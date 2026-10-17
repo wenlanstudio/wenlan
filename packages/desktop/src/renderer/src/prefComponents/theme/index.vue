@@ -64,8 +64,7 @@
         rows="10"
         :value="customCss"
         @change="
-          (event: Event) =>
-            onSelectChange('customCss', (event.target as HTMLTextAreaElement).value)
+          (event: Event) => onSelectChange('customCss', (event.target as HTMLTextAreaElement).value)
         "
       />
     </div>
@@ -390,6 +389,13 @@ const onSelectChange = (type: keyof PreferencesState, value: unknown): void => {
       background: #d5d6db;
       & a {
         color: #34548a;
+      }
+    }
+    &.typora {
+      color: #333333;
+      background: #ffffff;
+      & a {
+        color: #4183c4;
       }
     }
     &.solarized-light {

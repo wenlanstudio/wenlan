@@ -1,0 +1,439 @@
+/*
+ * Typora 风格浅色主题。
+ *
+ * 数值来源：本机 Typora 的 github 主题原文
+ *   D:\Program Files\Typora\resources\style\themes\github.css
+ *   D:\Program Files\Typora\resources\style\base.css
+ * 字号（16px）与行高（1.6）与 marktext 现有默认值一致，故本主题不改这两项。
+ */
+:root {
+  /*editor*/
+  --themeColor: rgba(65, 131, 196, 1);
+  --themeColor90: rgba(65, 131, 196, 0.9);
+  --themeColor80: rgba(65, 131, 196, 0.8);
+  --themeColor70: rgba(65, 131, 196, 0.7);
+  --themeColor60: rgba(65, 131, 196, 0.6);
+  --themeColor50: rgba(65, 131, 196, 0.5);
+  --themeColor40: rgba(65, 131, 196, 0.4);
+  --themeColor30: rgba(65, 131, 196, 0.3);
+  --themeColor20: rgba(65, 131, 196, 0.2);
+  --themeColor10: rgba(65, 131, 196, 0.1);
+  --highlightThemeColor: #4183c4;
+
+  --highlightColor: #b5d6fc80;
+  --selectionColor: #b5d6fc80;
+  --editorColor: #333333;
+  --editorColor80: rgba(51, 51, 51, 0.8);
+  --editorColor60: rgba(51, 51, 51, 0.6);
+  --editorColor50: rgba(51, 51, 51, 0.5);
+  --editorColor40: rgba(51, 51, 51, 0.4);
+  --editorColor30: rgba(51, 51, 51, 0.3);
+  --editorColor10: rgba(51, 51, 51, 0.1);
+  --editorColor04: rgba(51, 51, 51, 0.04);
+  --editorBgColor: #ffffff;
+  --deleteColor: #d73a49;
+  --iconColor: rgba(51, 51, 51, 0.56);
+  --codeBgColor: #f3f4f4;
+  --codeBlockBgColor: #f8f8f8;
+  --codeBlockColor: #333333;
+  --footnoteBgColor: rgba(247, 247, 247, 0.9);
+  --inputBgColor: rgba(0, 0, 0, 0.03);
+  --focusColor: #4183c4;
+
+  --buttonFontColor: #333333;
+  --buttonBgColor: linear-gradient(#fafbfc, #f4f5f6);
+  --buttonBorder: 1px solid #dfe2e5;
+  --buttonShadow: none;
+  --buttonFontColorHover: #333333;
+  --buttonBgColorHover: linear-gradient(#f4f5f6, #eef0f1);
+  --buttonBorderHover: var(--buttonBorder);
+  --buttonFontColorActive: var(--buttonFontColor);
+  --buttonBgColorActive: #eef0f1;
+  --buttonBorderActive: var(--buttonBorder);
+  --buttonFocusBorder: 1px solid #4183c4;
+
+  --buttonPrimaryFontColor: #ffffff;
+  --buttonPrimaryBgColor: linear-gradient(#4a8ec9, #4183c4);
+  --buttonPrimaryBorder: 1px solid #3a76ae;
+  --buttonPrimaryShadow: none;
+  --buttonPrimaryFontColorHover: var(--buttonPrimaryFontColor);
+  --buttonPrimaryBgColorHover: linear-gradient(#5896cd, #4a8ec9);
+  --buttonPrimaryBorderHover: var(--buttonPrimaryBorder);
+  --buttonPrimaryFontColorActive: var(--buttonPrimaryFontColor);
+  --buttonPrimaryBgColorActive: #3a76ae;
+  --buttonPrimaryBorderActive: var(--buttonPrimaryBorder);
+  --buttonPrimaryFocusBorder: none;
+  --buttonPrimaryFocusShadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5), 0 0 0 1px #4183c4;
+  --tableBorderColor: #dfe2e5;
+
+  /* Markdown element colors */
+  --headingColor: #333333;
+  --h1Color: #333333;
+  --h2Color: #333333;
+  --h3Color: #333333;
+  --h4Color: #333333;
+  --h5Color: #333333;
+  --h6Color: #777777;
+  --blockquoteTextColor: #777777;
+  --blockquoteBorderColor: #dfe2e5;
+  --hrColor: #e7e7e7;
+  --linkColor: #4183c4;
+  --strongColor: #333333;
+  --emColor: #333333;
+  --listMarkerColor: #333333;
+
+  /*marktext*/
+  --sideBarColor: #333333;
+  --sideBarIconColor: var(--iconColor);
+  --sideBarTitleColor: #333333;
+  --sideBarTextColor: #333333;
+  --sideBarBgColor: #fafafa;
+  --sideBarItemHoverBgColor: #f0f1f2;
+  --itemBgColor: #ffffff;
+
+  --floatFontColor: #333333;
+  --floatBgColor: #ffffff;
+  --floatHoverColor: #f8f8f8;
+  --floatBorderColor: #dfe2e5;
+  --floatShadow: rgba(0, 28, 36, 0.12);
+  --maskColor: rgba(0, 0, 0, 0.15);
+  --editorAreaWidth: 860px;
+
+  /* @muyajs/core (kebab-case) editor variables
+     与上面的 camelCase 变量一一对应；当前编辑器仍在读 camelCase，
+     新的 @muyajs/core 引擎读 kebab-case。两者都要保留。 */
+  --theme-color: var(--themeColor);
+  --highlight-color: var(--highlightColor);
+  --selection-color: var(--selectionColor);
+  --editor-color: var(--editorColor);
+  --editor-color-80: var(--editorColor80);
+  --editor-color-50: var(--editorColor50);
+  --editor-color-30: var(--editorColor30);
+  --editor-color-10: var(--editorColor10);
+  --editor-color-04: var(--editorColor04);
+  --editor-bg-color: var(--editorBgColor);
+  --editor-area-width: var(--editorAreaWidth);
+  --delete-color: var(--deleteColor);
+  --icon-color: var(--iconColor);
+  --code-block-bg-color: var(--codeBlockBgColor);
+  --code-block-color: var(--codeBlockColor);
+  --table-border-color: var(--tableBorderColor);
+  --input-bg-color: var(--inputBgColor);
+  --button-font-color: var(--buttonFontColor);
+  --button-bg-color: var(--buttonBgColor);
+  --button-border: var(--buttonBorder);
+  --button-bg-color-hover: var(--buttonBgColorHover);
+  --button-border-hover: var(--buttonBorderHover);
+  --button-bg-color-active: var(--buttonBgColorActive);
+  --button-border-active: var(--buttonBorderActive);
+  --button-border-focus: var(--button-border);
+  --float-bg-color: var(--floatBgColor);
+  --float-hover-color: var(--floatHoverColor);
+  --float-border-color: var(--floatBorderColor);
+  --float-shadow:
+    rgb(15 15 15 / 3%) 0 0 0 1px, rgb(15 15 15 / 4%) 0 3px 6px, rgb(15 15 15 / 5%) 0 9px 24px;
+  --link-color: var(--linkColor);
+  --h1-color: var(--h1Color);
+  --h2-color: var(--h2Color);
+  --h3-color: var(--h3Color);
+  --h4-color: var(--h4Color);
+  --h5-color: var(--h5Color);
+  --h6-color: var(--h6Color);
+  --blockquote-text-color: var(--blockquoteTextColor);
+  --blockquote-border-color: var(--blockquoteBorderColor);
+  --strong-color: var(--strongColor);
+  --em-color: var(--emColor);
+  --list-marker-color: var(--listMarkerColor);
+  --hr-color: var(--hrColor);
+}
+
+::-webkit-scrollbar,
+::-webkit-scrollbar-corner {
+  background: var(--editorBgColor);
+}
+::-webkit-scrollbar:vertical {
+  width: 10px;
+}
+::-webkit-scrollbar:vertical:hover {
+  width: 12px;
+}
+::-webkit-scrollbar-thumb {
+  background: #dfe2e5;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #c8ccd0;
+}
+
+/* --- Element UI ------------------------------------------------ */
+
+.v-modal {
+  background: #333333 !important;
+  opacity: 0.35 !important;
+}
+.el-dialog,
+.el-dialog.ag-dialog-table {
+  border-radius: 3px !important;
+  box-shadow: 0 1px 1px 0 rgba(0, 28, 36, 0.3) !important;
+  border: 1px solid #dfe2e5 !important;
+  background: #ffffff !important;
+}
+
+/* --- Core elements --------------------------------------------- */
+
+.mu-front-menu,
+.mu-float-wrapper {
+  box-shadow: 0 1px 3px 0 var(--floatShadow) !important;
+  border: 1px solid var(--floatBorderColor) !important;
+}
+
+.title-bar .frameless-titlebar-button > div > svg {
+  fill: #333333;
+}
+.title-bar .frameless-titlebar-minimize:hover,
+.title-bar .frameless-titlebar-toggle:hover {
+  background-color: rgba(51, 51, 51, 0.05) !important;
+}
+
+.input-wrapper {
+  border-radius: 3px !important;
+  border: 1px solid #dfe2e5 !important;
+  background: #fafbfc !important;
+}
+
+/* --- UI elements ----------------------------------------------- */
+
+.side-bar {
+  border-right: 1px solid #dfe2e5 !important;
+}
+.left-column ul > li > svg {
+  fill: rgba(51, 51, 51, 0.5) !important;
+}
+.left-column ul > li:hover > svg {
+  fill: #333333 !important;
+}
+.left-column ul > li.active > svg {
+  fill: #4183c4 !important;
+}
+
+.editor-tabs {
+  box-shadow: none !important;
+}
+.editor-tabs:after {
+  position: absolute;
+  content: '';
+  border-bottom: 1px solid #dfe2e5;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+}
+.editor-tabs ul.tabs-container:after {
+  position: absolute;
+  content: '';
+  border-bottom: 1px solid #dfe2e5;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+}
+.tabs-container > li,
+.tabs-container > li.active {
+  background: var(--editorBgColor) !important;
+}
+.tabs-container > li.active {
+  border: 1px solid #dfe2e5;
+  border-bottom: none;
+}
+.tabs-container > li.active:after {
+  top: 0 !important;
+  right: auto !important;
+  width: 2px !important;
+  height: auto !important;
+  background: #4183c4 !important;
+}
+.tabs-container svg.close-icon #unsaved-circle-icon {
+  fill: #4183c4;
+}
+
+/* --- Editor: Typora github 主题的版式数值 ------------------------- */
+
+/* 定宽列：860px 含左右各 30px 内边距，正文实际 800px，与 Typora 一致。
+   显式写 box-sizing 是为了不受 muya 的全局盒模型影响。
+   宽屏时按 Typora 的规则放宽到 1024 / 1200。 */
+.mu-container {
+  box-sizing: border-box;
+  max-width: var(--editor-area-width, 860px);
+  padding: 30px 30px 100px;
+}
+
+@media only screen and (min-width: 1400px) {
+  .mu-container {
+    max-width: 1024px;
+  }
+}
+
+@media only screen and (min-width: 1800px) {
+  .mu-container {
+    max-width: 1200px;
+  }
+}
+
+.mu-container h1,
+.mu-container h2,
+.mu-container h3,
+.mu-container h4,
+.mu-container h5,
+.mu-container h6 {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  font-weight: bold;
+  line-height: 1.4;
+}
+.mu-container h1 {
+  font-size: 2.25em;
+  line-height: 1.2;
+  border-bottom: 1px solid #eeeeee;
+}
+.mu-container h2 {
+  font-size: 1.75em;
+  line-height: 1.225;
+  border-bottom: 1px solid #eeeeee;
+}
+.mu-container h3 {
+  font-size: 1.5em;
+  line-height: 1.43;
+}
+.mu-container h4 {
+  font-size: 1.25em;
+}
+.mu-container h5 {
+  font-size: 1em;
+}
+.mu-container h6 {
+  font-size: 1em;
+  color: #777777;
+}
+
+.mu-container p,
+.mu-container blockquote,
+.mu-container ul,
+.mu-container ol,
+.mu-container dl {
+  margin: 0.8em 0;
+}
+
+.mu-container ul,
+.mu-container ol {
+  padding-left: 30px;
+}
+
+.mu-container blockquote {
+  border-left: 4px solid #dfe2e5;
+  padding: 0 15px;
+  color: #777777;
+}
+
+.mu-container hr {
+  height: 2px;
+  padding: 0;
+  margin: 16px 0;
+  background-color: #e7e7e7;
+  border: 0 none;
+  overflow: hidden;
+  box-sizing: content-box;
+}
+
+blockquote::before {
+  background: var(--highlightThemeColor);
+}
+
+.mu-container td,
+.mu-container th {
+  border: 1px solid #dfe2e5;
+  padding: 6px 13px;
+}
+.mu-container thead,
+.mu-container tr:nth-child(2n) {
+  background-color: #f8f8f8;
+}
+
+/* 代码：fences 用 #f8f8f8，行内 code 用 #f3f4f4，均带 1px 边框与 3px 圆角 */
+:not(pre) > code[class*='language-'],
+pre:not(.CodeMirror-line),
+pre[class*='language-'],
+pre.mu-code-block {
+  background: var(--codeBlockBgColor) !important;
+  border: 1px solid #e7eaed !important;
+  border-radius: 3px !important;
+}
+
+.mu-thematic-break:not(.mu-active)::before {
+  border-top: 2px solid #e7e7e7 !important;
+  background: none !important;
+}
+
+li.mu-task-list-item {
+  list-style-type: none;
+  position: relative;
+}
+li.mu-task-list-item > input[type='checkbox'],
+li.mu-task-list-item > span.mu-task-list-checkbox {
+  position: absolute;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  /* 原生 input 保留 UA 字号，用 em 无法跟随编辑器排版，故改用变量计算 */
+  top: calc(var(--mu-line-height, 1.6) * 0.5 * var(--mu-font-size, 16px) - 8px);
+  transform: rotate(-90deg);
+  margin: 0;
+  inset-inline-start: -24px;
+  transform-origin: center;
+  transition: all 0.2s ease;
+}
+li.mu-task-list-item > input.mu-checkbox-checked,
+li.mu-task-list-item > span.mu-checkbox-checked {
+  transform: rotate(0);
+}
+li.mu-task-list-item > input[type='checkbox']::before,
+li.mu-task-list-item > span.mu-task-list-checkbox::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  display: inline-block;
+  border: 1px solid var(--editorColor30);
+  border-radius: 2px;
+  background-color: var(--editorBgColor);
+  position: absolute;
+  top: 0;
+  left: 0;
+  transition: all 0.2s ease;
+}
+li.mu-task-list-item > input.mu-checkbox-checked::before,
+li.mu-task-list-item > span.mu-checkbox-checked::before {
+  border-color: var(--theme-color);
+  background-color: var(--theme-color);
+}
+li.mu-task-list-item > input::after,
+li.mu-task-list-item > span.mu-task-list-checkbox::after {
+  content: '';
+  transform: rotate(-45deg) scale(0);
+  width: 9px;
+  height: 5px;
+  border: 2px solid #fff;
+  border-top: none;
+  border-right: none;
+  position: absolute;
+  display: inline-block;
+  top: 1px;
+  left: 5px;
+  transition: all 0.2s ease;
+}
+li.mu-task-list-item > input.mu-checkbox-checked::after,
+li.mu-task-list-item > span.mu-checkbox-checked::after {
+  transform: rotate(-45deg) scale(1);
+}
+figure.mu-active.mu-math-block > div.mu-math-preview,
+figure.mu-active.mu-diagram-block > div.mu-diagram-preview {
+  box-shadow: 0 1px 3px 0 var(--floatShadow) !important;
+}

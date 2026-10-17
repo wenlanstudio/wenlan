@@ -260,7 +260,7 @@ See `packages/website/content/docs/dev/IPC.md` for conventions and examples.
 ## Important Build Notes
 
 - **CommonJS vs ESM**: `main` and `preload` compile to CommonJS; `renderer` is ESM-only. Do not use `require()` in renderer code.
-- **Minify locales**: `pnpm run minify-locales` must run before production builds. It is included in `build:win/mac/linux` but not in `dev`.
+- **Minify locales**: `pnpm run minify-locales` must run before production builds, and after editing `static/locales/*.json` in a checkout where the `.min.json` files already exist. `common/i18n.ts` prefers `<lang>.min.json` over `<lang>.json` whenever the minified file is present, so a stale minified file silently wins over your edit and the UI renders raw keys. It is included in `build:win/mac/linux` but not in `dev`.
 - **Native modules**: After changing Electron version, run `pnpm run rebuild-native` (`electron-rebuild -f`).
 - **Hot reload**: The renderer hot-reloads via Vite HMR. `Ctrl+R` in the dev window reloads the renderer and re-runs the preload script. Changes to `main/` source are NOT picked up by a window reload — restart `pnpm run dev` to pick them up.
 - **electron-builder output**: `directories.output` in `packages/desktop/electron-builder.yml` is set to `../../dist` so installers land in the repo-root `dist/` (where CI artifact globs look for them). `out/` from electron-vite stays inside `packages/desktop/`.

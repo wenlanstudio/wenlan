@@ -1,5 +1,7 @@
 import { type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
 import * as actions from '../actions/view'
+import { minimizeWindow, toggleAlwaysOnTop, toggleFullScreen } from '../actions/window'
+import { zoomIn, zoomOut, resetZoom } from '../../windows/utils'
 import { t } from '../../i18n'
 import type Keybindings from '../../keyboard/shortcutHandler'
 
@@ -81,6 +83,64 @@ export default function(keybindings: Keybindings): MenuItemConstructorOptions {
       accelerator: keybindings.getAccelerator('view.reload-images') ?? undefined,
       click(_item, focusedWindow) {
         actions.reloadImageCache(focusedWindow as BrowserWindow | undefined)
+      }
+    },
+    {
+      type: 'separator'
+    },
+    // 「窗口」菜单已按 Typora 的菜单结构取消，这些窗口级操作连同快捷键一起
+    // 并入「视图」。不要把 accelerator 留空：Electron 的快捷键就注册在菜单项上，
+    // 删掉菜单项等于废掉快捷键。
+    {
+      label: t('menu.window.minimize'),
+      accelerator: keybindings.getAccelerator('window.minimize') ?? undefined,
+      click(_menuItem, browserWindow) {
+        minimizeWindow(browserWindow as BrowserWindow | undefined)
+      }
+    },
+    {
+      id: 'alwaysOnTopMenuItem',
+      label: t('menu.window.alwaysOnTop'),
+      type: 'checkbox',
+      accelerator: keybindings.getAccelerator('window.toggle-always-on-top') ?? undefined,
+      click(_menuItem, browserWindow) {
+        toggleAlwaysOnTop(browserWindow as BrowserWindow | undefined)
+      }
+    },
+    {
+      type: 'separator'
+    },
+    {
+      label: t('menu.window.zoomIn'),
+      accelerator: keybindings.getAccelerator('window.zoomIn') ?? undefined,
+      click(_menuItem, browserWindow) {
+        zoomIn(browserWindow as BrowserWindow | undefined)
+      }
+    },
+    {
+      label: t('menu.window.zoomOut'),
+      accelerator: keybindings.getAccelerator('window.zoomOut') ?? undefined,
+      click(_menuItem, browserWindow) {
+        zoomOut(browserWindow as BrowserWindow | undefined)
+      }
+    },
+    {
+      label: t('menu.window.resetZoom'),
+      accelerator: keybindings.getAccelerator('window.resetZoom') ?? undefined,
+      click(_menuItem, browserWindow) {
+        resetZoom(browserWindow as BrowserWindow | undefined)
+      }
+    },
+    {
+      type: 'separator'
+    },
+    {
+      label: t('menu.window.fullScreen'),
+      accelerator: keybindings.getAccelerator('window.toggle-full-screen') ?? undefined,
+      click(_item, browserWindow) {
+        if (browserWindow) {
+          toggleFullScreen(browserWindow as BrowserWindow)
+        }
       }
     }
   ]

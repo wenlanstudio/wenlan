@@ -34,6 +34,7 @@ import solarizedLightTheme from '../assets/themes/solarized-light.theme.css?inli
 import ayuLightTheme from '../assets/themes/ayu-light.theme.css?inline'
 import everforestLightTheme from '../assets/themes/everforest-light.theme.css?inline'
 import rosePineDawnTheme from '../assets/themes/rose-pine-dawn.theme.css?inline'
+import typoraTheme from '../assets/themes/typora.theme.css?inline'
 
 // Prism.js syntax highlighting themes
 import darkPrismTheme from '../assets/themes/prismjs/dark.theme.css?inline'
@@ -67,6 +68,7 @@ import nightfoxPrismTheme from '../assets/themes/prismjs/nightfox.theme.css?inli
 import cyberdreamPrismTheme from '../assets/themes/prismjs/cyberdream.theme.css?inline'
 import graphitePrismTheme from '../assets/themes/prismjs/graphite.theme.css?inline'
 import ulyssesPrismTheme from '../assets/themes/prismjs/ulysses.theme.css?inline'
+import typoraPrismTheme from '../assets/themes/prismjs/typora.theme.css?inline'
 
 // Original themes
 export const dark = (): string => {
@@ -197,4 +199,9 @@ export const everforestLight = (): string => {
 
 export const rosePineDawn = (): string => {
   return rosePineDawnTheme + '\n' + rosePineDawnPrismTheme
+}
+
+// Typora 风格（light）
+export const typora = (): string => {
+  return typoraTheme + '\n' + typoraPrismTheme
 }

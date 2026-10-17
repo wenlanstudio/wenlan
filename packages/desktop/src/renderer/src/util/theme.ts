@@ -39,7 +39,8 @@ import {
   solarizedLight,
   ayuLight,
   everforestLight,
-  rosePineDawn
+  rosePineDawn,
+  typora
 } from './themeColor'
 import { isLinux } from './index'
 
@@ -170,6 +171,9 @@ export const addThemeStyle = (theme: string): void => {
       break
     case 'rose-pine-dawn':
       themeStyleEle.innerHTML = patchTheme(rosePineDawn())
+      break
+    case 'typora':
+      themeStyleEle.innerHTML = patchTheme(typora())
       break
     default:
       break

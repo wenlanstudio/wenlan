@@ -13,6 +13,7 @@ export const themes: ReadonlyArray<ThemeDescriptor> = [
   { name: 'rose-pine-dawn' },
   { name: 'solarized-light' },
   { name: 'tokyo-night-light' },
+  { name: 'typora' },
   { name: 'ulysses' },
   // Dark Themes (alphabetical)
   { name: 'ayu-dark' },

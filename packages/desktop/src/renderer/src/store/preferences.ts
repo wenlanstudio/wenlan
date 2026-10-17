@@ -217,9 +217,9 @@ export const usePreferencesStore = defineStore('preferences', {
     sequenceTheme: 'hand',
     plantumlServer: 'https://www.plantuml.com/plantuml',
 
-    theme: 'light',
+    theme: 'typora',
     followSystemTheme: true,
-    lightModeTheme: 'light',
+    lightModeTheme: 'typora',
     darkModeTheme: 'dark',
     customCss: '',
 

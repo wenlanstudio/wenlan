@@ -5,7 +5,6 @@ import file from './file'
 import help from './help'
 import marktext from './marktext'
 import view from './view'
-import window from './window'
 import paragraph from './paragraph'
 import format from './format'
 import theme from './theme'
@@ -45,9 +44,8 @@ export default function(
     edit(keybindings),
     paragraph(keybindings, preferences),
     format(keybindings),
-    window(keybindings),
-    theme(preferences),
     view(keybindings),
+    theme(preferences),
     help()
   ]
 }
