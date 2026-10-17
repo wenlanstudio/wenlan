@@ -1,42 +1,82 @@
 <template>
   <div
-    ref="rootEl"
     class="menu-bar title-no-drag"
+    @mouseenter="handleBarEnter"
+    @mouseleave="handleBarLeave"
   >
+    <!-- Hibernate state: only the burger stays in the title bar. Hovering the
+         bar — no click needed — reveals the flat entries beside it, the way the
+         JetBrains new UI does it. Clicking the burger opens the first menu,
+         which is what the hamburger used to do with the old popup menu. -->
     <div
-      v-for="(menu, index) of menus"
-      :key="menu.id || index"
-      class="menu-bar-root title-no-drag"
-      :class="{ 'is-open': openIndex === index }"
-      @click.stop="toggle(index)"
-      @mouseenter="handleEnter(index)"
+      class="menu-bar-burger"
+      :class="{ 'is-open': openIndex !== -1 }"
+      @click.stop="handleBurgerClick"
     >
-      {{ menu.label }}
-      <menu-dropdown
-        v-if="openIndex === index"
-        class="menu-bar-panel"
-        :items="menu.submenu"
-        @execute="run"
-      />
+      <svg
+        width="14"
+        height="12"
+        viewBox="0 0 14 12"
+      >
+        <rect
+          y="0"
+          width="14"
+          height="1.6"
+          rx="0.8"
+        />
+        <rect
+          y="5.2"
+          width="14"
+          height="1.6"
+          rx="0.8"
+        />
+        <rect
+          y="10.4"
+          width="14"
+          height="1.6"
+          rx="0.8"
+        />
+      </svg>
     </div>
+    <Transition name="menu-bar-fade">
+      <div
+        v-show="expanded"
+        class="menu-bar-roots"
+      >
+        <div
+          v-for="(menu, index) of menus"
+          :key="menu.id || index"
+          class="menu-bar-root title-no-drag"
+          :class="{ 'is-open': openIndex === index }"
+          @click.stop="toggle(index)"
+          @mouseenter="handleEnter(index)"
+        >
+          {{ menu.label }}
+          <menu-dropdown
+            v-if="openIndex === index"
+            class="menu-bar-panel"
+            :items="menu.submenu"
+            @execute="run"
+          />
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { MenuStructureItem } from '@shared/types/menu'
 import MenuDropdown from './menuDropdown.vue'
 
-// The bar replaces the old hamburger button, so it can take real horizontal
-// room; the title bar uses this width to keep the centered filename clear.
-const emit = defineEmits<{
-  resize: [width: number]
-}>()
-
 const menus = ref<MenuStructureItem[]>([])
 const openIndex = ref(-1)
-const rootEl = ref<HTMLElement | null>(null)
-let observer: ResizeObserver | null = null
+const hovered = ref(false)
+
+// The entries are hidden until the pointer arrives, and stay visible while a
+// dropdown is open so hiding the bar can never pull it out from under the
+// menu the user is reading.
+const expanded = computed(() => hovered.value || openIndex.value !== -1)
 
 const load = async (): Promise<void> => {
   try {
@@ -68,6 +108,24 @@ const handleEnter = (index: number): void => {
   openIndex.value = index
 }
 
+const handleBarEnter = (): void => {
+  hovered.value = true
+}
+
+const handleBarLeave = (): void => {
+  hovered.value = false
+}
+
+const handleBurgerClick = async (): Promise<void> => {
+  if (openIndex.value !== -1) {
+    close()
+    return
+  }
+  await load()
+  if (!menus.value.length) return
+  openIndex.value = 0
+}
+
 const run = (item: MenuStructureItem): void => {
   close()
   if (!item.id) return
@@ -86,22 +144,12 @@ onMounted(async () => {
   document.addEventListener('click', onDocumentClick)
   document.addEventListener('keydown', onKeydown)
   window.addEventListener('blur', close)
-
-  await nextTick()
-  const el = rootEl.value
-  if (!el) return
-  emit('resize', el.offsetWidth)
-  if (typeof ResizeObserver === 'undefined') return
-  observer = new ResizeObserver(() => emit('resize', el.offsetWidth))
-  observer.observe(el)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', onDocumentClick)
   document.removeEventListener('keydown', onKeydown)
   window.removeEventListener('blur', close)
-  observer?.disconnect()
-  observer = null
 })
 </script>
 
@@ -111,6 +159,32 @@ onBeforeUnmount(() => {
   align-items: center;
   height: 100%;
   user-select: none;
+}
+
+.menu-bar-burger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 100%;
+  color: var(--editorColor80, var(--editorColor));
+  cursor: default;
+}
+
+.menu-bar-burger svg {
+  fill: currentColor;
+}
+
+.menu-bar-burger:hover,
+.menu-bar-burger.is-open {
+  background: var(--editorColor10);
+  color: var(--editorColor);
+}
+
+.menu-bar-roots {
+  display: flex;
+  align-items: center;
+  height: 100%;
 }
 
 .menu-bar-root {
@@ -136,5 +210,15 @@ onBeforeUnmount(() => {
   top: 100%;
   left: 0;
   z-index: 100;
+}
+
+.menu-bar-fade-enter-active,
+.menu-bar-fade-leave-active {
+  transition: opacity 0.15s ease-in-out;
+}
+
+.menu-bar-fade-enter-from,
+.menu-bar-fade-leave-to {
+  opacity: 0;
 }
 </style>

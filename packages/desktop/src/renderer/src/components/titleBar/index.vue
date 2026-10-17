@@ -15,7 +15,6 @@
     >
       <div
         class="title"
-        :style="titlePadding"
         @dblclick.stop="toggleMaxmizeOnMacOS"
       >
         <!-- The title slot is intentionally empty for now (TODO #5: turn it into
@@ -30,7 +29,7 @@
         v-if="showCustomTitleBar"
         class="left-toolbar title-no-drag"
       >
-        <menu-bar @resize="menuWidth = $event" />
+        <menu-bar />
       </div>
       <div
         v-if="titleBarStyle === 'custom' && !isFullScreen && !isOsx"
@@ -120,8 +119,6 @@ const windowIconClose = closePath
 
 const isFullScreen = ref(false)
 const isMaximized = ref(false)
-// Width of the in-window menu bar, so the centered title slot stays clear of it.
-const menuWidth = ref(0)
 
 onMounted(async () => {
   try {
@@ -145,11 +142,6 @@ const showCustomTitleBar = computed(() => {
 const showTitleBar = computed(() => {
   return shouldShowInAppTitleBar(titleBarStyle.value, isOsx)
 })
-
-const titlePadding = computed(() => ({
-  paddingLeft: menuWidth.value > 0 ? `${menuWidth.value + 24}px` : '142px',
-  paddingRight: '142px'
-}))
 
 watch(
   () => props.filename,
@@ -290,7 +282,8 @@ div.title > .save-dot {
   position: absolute;
   top: 0;
   left: 0;
-  /* Wide enough to hold the in-window menu bar; the panel below each entry is
+  /* Collapsed to the burger button most of the time; when the menus expand
+     they spill over the (empty) title slot, and each entry's panel is
      absolutely positioned so it overflows this box instead of being clipped. */
   width: auto;
   display: flex;
