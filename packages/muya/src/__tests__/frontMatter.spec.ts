@@ -224,16 +224,17 @@ describe('quick-insert front matter (replaceBlockByLabel)', () => {
     });
 });
 
-// The focused front-matter block renders before/after delimiter markers via the
-// CSS rules `pre.mu-active.mu-frontmatter::before/::after` (blockSyntax.css). Two
-// regressions are guarded:
-//   - The block's class must be `mu-frontmatter`; the CSS once targeted the
-//     non-existent `mu-front-matter`, so the markers never showed (muyajs parity).
-//   - The marker text is driven by the `frontMatterStart` / `frontMatterEnd`
-//     attributes on the <pre>, which mirror the real delimiters `stateToMarkdown`
-//     emits per type (yaml `---`, toml `+++`, json `;;;`, json-braces `{` / `}`),
-//     not a hardcoded `---`.
-describe('front matter delimiter marker', () => {
+// Front matter no longer draws its `---` / `+++` / `;;;` / `{}` fences while the
+// block has focus: `pre.mu-active.mu-frontmatter::before/::after` were dropped
+// from blockSyntax.css for the same Typora-style clean focus that code blocks
+// got. Two regressions are guarded:
+//   - The block's class must stay `mu-frontmatter`; the CSS once targeted the
+//     non-existent `mu-front-matter`, so none of it applied (muyajs parity).
+//     The surviving rules style the block frame and the empty placeholder.
+//   - The <pre> must not carry `frontMatterStart` / `frontMatterEnd` any more:
+//     those attributes only ever fed the removed markers, and re-adding them is
+//     how the fences would quietly come back.
+describe('front matter focus markers stay off', () => {
     function frontmatterPre(muya: Muya): HTMLElement {
         const block = muya.editor.scrollPage!.find(0) as unknown as Parent;
         return block.domNode!;
@@ -249,34 +250,18 @@ describe('front matter delimiter marker', () => {
         return frontmatterPre(muya);
     }
 
-    it('tags the front-matter <pre> with the class the marker CSS targets', () => {
+    it('tags the front-matter <pre> with the class its CSS targets', () => {
         const muya = bootMuya('---\ntitle: hi\n---\n\nbody\n');
         const pre = frontmatterPre(muya);
         expect(pre.tagName).toBe('PRE');
         expect(pre.classList.contains('mu-frontmatter')).toBe(true);
     });
 
-    it('yaml (default \'-\') shows --- before and after', async () => {
-        const pre = await insertFrontMatter();
-        expect(pre.getAttribute('frontMatterStart')).toBe('---');
-        expect(pre.getAttribute('frontMatterEnd')).toBe('---');
-    });
-
-    it('toml (\'+\') shows +++ before and after', async () => {
-        const pre = await insertFrontMatter('+');
-        expect(pre.getAttribute('frontMatterStart')).toBe('+++');
-        expect(pre.getAttribute('frontMatterEnd')).toBe('+++');
-    });
-
-    it('json (\';\') shows ;;; before and after', async () => {
-        const pre = await insertFrontMatter(';');
-        expect(pre.getAttribute('frontMatterStart')).toBe(';;;');
-        expect(pre.getAttribute('frontMatterEnd')).toBe(';;;');
-    });
-
-    it('json braces (\'{\') shows { before and } after', async () => {
-        const pre = await insertFrontMatter('{');
-        expect(pre.getAttribute('frontMatterStart')).toBe('{');
-        expect(pre.getAttribute('frontMatterEnd')).toBe('}');
+    it('emits no fence attributes for any front matter type', async() => {
+        for (const type of ['-', '+', ';', '{']) {
+            const pre = await insertFrontMatter(type);
+            expect(pre.hasAttribute('frontMatterStart')).toBe(false);
+            expect(pre.hasAttribute('frontMatterEnd')).toBe(false);
+        }
     });
 });
