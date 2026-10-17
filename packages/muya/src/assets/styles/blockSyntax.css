@@ -901,17 +901,12 @@ pre.mu-active[data-role='vega-lite']::before {
     content: '``` vega-lite';
 }
 
-pre.mu-active.mu-fenced-code::before,
-pre.mu-active.mu-fenced-code::after,
+/* Code (fenced / tilde) blocks no longer draw the ``` / ~~~ markers when
+   active, for a cleaner focus state (Typora-style). Diagram and math blocks
+   keep their labels so their type stays visible at a glance. */
 pre.mu-active[data-role='mermaid']::after,
 pre.mu-active[data-role='vega-lite']::after {
     content: '```';
-}
-
-/* A tilde-fenced code block draws its own fence character in the marker. */
-pre.mu-active.mu-fenced-code.mu-tilde-fence::before,
-pre.mu-active.mu-fenced-code.mu-tilde-fence::after {
-    content: '~~~';
 }
 
 pre.mu-active.mu-frontmatter::before,
@@ -920,8 +915,6 @@ pre.mu-active[data-role='mermaid']::before,
 pre.mu-active[data-role='mermaid']::after,
 pre.mu-active[data-role='vega-lite']::before,
 pre.mu-active[data-role='vega-lite']::after,
-pre.mu-active.mu-fenced-code::before,
-pre.mu-active.mu-fenced-code::after,
 pre.mu-active.mu-math-container::before,
 pre.mu-active.mu-math-container::after {
     position: absolute;
@@ -934,16 +927,14 @@ pre.mu-active.mu-math-container::after {
 pre.mu-active.mu-frontmatter::before,
 pre.mu-active[data-role='mermaid']::before,
 pre.mu-active[data-role='vega-lite']::before,
-pre.mu-active.mu-math-container::before,
-pre.mu-active.mu-fenced-code::before {
+pre.mu-active.mu-math-container::before {
     top: -20px;
 }
 
 pre.mu-active.mu-frontmatter::after,
 pre.mu-active[data-role='mermaid']::after,
 pre.mu-active[data-role='vega-lite']::after,
-pre.mu-active.mu-math-container::after,
-pre.mu-active.mu-fenced-code::after {
+pre.mu-active.mu-math-container::after {
     bottom: -23px;
 }
 
