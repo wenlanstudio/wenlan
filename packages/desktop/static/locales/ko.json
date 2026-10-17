@@ -239,10 +239,6 @@
       "createFile": "파일 만들기",
       "openFolder": "폴더 열기"
     },
-    "toc": {
-      "expandAll": "모두 펼치기",
-      "collapseAll": "모두 접기"
-    },
     "tabs": {
       "files": "파일",
       "outline": "아웃트라인"

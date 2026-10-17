@@ -239,10 +239,6 @@
       "createFile": "Créer un fichier",
       "openFolder": "Ouvrir un dossier"
     },
-    "toc": {
-      "expandAll": "Tout développer",
-      "collapseAll": "Tout réduire"
-    },
     "tabs": {
       "files": "Fichiers",
       "outline": "Plan"

@@ -239,10 +239,6 @@
       "createFile": "Create File",
       "openFolder": "Open Folder"
     },
-    "toc": {
-      "expandAll": "Expand all",
-      "collapseAll": "Collapse all"
-    },
     "tabs": {
       "files": "Files",
       "outline": "Outline"

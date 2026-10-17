@@ -239,10 +239,6 @@
       "createFile": "Bestand aanmaken",
       "openFolder": "Map openen"
     },
-    "toc": {
-      "expandAll": "Alles uitklappen",
-      "collapseAll": "Alles inklappen"
-    },
     "tabs": {
       "files": "Bestanden",
       "outline": "Overzicht"

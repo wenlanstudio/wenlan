@@ -239,10 +239,6 @@
       "createFile": "建立檔案",
       "openFolder": "開啟資料夾"
     },
-    "toc": {
-      "expandAll": "全部展開",
-      "collapseAll": "全部折疊"
-    },
     "tabs": {
       "files": "檔案",
       "outline": "大綱"

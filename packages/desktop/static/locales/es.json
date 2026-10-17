@@ -239,10 +239,6 @@
       "createFile": "Crear Archivo",
       "openFolder": "Abrir Carpeta"
     },
-    "toc": {
-      "expandAll": "Expandir todo",
-      "collapseAll": "Contraer todo"
-    },
     "tabs": {
       "files": "Archivos",
       "outline": "Esquema"

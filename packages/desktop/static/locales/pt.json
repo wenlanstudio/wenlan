@@ -239,10 +239,6 @@
       "createFile": "Criar Arquivo",
       "openFolder": "Abrir Pasta"
     },
-    "toc": {
-      "expandAll": "Expandir tudo",
-      "collapseAll": "Recolher tudo"
-    },
     "tabs": {
       "files": "Arquivos",
       "outline": "Tópicos"

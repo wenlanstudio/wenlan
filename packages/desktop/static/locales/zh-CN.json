@@ -239,10 +239,6 @@
       "createFile": "创建文件",
       "openFolder": "打开文件夹"
     },
-    "toc": {
-      "expandAll": "全部展开",
-      "collapseAll": "全部折叠"
-    },
     "tabs": {
       "files": "文件",
       "outline": "大纲"

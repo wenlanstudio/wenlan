@@ -239,10 +239,6 @@
       "createFile": "ファイルの作成",
       "openFolder": "フォルダーを開く"
     },
-    "toc": {
-      "expandAll": "すべて展開",
-      "collapseAll": "すべて折りたたむ"
-    },
     "tabs": {
       "files": "ファイル",
       "outline": "アウトライン"

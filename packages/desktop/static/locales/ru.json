@@ -239,10 +239,6 @@
       "createFile": "Создать файл",
       "openFolder": "Открыть папку"
     },
-    "toc": {
-      "expandAll": "Развернуть всё",
-      "collapseAll": "Свернуть всё"
-    },
     "tabs": {
       "files": "Файлы",
       "outline": "Структура"

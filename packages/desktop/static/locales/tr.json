@@ -239,10 +239,6 @@
       "createFile": "Dosya Oluştur",
       "openFolder": "Klasör Aç"
     },
-    "toc": {
-      "expandAll": "Tümünü genişlet",
-      "collapseAll": "Tümünü daralt"
-    },
     "tabs": {
       "files": "Dosyalar",
       "outline": "Anahat"

@@ -145,9 +145,6 @@ const handleClick = (data: { slug?: unknown }): void => {
 <style>
 .side-bar-toc {
   height: 100%;
-  margin: 0;
-  padding: 0;
-  list-style: none;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -199,11 +196,6 @@ const handleClick = (data: { slug?: unknown }): void => {
   color: var(--themeColor);
 }
 
-.side-bar-toc > li {
-  font-size: 14px;
-  margin-bottom: 15px;
-  cursor: pointer;
-}
 .side-bar-toc-overflow .el-tree {
   overflow: auto;
 }

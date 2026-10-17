@@ -239,10 +239,6 @@
       "createFile": "Datei erstellen",
       "openFolder": "Ordner öffnen"
     },
-    "toc": {
-      "expandAll": "Alle ausklappen",
-      "collapseAll": "Alle einklappen"
-    },
     "tabs": {
       "files": "Dateien",
       "outline": "Gliederung"
