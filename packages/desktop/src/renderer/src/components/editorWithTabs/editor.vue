@@ -2023,6 +2023,14 @@ onMounted(() => {
     if (!sourceCode.value && editor.value) {
       setSelectionWordCountFromText(editor.value.getSelectedText())
     }
+    // Emit cursor position for the status-bar line:column indicator.
+    if (editor.value) {
+      const offset = editor.value.getCursorOffset()
+      const focus = offset?.focus
+      if (focus) {
+        bus.emit('cursor-position', { line: focus.line + 1, ch: focus.ch + 1 })
+      }
+    }
     // Persist the caret so a click/arrow-key move (which never fires
     // `json-change`) survives an in-session tab switch — `tab.cursor` is what
     // `handleFileChange` replays on re-activation. Cheap: serialized caret only.

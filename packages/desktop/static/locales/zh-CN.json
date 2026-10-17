@@ -881,7 +881,8 @@
       "pptView": "幻灯片视图",
       "excelView": "表格视图",
       "comingSoon": "即将推出",
-      "pageWidth": "页面宽度"
+      "pageWidth": "页面宽度",
+      "cursorPosition": "光标位置"
     },
     "tabs": {
       "cycleForward": "向前循环",

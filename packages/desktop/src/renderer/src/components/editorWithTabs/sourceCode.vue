@@ -346,6 +346,8 @@ const listenChange = (cm: CodeMirror.Editor) => {
   cm.on('cursorActivity', (instance: CodeMirror.Editor) => {
     saveContent(instance)
     updateSelectionWordCount(instance)
+    const cursor = instance.getCursor()
+    bus.emit('cursor-position', { line: cursor.line + 1, ch: cursor.ch + 1 })
   })
 }
 

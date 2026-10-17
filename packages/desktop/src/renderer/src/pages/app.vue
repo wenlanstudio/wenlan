@@ -60,9 +60,16 @@
         </svg>
       </div>
 
-      <!-- Right-corner dock: view switcher + word count -->
+      <!-- Right-corner dock: view switcher + word count + cursor position -->
       <div class="right-corner-dock">
         <ViewSwitcher />
+        <div
+          v-if="showCursorPosition"
+          class="cursor-position"
+          :title="t('view.cursorPosition')"
+        >
+          {{ cursorPositionText }}
+        </div>
         <WordCount
           :word-count="wordCount"
           :selection-word-count="selectionWordCount"
@@ -100,6 +107,7 @@ import { useCommandCenterStore } from '@/store/commandCenter'
 import { useProjectStore } from '@/store/project'
 import { useAutoUpdatesStore } from '@/store/autoUpdates'
 import { useNotificationStore } from '@/store/notification'
+import { useEditorViewStore } from '@/store/editorView'
 
 const mainStore = useMainStore()
 const editorStore = useEditorStore()
@@ -110,6 +118,7 @@ const listenForMainStore = useListenForMainStore()
 const autoUpdateStore = useAutoUpdatesStore()
 const commandCenterStore = useCommandCenterStore()
 const notificationStore = useNotificationStore()
+const editorViewStore = useEditorViewStore()
 
 const timer = ref<ReturnType<typeof setTimeout> | null>(null)
 
@@ -117,6 +126,7 @@ const { windowActive, platform, init } = storeToRefs(mainStore)
 const { theme, customCss, textDirection, zoom } = storeToRefs(preferencesStore)
 const { projectTree } = storeToRefs(projectStore)
 const { currentFile, selectionWordCount } = storeToRefs(editorStore)
+const { mainView } = storeToRefs(editorViewStore)
 
 const filename = computed(() => currentFile.value?.filename)
 const isSaved = computed(() => currentFile.value?.isSaved)
@@ -135,6 +145,25 @@ const muyaIndexCursor = computed<Record<string, unknown> | undefined>(
 
 const hasCurrentFile = computed<boolean>(() => {
   return currentFile.value?.markdown !== undefined
+})
+
+// Cursor position indicator (line:column) — shown in Word & Dev modes.
+const cursorPosition = ref<{ line: number; ch: number } | null>(null)
+const showCursorPosition = computed(() => {
+  if (!hasCurrentFile.value) return false
+  const mv = mainView.value
+  return mv === 'word' || mv === 'dev'
+})
+const cursorPositionText = computed(() => {
+  const pos = cursorPosition.value
+  return pos ? `${pos.line}:${pos.ch}` : ''
+})
+
+bus.on('cursor-position', (payload: unknown) => {
+  const p = payload as { line: number; ch: number } | undefined
+  if (p && typeof p.line === 'number' && typeof p.ch === 'number') {
+    cursorPosition.value = p
+  }
 })
 
 // The only sidebar switch left: the small button in the content's bottom-left
@@ -327,5 +356,13 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.cursor-position {
+  font-size: 11px;
+  color: var(--editorColor40);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  line-height: 24px;
 }
 </style>

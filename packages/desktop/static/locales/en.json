@@ -881,7 +881,8 @@
       "pptView": "Slide View",
       "excelView": "Sheet View",
       "comingSoon": "Coming soon",
-      "pageWidth": "Page Width"
+      "pageWidth": "Page Width",
+      "cursorPosition": "Cursor Position"
     },
     "tabs": {
       "cycleForward": "Cycle Forward",
