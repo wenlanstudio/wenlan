@@ -876,7 +876,11 @@
       "reloadImages": "Reload Images",
       "textDirection": "Text Direction",
       "actualSize": "Actual Size",
-      "devToggleDeveloperTools": "Toggle Developer Tools"
+      "devToggleDeveloperTools": "Toggle Developer Tools",
+      "readingView": "Reading View",
+      "pptView": "Slide View",
+      "excelView": "Sheet View",
+      "comingSoon": "Coming soon"
     },
     "tabs": {
       "cycleForward": "Cycle Forward",

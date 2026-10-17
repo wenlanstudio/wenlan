@@ -876,7 +876,11 @@
       "devToggleDeveloperTools": "切换开发者工具",
       "devReload": "开发者重载",
       "reloadImages": "重新加载图片",
-      "textDirection": "文本方向"
+      "textDirection": "文本方向",
+      "readingView": "阅读视图",
+      "pptView": "幻灯片视图",
+      "excelView": "表格视图",
+      "comingSoon": "即将推出"
     },
     "tabs": {
       "cycleForward": "向前循环",

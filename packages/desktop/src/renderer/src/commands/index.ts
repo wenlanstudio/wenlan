@@ -584,7 +584,8 @@ const commands: CommandDescriptor[] = [
   {
     id: 'view.source-code-mode',
     execute: async() => {
-      bus.emit('view:toggle-view-entry', 'sourceCode')
+      const { useEditorViewStore } = await import('@/store/editorView')
+      useEditorViewStore().toggleSourceMode()
     }
   },
   {

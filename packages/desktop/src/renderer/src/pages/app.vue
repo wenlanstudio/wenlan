@@ -20,7 +20,6 @@
         :markdown="markdown"
         :cursor="cursor"
         :muya-index-cursor="muyaIndexCursor"
-        :source-code="sourceCode"
         :text-direction="textDirection"
         :platform="platform"
       />
@@ -61,14 +60,14 @@
         </svg>
       </div>
 
-      <!-- PascalCase on purpose: a kebab `<word-count>` tag collides with the
-           local `wordCount` computed, and the linter then reads the import as
-           unused. Sibling components below use kebab-case. -->
-      <WordCount
-        class="word-count-dock"
-        :word-count="wordCount"
-        :selection-word-count="selectionWordCount"
-      />
+      <!-- Right-corner dock: view switcher + word count -->
+      <div class="right-corner-dock">
+        <ViewSwitcher />
+        <WordCount
+          :word-count="wordCount"
+          :selection-word-count="selectionWordCount"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -88,6 +87,7 @@ import ExportSettingDialog from '@/components/exportSettings/index.vue'
 import Rename from '@/components/rename/index.vue'
 import ImportModal from '@/components/import/index.vue'
 import WordCount from '@/components/wordCount/index.vue'
+import ViewSwitcher from '@/components/viewSwitcher/index.vue'
 import bus from '@/bus'
 import { t } from '@/i18n'
 import { DEFAULT_STYLE } from '@/config'
@@ -114,7 +114,7 @@ const notificationStore = useNotificationStore()
 const timer = ref<ReturnType<typeof setTimeout> | null>(null)
 
 const { windowActive, platform, init } = storeToRefs(mainStore)
-const { sourceCode, theme, customCss, textDirection, zoom } = storeToRefs(preferencesStore)
+const { theme, customCss, textDirection, zoom } = storeToRefs(preferencesStore)
 const { projectTree } = storeToRefs(projectStore)
 const { currentFile, selectionWordCount } = storeToRefs(editorStore)
 
@@ -318,11 +318,14 @@ onMounted(async () => {
   }
 }
 
-/* Mirrors the sidebar toggle in the opposite corner. */
-.word-count-dock {
+/* Right-corner dock groups the view switcher and word count. */
+.right-corner-dock {
   position: absolute;
   right: 6px;
   bottom: 6px;
   z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 </style>
