@@ -6,6 +6,8 @@ import exportStyle from '../assets/styles/exportStyle.css?inline';
 import { EXPORT_DOMPURIFY_CONFIG } from '../config';
 import { isHTMLElement, sanitize, unescapeHTML } from '../utils';
 import loadRenderer from '../utils/diagram';
+import { diagramTypeOfLang } from '../utils/diagram/fence';
+import { renderDiagram } from '../utils/diagram/render';
 
 import { getHighlightHtml } from '../utils/marked';
 import { sanitizeExportHtml } from '../utils/sanitizeExportHtml';
@@ -93,64 +95,59 @@ export class MarkdownToHtml {
     }
 
     private async _renderDiagram() {
-        const selector
-            = 'code.language-vega-lite, code.language-plantuml, code.language-flowchart, code.language-sequence';
+        // mermaid is absent on purpose: its marked extension renders it.
+        // drawio is absent too: the export is a static HTML file with no host
+        // to drive the embed editor's postMessage protocol, so a frame here
+        // would come up empty — the fenced source is the honest fallback.
+        const languages = [
+            'vega-lite',
+            'plantuml',
+            'flowchart',
+            'sequence',
+            'graphviz',
+            'wavedrom',
+            'echarts',
+            'chart',
+            'chartjs',
+            'abc',
+            'matplotlib',
+        ];
+        const selector = languages.map(lang => `code.language-${lang}`).join(', ');
         const codes = this._exportContainer!.querySelectorAll(selector);
+        const options = this._muya?.options;
 
         for (const code of codes) {
             const rawCode = unescapeHTML(code.innerHTML);
-            const functionType = (() => {
-                if (/plantuml/.test(code.className))
-                    return 'plantuml';
-                else if (/flowchart/.test(code.className))
-                    return 'flowchart';
-                else if (/sequence/.test(code.className))
-                    return 'sequence';
-                else
-                    return 'vega-lite';
-            })();
-            const render = await loadRenderer(functionType);
+            const lang = /language-([\w-]+)/.exec(code.className)?.[1] ?? '';
+            const functionType = diagramTypeOfLang(lang);
+            if (!functionType)
+                continue;
+
             const preParent = code.parentNode;
             if (!isHTMLElement(preParent))
                 continue;
+
             const diagramContainer = document.createElement('div');
             diagramContainer.classList.add(functionType);
             preParent.replaceWith(diagramContainer);
-            const options = {};
-            if (functionType === 'vega-lite') {
-                Object.assign(options, {
-                    actions: false,
-                    tooltip: false,
-                    renderer: 'svg',
-                    theme: 'latimes', // only render light theme
-                    // Parse the spec to an AST and evaluate expressions with the
-                    // interpreter instead of compiling them via `new Function`,
-                    // which the sandboxed renderer's CSP blocks (`unsafe-eval`
-                    // is not granted) — without this the embed throws and the
-                    // chart renders as `< Invalid Diagram >`.
-                    ast: true,
-                });
-            }
-            else if (functionType === 'sequence') {
-                Object.assign(options, {
-                    theme: this._muya?.options.sequenceTheme ?? 'hand',
-                });
-            }
 
             try {
-                if (functionType === 'plantuml') {
-                    const diagram = render.parse(rawCode, this._muya?.options.plantumlServer);
-                    diagramContainer.innerHTML = '';
-                    diagram.insertImgElement(diagramContainer);
-                }
-                else if (functionType === 'flowchart' || functionType === 'sequence') {
-                    const diagram = render.parse(rawCode);
-                    diagramContainer.innerHTML = '';
-                    diagram.drawSVG(diagramContainer, options);
-                }
-                else if (functionType === 'vega-lite') {
-                    await render(diagramContainer, JSON.parse(rawCode), options);
-                }
+                // One render path for preview and export; the export container
+                // only pins the vega theme to a light one.
+                await renderDiagram({
+                    type: functionType,
+                    code: rawCode,
+                    target: diagramContainer,
+                    mermaidTheme: options?.mermaidTheme ?? 'default',
+                    vegaTheme: 'latimes', // only render light theme
+                    plantumlServer: options?.plantumlServer ?? '',
+                    sequenceTheme: options?.sequenceTheme ?? 'hand',
+                    drawioServer: options?.drawioServer ?? 'https://embed.diagrams.net',
+                    renderExternalDiagram: options?.renderExternalDiagram,
+                    // The result is written out as an HTML file, and a canvas
+                    // copied as markup is an empty rectangle.
+                    vector: true,
+                });
             }
             catch {
                 diagramContainer.innerHTML = '< Invalid Diagram >';

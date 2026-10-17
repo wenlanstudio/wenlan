@@ -1,4 +1,10 @@
-import type { TState } from './state/types';
+import type { TDiagramType, TState } from './state/types';
+
+export type TExternalDiagramRenderer = (
+    type: TDiagramType,
+    code: string,
+    target: HTMLElement,
+) => Promise<void>;
 
 export interface IMuyaOptions {
     fontSize: number;
@@ -24,6 +30,14 @@ export interface IMuyaOptions {
     vegaTheme: string;
     plantumlServer: string;
     sequenceTheme: 'hand' | 'simple';
+    /** Base URL of a drawio webapp the `drawio` diagrams render against. */
+    drawioServer: string;
+    /**
+     * Out-of-process renderers the host application provides (matplotlib needs
+     * a local Python). Absent in standalone muya, where those types then
+     * report that they cannot render.
+     */
+    renderExternalDiagram?: TExternalDiagramRenderer;
     hideQuickInsertHint: boolean;
     hideLinkPopup: boolean;
     autoCheck: boolean;

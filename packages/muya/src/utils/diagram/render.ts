@@ -1,3 +1,7 @@
+import type { TDiagramType } from '../../state/types';
+import type { TExternalDiagramRenderer } from '../../types';
+import { applyBlockStyle, parseDiagramBlock, parseJsonBlock, pixelSize } from './blockSource';
+import { loadDrawioDiagram, renderDrawio } from './drawio';
 import loadRenderer from './index';
 
 // Mermaid's own `run()` derives the id it stamps on the rendered `<svg>` from
@@ -8,7 +12,103 @@ import loadRenderer from './index';
 // `render()` takes one — so concurrent renders can never share it.
 let mermaidRenderCount = 0;
 
+// Live Chart.js instances by preview container, so a re-render disposes the
+// one before it instead of stacking instances on the editor's element.
+const chartRegistry = new WeakMap<HTMLElement, { destroy: () => void }>();
+
 const RAPHAEL_DESC = /^Created with Rapha/;
+
+// Stage sizes for the renderers that need to be told how big to draw, either
+// because their container is still empty (ECharts) or because they only draw
+// into a canvas of their own (Chart.js).
+const ECHARTS_HEIGHT = '300px';
+const CHART_WIDTH = 640;
+const CHART_HEIGHT = 400;
+
+/** The subset of a Chart.js config these blocks set: everything that comes in is handed over. */
+interface IChartConfig {
+    options?: Record<string, unknown>;
+}
+
+// Each renderer arrives from a lazy `import()` whose shape is its own library's,
+// so the helper that drives it declares what it needs from it.
+type TLoadedRenderer = Awaited<ReturnType<typeof loadRenderer>>;
+
+/**
+ * ECharts takes its size from the container, and a preview awaiting its first
+ * render measures zero — without a height the chart draws zero pixels tall and
+ * the block looks like nothing happened.
+ *
+ * Live drawing goes to a canvas: that is where the tooltip, the legend and
+ * every hover highlight live, and it survives a chart with thousands of points
+ * where the svg renderer spends its time building nodes. Anything that leaves
+ * the app — an exported image, a saved HTML file — has no canvas to copy, so
+ * it asks for the svg renderer instead.
+ */
+function renderECharts(
+    render: TLoadedRenderer,
+    target: HTMLElement,
+    code: string,
+    dark: boolean,
+    vector: boolean,
+): void {
+    const { options, value } = parseJsonBlock(code);
+    applyBlockStyle(target, options);
+    if (!options.height && !target.style.height)
+        target.style.height = ECHARTS_HEIGHT;
+
+    // Rendering replaces `target`'s contents, but echarts keeps a registry
+    // entry keyed on the element until disposed — re-initialising without
+    // this logs a warning and leaves the old instance unreachable.
+    render.dispose(target);
+    const chart = render.init(target, dark ? 'dark' : undefined, {
+        renderer: vector ? 'svg' : 'canvas',
+    });
+    chart.setOption(value);
+    if (!vector)
+        centreCanvasStage(target);
+}
+
+/**
+ * Centre the canvas ECharts drew.
+ *
+ * Zrender wraps the canvas in a `<div>` of its own, sized in pixels and
+ * carrying `margin: 0`. An `<svg>` is an inline box, so the container's
+ * `text-align: center` used to place it; a block-level stage ignores that and
+ * sits against the left edge as soon as it is narrower than the column — which
+ * is what a block that asks for a width, or one measured before the editor laid
+ * it out, produces. Auto margins centre it either way, and do nothing once the
+ * stage is already as wide as its container.
+ */
+function centreCanvasStage(target: HTMLElement): void {
+    const stage = target.querySelector('canvas')?.parentElement;
+    if (!(stage instanceof HTMLElement))
+        return;
+
+    stage.style.marginLeft = 'auto';
+    stage.style.marginRight = 'auto';
+}
+
+function renderChartJs(render: TLoadedRenderer, target: HTMLElement, code: string): void {
+    const { options, value } = parseJsonBlock<IChartConfig>(code);
+    applyBlockStyle(target, options);
+    target.innerHTML = '';
+    const canvas = document.createElement('canvas');
+    canvas.width = pixelSize(options.width) ?? CHART_WIDTH;
+    canvas.height = pixelSize(options.height) ?? CHART_HEIGHT;
+    target.appendChild(canvas);
+
+    // Export re-renders into an offscreen host, so the chart must draw at
+    // its own declared size instead of tracking the container.
+    const Chart = render;
+    const config = { ...value, options: { animation: false, responsive: false, ...value.options } };
+    // Chart.js keeps its own canvas registry; destroying the previous
+    // instance stops a re-render from doubling listeners.
+    const previous = chartRegistry.get(target);
+    previous?.destroy();
+    const chart = new Chart(canvas, config);
+    chartRegistry.set(target, chart);
+}
 
 // Give a fixed-size `<svg>` (one with `width`/`height` px attributes but no
 // `viewBox`) a viewBox derived from those dimensions, so `max-width: 100%`
@@ -51,7 +151,9 @@ function accessibleName(media: Element, fallback: string): string {
 }
 
 function applyFinalizations(target: HTMLElement, fallback: string): boolean {
-    const media = target.querySelector('svg, img');
+    // A canvas counts: ECharts and Chart.js draw into one, and there is no
+    // `<svg>` for a screen reader to find there.
+    const media = target.querySelector('svg, img, canvas');
     if (!media)
         return false;
     if (media.tagName.toLowerCase() === 'svg' && !sizeSvg(media))
@@ -111,6 +213,8 @@ export function withMermaidInit(code: string, config: Record<string, unknown>): 
 }
 
 export interface IRenderOptions {
+    // `string` rather than TDiagramType: hosts pass the type through from
+    // their own loosely typed diagram sources.
     type: string;
     code: string;
     target: HTMLElement;
@@ -118,6 +222,20 @@ export interface IRenderOptions {
     mermaidTheme: string;
     plantumlServer: string;
     sequenceTheme: 'hand' | 'simple';
+    /** Base URL of the diagrams.net embed the `drawio` type renders against. */
+    drawioServer: string;
+    /**
+     * Host-provided renderer for diagram types that need a facility outside
+     * the browser sandbox (matplotlib runs a local Python). Optional: muya
+     * standalone has no such facility and reports that instead.
+     */
+    renderExternalDiagram?: TExternalDiagramRenderer;
+    /**
+     * Draw as vector rather than to a canvas, for output that leaves the
+     * preview: an exported image, or an HTML file that has to carry the
+     * drawing as markup. Only ECharts draws both ways today.
+     */
+    vector?: boolean;
 }
 
 export interface IExportRenderOptions extends IRenderOptions {
@@ -138,7 +256,7 @@ export async function renderDiagramForExport({
         ? withMermaidInit(options.code, { htmlLabels: false })
         : options.code;
 
-    await renderDiagram({ ...options, code });
+    await renderDiagram({ ...options, code, vector: true });
 }
 
 export async function renderDiagram({
@@ -149,8 +267,11 @@ export async function renderDiagram({
     mermaidTheme,
     plantumlServer,
     sequenceTheme,
+    drawioServer,
+    renderExternalDiagram,
+    vector,
 }: IRenderOptions) {
-    const render = await loadRenderer(type);
+    const render = await loadRenderer(type as TDiagramType);
     const options = {};
     if (type === 'vega-lite') {
         Object.assign(options, {
@@ -192,5 +313,47 @@ export async function renderDiagram({
         );
         target.innerHTML = svg;
         bindFunctions?.(target);
+    }
+    else if (type === 'graphviz') {
+        // The module exports `instance()`, which resolves to a compiler bound
+        // to its WASM module; repeated calls reuse the same instance.
+        const { instance } = render;
+        const viz = await instance();
+        target.innerHTML = '';
+        target.appendChild(viz.renderSVGElement(code));
+    }
+    else if (type === 'wavedrom') {
+        const { options, value } = parseJsonBlock(code);
+        applyBlockStyle(target, options);
+        target.innerHTML = '';
+        // `renderAny` returns the drawing as ONML; stringify paints it into
+        // the block. `renderWaveForm` would go through a document-wide id
+        // lookup, which two diagrams on one page would race.
+        const onml = render.renderAny(0, value, render.waveSkin);
+        target.innerHTML = render.onml.stringify(onml);
+    }
+    else if (type === 'echarts') {
+        renderECharts(render, target, code, mermaidTheme === 'dark', !!vector);
+    }
+    else if (type === 'chart') {
+        renderChartJs(render, target, code);
+    }
+    else if (type === 'abc') {
+        const { options, body } = parseDiagramBlock(code);
+        applyBlockStyle(target, options);
+        target.innerHTML = '';
+        render.renderAbc(target, body, { responsive: 'resize' });
+    }
+    else if (type === 'drawio') {
+        const xml = await loadDrawioDiagram(code);
+        await renderDrawio(target, xml, drawioServer);
+    }
+    else if (type === 'matplotlib') {
+        if (!renderExternalDiagram) {
+            throw new Error(
+                'Matplotlib diagrams need a local Python — enable them in the preferences.',
+            );
+        }
+        await renderExternalDiagram(type, code, target);
     }
 }

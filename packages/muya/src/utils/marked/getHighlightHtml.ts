@@ -2,6 +2,7 @@ import type { ILexOption } from './types';
 import { Marked } from 'marked';
 import { markedHighlight } from 'marked-highlight';
 import Prism from 'prismjs';
+import { diagramLangs } from '../diagram/fence';
 import cjkEmStrongExtension from './extensions/cjkEmStrong';
 import emojiExtension from './extensions/emoji';
 import footnoteExtension from './extensions/footnote';
@@ -14,13 +15,7 @@ import fm, { frontMatterRender } from './frontMatter';
 import { DEFAULT_OPTIONS } from './options';
 import walkTokens from './walkTokens';
 
-const DIAGRAM_TYPE = [
-    'mermaid',
-    'plantuml',
-    'vega-lite',
-    'flowchart',
-    'sequence',
-];
+const DIAGRAM_TYPE = diagramLangs();
 
 function highlight(code: string, lang: string) {
     // Language may be undefined (GH#591)

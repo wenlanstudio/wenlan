@@ -257,7 +257,7 @@ describe('front matter focus markers stay off', () => {
         expect(pre.classList.contains('mu-frontmatter')).toBe(true);
     });
 
-    it('emits no fence attributes for any front matter type', async() => {
+    it('emits no fence attributes for any front matter type', async () => {
         for (const type of ['-', '+', ';', '{']) {
             const pre = await insertFrontMatter(type);
             expect(pre.hasAttribute('frontMatterStart')).toBe(false);

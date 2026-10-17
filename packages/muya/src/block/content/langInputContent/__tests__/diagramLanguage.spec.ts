@@ -80,6 +80,8 @@ describe('leaving the language input with a diagram language', () => {
         expect(muya.getState()[0]).toMatchObject({ name: 'diagram', meta: { type: 'vega-lite', lang: 'json' } });
     });
 
+    // The case really renders a mermaid diagram, which drags the mermaid
+    // module in — near the 5s default when the suite runs in parallel.
     it('keys off the first word of the info string, like loading the fence', async () => {
         const muya = bootMuya('```\ngraph TD\n```\n');
         typeLanguage(muya, 'mermaid title=x');
@@ -88,7 +90,7 @@ describe('leaving the language input with a diagram language', () => {
         await settle();
 
         expect(muya.getState()[0]).toMatchObject({ name: 'diagram', meta: { type: 'mermaid' } });
-    });
+    }, 15000);
 
     it('moves the caret into the diagram code when it went into the code block', async () => {
         const muya = bootMuya('```\ngraph TD\n```\n');

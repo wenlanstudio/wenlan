@@ -19,6 +19,27 @@ declare module 'prismjs/dependencies';
 declare module '@marktext/file-icons';
 declare module 'snapsvg-cjs';
 
+declare module 'wavedrom' {
+    type TOnml = unknown;
+
+    export function renderAny(
+        index: number,
+        source: unknown,
+        waveSkin: unknown,
+        notFirstSignal?: boolean,
+    ): TOnml;
+    export const waveSkin: unknown;
+    export const onml: {
+        stringify: (ml: TOnml, indent?: number) => string;
+    };
+    export function renderWaveForm(
+        index: number,
+        source: unknown,
+        outputId: string,
+        notFirstSignal?: boolean,
+    ): void;
+}
+
 declare module 'flowchart.js' {
     interface IFlowChartDrawOptions {
         [key: string]: unknown;

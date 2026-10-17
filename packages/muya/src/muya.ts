@@ -91,6 +91,13 @@ const PARAGRAPH_LABEL_MAP: Record<string, string> = {
     'vega-lite': 'diagram vega-lite',
     'flowchart': 'diagram flowchart',
     'sequence': 'diagram sequence',
+    'graphviz': 'diagram graphviz',
+    'wavedrom': 'diagram wavedrom',
+    'echarts': 'diagram echarts',
+    'chart': 'diagram chart',
+    'abc': 'diagram abc',
+    'drawio': 'diagram drawio',
+    'matplotlib': 'diagram matplotlib',
 };
 
 // The outmost-block labels that wrap a cross-block selection into a list.

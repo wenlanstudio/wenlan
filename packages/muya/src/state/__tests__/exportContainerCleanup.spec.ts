@@ -27,11 +27,15 @@ describe('export container cleanup', () => {
         expect(document.querySelectorAll('.mu-render-container')).toHaveLength(0);
     });
 
-    it('removes the container when a diagram renderer fails to load', async () => {
+    it('renders the invalid-diagram placeholder when a diagram renderer fails to load', async () => {
+        // Since the diagram render went through one shared path with the live
+        // preview, a broken renderer is a per-diagram error (the placeholder
+        // the preview shows) rather than a failure of the whole export.
         loadRenderer.mockRejectedValue(new Error('Failed to fetch dynamically imported module'));
 
-        await expect(new MarkdownToHtml(PLANTUML_DOC).renderHtml()).rejects.toThrow();
+        const html = await new MarkdownToHtml(PLANTUML_DOC).renderHtml();
 
+        expect(html).toContain('Invalid Diagram');
         expect(document.querySelectorAll('.mu-render-container')).toHaveLength(0);
     });
 });

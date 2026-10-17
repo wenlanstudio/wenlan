@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28">
+  <path
+    d="M5 4v20"
+    fill="none"
+    stroke="#8a8a8a"
+    stroke-width="1.8"
+    stroke-linecap="round"
+  />
+  <path
+    d="M5 24h20"
+    fill="none"
+    stroke="#8a8a8a"
+    stroke-width="1.8"
+    stroke-linecap="round"
+  />
+  <path
+    d="M7 20c4 0 5-12 8.5-12S19 17 23 17"
+    fill="none"
+    stroke="#8a8a8a"
+    stroke-width="1.8"
+    stroke-linecap="round"
+  />
+</svg>

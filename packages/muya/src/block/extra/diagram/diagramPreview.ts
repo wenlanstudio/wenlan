@@ -1,5 +1,5 @@
 import type { Muya } from '../../../muya';
-import type { IDiagramState, TState } from '../../../state/types';
+import type { IDiagramState, TDiagramType, TState } from '../../../state/types';
 import { fromEvent } from 'rxjs';
 import { CLASS_NAMES, PREVIEW_DOMPURIFY_CONFIG } from '../../../config';
 import { sanitize } from '../../../utils';
@@ -11,7 +11,7 @@ const debug = logger('diagramPreview:');
 
 class DiagramPreview extends Parent {
     private _code: string;
-    private _type: string;
+    private _type: TDiagramType;
     private _cancelFinalize: (() => void) | null = null;
     static override blockName = 'diagram-preview';
 
@@ -76,7 +76,14 @@ class DiagramPreview extends Parent {
 
         if (code) {
             this.domNode!.innerHTML = i18n.t('Loading...');
-            const { mermaidTheme, vegaTheme, plantumlServer, sequenceTheme } = this.muya.options;
+            const {
+                mermaidTheme,
+                vegaTheme,
+                plantumlServer,
+                sequenceTheme,
+                drawioServer,
+                renderExternalDiagram,
+            } = this.muya.options;
             const { _type: type } = this;
 
             try {
@@ -88,6 +95,8 @@ class DiagramPreview extends Parent {
                     vegaTheme,
                     plantumlServer,
                     sequenceTheme,
+                    drawioServer,
+                    renderExternalDiagram,
                 });
                 this._cancelFinalize = finalizeRenderedDiagram(this.domNode!, i18n.t('Diagram'));
             }

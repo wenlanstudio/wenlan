@@ -2,12 +2,17 @@ import type Parent from '../../block/base/parent';
 import type AtxHeading from '../../block/commonMark/atxHeading';
 import type SetextHeading from '../../block/commonMark/setextHeading';
 import type DiagramBlock from '../../block/extra/diagram';
+import abcIcon from '../../assets/icons/abc/2.svg';
 import bulletListIcon from '../../assets/icons/bullet_list/2.png';
 import vegaIcon from '../../assets/icons/chart/2.png';
+import chartJsIcon from '../../assets/icons/chart/2.svg';
 import codeIcon from '../../assets/icons/code/2.png';
+import drawioIcon from '../../assets/icons/drawio/2.svg';
+import echartsIcon from '../../assets/icons/echarts/2.svg';
 import flowchartIcon from '../../assets/icons/flowchart/2.png';
 import footnoteIcon from '../../assets/icons/footnote/2.png';
 import frontMatterIcon from '../../assets/icons/front_matter/2.png';
+import graphvizIcon from '../../assets/icons/graphviz/2.svg';
 import header1Icon from '../../assets/icons/heading_1/2.png';
 import header2Icon from '../../assets/icons/heading_2/2.png';
 import header3Icon from '../../assets/icons/heading_3/2.png';
@@ -17,6 +22,7 @@ import header6Icon from '../../assets/icons/heading_6/2.png';
 import thematicBreakIcon from '../../assets/icons/horizontal_line/2.png';
 import htmlIcon from '../../assets/icons/html/2.png';
 import mathBlockIcon from '../../assets/icons/math/2.png';
+import matplotlibIcon from '../../assets/icons/matplotlib/2.svg';
 import mermaidIcon from '../../assets/icons/mermaid/2.png';
 import tableIcon from '../../assets/icons/new_table/2.png';
 import orderListIcon from '../../assets/icons/order_list/2.png';
@@ -25,6 +31,7 @@ import plantumlIcon from '../../assets/icons/plantuml/2.png';
 import quoteIcon from '../../assets/icons/quote_block/2.png';
 import sequenceIcon from '../../assets/icons/sequence/2.png';
 import taskListIcon from '../../assets/icons/todolist/2.png';
+import wavedromIcon from '../../assets/icons/wavedrom/2.svg';
 
 const HEADING_ICONS = [
     header1Icon,
@@ -41,6 +48,13 @@ const DIAGRAM_ICONS = {
     'vega-lite': vegaIcon,
     'flowchart': flowchartIcon,
     'sequence': sequenceIcon,
+    'graphviz': graphvizIcon,
+    'wavedrom': wavedromIcon,
+    'echarts': echartsIcon,
+    'chart': chartJsIcon,
+    'abc': abcIcon,
+    'drawio': drawioIcon,
+    'matplotlib': matplotlibIcon,
 };
 
 export function getIcon(block: Parent) {

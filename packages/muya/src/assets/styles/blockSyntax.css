@@ -763,6 +763,21 @@ figure.mu-diagram-block .mu-diagram-preview > svg {
     height: auto;
 }
 
+/* ECharts and Chart.js draw into a canvas, and ECharts sizes its bitmap to the
+   device pixel ratio — the CSS box is what has to stay inside the column. */
+figure.mu-diagram-block .mu-diagram-preview canvas {
+    max-width: 100%;
+}
+
+/* drawio renders inside the real embed editor hosted in an iframe; it needs a
+   stage of its own, not the editor's typography. */
+figure.mu-diagram-block .mu-diagram-preview iframe.mu-diagram-drawio {
+    width: 100%;
+    min-height: 320px;
+    border: 0;
+    border-radius: 0.3em;
+}
+
 figure.mu-html-block .mu-html-preview > pre {
     padding: 0 1rem;
 

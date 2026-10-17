@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from 'vitest';
-import { finalizeRenderedDiagram, withMermaidInit } from '../render';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { finalizeRenderedDiagram, renderDiagram, withMermaidInit } from '../render';
 
 const hosts: HTMLElement[] = [];
 
@@ -160,6 +160,62 @@ describe('finalizeRenderedDiagram — accessible name', () => {
         finalizeRenderedDiagram(target, FALLBACK);
 
         expect(target.getAttribute('aria-label')).toBe(FALLBACK);
+    });
+});
+
+describe('renderDiagram — types with no bundled renderer', () => {
+    // Both of these are drawn outside the browser sandbox, so they must not go
+    // through the lazy renderer loader: it has no library to give them and
+    // used to reject with "Unknown diagram name" before their branch ran.
+    const draw = (
+        type: string,
+        code: string,
+        renderExternalDiagram?: (...args: never[]) => Promise<void>,
+    ): Promise<void> => renderDiagram({
+        type,
+        code,
+        target: makeTarget(),
+        vegaTheme: 'latimes',
+        mermaidTheme: 'default',
+        plantumlServer: '',
+        sequenceTheme: 'simple',
+        drawioServer: 'https://embed.diagrams.net',
+        renderExternalDiagram,
+    } as never);
+
+    it('asks for a Python instead of reporting an unknown renderer', async () => {
+        await expect(draw('matplotlib', 'plt.plot([1, 2])')).rejects.toThrow(/Python/);
+    });
+
+    it('hands a matplotlib block to the host renderer', async () => {
+        const target = makeTarget();
+        await renderDiagram({
+            type: 'matplotlib',
+            code: 'plt.plot([1, 2])',
+            target,
+            vegaTheme: '',
+            mermaidTheme: '',
+            plantumlServer: '',
+            sequenceTheme: 'simple',
+            drawioServer: '',
+            renderExternalDiagram: async (_type, _code, host) => {
+                host.innerHTML = '<img src="data:image/svg+xml;base64,AA">';
+            },
+        });
+
+        expect(target.querySelector('img')).not.toBeNull();
+    });
+
+    it('reports a DrawIO source that cannot be fetched', async () => {
+        const fetchMock = vi.fn().mockRejectedValue(new Error('offline'));
+        vi.stubGlobal('fetch', fetchMock);
+
+        await expect(draw('drawio', 'graphConfig = { source: "https://example.invalid/a.drawio" }'))
+            .rejects
+            .toThrow(/source at .* could not be loaded/);
+        expect(fetchMock).toHaveBeenCalled();
+
+        vi.unstubAllGlobals();
     });
 });
 

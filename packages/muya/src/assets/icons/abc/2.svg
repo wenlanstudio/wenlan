@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28">
+  <path
+    d="M11 22V6l9-2v14"
+    fill="none"
+    stroke="#8a8a8a"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <ellipse
+    cx="8.2"
+    cy="22"
+    rx="2.9"
+    ry="2.4"
+    fill="#8a8a8a"
+  />
+  <ellipse
+    cx="17.2"
+    cy="18"
+    rx="2.9"
+    ry="2.4"
+    fill="#8a8a8a"
+  />
+</svg>

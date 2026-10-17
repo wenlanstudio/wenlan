@@ -1,9 +1,21 @@
+import type { TDiagramType } from '../../state/types';
+
 const rendererCache = new Map();
+
 /**
+ * Load a diagram renderer lazily, so each library's bundle is only fetched
+ * when a diagram of that kind is actually on screen.
  *
- * @param {string} name the renderer name: plantuml, mermaid, vega-lite, flowchart, sequence
+ * What comes back depends on the library's own entry point; render.ts knows
+ * how to drive each one.
+ *
+ * Resolves to null for a type that draws without a bundled library, so the
+ * caller can ask for any diagram type and use what comes back where it has one.
+ *
+ * @param {string} name the renderer name: plantuml, mermaid, vega-lite,
+ * flowchart, sequence, graphviz, wavedrom, echarts, chart, abc
  */
-async function loadRenderer(name: string) {
+async function loadRenderer(name: TDiagramType) {
     if (!rendererCache.has(name)) {
         let m;
         switch (name) {
@@ -30,6 +42,40 @@ async function loadRenderer(name: string) {
             case 'sequence':
                 m = await import('./sequence');
                 rendererCache.set(name, m.default);
+                break;
+
+            case 'graphviz':
+                m = await import('@viz-js/viz');
+                rendererCache.set(name, m);
+                break;
+
+            case 'wavedrom':
+                m = await import('wavedrom');
+                rendererCache.set(name, m.default ?? m);
+                break;
+
+            case 'echarts':
+                m = await import('echarts');
+                rendererCache.set(name, m);
+                break;
+
+            case 'chart':
+                m = await import('chart.js/auto');
+                rendererCache.set(name, m.default ?? m);
+                break;
+
+            case 'abc':
+                m = await import('abcjs');
+                rendererCache.set(name, m.default ?? m);
+                break;
+
+            // drawio renders in a remote embed and matplotlib runs the
+            // document's Python in the host process: neither has a library to
+            // import. Claiming them here is what keeps `renderDiagram` from
+            // rejecting both before their branch is reached.
+            case 'drawio':
+            case 'matplotlib':
+                rendererCache.set(name, null);
                 break;
 
             default:

@@ -171,9 +171,23 @@ export interface IFrontmatterState {
     text: string;
 }
 
+export type TDiagramType
+    = | 'mermaid'
+        | 'plantuml'
+        | 'vega-lite'
+        | 'flowchart'
+        | 'sequence'
+        | 'graphviz'
+        | 'wavedrom'
+        | 'echarts'
+        | 'chart'
+        | 'abc'
+        | 'drawio'
+        | 'matplotlib';
+
 export interface IDiagramMeta {
-    lang: string; // 'yaml' | 'json';
-    type: 'mermaid' | 'plantuml' | 'vega-lite' | 'flowchart' | 'sequence';
+    lang: string; // 'yaml' | 'json' | 'dot' | ...
+    type: TDiagramType;
 }
 
 export interface IDiagramState {

@@ -5,6 +5,7 @@ import emptyStates from '../config/emptyStates';
 import { getCursorReference } from '../selection';
 import { isParagraphState } from '../state/types';
 import { deepClone } from '../utils';
+import { createDiagramState, diagramTypeOfLang } from '../utils/diagram/fence';
 import logger from '../utils/logger';
 import { ScrollPage } from './scrollPage';
 
@@ -161,19 +162,15 @@ function buildListBlock(label: 'bullet-list' | 'task-list', muya: Muya, text: st
 }
 
 function buildDiagramBlock(label: string, muya: Muya) {
-    const diagramState = deepClone(emptyStates.diagram);
-
     const [name, type] = label.split(' ');
-    if (
-        type === 'mermaid'
-        || type === 'plantuml'
-        || type === 'vega-lite'
-        || type === 'flowchart'
-        || type === 'sequence'
-    ) {
-        diagramState.meta.type = type;
-        diagramState.meta.lang = type === 'vega-lite' ? 'json' : 'yaml';
-    }
+    const diagramType = type ? diagramTypeOfLang(type) : null;
+
+    // Unknown types fall back to the empty default, which serializes as a
+    // plain mermaid block — the same fallback the menu's `canInsertLabel`
+    // already prevents from being offered.
+    const diagramState = diagramType
+        ? createDiagramState(diagramType)
+        : deepClone(emptyStates.diagram);
 
     return ScrollPage.loadBlock(name).create(muya, diagramState);
 }

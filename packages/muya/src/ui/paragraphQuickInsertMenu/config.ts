@@ -1,8 +1,13 @@
+import abcIcon from '../../assets/icons/abc/2.svg';
 import bulletListIcon from '../../assets/icons/bullet_list/2.png';
 import vegaIcon from '../../assets/icons/chart/2.png';
+import chartJsIcon from '../../assets/icons/chart/2.svg';
 import codeIcon from '../../assets/icons/code/2.png';
+import drawioIcon from '../../assets/icons/drawio/2.svg';
+import echartsIcon from '../../assets/icons/echarts/2.svg';
 import flowchartIcon from '../../assets/icons/flowchart/2.png';
 import frontMatterIcon from '../../assets/icons/front_matter/2.png';
+import graphvizIcon from '../../assets/icons/graphviz/2.svg';
 import header1Icon from '../../assets/icons/heading_1/2.png';
 import header2Icon from '../../assets/icons/heading_2/2.png';
 import header3Icon from '../../assets/icons/heading_3/2.png';
@@ -12,15 +17,17 @@ import header6Icon from '../../assets/icons/heading_6/2.png';
 import hrIcon from '../../assets/icons/horizontal_line/2.png';
 import htmlIcon from '../../assets/icons/html/2.png';
 import mathBlockIcon from '../../assets/icons/math/2.png';
+import matplotlibIcon from '../../assets/icons/matplotlib/2.svg';
 import mermaidIcon from '../../assets/icons/mermaid/2.png';
+
 import newTableIcon from '../../assets/icons/new_table/2.png';
 import orderListIcon from '../../assets/icons/order_list/2.png';
 import paragraphIcon from '../../assets/icons/paragraph/2.png';
 import plantumlIcon from '../../assets/icons/plantuml/2.png';
 import quoteIcon from '../../assets/icons/quote_block/2.png';
 import sequenceIcon from '../../assets/icons/sequence/2.png';
-
 import todoListIcon from '../../assets/icons/todolist/2.png';
+import wavedromIcon from '../../assets/icons/wavedrom/2.svg';
 import { isOsx } from '../../config';
 import { isKeyboardEvent } from '../../utils';
 
@@ -330,6 +337,48 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                 subTitle: 'By js-sequence-diagrams',
                 label: 'diagram sequence',
                 icon: sequenceIcon,
+            },
+            {
+                title: 'GraphViz',
+                subTitle: 'By @viz-js/viz (dot)',
+                label: 'diagram graphviz',
+                icon: graphvizIcon,
+            },
+            {
+                title: 'WaveDrom',
+                subTitle: 'By wavedrom',
+                label: 'diagram wavedrom',
+                icon: wavedromIcon,
+            },
+            {
+                title: 'ECharts',
+                subTitle: 'By echarts',
+                label: 'diagram echarts',
+                icon: echartsIcon,
+            },
+            {
+                title: 'Chart.js',
+                subTitle: 'By chart.js',
+                label: 'diagram chart',
+                icon: chartJsIcon,
+            },
+            {
+                title: 'ABC Notation',
+                subTitle: 'By abcjs',
+                label: 'diagram abc',
+                icon: abcIcon,
+            },
+            {
+                title: 'DrawIO',
+                subTitle: 'By embed.diagrams.net',
+                label: 'diagram drawio',
+                icon: drawioIcon,
+            },
+            {
+                title: 'Matplotlib',
+                subTitle: 'By local Python',
+                label: 'diagram matplotlib',
+                icon: matplotlibIcon,
             },
         ],
     },
