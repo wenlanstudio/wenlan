@@ -11,7 +11,7 @@ import { onInternalChannel } from '../utils/internalIpc'
 import { viewLayoutChanged } from '../menu/actions/view'
 import configureMenu, { configSettingMenu } from '../menu/templates'
 import {
-  collectMenuActions,
+  annotateMenuTemplate,
   executeMenuRole,
   serializeMenu,
   type MenuItemActionMap
@@ -484,8 +484,7 @@ class AppMenu {
 
     const menuTemplate = configureMenu(this._keybindings, this._preferences, recentUsedDocuments)
     const actions: MenuItemActionMap = new Map()
-    collectMenuActions(menuTemplate, actions)
-    const menu = Menu.buildFromTemplate(menuTemplate)
+    const menu = Menu.buildFromTemplate(annotateMenuTemplate(menuTemplate, actions))
     return { menu, type: MenuType.EDITOR, actions }
   }
 

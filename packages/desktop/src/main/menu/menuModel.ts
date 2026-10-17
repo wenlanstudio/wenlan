@@ -27,25 +27,31 @@ export type MenuItemActionMap = Map<string, MenuItemAction>
  * Give every addressable menu entry a stable id and remember how to run it.
  *
  * The template is rebuilt per window (and again whenever the menu is updated),
- * so marking it up here keeps the individual template files free of ids that
+ * so marking ids up here keeps the individual template files free of ids that
  * only the menu bar needs. Entries that already declare an id keep it, which
  * matters because main-process code looks some of them up by name.
+ *
+ * The input template is never mutated: a shallow copy of each entry carries
+ * the id, so frozen or shared template objects (and templates from tests)
+ * pass through unharmed.
  */
-export function collectMenuActions(
-  template: MenuItemConstructorOptions[],
+export function annotateMenuTemplate(
+  template: readonly MenuItemConstructorOptions[],
   actions: MenuItemActionMap
-): void {
+): MenuItemConstructorOptions[] {
   let anonymous = 0
 
-  const walk = (items: MenuItemConstructorOptions[], path: string): void => {
-    for (const item of items) {
-      if (!item) continue
+  const walk = (
+    items: readonly MenuItemConstructorOptions[],
+    path: string
+  ): MenuItemConstructorOptions[] =>
+    items.map((item) => {
+      if (!item || typeof item !== 'object') return item
 
       // Separators are drawn by the renderer from `type`; they need no id.
-      if (item.type === 'separator') continue
+      if (item.type === 'separator') return item
 
       const id = typeof item.id === 'string' && item.id ? item.id : `${path}/${anonymous++}`
-      item.id = id
 
       const click = item.click
       if (click || item.role) {
@@ -63,13 +69,18 @@ export function collectMenuActions(
         })
       }
 
-      if (Array.isArray(item.submenu)) {
-        walk(item.submenu as MenuItemConstructorOptions[], id)
+      if (!Array.isArray(item.submenu)) {
+        return { ...item, id }
       }
-    }
-  }
 
-  walk(template, 'menu')
+      return {
+        ...item,
+        id,
+        submenu: walk(item.submenu as readonly MenuItemConstructorOptions[], id)
+      }
+    })
+
+  return walk(template, 'menu')
 }
 
 /**
