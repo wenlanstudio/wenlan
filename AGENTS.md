@@ -253,6 +253,7 @@ See `packages/website/content/docs/dev/IPC.md` for conventions and examples.
 - `INTERFACE.md` — Muya and renderer public interfaces
 - `IPC.md` — full IPC channel catalog and `mt::` conventions
 - `LINUX_DEV.md` — Linux-specific dev environment setup
+- `WINDOWS_DEV.md` — Windows-specific dev environment setup (VS 2022 toolchain, mirrors, local packaging)
 - `PERFORMANCE.md` — perf measurement workflow (pairs with `pnpm run perf:inspect`)
 - `RELEASE.md` / `RELEASE_HOTFIX.md` — release process
 

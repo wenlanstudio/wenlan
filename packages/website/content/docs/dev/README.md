@@ -20,6 +20,8 @@
 - You will need [Build Tools for Visual Studio 2022](https://visualstudio.microsoft.com/downloads/) (Scroll all the way to the bottom)
   - Additionally, you need **spectre-mitigated MSVC**, go to "Individual Components" and select "MSVC ... - VS2022 C++ Spectre-Mitigated Libs"
   - Many native libraries do not support ClangCL well yet, hence we force it to use MSVC in our `.npmrc` (pnpm respects this file)
+  - The Visual Studio **2022** release is required: the node-gyp bundled with pnpm only knows 2019 and 2022 and rejects newer installations
+  - For the full walkthrough (Node/pnpm, mirrors, packaging), see [Windows Specific Pre-reqs](WINDOWS_DEV.md)
 
 ### 1.4 Clone and Install
 
