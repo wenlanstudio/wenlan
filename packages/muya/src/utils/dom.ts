@@ -77,6 +77,54 @@ export function createDomNode(tagName: string, { classList = [], attributes = {}
 }
 
 /**
+ * Whether the reader is holding a text selection that starts inside `node`.
+ *
+ * Rendered previews (diagram, math, html) are `contenteditable=false` islands:
+ * the browser will happily let the reader select their text, but the document
+ * model has no words there to back a selection of its own. Anything that
+ * reacts to a click by moving the caret therefore has to check this first, or
+ * it drops the only selection the reader can make of a long error message.
+ */
+export function hasTextSelectionIn(node: Node): boolean {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0)
+        return false;
+
+    const { anchorNode } = selection;
+
+    return !!anchorNode && node.contains(anchorNode);
+}
+
+/**
+ * Whether the current selection sits in a `contenteditable=false` island
+ * under `root` — a region the document model cannot describe.
+ *
+ * Copy has to answer this: muya fills the clipboard from its own blocks, and
+ * for an island there are none, so it would write nothing at all.
+ */
+export function isSelectionInReadOnlyIsland(root: HTMLElement): boolean {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0)
+        return false;
+
+    const { anchorNode } = selection;
+    if (!anchorNode || !root.contains(anchorNode))
+        return false;
+
+    const element = anchorNode.nodeType === Node.ELEMENT_NODE
+        ? anchorNode as HTMLElement
+        : anchorNode.parentElement;
+
+    // Walk to the island itself rather than asking whether any ancestor is
+    // non-editable: the editor root is editable, and an inline
+    // `contenteditable=false` image inside an editable paragraph is not an
+    // island the reader is selecting text out of.
+    const island = element?.closest<HTMLElement>('[contenteditable="false"]') ?? null;
+
+    return !!island && root.contains(island);
+}
+
+/**
  * [description `add` or `remove` className of element
  */
 export function operateClassName(element: HTMLElement, ctrl: 'add' | 'remove', className: string) {

@@ -155,6 +155,39 @@ describe('diagramPreview — clickHandler routing', () => {
         expect(event.stopPropagation).toHaveBeenCalledTimes(1);
     });
 
+    it('leaves a selection of the error text alone instead of moving the caret', async () => {
+        loadRendererMock.mockRejectedValue(new Error('Unknown diagram name matplotlib'));
+        const { preview } = makePreview('graph TD; A-->B');
+        await preview.update('graph TD; A-->B');
+
+        const detail = preview.domNode!.querySelector('.mu-diagram-error-detail')!;
+        const range = document.createRange();
+        range.selectNodeContents(detail);
+        const selection = window.getSelection()!;
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        const setCursor = vi.fn();
+        preview.parent = {
+            firstContentInDescendant: vi.fn(() => ({ setCursor })),
+        } as unknown as DiagramPreview['parent'];
+
+        const event = {
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+        } as unknown as Event;
+
+        preview.clickHandler(event);
+
+        // The drag that made this selection ends in a click. Routing it to the
+        // caret would drop the selection, and with it the only way to copy a
+        // renderer error out of the preview.
+        expect(setCursor).not.toHaveBeenCalled();
+        expect(event.preventDefault).not.toHaveBeenCalled();
+        expect(selection.isCollapsed).toBe(false);
+        expect(selection.toString()).toContain('Unknown diagram name matplotlib');
+    });
+
     it('does not throw when parent has no content (firstContentInDescendant returns null)', () => {
         const { preview } = makePreview('');
         const parent = {

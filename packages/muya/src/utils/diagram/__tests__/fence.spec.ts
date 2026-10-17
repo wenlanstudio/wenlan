@@ -1,6 +1,11 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
-import { createDiagramState, diagramLangs, diagramTypeOfLang } from '../fence';
+import {
+    createDiagramState,
+    diagramGrammarOfType,
+    diagramLangs,
+    diagramTypeOfLang,
+} from '../fence';
 
 // Every diagram type is reachable through the fence language a user types, so
 // adding a renderer without wiring its language in (or vice versa) must fail
@@ -39,15 +44,22 @@ describe('diagram fence language → type', () => {
         }
     });
 
-    it('marks the JSON-sourced types as json, the rest as yaml', () => {
+    // `meta.lang` is the grammar the source is highlighted with, not the fence
+    // language: a matplotlib block holds Python, and a drawio block a JSON
+    // config, so neither reads as yaml despite being "not JSON-sourced" by the
+    // old rule.
+    it('highlights each type with the grammar its source is written in', () => {
         expect(createDiagramState('vega-lite').meta.lang).toBe('json');
         expect(createDiagramState('echarts').meta.lang).toBe('json');
         expect(createDiagramState('chart').meta.lang).toBe('json');
         expect(createDiagramState('wavedrom').meta.lang).toBe('json');
+        expect(createDiagramState('drawio').meta.lang).toBe('json');
+        expect(createDiagramState('matplotlib').meta.lang).toBe('python');
         expect(createDiagramState('graphviz').meta.lang).toBe('yaml');
         expect(createDiagramState('abc').meta.lang).toBe('yaml');
-        expect(createDiagramState('drawio').meta.lang).toBe('yaml');
-        expect(createDiagramState('matplotlib').meta.lang).toBe('yaml');
+
+        expect(diagramGrammarOfType('mermaid')).toBe('yaml');
+        expect(diagramGrammarOfType('matplotlib')).toBe('python');
 
         const state = createDiagramState('abc', 'X:1\n');
         expect(state).toEqual({

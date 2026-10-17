@@ -402,6 +402,16 @@ class Content extends TreeNode {
         return [...pPath, 'text'];
     }
 
+    /**
+     * The `meta` key this content's text is stored under, or null for content
+     * that is the block's own text. Only the language input has one: a code
+     * block's marker edits the grammar its source is highlighted with
+     * (`lang`), a diagram block's the fence language it serializes as (`type`).
+     */
+    protected get metaKey(): string | null {
+        return null;
+    }
+
     get text() {
         return this._text;
     }
@@ -410,9 +420,10 @@ class Content extends TreeNode {
         const oldText = this._text;
         this._text = text;
         const { path } = this;
-        if (this.blockName === 'language-input') {
+        const metaKey = this.metaKey;
+        if (metaKey) {
             path.pop();
-            path.push('meta', 'lang');
+            path.push('meta', metaKey);
         }
 
         // dispatch change to modify json state

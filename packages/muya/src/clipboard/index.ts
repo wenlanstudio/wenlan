@@ -4,6 +4,7 @@ import type { IClipboardPayload } from './copyData';
 import Format from '../block/base/format';
 import { classifyInputKind } from '../history';
 import { isClipboardEvent, isInputEvent, isKeyboardEvent } from '../utils';
+import { isSelectionInReadOnlyIsland } from '../utils/dom';
 import { getClipboardData, writeClipboardData } from './copyData';
 import { cutSelection, deleteTableSelection, insertTextAtCursor } from './cut';
 import { pastePlainText, pasteSelection } from './paste';
@@ -76,19 +77,7 @@ class Clipboard {
     private _listen() {
         const ownsEvent = () => this.muya.hasFocus();
 
-        const copyCutHandler = (event: Event) => {
-            if (!ownsEvent() || !isClipboardEvent(event))
-                return;
-            event.preventDefault();
-            event.stopPropagation();
-
-            const isCut = event.type === 'cut';
-
-            this.copyHandler(event);
-
-            if (isCut)
-                this.cutHandler();
-        };
+        const copyCutHandler = (event: Event) => this.copyCutHandler(event);
 
         const keydownHandler = (event: Event) => {
             if (!ownsEvent() || !isKeyboardEvent(event))
@@ -157,6 +146,49 @@ class Clipboard {
         eventCenter.attachDOMEvent(document, 'paste', pasteHandler);
         eventCenter.attachDOMEvent(document, 'keydown', keydownHandler);
         eventCenter.attachDOMEvent(document, 'beforeinput', beforeInputHandler);
+    }
+
+    /**
+     * Whether the reader is copying text out of a rendered preview rather than
+     * out of the document. See `copyCutHandler` — such a selection has no
+     * blocks behind it, so muya must not claim the clipboard event.
+     */
+    isSelectionInPreview(): boolean {
+        const root = this.muya.domNode;
+        if (!root)
+            return false;
+
+        return isSelectionInReadOnlyIsland(root);
+    }
+
+    copyCutHandler(event: Event): void {
+        if (!this.muya.hasFocus() || !isClipboardEvent(event))
+            return;
+
+        // A rendered preview (diagram / math / html) is a
+        // `contenteditable=false` island: the reader can select its text —
+        // which is the only way to copy a renderer error out of it — but the
+        // document model has nothing there to serialise, so muya would write
+        // an empty clipboard over the selection. Leave these to the browser,
+        // which copies exactly what is highlighted.
+        if (this.isSelectionInPreview()) {
+            // Cutting must still not try to delete read-only content.
+            if (event.type === 'cut') {
+                event.preventDefault();
+                document.execCommand('copy');
+            }
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const isCut = event.type === 'cut';
+
+        this.copyHandler(event);
+
+        if (isCut)
+            this.cutHandler();
     }
 
     getClipboardData(): IClipboardPayload {

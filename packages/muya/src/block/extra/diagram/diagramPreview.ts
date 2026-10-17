@@ -3,6 +3,7 @@ import type { IDiagramState, TDiagramType, TState } from '../../../state/types';
 import { fromEvent } from 'rxjs';
 import { CLASS_NAMES, PREVIEW_DOMPURIFY_CONFIG } from '../../../config';
 import { sanitize } from '../../../utils';
+import { hasTextSelectionIn } from '../../../utils/dom';
 import { finalizeRenderedDiagram, renderDiagram } from '../../../utils/diagram/render';
 import logger from '../../../utils/logger';
 import Parent from '../../base/parent';
@@ -52,6 +53,12 @@ class DiagramPreview extends Parent {
     }
 
     clickHandler(event: Event) {
+        // A drag that selected the error text ends in a click too. Moving the
+        // caret here would throw the selection away, and a reader who cannot
+        // select the message cannot copy it out of the preview at all.
+        if (hasTextSelectionIn(this.domNode!))
+            return;
+
         event.preventDefault();
         event.stopPropagation();
 
@@ -60,6 +67,19 @@ class DiagramPreview extends Parent {
 
         const cursorBlock = this.parent.firstContentInDescendant();
         cursorBlock?.setCursor(0, 0);
+    }
+
+    /**
+     * Re-render after the block's fence language changed. The type is captured
+     * when the preview is built, so editing the language marker has to hand the
+     * new one over.
+     */
+    setType(type: TDiagramType): void {
+        if (type === this._type)
+            return;
+
+        this._type = type;
+        void this.update();
     }
 
     async update(code = this._code) {

@@ -398,6 +398,20 @@ span.mu-language-input {
     content: attr(hint);
 }
 
+/* 图表块也把语言声明放在右下角，与普通代码块同一位置：写错了（比如该写
+   plantuml 却写了 mermaid）可以直接改，不必重抄整段源码。 */
+figure.mu-diagram-block {
+    position: relative;
+}
+
+figure.mu-diagram-block .mu-language-input {
+    opacity: 0.6;
+}
+
+figure.mu-diagram-block.mu-active .mu-language-input {
+    opacity: 1;
+}
+
 /* loose tight list */
 .mu-tight-list > li > p {
     margin: 0;

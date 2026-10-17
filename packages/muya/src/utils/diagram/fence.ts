@@ -22,8 +22,20 @@ const DIAGRAM_LANGS: Readonly<Record<string, IDiagramMeta['type']>> = {
     'matplotlib': 'matplotlib',
 };
 
-/** Diagram types whose source is JSON rather than a line-oriented language. */
-const JSON_TYPES = new Set(['vega-lite', 'wavedrom', 'echarts', 'chart']);
+/**
+ * The grammar the source of each diagram type is highlighted with — its source
+ * is JSON (or Python) rather than a line-oriented language. Anything unlisted
+ * reads as `yaml`, which is what mermaid / plantuml / sequence / flowchart /
+ * graphviz / abc look like.
+ */
+const DIAGRAM_GRAMMARS: Readonly<Record<string, string>> = {
+    'vega-lite': 'json',
+    'wavedrom': 'json',
+    'echarts': 'json',
+    'chart': 'json',
+    'drawio': 'json',
+    'matplotlib': 'python',
+};
 
 /**
  * The diagram type a fence language renders as, or null for a code language.
@@ -38,10 +50,19 @@ export function diagramLangs(): string[] {
     return Object.keys(DIAGRAM_LANGS);
 }
 
+/**
+ * The grammar a diagram's source is highlighted with — `meta.lang`, which is
+ * what the code container loads. It is not the fence language: that is
+ * `meta.type` (` ```mermaid `), and the two only coincide by accident.
+ */
+export function diagramGrammarOfType(type: IDiagramMeta['type']): string {
+    return DIAGRAM_GRAMMARS[type] ?? 'yaml';
+}
+
 export function createDiagramState(type: IDiagramMeta['type'], text = ''): IDiagramState {
     return {
         name: 'diagram',
         text,
-        meta: { type, lang: JSON_TYPES.has(type) ? 'json' : 'yaml' },
+        meta: { type, lang: diagramGrammarOfType(type) },
     };
 }

@@ -4,6 +4,7 @@ import katex from 'katex';
 import { fromEvent } from 'rxjs';
 import { CLASS_NAMES } from '../../../config';
 import { escapeHTML } from '../../../utils';
+import { hasTextSelectionIn } from '../../../utils/dom';
 import logger from '../../../utils/logger';
 import Parent from '../../base/parent';
 import 'katex/dist/contrib/mhchem.mjs';
@@ -51,6 +52,11 @@ class MathPreview extends Parent {
     }
 
     clickHandler(event: Event) {
+        // Selecting the rendered formula (or a KaTeX error message) ends in a
+        // click; moving the caret here would discard the selection.
+        if (hasTextSelectionIn(this.domNode!))
+            return;
+
         event.preventDefault();
         event.stopPropagation();
 
