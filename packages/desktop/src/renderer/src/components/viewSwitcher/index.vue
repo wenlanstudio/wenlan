@@ -14,7 +14,7 @@
       </button>
     </div>
 
-    <!-- Sub-view toggle (shown when current main view has multiple sub-views) -->
+    <!-- Sub-view toggle -->
     <div
       v-if="availableSubViews.length > 1"
       class="sub-views"
@@ -29,20 +29,68 @@
         {{ sv.label }}
       </button>
     </div>
+
+    <!-- Page width slider (Word page view only) -->
+    <div
+      v-if="showWidthSlider"
+      class="width-slider-group"
+      :title="t('view.pageWidth')"
+    >
+      <input
+        v-model.number="sliderValue"
+        type="range"
+        min="400"
+        max="1200"
+        step="10"
+        class="width-slider"
+        @change="handleSliderChange"
+      >
+      <span class="width-label">{{ sliderValue }}</span>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useEditorViewStore, MAIN_VIEWS, MAIN_VIEW_META, type MainView } from '@/store/editorView'
+import { usePreferencesStore } from '@/store/preferences'
+import { t } from '@/i18n'
 
 const editorViewStore = useEditorViewStore()
+const preferencesStore = usePreferencesStore()
 const { mainView, subView, availableSubViews } = storeToRefs(editorViewStore)
 const { setMainView, setSubView } = editorViewStore
+const { editorLineWidth } = storeToRefs(preferencesStore)
 
 const handleMainViewClick = (mv: MainView) => {
   if (mainView.value === mv) return
   setMainView(mv)
+}
+
+const showWidthSlider = computed(() =>
+  mainView.value === 'word' && subView.value === 'page'
+)
+
+const DEFAULT_WIDTH = 750
+
+const parsePx = (value: string): number => {
+  const m = value.trim().match(/^(\d+)px$/)
+  return m ? Number(m[1]) : DEFAULT_WIDTH
+}
+
+const sliderValue = ref<number>(parsePx(editorLineWidth.value))
+
+// Keep slider in sync when editorLineWidth changes from outside (e.g. preferences dialog).
+watch(editorLineWidth, (val) => {
+  sliderValue.value = parsePx(val)
+})
+
+const handleSliderChange = () => {
+  const px = `${sliderValue.value}px`
+  if (editorLineWidth.value !== px) {
+    preferencesStore.SET_SINGLE_PREFERENCE({ type: 'editorLineWidth', value: px })
+  }
 }
 </script>
 
@@ -125,9 +173,73 @@ const handleMainViewClick = (mv: MainView) => {
   background: var(--editorColor10);
 }
 
-/* Collapse sub-views on very narrow screens */
-@media (max-width: 480px) {
+/* Page width slider */
+.width-slider-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 6px;
+  border-left: 1px solid var(--editorColor10);
+  margin-left: 2px;
+}
+
+.width-slider {
+  width: 60px;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--editorColor10);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.width-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--editorColor50);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.width-slider::-webkit-slider-thumb:hover {
+  background: var(--editorColor80);
+}
+
+.width-slider::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--editorColor50);
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s ease;
+}
+
+.width-slider::-moz-range-thumb:hover {
+  background: var(--editorColor80);
+}
+
+.width-label {
+  font-size: 10px;
+  color: var(--editorColor40);
+  min-width: 28px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Collapse on narrow screens */
+@media (max-width: 560px) {
   .sub-views {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .width-slider-group {
     display: none;
   }
 }

@@ -880,7 +880,8 @@
       "readingView": "Reading View",
       "pptView": "Slide View",
       "excelView": "Sheet View",
-      "comingSoon": "Coming soon"
+      "comingSoon": "Coming soon",
+      "pageWidth": "Page Width"
     },
     "tabs": {
       "cycleForward": "Cycle Forward",
