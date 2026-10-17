@@ -11,12 +11,14 @@ import type { MenuStructureItem } from '@shared/types/menu'
  * How to run one entry when the renderer asks for it. Exactly one of the two
  * is set: menu items either carry a `click` handler or a native `role`.
  *
- * `click` is stored as "given a window, do the thing" so Electron's
- * three-argument click signature — and the dummy arguments it would need —
- * stay confined to this file.
+ * `click` is stored as "given a window and the activated item, do the thing"
+ * so Electron's three-argument click signature — and the dummy arguments it
+ * would need — stay confined to this file. The item is whatever
+ * `resolveMenuClickTarget` found; it is null only when the menu cannot be
+ * walked (no MenuItem array).
  */
 export interface MenuItemAction {
-  click?: (win: BrowserWindow) => void
+  click?: (win: BrowserWindow, item: MenuItem | null) => void
   role?: string
 }
 
@@ -57,12 +59,8 @@ export function annotateMenuTemplate(
       if (click || item.role) {
         actions.set(id, {
           click: click
-            ? (win: BrowserWindow): void => {
-              click(
-                null as unknown as MenuItem,
-                win,
-                undefined as unknown as KeyboardEvent
-              )
+            ? (win: BrowserWindow, target: MenuItem | null): void => {
+              click(target as MenuItem, win, undefined as unknown as KeyboardEvent)
             }
             : undefined,
           role: typeof item.role === 'string' ? item.role : undefined
@@ -81,6 +79,58 @@ export function annotateMenuTemplate(
     })
 
   return walk(template, 'menu')
+}
+
+interface MenuItemLocation {
+  item: MenuItem
+  /** The siblings this item shares a submenu with — i.e. its radio group. */
+  siblings: readonly MenuItem[]
+}
+
+function findMenuItemLocation(
+  items: readonly MenuItem[],
+  id: string
+): MenuItemLocation | null {
+  for (const item of items) {
+    if (item.id === id) return { item, siblings: items }
+    if (item.submenu) {
+      const nested = findMenuItemLocation(item.submenu.items, id)
+      if (nested) return nested
+    }
+  }
+  return null
+}
+
+/**
+ * Resolve the item an in-window menu-bar click should be handed, and bring it
+ * to the state Electron would have put it in before calling `click`.
+ *
+ * Activating an entry through the native menu bar does two things before the
+ * handler runs: it passes the real `MenuItem`, and it updates that item first
+ * — flipping a checkbox, or moving the radio mark within the group. The
+ * in-window bar reaches the handler directly, so both happen here.
+ *
+ * Skipping either half broke entries that read the item: Follow System Theme
+ * and Auto Save read `menuItem.checked` to know the state to apply, and the
+ * recent-files entries read `menuItem.label`.
+ */
+export function resolveMenuClickTarget(menu: Menu | null, id: string): MenuItem | null {
+  if (!menu || !Array.isArray(menu.items)) return null
+
+  const found = findMenuItemLocation(menu.items, id)
+  if (!found) return null
+
+  const { item, siblings } = found
+  if (item.type === 'checkbox') {
+    item.checked = !item.checked
+  } else if (item.type === 'radio') {
+    for (const sibling of siblings) {
+      if (sibling !== item && sibling.type === 'radio') sibling.checked = false
+    }
+    item.checked = true
+  }
+
+  return item
 }
 
 /**

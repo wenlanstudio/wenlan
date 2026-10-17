@@ -13,6 +13,7 @@ import configureMenu, { configSettingMenu } from '../menu/templates'
 import {
   annotateMenuTemplate,
   executeMenuRole,
+  resolveMenuClickTarget,
   serializeMenu,
   type MenuItemActionMap
 } from '../menu/menuModel'
@@ -469,7 +470,10 @@ class AppMenu {
     if (!win || win.isDestroyed()) return
 
     if (action.click) {
-      action.click(win)
+      // Handlers read the activated entry (Follow System Theme and Auto Save
+      // its `checked`, recent files its `label`), so hand over the real one —
+      // see menuModel.resolveMenuClickTarget.
+      action.click(win, resolveMenuClickTarget(entry?.menu ?? null, id))
     } else if (action.role) {
       executeMenuRole(win, action.role)
     }
