@@ -114,7 +114,6 @@
     "view": {
       "view": "보기",
       "toggleSidebar": "사이드바 토글",
-      "toggleTabbar": "탭바 토글",
       "commandPalette": "명령 팔레트",
       "sourceCodeMode": "소스 코드 모드",
       "typewriterMode": "타자기 모드",
@@ -861,7 +860,6 @@
       "toggleFocusMode": "집중 모드 토글",
       "toggleSidebar": "사이드바 토글",
       "toggleToc": "목차 토글",
-      "toggleTabbar": "탭바 토글",
       "toggleDevTools": "개발자 도구 토글",
       "devReload": "개발자 새로고침",
       "reloadImages": "이미지 새로고침",

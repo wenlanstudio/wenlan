@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
 import {
+  isActiveTabDirty,
+  readActiveTabId,
   launchWithMarkdown,
   sendIpcToRenderer,
   focusEditor,
@@ -67,9 +69,6 @@ const RESULT_COUNTER = '.search-bar .search-result'
 const REPLACE_ALL_BTN = '.search-bar .replace .button-group .button.right'
 const REPLACE_SINGLE_BTN = '.search-bar .replace .button-group .button:not(.right)'
 
-const isTabDirty = (page: Page): Promise<boolean> =>
-  page.evaluate(() => !!document.querySelector('.editor-tabs li.unsaved'))
-
 // Fire a native click on the first element matching `selector` directly in the
 // page context. The replace buttons are wrapped in Element Plus `el-tooltip`s
 // whose poppers can linger across tests and intercept a pointer-based
@@ -129,12 +128,10 @@ const seedDocClean = async(
   await closeAndReset(page)
   await setSourceMarkdown(page, app, markdown)
   await page.waitForTimeout(400)
-  const tabId = await page.evaluate(
-    () => document.querySelector('.editor-tabs li.active')?.getAttribute('data-id') ?? null
-  )
+  const tabId = await readActiveTabId(page)
   if (!tabId) throw new Error('could not resolve the active tab id')
   await sendIpcToRenderer(app, 'mt::tab-saved', tabId)
-  await expect.poll(() => isTabDirty(page)).toBe(false)
+  await expect.poll(() => isActiveTabDirty(page)).toBe(false)
 }
 
 const openFind = async(app: ElectronApplication, page: Page): Promise<void> => {
@@ -353,7 +350,7 @@ test.describe('Find bar — replace single / all dirty the tab (items 153, 183, 
       })
       .toEqual({ bar: 1, foo: 2 })
 
-    await expect.poll(() => isTabDirty(page)).toBe(true)
+    await expect.poll(() => isActiveTabDirty(page)).toBe(true)
     await closeAndReset(page)
   })
 
@@ -372,7 +369,7 @@ test.describe('Find bar — replace single / all dirty the tab (items 153, 183, 
         return { dog: countOccurrences(text, 'dog'), cat: countOccurrences(text, 'cat') }
       })
       .toEqual({ dog: 3, cat: 0 })
-    await expect.poll(() => isTabDirty(page)).toBe(true)
+    await expect.poll(() => isActiveTabDirty(page)).toBe(true)
 
     // Searching the old word now reports zero matches.
     await page.locator(FIND_INPUT).fill('cat')
@@ -396,7 +393,7 @@ test.describe('Find bar — replace single / all dirty the tab (items 153, 183, 
       })
       .toEqual({ omega: 3, alpha: 0 })
     // The replace-all dirtied the tab (#4431 saved-indicator wiring).
-    await expect.poll(() => isTabDirty(page)).toBe(true)
+    await expect.poll(() => isActiveTabDirty(page)).toBe(true)
 
     // Close the bar before undoing so the engine cursor is back in the document
     // (the find bar holds focus while open) and the undo applies cleanly.
@@ -411,7 +408,7 @@ test.describe('Find bar — replace single / all dirty the tab (items 153, 183, 
         return { omega: countOccurrences(text, 'omega'), alpha: countOccurrences(text, 'alpha') }
       })
       .toEqual({ omega: 0, alpha: 3 })
-    await expect.poll(() => isTabDirty(page)).toBe(false)
+    await expect.poll(() => isActiveTabDirty(page)).toBe(false)
   })
 })
 

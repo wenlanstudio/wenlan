@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import fs from 'fs'
-import { launchWithMarkdown, waitForMenuReady } from './helpers'
+import { isActiveTabDirty as isDirty, launchWithMarkdown, waitForMenuReady } from './helpers'
 
 // #1861 — rewriting the open file on disk with byte-identical content (e.g. a
 // git checkout that left it unchanged) fires a watcher 'change', but must NOT
@@ -11,9 +11,6 @@ import { launchWithMarkdown, waitForMenuReady } from './helpers'
 // This drives the REAL watcher: it writes the actual file and lets the
 // main-process chokidar watcher -> loadMarkdownFile -> renderer handler run,
 // rather than hand-crafting the IPC payload (which would tautologically match).
-
-const isDirty = (page: Page) =>
-  page.evaluate(() => !!document.querySelector('.editor-tabs li.unsaved'))
 
 const editorText = (page: Page) =>
   page.evaluate(() => document.querySelector('.editor-component')?.textContent ?? '')

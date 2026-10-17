@@ -110,7 +110,6 @@ These entries are marked `--internal` in the schema. They have no UI control and
 | Key                   | Type    | Default | Description                                                           |
 | --------------------- | ------- | ------- | --------------------------------------------------------------------- |
 | sideBarVisibility     | Boolean | `false` | Initial visibility of the sidebar. Overridden by the menu / shortcut. |
-| tabBarVisibility      | Boolean | `false` | Initial visibility of the tab bar. Overridden by the menu / shortcut. |
 | sourceCodeModeEnabled | Boolean | `false` | Initial source-code mode state. Overridden by the menu / shortcut.    |
 
 ##### General (internal)

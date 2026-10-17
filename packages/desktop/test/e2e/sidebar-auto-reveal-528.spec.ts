@@ -3,7 +3,13 @@ import type { ElectronApplication, Page } from 'playwright'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { launchElectron, openProjectFolder } from './helpers'
+import {
+  clickMenuById,
+  launchElectron,
+  openProjectFolder,
+  readActiveTabFilename,
+  sendIpcToRenderer
+} from './helpers'
 
 // #528 — the fixture overflows the list on purpose: the folder of many files
 // sorts above the folder holding the deep file, pushing that row below the fold.
@@ -43,11 +49,19 @@ const treeRow = (page: Page, filePath: string) =>
 const folderHeader = (page: Page, folderPath: string) =>
   page.locator(`.tree-wrapper .folder-name[title="${folderPath}"]`)
 
-const tab = (page: Page, filePath: string) =>
-  page.locator(`.editor-tabs .tabs-container li[title="${filePath}"]`)
+// The tab strip is gone: switching to an already-open document is now done from
+// the side bar tree (clicking its row calls UPDATE_CURRENT_FILE), exactly the
+// way a user reaches it.
+const switchToTab = async(page: Page, filePath: string): Promise<void> => {
+  await treeRow(page, filePath).click()
+  await expect.poll(() => readActiveTabFilename(page)).toBe(path.basename(filePath))
+}
 
-const filesIcon = (page: Page) =>
-  page.locator('.side-bar .left-column > ul').first().locator('li').nth(0)
+// Hide the sidebar through the same View-menu entry the bottom-left button
+// routes to (the icon strip it used to collapse to no longer exists).
+const filesIcon = async(app: ElectronApplication): Promise<void> => {
+  await clickMenuById(app, 'sideBarMenuItem')
+}
 
 const sideBarWidth = (page: Page): Promise<number> =>
   page.evaluate(() => {
@@ -96,37 +110,9 @@ const openProject = async(app: ElectronApplication, page: Page, root: string): P
 
 const openFileFromTree = async(page: Page, filePath: string): Promise<void> => {
   await treeRow(page, filePath).click()
-  await tab(page, filePath).waitFor({ timeout: 10000 })
-}
-
-const clickNextPopupItem = async(
-  app: ElectronApplication,
-  menuItemId: string
-): Promise<void> => {
-  await app.evaluate(({ ipcMain }, wanted) => {
-    const findId = (items: Array<{ id?: string; submenu?: unknown }>): string | null => {
-      for (const item of items || []) {
-        if (item?.id && String(item.id).startsWith(wanted)) return item.id
-        if (item?.submenu) {
-          const nested = findId(item.submenu as Array<{ id?: string }>)
-          if (nested) return nested
-        }
-      }
-      return null
-    }
-    ipcMain.removeAllListeners('mt::menu::popup')
-    ipcMain.on('mt::menu::popup', (event, template) => {
-      const id = findId(template as Array<{ id?: string }>)
-      if (!id) return
-      setTimeout(() => {
-        try {
-          event.sender.send('mt::menu::click', { id })
-        } catch {
-          /* window gone */
-        }
-      }, 30)
-    })
-  }, menuItemId)
+  await expect
+    .poll(() => readActiveTabFilename(page), { timeout: 10000 })
+    .toBe(path.basename(filePath))
 }
 
 test.describe('#528 reveal active file in the side bar', () => {
@@ -156,7 +142,7 @@ test.describe('#528 reveal active file in the side bar', () => {
     await scrollTreeTo(page, 0)
     await expect(treeRow(page, fixture.deep)).toHaveCount(0)
 
-    await tab(page, fixture.deep).click()
+    await switchToTab(page, fixture.deep)
 
     await expect(treeRow(page, fixture.deep)).toHaveCount(1)
     await expect(treeRow(page, fixture.deep)).toHaveClass(/current/)
@@ -202,7 +188,7 @@ test.describe('#528 reveal with autoRevealInSidebar turned off', () => {
     await setFolderExpanded(page, fixture.target, true)
     await openFileFromTree(page, fixture.deep)
     await openFileFromTree(page, fixture.top)
-    await tab(page, fixture.deep).click()
+    await switchToTab(page, fixture.deep)
     await setFolderExpanded(page, fixture.target, false)
   })
 
@@ -211,21 +197,24 @@ test.describe('#528 reveal with autoRevealInSidebar turned off', () => {
     fs.rmSync(fixture.root, { recursive: true, force: true })
   })
 
-  test('switching tabs does not touch the tree', async() => {
-    await tab(page, fixture.top).click()
-    await tab(page, fixture.deep).click()
+  test('switching documents does not touch the tree', async() => {
+    await switchToTab(page, fixture.top)
+    await switchToTab(page, fixture.deep)
 
     expect(await isFolderCollapsed(page, fixture.target)).toBe(true)
     await expect(treeRow(page, fixture.deep)).toHaveCount(0)
   })
 
-  test('the tab context menu reveals the file anyway', async() => {
-    await clickNextPopupItem(app, 'showInSideBar')
+  // The "reveal" entry point used to live in the tab context menu. Its live
+  // equivalent is the `file.reveal-in-sidebar` command (reachable from the
+  // command palette), which still walks the same project-store path.
+  test('the reveal-in-sidebar command reveals the file anyway', async() => {
+    await sendIpcToRenderer(app, 'mt::execute-command-by-id', 'file.reveal-in-sidebar')
 
-    await filesIcon(page).click()
+    await filesIcon(app)
     await expect.poll(() => sideBarWidth(page)).toBeLessThan(60)
 
-    await tab(page, fixture.deep).click({ button: 'right' })
+    await sendIpcToRenderer(app, 'mt::execute-command-by-id', 'file.reveal-in-sidebar')
 
     await expect.poll(() => sideBarWidth(page)).toBeGreaterThan(200)
     await expect(treeRow(page, fixture.deep)).toHaveCount(1)
@@ -245,7 +234,9 @@ test.describe('#528 reveal when the project is opened after the file', () => {
     const launched = await launchElectron([fixture.deep])
     app = launched.app
     page = launched.page
-    await tab(page, fixture.deep).first().waitFor({ timeout: 20000 })
+    await expect
+      .poll(() => readActiveTabFilename(page), { timeout: 20000 })
+      .toBe(path.basename(fixture.deep))
   })
 
   test.afterAll(async() => {

@@ -114,7 +114,6 @@
     "view": {
       "view": "Görünüm",
       "toggleSidebar": "Kenar Çubuğunu Aç/Kapat",
-      "toggleTabbar": "Sekme Çubuğunu Aç/Kapat",
       "commandPalette": "Komut Paleti",
       "sourceCodeMode": "Kaynak Kod Modu",
       "typewriterMode": "Daktilo Modu",
@@ -861,7 +860,6 @@
       "toggleFocusMode": "Odak Modunu Aç/Kapat",
       "toggleSidebar": "Kenar Çubuğunu Aç/Kapat",
       "toggleToc": "İçindekileri Aç/Kapat",
-      "toggleTabbar": "Sekme Çubuğunu Aç/Kapat",
       "toggleDevTools": "Geliştirici Araçlarını Aç/Kapat",
       "devReload": "Geliştirici Yeniden Yükleme",
       "reloadImages": "Görselleri Yeniden Yükle",

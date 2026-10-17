@@ -79,6 +79,5 @@ export interface IUserPreferences {
 export interface LayoutState {
   sidebarTab: 'files' | 'toc'
   showSideBar: boolean
-  showTabBar: boolean
   [key: string]: unknown
 }

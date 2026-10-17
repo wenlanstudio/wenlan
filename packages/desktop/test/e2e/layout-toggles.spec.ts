@@ -40,16 +40,6 @@ test.describe('Layout panel toggles', () => {
     await clickMenuById(app, 'sideBarMenuItem')
   })
 
-  test('Tab bar toggle flips .editor-tabs visibility', async() => {
-    const tabBar = page.locator('.editor-tabs')
-    const initial = await tabBar.isVisible()
-    await clickMenuById(app, 'tabBarMenuItem')
-    await waitForVisibilityFlip(page, '.editor-tabs', initial)
-    const afterToggle = await tabBar.isVisible()
-    expect(afterToggle).not.toBe(initial)
-    await clickMenuById(app, 'tabBarMenuItem')
-  })
-
   test('TOC menu toggles ToC panel without throwing', async() => {
     // Ensure sidebar is visible so TOC has somewhere to render.
     const sideBar = page.locator('.side-bar')
@@ -71,71 +61,46 @@ test.describe('Layout panel toggles', () => {
     await clickMenuById(app, 'tocMenuItem')
   })
 
-  // Regression for the gap left between the sidebar and editor when the
-  // sidebar collapses to its 45px icon strip (rightColumn=''). The store's
-  // `sideBarWidth` is clamped to ≥220, so the editor's max-width must come
-  // from the *effective* sidebar width, not the raw store value.
-  test('Editor fills width after collapsing sidebar to icon strip', async() => {
-    // Ensure sidebar is visible.
-    const sideBar = page.locator('.side-bar')
-    if (!(await sideBar.isVisible())) {
-      await clickMenuById(app, 'sideBarMenuItem')
-      await page.waitForFunction(
-        () => {
-          const el = document.querySelector('.side-bar') as HTMLElement | null
-          return !!(el && el.offsetParent !== null)
-        },
-        null,
-        { timeout: 5000 }
-      )
-    }
-
-    // Open search panel and then collapse it back to the icon strip by
-    // clicking the search icon. We use a locator-based click (not a DOM
-    // .click()) so Playwright handles focus/activation correctly.
-    const searchIcon = page.locator('.side-bar .left-column > ul').first().locator('li').nth(1)
-
-    // Step 1: ensure rightColumn='search' (sidebar width ≥ 220 with the
-    // search panel mounted at `.side-bar-search`).
-    for (let i = 0; i < 3; i++) {
-      const { width, hasSearch } = await page.evaluate(() => {
-        const sb = document.querySelector('.side-bar') as HTMLElement | null
-        return {
-          width: sb ? Math.round(sb.getBoundingClientRect().width) : 0,
-          hasSearch: !!document.querySelector('.side-bar .right-column .side-bar-search')
-        }
-      })
-      if (width >= 220 && hasSearch) break
-      await searchIcon.click()
-      await page.waitForTimeout(250)
-    }
-
-    // Step 2: click search icon again to collapse to icon strip. The sidebar
-    // shrinks to its 45px icon column (+1px border-right = 46px outer width).
-    await searchIcon.click()
+  // Regression for the gap left between the editor when the sidebar is hidden:
+  // the editor's max-width must follow the *effective* sidebar width, which is
+  // 0 while the sidebar is closed, not the raw store value (clamped to >=220).
+  test('Editor fills the viewport width while the sidebar is hidden', async() => {
+    // Make sure the sidebar is open first.
     await page.waitForFunction(
       () => {
-        const sb = document.querySelector('.side-bar') as HTMLElement | null
-        return !!sb && sb.getBoundingClientRect().width <= 50
+        const el = document.querySelector('.side-bar') as HTMLElement | null
+        return !!(el && el.offsetParent !== null)
       },
       null,
       { timeout: 5000 }
     )
 
-    const { editorWidth, sideBarWidth, viewportWidth } = await page.evaluate(() => {
+    const shownWidth = await page.evaluate(() => {
       const editor = document.querySelector('.editor-with-tabs') as HTMLElement | null
-      const sb = document.querySelector('.side-bar') as HTMLElement | null
+      return editor ? editor.getBoundingClientRect().width : 0
+    })
+
+    await clickMenuById(app, 'sideBarMenuItem')
+    await page.waitForFunction(
+      () => {
+        const el = document.querySelector('.side-bar') as HTMLElement | null
+        return !el || el.offsetParent === null
+      },
+      null,
+      { timeout: 5000 }
+    )
+
+    const { editorWidth, viewportWidth } = await page.evaluate(() => {
+      const editor = document.querySelector('.editor-with-tabs') as HTMLElement | null
       return {
         editorWidth: editor ? editor.getBoundingClientRect().width : 0,
-        sideBarWidth: sb ? sb.getBoundingClientRect().width : 0,
         viewportWidth: window.innerWidth
       }
     })
-    // Sidebar is the 45px icon strip (+1px border). The editor must consume
-    // the remaining viewport width — before the fix it was capped by the
-    // store's `sideBarWidth` (clamped to ≥220), leaving a 175+ px gap to the
-    // right of the editor.
-    expect(sideBarWidth).toBeLessThanOrEqual(50)
-    expect(Math.abs(editorWidth - (viewportWidth - sideBarWidth))).toBeLessThanOrEqual(1)
+    expect(editorWidth).toBeGreaterThan(shownWidth)
+    expect(Math.abs(editorWidth - viewportWidth)).toBeLessThanOrEqual(1)
+
+    // Leave the sidebar open for the other tests in this suite.
+    await clickMenuById(app, 'sideBarMenuItem')
   })
 })

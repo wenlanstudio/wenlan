@@ -5,7 +5,8 @@ import {
   getMarkdownContent,
   expectNoRendererErrors,
   sendIpcToRenderer,
-  enterSourceMode
+  enterSourceMode,
+  readTabCount
 } from './helpers'
 
 const SVG_DATA_URI =
@@ -78,11 +79,7 @@ test.describe('media viewer is modal to the keyboard', () => {
     await openViewer(page)
 
     await sendIpcToRenderer(app, 'mt::new-untitled-tab', true, '')
-    await page.waitForFunction(
-      () => document.querySelectorAll('.tabs-container > li').length > 1,
-      undefined,
-      { timeout: 5000 }
-    )
+    await expect.poll(() => readTabCount(page), { timeout: 5000 }).toBeGreaterThan(1)
 
     // Otherwise the overlay keeps showing the previous document's image while
     // holding the new one at `pointer-events: none`.

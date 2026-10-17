@@ -114,7 +114,6 @@
     "view": {
       "view": "檢視",
       "toggleSidebar": "切換側邊欄",
-      "toggleTabbar": "切換標籤欄",
       "commandPalette": "命令面板",
       "sourceCodeMode": "原始碼模式",
       "typewriterMode": "打字機模式",
@@ -861,7 +860,6 @@
       "toggleFocusMode": "切換專注模式",
       "toggleSidebar": "切換側邊欄",
       "toggleToc": "切換目錄",
-      "toggleTabbar": "切換標籤欄",
       "toggleDevTools": "切換開發者工具",
       "devReload": "開發者重新載入",
       "reloadImages": "重新載入圖片",

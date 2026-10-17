@@ -605,12 +605,6 @@ const commands: CommandDescriptor[] = [
       bus.emit('view:toggle-layout-entry', 'showSideBar')
     }
   },
-  {
-    id: 'view.toggle-tabbar',
-    execute: async() => {
-      bus.emit('view:toggle-layout-entry', 'showTabBar')
-    }
-  },
 
   {
     id: 'view.text-direction',

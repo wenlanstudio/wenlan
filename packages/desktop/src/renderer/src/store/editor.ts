@@ -924,7 +924,6 @@ export const useEditorStore = defineStore('editor', {
           markdownList,
           lineEnding,
           sideBarVisibility,
-          tabBarVisibility,
           sourceCodeModeEnabled
         } = config
 
@@ -933,8 +932,7 @@ export const useEditorStore = defineStore('editor', {
         preferencesStore.SET_USER_PREFERENCE({ endOfLine: lineEnding })
         layoutStore.SET_LAYOUT({
           sidebarTab: 'files',
-          showSideBar: !!sideBarVisibility,
-          showTabBar: !!tabBarVisibility
+          showSideBar: !!sideBarVisibility
         })
         layoutStore.DISPATCH_LAYOUT_MENU_ITEMS()
         preferencesStore.SET_MODE({
@@ -1090,28 +1088,6 @@ export const useEditorStore = defineStore('editor', {
       ])
     },
 
-    CLOSE_OTHER_TABS(file: IFileState): void {
-      this.tabs
-        .filter((f) => f.id !== file.id)
-        .forEach((tab) => {
-          this.CLOSE_TAB(tab)
-        })
-    },
-
-    CLOSE_SAVED_TABS(): void {
-      this.tabs
-        .filter((f) => f.isSaved)
-        .forEach((tab) => {
-          this.CLOSE_TAB(tab)
-        })
-    },
-
-    CLOSE_ALL_TABS(): void {
-      this.tabs.slice().forEach((tab) => {
-        this.CLOSE_TAB(tab)
-      })
-    },
-
     CLOSE_TABS(tabIdList: string[]): void {
       if (!tabIdList || tabIdList.length === 0) return
 
@@ -1165,34 +1141,6 @@ export const useEditorStore = defineStore('editor', {
         this.listToc = []
         this.toc = []
       }
-      debouncedSendBufferedState()
-    },
-
-    EXCHANGE_TABS_BY_ID(tabIDs: { fromId: string; toId: string | null }): void {
-      const { fromId, toId } = tabIDs
-      const { tabs } = this
-      const moveItem = <T>(arr: T[], from: number, to: number): boolean => {
-        if (from === to) return true
-        const len = arr.length
-        const item = arr.splice(from, 1)
-        if (item.length === 0) return false
-
-        arr.splice(to, 0, item[0]!)
-        return arr.length === len
-      }
-
-      const fromIndex = tabs.findIndex((t) => t.id === fromId)
-      if (fromIndex === -1) return
-
-      if (!toId) {
-        moveItem(tabs, fromIndex, tabs.length - 1)
-      } else {
-        const toIndex = tabs.findIndex((t) => t.id === toId)
-        if (toIndex === -1) return
-        const realToIndex = fromIndex < toIndex ? toIndex - 1 : toIndex
-        moveItem(tabs, fromIndex, realToIndex)
-      }
-      this.updateTabIdToIndex()
       debouncedSendBufferedState()
     },
 
@@ -1317,8 +1265,6 @@ export const useEditorStore = defineStore('editor', {
         selected = true
       }
 
-      this.SHOW_TAB_VIEW(false)
-
       const preferencesStore = usePreferencesStore()
       const { defaultEncoding, endOfLine } = preferencesStore
       const fileState = getBlankFileState(
@@ -1372,17 +1318,13 @@ export const useEditorStore = defineStore('editor', {
         return
       }
 
-      let keepTabBarState = false
+      // Opening a real document replaces the pristine untitled tab seeded at
+      // bootstrap instead of stacking next to it.
       if (currentFile) {
         const { isSaved, pathname: cfPath } = currentFile
         if (isSaved && !cfPath) {
-          keepTabBarState = true
           this.FORCE_CLOSE_TAB(currentFile)
         }
-      }
-
-      if (!keepTabBarState) {
-        this.SHOW_TAB_VIEW(false)
       }
 
       const { markdown, isMixedLineEndings } = markdownDocument
@@ -1416,15 +1358,6 @@ export const useEditorStore = defineStore('editor', {
             })
           })
         }
-      }
-    },
-
-    SHOW_TAB_VIEW(always: boolean): void {
-      const { tabs } = this
-      const layoutStore = useLayoutStore()
-      if (always || tabs.length === 1) {
-        layoutStore.SET_LAYOUT({ showTabBar: true })
-        layoutStore.DISPATCH_LAYOUT_MENU_ITEMS()
       }
     },
 

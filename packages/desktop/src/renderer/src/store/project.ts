@@ -123,8 +123,7 @@ export const useProjectStore = defineStore('project', () => {
 
     const layout: LayoutPartial = {
       sidebarTab: 'files',
-      showSideBar: true,
-      showTabBar: true
+      showSideBar: true
     }
     layoutStore.SET_LAYOUT(layout, { scheduleBufferUpdate })
     layoutStore.DISPATCH_LAYOUT_MENU_ITEMS()

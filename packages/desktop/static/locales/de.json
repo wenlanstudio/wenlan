@@ -114,7 +114,6 @@
     "view": {
       "view": "Ansicht",
       "toggleSidebar": "Seitenleiste umschalten",
-      "toggleTabbar": "Tab-Leiste umschalten",
       "commandPalette": "Befehlspalette",
       "sourceCodeMode": "Quellcode-Modus",
       "typewriterMode": "Schreibmaschinen-Modus",
@@ -861,7 +860,6 @@
       "toggleFocusMode": "Fokus-Modus umschalten",
       "toggleSidebar": "Seitenleiste umschalten",
       "toggleToc": "Inhaltsverzeichnis umschalten",
-      "toggleTabbar": "Tab-Leiste umschalten",
       "toggleDevTools": "Entwicklertools umschalten",
       "devReload": "Entwickler-Neuladen",
       "reloadImages": "Bilder neu laden",

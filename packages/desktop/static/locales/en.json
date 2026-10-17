@@ -114,7 +114,6 @@
     "view": {
       "view": "View",
       "toggleSidebar": "Toggle Sidebar",
-      "toggleTabbar": "Toggle Tabbar",
       "commandPalette": "Command Palette",
       "sourceCodeMode": "Source Code Mode",
       "typewriterMode": "Typewriter Mode",
@@ -861,7 +860,6 @@
       "toggleFocusMode": "Toggle Focus Mode",
       "toggleSidebar": "Toggle Sidebar",
       "toggleToc": "Toggle Table of Contents",
-      "toggleTabbar": "Toggle Tab Bar",
       "toggleDevTools": "Toggle Developer Tools",
       "devReload": "Developer Reload",
       "reloadImages": "Reload Images",

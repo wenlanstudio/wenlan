@@ -5,11 +5,12 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import { launchElectron } from './helpers'
 
-// #5631 — the Files tree is under a v-if, so switching to another sidebar view
+// #5631 — the Files tree is under a v-if, so switching to the Outline tab
 // remounts every folder. Expanded folders must stay expanded across that.
 
-const sideBarIcon = (page: Page, index: number) =>
-  page.locator('.side-bar .left-column > ul').first().locator('li').nth(index)
+// The sidebar's Files / Outline tabs, in order.
+const sideBarTab = (page: Page, index: number) =>
+  page.locator('.side-bar-tabs .tab').nth(index)
 
 const folderName = (page: Page, name: string) =>
   page.locator('.side-bar-folder > .folder-name', { hasText: name })
@@ -58,9 +59,9 @@ test.describe('#5631 folder collapse state survives a sidebar view switch', () =
     await folderName(page, 'nested').click()
     await expect(page.locator('.side-bar-file[title$="note.md"]')).toBeVisible()
 
-    await sideBarIcon(page, 2).click() // TOC
+    await sideBarTab(page, 1).click() // Outline
     await expect(folderName(page, 'sub')).toHaveCount(0)
-    await sideBarIcon(page, 0).click() // Files
+    await sideBarTab(page, 0).click() // Files
 
     await expect(page.locator('.side-bar-file[title$="note.md"]')).toBeVisible()
     await expect(folderName(page, 'sub').locator('.icon-arrow')).not.toHaveClass(/\bfold\b/)

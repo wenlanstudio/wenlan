@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { expect, test } from '@playwright/test'
-import { getElectronPath, launchWithMarkdown } from './helpers'
+import { getElectronPath, launchWithMarkdown, readTabFilenames } from './helpers'
 
 // #3020: the `argv` of the `second-instance` event lists switches before the
 // other arguments and adds switches of its own, so `second.md --user-data-dir
@@ -87,9 +87,9 @@ test('a second instance started with --user-data-dir opens its file in the runni
     )
     expect(record).toEqual({ received: 1, errors: [] })
 
-    await expect(page.locator('.tabs-container > li', { hasText: 'second.md' })).toHaveCount(1, {
-      timeout: 10000
-    })
+    await expect
+      .poll(() => readTabFilenames(page), { timeout: 10000 })
+      .toContain('second.md')
     const windowCount = await app.evaluate(
       ({ BrowserWindow }) => BrowserWindow.getAllWindows().length
     )

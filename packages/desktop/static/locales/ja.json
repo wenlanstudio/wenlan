@@ -114,7 +114,6 @@
     "view": {
       "view": "表示",
       "toggleSidebar": "サイドバーの切り替え",
-      "toggleTabbar": "タブバーの切り替え",
       "commandPalette": "コマンドパレット",
       "sourceCodeMode": "ソースコードモード",
       "typewriterMode": "タイプライターモード",
@@ -861,7 +860,6 @@
       "toggleFocusMode": "フォーカスモードの切り替え",
       "toggleSidebar": "サイドバーの切り替え",
       "toggleToc": "目次の切り替え",
-      "toggleTabbar": "タブバーの切り替え",
       "toggleDevTools": "開発者ツールの切り替え",
       "devReload": "開発者を再読み込み",
       "reloadImages": "画像を再読み込み",

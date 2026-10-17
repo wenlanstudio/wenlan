@@ -3,14 +3,12 @@
     <div
       v-if="showTitleBar"
       class="title-bar-editor-bg"
-      :class="{ 'tabs-visible': showTabBar }"
     />
     <div
       v-if="showTitleBar"
       class="title-bar"
       :class="[
         { active: active },
-        { 'tabs-visible': showTabBar },
         { frameless: titleBarStyle === 'custom' },
         { isOsx: isOsx }
       ]"
@@ -92,7 +90,6 @@
 
 <script setup lang="ts">
 import { usePreferencesStore } from '@/store/preferences.js'
-import { useLayoutStore } from '@/store/layout.js'
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { storeToRefs } from 'pinia'
 import { minimizePath, restorePath, maximizePath, closePath } from '../../assets/window-controls.js'
@@ -114,7 +111,6 @@ const props = defineProps<{
 }>()
 
 const preferencesStore = usePreferencesStore()
-const layoutStore = useLayoutStore()
 
 const isOsx = isOsxPlatform
 const windowIconMinimize = minimizePath
@@ -141,7 +137,6 @@ onMounted(async () => {
 })
 
 const { titleBarStyle } = storeToRefs(preferencesStore)
-const { showTabBar } = storeToRefs(layoutStore)
 
 const showCustomTitleBar = computed(() => {
   return titleBarStyle.value === 'custom' && !isOsx

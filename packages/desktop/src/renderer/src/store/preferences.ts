@@ -103,9 +103,8 @@ export interface PreferencesState {
   spellcheckerNoUnderline: boolean
   spellcheckerLanguage: string
 
-  // ----- Side bar / tab bar visibility (persisted) -----
+  // ----- Side bar visibility (persisted) -----
   sideBarVisibility: boolean
-  tabBarVisibility: boolean
   sourceCodeModeEnabled: boolean
   openedFilesInSidebar: boolean
   autoRevealInSidebar: boolean
@@ -223,7 +222,6 @@ export const usePreferencesStore = defineStore('preferences', {
 
     // Default values that are overwritten with the entries below.
     sideBarVisibility: false,
-    tabBarVisibility: false,
     sourceCodeModeEnabled: false,
     openedFilesInSidebar: true,
     autoRevealInSidebar: true,

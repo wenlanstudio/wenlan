@@ -112,7 +112,6 @@ const keybindings: Map<string, string> = new Map([
   // Typora：Ctrl+Shift+1 大纲、Ctrl+Shift+2 文件树。
   ['view.toggle-sidebar', 'Ctrl+Shift+2'],
   ['view.toggle-toc', 'Ctrl+Shift+1'],
-  ['view.toggle-tabbar', 'Ctrl+Shift+B'],
   ['view.toggle-dev-tools', 'Ctrl+Alt+I'],
   ['view.dev-reload', 'Ctrl+F5'],
   ['view.reload-images', 'F5'],

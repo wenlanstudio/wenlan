@@ -320,7 +320,6 @@ class AppMenu {
       updateMenuItem(oldMenu, newMenu, 'typewriterModeMenuItem')
       updateMenuItem(oldMenu, newMenu, 'focusModeMenuItem')
       updateMenuItem(oldMenu, newMenu, 'sideBarMenuItem')
-      updateMenuItem(oldMenu, newMenu, 'tabBarMenuItem')
 
       // update window menu
       value.menu = newMenu
@@ -351,7 +350,6 @@ class AppMenu {
         updateMenuItem(oldMenu, rebuilt.menu, 'typewriterModeMenuItem')
         updateMenuItem(oldMenu, rebuilt.menu, 'focusModeMenuItem')
         updateMenuItem(oldMenu, rebuilt.menu, 'sideBarMenuItem')
-        updateMenuItem(oldMenu, rebuilt.menu, 'tabBarMenuItem')
         newMenu = rebuilt.menu
         newActions = rebuilt.actions
       } else if (type === MenuType.SETTINGS) {

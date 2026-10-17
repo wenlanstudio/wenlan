@@ -114,7 +114,6 @@
     "view": {
       "view": "Weergave",
       "toggleSidebar": "Zijbalk in-/uitschakelen",
-      "toggleTabbar": "Tabbalk in-/uitschakelen",
       "commandPalette": "Opdrachtpalet",
       "sourceCodeMode": "Broncodeweergave",
       "typewriterMode": "Typemachinestand",
@@ -861,7 +860,6 @@
       "toggleFocusMode": "Focusstand in-/uitschakelen",
       "toggleSidebar": "Zijbalk in-/uitschakelen",
       "toggleToc": "Inhoudsopgave in-/uitschakelen",
-      "toggleTabbar": "Tabbalk in-/uitschakelen",
       "toggleDevTools": "Ontwikkelaarshulpmiddelen in-/uitschakelen",
       "devReload": "Ontwikkelaar herladen",
       "reloadImages": "Afbeeldingen herladen",

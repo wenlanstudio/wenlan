@@ -4,7 +4,8 @@ import {
   launchWithMarkdown,
   clickMenuById,
   waitForEditor,
-  sendIpcToRenderer
+  sendIpcToRenderer,
+  readTabCount
 } from './helpers'
 
 // Build a long document with many top-level headings so the editor content
@@ -114,15 +115,10 @@ test.describe('TOC sidebar click scrolls the live editor', () => {
     app = launched.app
     page = launched.page
     await waitForEditor(page)
-    // Keep two files open so the editor viewport starts below the visible tab
-    // bar. The TOC target must align to that viewport, not to the window.
+    // Keep two documents open so the TOC target has to align to the editor's own
+    // viewport rather than to whatever happens to sit above it.
     await sendIpcToRenderer(app, 'mt::new-untitled-tab', true, '')
-    await page.waitForFunction(
-      () => document.querySelectorAll('.tabs-container > li').length >= 2,
-      null,
-      { timeout: 5000 }
-    )
-    await expect(page.locator('.editor-tabs')).toBeVisible()
+    await expect.poll(() => readTabCount(page), { timeout: 5000 }).toBe(2)
     await sendIpcToRenderer(app, 'mt::switch-tab-by-index', 0)
     await page.waitForFunction(
       (count) => document.querySelectorAll('.mu-container > h1').length >= count,

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
 import {
+  isActiveTabDirty,
   launchWithMarkdown,
   launchWithDoc,
   clickMenuById,
@@ -272,9 +273,7 @@ test.describe('Table source-mode round-trip + modified indicator (item 89)', () 
 
   test('editing a table cell marks the tab as unsaved', async() => {
     // Sanity: a freshly loaded file starts clean.
-    expect(
-      await page.evaluate(() => !!document.querySelector('.editor-tabs li.unsaved'))
-    ).toBe(false)
+    expect(await isActiveTabDirty(page)).toBe(false)
 
     // Click into the first table cell so the engine's active block is a cell,
     // then type into it.
@@ -285,12 +284,7 @@ test.describe('Table source-mode round-trip + modified indicator (item 89)', () 
 
     // The edit dirties the tab; poll because the indicator flips on the
     // async json-change.
-    await expect
-      .poll(
-        () => page.evaluate(() => !!document.querySelector('.editor-tabs li.unsaved')),
-        { timeout: 5000 }
-      )
-      .toBe(true)
+    await expect.poll(() => isActiveTabDirty(page), { timeout: 5000 }).toBe(true)
 
     // The modified content is observable through the source-mode round-trip.
     const md = await getMarkdownContent(page, app)

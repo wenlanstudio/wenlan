@@ -215,46 +215,6 @@
   fill: #4183c4 !important;
 }
 
-.editor-tabs {
-  box-shadow: none !important;
-}
-.editor-tabs:after {
-  position: absolute;
-  content: '';
-  border-bottom: 1px solid #dfe2e5;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 1;
-}
-.editor-tabs ul.tabs-container:after {
-  position: absolute;
-  content: '';
-  border-bottom: 1px solid #dfe2e5;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 2;
-}
-.tabs-container > li,
-.tabs-container > li.active {
-  background: var(--editorBgColor) !important;
-}
-.tabs-container > li.active {
-  border: 1px solid #dfe2e5;
-  border-bottom: none;
-}
-.tabs-container > li.active:after {
-  top: 0 !important;
-  right: auto !important;
-  width: 2px !important;
-  height: auto !important;
-  background: #4183c4 !important;
-}
-.tabs-container svg.close-icon #unsaved-circle-icon {
-  fill: #4183c4;
-}
-
 /* --- Editor: Typora github 主题的版式数值 ------------------------- */
 
 /* 定宽列：860px 含左右各 30px 内边距，正文实际 800px，与 Typora 一致。

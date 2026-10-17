@@ -114,7 +114,6 @@
     "view": {
       "view": "视图",
       "toggleSidebar": "切换侧边栏",
-      "toggleTabbar": "切换标签栏",
       "commandPalette": "命令面板",
       "sourceCodeMode": "源码模式",
       "typewriterMode": "打字机模式",
@@ -861,7 +860,6 @@
       "toggleFocusMode": "切换专注模式",
       "toggleSidebar": "切换侧边栏",
       "toggleToc": "切换目录",
-      "toggleTabbar": "切换标签栏",
       "toggleDevTools": "切换开发者工具",
       "actualSize": "实际大小",
       "devToggleDeveloperTools": "切换开发者工具",

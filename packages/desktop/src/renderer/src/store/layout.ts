@@ -9,7 +9,6 @@ export type SidebarTab = 'files' | 'toc'
 export interface LayoutPartial {
   sidebarTab?: SidebarTab
   showSideBar?: boolean
-  showTabBar?: boolean
   sideBarWidth?: number | string
 }
 
@@ -29,7 +28,6 @@ const normalizeSidebarTab = (tab: unknown): SidebarTab => (tab === 'toc' ? 'toc'
 interface BufferedLayout {
   sidebarTab: SidebarTab
   showSideBar: boolean
-  showTabBar: boolean
   sideBarWidth: number
 }
 
@@ -40,7 +38,6 @@ const createBufferedLayoutState = (state: unknown): BufferedLayout | null => {
   return {
     sidebarTab: normalizeSidebarTab(s.sidebarTab),
     showSideBar: !!s.showSideBar,
-    showTabBar: !!s.showTabBar,
     sideBarWidth: normalizeSideBarWidth(s.sideBarWidth)
   }
 }
@@ -51,7 +48,6 @@ const initialSideBarWidth = normalizeSideBarWidth(initialWidth)
 export const useLayoutStore = defineStore('layout', () => {
   const sidebarTab = ref<SidebarTab>('files')
   const showSideBar = ref(false)
-  const showTabBar = ref(false)
   const sideBarWidth = ref<number>(initialSideBarWidth)
 
   // Actual rendered sidebar width. `sideBarWidth` is the user-chosen width
@@ -84,7 +80,6 @@ export const useLayoutStore = defineStore('layout', () => {
     // sideBarWidth's normalization), and skip unknown keys silently.
     if (layout.sidebarTab !== undefined) sidebarTab.value = layout.sidebarTab
     if (layout.showSideBar !== undefined) showSideBar.value = !!layout.showSideBar
-    if (layout.showTabBar !== undefined) showTabBar.value = !!layout.showTabBar
     if (layout.sideBarWidth !== undefined) sideBarWidth.value = layout.sideBarWidth as number
     if (scheduleBufferUpdate) {
       debouncedSendBufferedState()
@@ -95,7 +90,6 @@ export const useLayoutStore = defineStore('layout', () => {
     return createBufferedLayoutState({
       sidebarTab: sidebarTab.value,
       showSideBar: showSideBar.value,
-      showTabBar: showTabBar.value,
       sideBarWidth: sideBarWidth.value
     })
   }
@@ -108,25 +102,20 @@ export const useLayoutStore = defineStore('layout', () => {
     SET_LAYOUT(
       {
         sidebarTab: layout.sidebarTab,
-        showSideBar: layout.showSideBar,
-        showTabBar: layout.showTabBar
+        showSideBar: layout.showSideBar
       },
       { scheduleBufferUpdate: false }
     )
     DISPATCH_LAYOUT_MENU_ITEMS()
   }
 
-  function TOGGLE_LAYOUT_ENTRY(entryName: 'showSideBar' | 'showTabBar'): void {
-    if (entryName === 'showSideBar') {
-      showSideBar.value = !showSideBar.value
-      const preferencesStore = usePreferencesStore()
-      preferencesStore.SET_SINGLE_PREFERENCE({
-        type: 'sideBarVisibility',
-        value: !!showSideBar.value
-      })
-    } else if (entryName === 'showTabBar') {
-      showTabBar.value = !showTabBar.value
-    }
+  function TOGGLE_SIDE_BAR(): void {
+    showSideBar.value = !showSideBar.value
+    const preferencesStore = usePreferencesStore()
+    preferencesStore.SET_SINGLE_PREFERENCE({
+      type: 'sideBarVisibility',
+      value: !!showSideBar.value
+    })
     debouncedSendBufferedState()
   }
 
@@ -149,25 +138,27 @@ export const useLayoutStore = defineStore('layout', () => {
       DISPATCH_LAYOUT_MENU_ITEMS()
     })
 
+    // Only the side bar is left in the layout channel: the tab bar used to be
+    // the second entry and is gone. The channel names stay put because they are
+    // the transport contract with the main process menu actions.
     window.electron.ipcRenderer.on('mt::toggle-view-layout-entry', (_e, entryName) => {
-      TOGGLE_LAYOUT_ENTRY(entryName as 'showSideBar' | 'showTabBar')
+      if (entryName === 'showSideBar') {
+        TOGGLE_SIDE_BAR()
+      }
       DISPATCH_LAYOUT_MENU_ITEMS()
     })
 
     bus.on('view:toggle-layout-entry', (entryName: unknown) => {
-      const name = entryName as 'showSideBar' | 'showTabBar'
-      TOGGLE_LAYOUT_ENTRY(name)
-      const { windowId } = window.marktext?.env ?? {}
-      window.electron.ipcRenderer.send('mt::view-layout-changed', Number(windowId), {
-        [name]: name === 'showSideBar' ? showSideBar.value : showTabBar.value
-      })
+      if (entryName === 'showSideBar') {
+        TOGGLE_SIDE_BAR()
+      }
+      DISPATCH_LAYOUT_MENU_ITEMS()
     })
   }
 
   function DISPATCH_LAYOUT_MENU_ITEMS(): void {
     const { windowId } = window.marktext?.env ?? {}
     window.electron.ipcRenderer.send('mt::view-layout-changed', Number(windowId), {
-      showTabBar: showTabBar.value,
       showSideBar: showSideBar.value
     })
   }
@@ -179,13 +170,12 @@ export const useLayoutStore = defineStore('layout', () => {
   return {
     sidebarTab,
     showSideBar,
-    showTabBar,
     sideBarWidth,
     effectiveSideBarWidth,
     SET_LAYOUT,
     CREATE_BUFFERED_STATE,
     RESTORE_BUFFERED_STATE,
-    TOGGLE_LAYOUT_ENTRY,
+    TOGGLE_SIDE_BAR,
     SET_SIDE_BAR_WIDTH,
     LISTEN_FOR_LAYOUT,
     DISPATCH_LAYOUT_MENU_ITEMS,

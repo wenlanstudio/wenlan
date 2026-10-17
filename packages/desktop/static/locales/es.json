@@ -114,7 +114,6 @@
     "view": {
       "view": "Ver",
       "toggleSidebar": "Alternar Barra Lateral",
-      "toggleTabbar": "Alternar Barra de Pestañas",
       "commandPalette": "Paleta de Comandos",
       "sourceCodeMode": "Modo Código Fuente",
       "typewriterMode": "Modo Máquina de Escribir",
@@ -861,7 +860,6 @@
       "toggleFocusMode": "Alternar Modo Enfoque",
       "toggleSidebar": "Alternar Barra Lateral",
       "toggleToc": "Alternar Tabla de Contenidos",
-      "toggleTabbar": "Alternar Barra de Pestañas",
       "toggleDevTools": "Alternar Herramientas de Desarrollador",
       "devReload": "Recarga de Desarrollador",
       "reloadImages": "Recargar Imágenes",

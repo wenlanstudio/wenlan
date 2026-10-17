@@ -13,7 +13,6 @@ import log from 'electron-log'
 import { isDirectory, isFile, exists } from 'common/filesystem'
 import { MARKDOWN_EXTENSIONS, isDangerousExecutableFile, isMarkdownFile } from 'common/filesystem/paths'
 import { checkUpdates, userSetting } from './marktext'
-import { showTabBar } from './view'
 import { COMMANDS } from '../../commands'
 import type { CommandManager } from '../../commands'
 import { EXTENSION_HASN, PANDOC_EXTENSIONS, URL_REG } from '../../config'
@@ -911,7 +910,6 @@ export const openFileOrFolder = (
 export const newBlankTab = (win: Win): void => {
   if (win && win.webContents) {
     win.webContents.send('mt::new-untitled-tab')
-    showTabBar(win)
   }
 }
 

@@ -2,18 +2,18 @@ import { expect, test } from '@playwright/test'
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { launchElectron } from './helpers'
+import { launchElectron, readTabFilenames } from './helpers'
 
 test('CLI opens a named buffer without writing until Save (#2143)', async() => {
   const directory = mkdtempSync(path.join(tmpdir(), 'marktext-2143-e2e-'))
   const pathname = path.join(directory, 'first.md')
   const { app, page } = await launchElectron([pathname], {
-    preferences: { openFilesInNewWindow: false, autoSave: false, tabBarVisibility: true }
+    preferences: { openFilesInNewWindow: false, autoSave: false }
   })
   try {
-    await expect(page.locator('.tabs-container > li').filter({ hasText: 'first.md' })).toHaveCount(
-      1
-    )
+    await expect
+      .poll(() => readTabFilenames(page), { timeout: 10000 })
+      .toContain('first.md')
     expect(existsSync(pathname)).toBe(false)
     await app.evaluate(({ BrowserWindow }) => {
       BrowserWindow.getAllWindows()[0].webContents.send('mt::editor-ask-file-save')
@@ -39,9 +39,9 @@ test('CLI opens a named buffer without writing until Save (#2143)', async() => {
       const argv = ['marktext', 'second.md']
       app.emit('second-instance', {}, argv, workingDirectory, { argv })
     }, directory)
-    await expect(page.locator('.tabs-container > li').filter({ hasText: 'second.md' })).toHaveCount(
-      1
-    )
+    await expect
+      .poll(() => readTabFilenames(page), { timeout: 10000 })
+      .toContain('second.md')
     expect(existsSync(path.join(directory, 'second.md'))).toBe(false)
     if (process.platform === 'darwin') {
       await expect
@@ -58,15 +58,15 @@ test('CLI opens a named buffer without writing until Save (#2143)', async() => {
       const argv = ['marktext', 'second.md']
       app.emit('second-instance', {}, argv, workingDirectory, { argv })
     }, directory)
-    await expect(page.locator('.tabs-container > li').filter({ hasText: 'second.md' })).toHaveCount(
-      1
-    )
+    await expect
+      .poll(() => readTabFilenames(page), { timeout: 10000 })
+      .toContain('second.md')
     await app.evaluate(({ BrowserWindow }) => {
       BrowserWindow.getAllWindows()[0].webContents.send('mt::editor-close-tab')
     })
-    await expect(page.locator('.tabs-container > li').filter({ hasText: 'second.md' })).toHaveCount(
-      0
-    )
+    await expect
+      .poll(() => readTabFilenames(page), { timeout: 10000 })
+      .not.toContain('second.md')
     expect(existsSync(path.join(directory, 'second.md'))).toBe(false)
 
     await app.evaluate(({ app }, workingDirectory) => {
@@ -76,9 +76,9 @@ test('CLI opens a named buffer without writing until Save (#2143)', async() => {
     await expect.poll(() => app.windows().length).toBe(2)
     const newPage = app.windows().find((window) => window !== page)
     if (!newPage) throw new Error('Expected a new editor window')
-    await expect(
-      newPage.locator('.tabs-container > li').filter({ hasText: 'third.md' })
-    ).toHaveCount(1)
+    await expect
+      .poll(() => readTabFilenames(newPage), { timeout: 10000 })
+      .toContain('third.md')
     const thirdPath = path.join(directory, 'third.md')
     expect(existsSync(thirdPath)).toBe(false)
     writeFileSync(thirdPath, 'external content')

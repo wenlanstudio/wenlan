@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import {
+  isActiveTabDirty,
   launchWithMarkdown,
   waitForMenuReady,
   getMarkdownContent,
@@ -64,7 +65,7 @@ test.describe('External disk reload — undo restores the pre-change document', 
     // ...and stays clean: the reloaded content matches the file on disk, so the
     // tab must NOT be flagged unsaved (replaceContent fires a json-change that
     // would otherwise mark it dirty against the stale baseline).
-    expect(await page.evaluate(() => !!document.querySelector('.editor-tabs li.unsaved'))).toBe(
+    expect(await isActiveTabDirty(page)).toBe(
       false
     )
 
@@ -75,7 +76,7 @@ test.describe('External disk reload — undo restores the pre-change document', 
     expect((await getMarkdownContent(page, app)).trim()).toBe('old content here')
     // The undone document now diverges from on-disk content, so the tab is dirty.
     await expect
-      .poll(() => page.evaluate(() => !!document.querySelector('.editor-tabs li.unsaved')))
+      .poll(() => isActiveTabDirty(page))
       .toBe(true)
     await app.close()
   })

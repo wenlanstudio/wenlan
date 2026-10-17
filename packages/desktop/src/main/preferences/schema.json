@@ -398,11 +398,6 @@
     "type": "boolean",
     "default": false
   },
-  "tabBarVisibility": {
-    "description": "View--Whether the tabs are shown.--internal",
-    "type": "boolean",
-    "default": false
-  },
   "sourceCodeModeEnabled": {
     "description": "View--Whether the source-code mode is enabled by default.--internal",
     "type": "boolean",

@@ -401,3 +401,77 @@ export const sendIpcToRenderer = async(
     { channel, args }
   )
 }
+
+// --- Open-document (tab) state -------------------------------------------
+//
+// The tab strip is gone, so nothing renders the open documents into the DOM
+// anymore. What remains is the Pinia `editor` store, i.e. the very source the
+// strip used to draw from, and it is reachable from the page: the renderer
+// exposes the active pinia instance on `#app.__vue_app__` via
+// `config.globalProperties.$pinia`, and pinia keeps registered stores in its
+// internal `_s` Map keyed by id.
+
+interface TabSnapshot {
+  id: string
+  filename?: string
+  pathname?: string
+  isSaved?: boolean
+}
+
+interface EditorStoreSnapshot {
+  tabs: TabSnapshot[]
+  currentFile: TabSnapshot | null
+}
+
+const grabEditorStore = (): EditorStoreSnapshot | null => {
+  const root = document.querySelector('#app') as
+    | (Element & { __vue_app__?: { config?: { globalProperties?: Record<string, unknown> } } })
+    | null
+  const pinia = root?.__vue_app__?.config?.globalProperties?.$pinia as
+    | { _s?: Map<string, Record<string, unknown>> }
+    | undefined
+  const store = pinia?._s?.get('editor') as
+    | { tabs?: TabSnapshot[]; currentFile?: TabSnapshot | null }
+    | undefined
+  if (!store) return null
+  return {
+    tabs: Array.isArray(store.tabs) ? store.tabs : [],
+    currentFile: store.currentFile ?? null
+  }
+}
+
+const readEditorStore = (page: Page): Promise<EditorStoreSnapshot | null> =>
+  page.evaluate(grabEditorStore)
+
+/** How many documents are open in this window. */
+export const readTabCount = async(page: Page): Promise<number> =>
+  (await readEditorStore(page))?.tabs.length ?? 0
+
+/** The open documents' filenames, in tab order. */
+export const readTabFilenames = async(page: Page): Promise<string[]> =>
+  (await readEditorStore(page))?.tabs.map((tab) => tab.filename ?? '') ?? []
+
+/** The ordered tab ids; close-survivor assertions compare against these. */
+export const readTabIds = async(page: Page): Promise<string[]> =>
+  (await readEditorStore(page))?.tabs.map((tab) => tab.id) ?? []
+
+/** Id of the document currently in the editor, or null when there is none. */
+export const readActiveTabId = async(page: Page): Promise<string | null> =>
+  (await readEditorStore(page))?.currentFile?.id ?? null
+
+/** Filename of the document currently in the editor. */
+export const readActiveTabFilename = async(page: Page): Promise<string | null> =>
+  (await readEditorStore(page))?.currentFile?.filename ?? null
+
+/** Whether the document currently in the editor has unsaved changes. */
+export const isActiveTabDirty = async(page: Page): Promise<boolean> =>
+  (await readEditorStore(page))?.currentFile?.isSaved === false
+
+/** Wait until the window holds exactly `expected` open documents. */
+export const waitForTabCount = async(
+  page: Page,
+  expected: number,
+  timeout = 5000
+): Promise<void> => {
+  await expect.poll(() => readTabCount(page), { timeout }).toBe(expected)
+}

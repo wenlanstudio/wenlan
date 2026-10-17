@@ -49,7 +49,6 @@ test.describe('Application menu wiring', () => {
       'typewriterModeMenuItem',
       'focusModeMenuItem',
       'sideBarMenuItem',
-      'tabBarMenuItem',
       'tocMenuItem',
       'autoSaveMenuItem',
       'dark',

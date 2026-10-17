@@ -114,7 +114,6 @@
     "view": {
       "view": "Affichage",
       "toggleSidebar": "Basculer la barre latérale",
-      "toggleTabbar": "Basculer la barre d'onglets",
       "commandPalette": "Palette de commandes",
       "sourceCodeMode": "Mode code source",
       "typewriterMode": "Mode machine à écrire",
@@ -861,7 +860,6 @@
       "toggleFocusMode": "Basculer le mode focus",
       "toggleSidebar": "Basculer la barre latérale",
       "toggleToc": "Basculer la table des matières",
-      "toggleTabbar": "Basculer la barre d'onglets",
       "toggleDevTools": "Basculer les outils de développement",
       "devReload": "Rechargement développeur",
       "reloadImages": "Recharger les images",

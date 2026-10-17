@@ -2,16 +2,13 @@ import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import fs from 'fs'
 import path from 'path'
-import { launchWithMarkdown, typeIntoEditor } from './helpers'
+import { isActiveTabDirty as isDirty, launchWithMarkdown, typeIntoEditor } from './helpers'
 
 // #3652 — MarkText open beside another editor. A tab the user never edited
 // discards nothing when it reloads, so it reloads silently; a tab holding
 // unsaved edits must still ask before those edits are thrown away.
 //
 // Both cases drive the REAL watcher by writing the file on disk.
-
-const isDirty = (page: Page) =>
-  page.evaluate(() => !!document.querySelector('.editor-tabs li.unsaved'))
 
 const editorText = (page: Page) =>
   page.evaluate(() => document.querySelector('.editor-component')?.textContent ?? '')

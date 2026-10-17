@@ -3,6 +3,7 @@ import type { ElectronApplication, Page } from 'playwright'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import {
+  isActiveTabDirty,
   launchWithDoc,
   waitForMenuReady,
   enterSourceMode,
@@ -24,7 +25,7 @@ import {
 // is one desktop doc with all block types + the full desktop save path:
 //   editor (loaded with a real file) -> Cmd/Ctrl+S (mt::editor-ask-file-save)
 //   -> store FILE_SAVE -> mt::response-file-save -> main writeMarkdownFile
-//   -> mt::tab-saved -> the tab's unsaved dot clears.
+//   -> mt::tab-saved -> the document is clean again.
 //
 // The fixture lives at test/e2e/data/all-blocks.md. It is written in the
 // engine's canonical serialized form (default desktop prefs: listIndentation 1,
@@ -38,8 +39,6 @@ const FIXTURE_REL = 'test/e2e/data/all-blocks.md'
 // desktop package root (cwd). helpers.ts sets projectRoot to packages/desktop.
 const FIXTURE_ABS = path.resolve(__dirname, 'data', 'all-blocks.md')
 
-const UNSAVED_DOT = '.editor-tabs li.unsaved'
-
 // Trigger the desktop save through the exact IPC channel the File > Save menu
 // item sends (`mt::editor-ask-file-save` -> store FILE_SAVE). The file was
 // opened from a real path so main takes the alreadyExistOnDisk branch: it
@@ -49,9 +48,6 @@ const save = async(app: ElectronApplication): Promise<void> => {
 }
 
 const readDisk = (): string => fs.readFileSync(FIXTURE_ABS, 'utf-8')
-
-const isDirty = (page: Page): Promise<boolean> =>
-  page.evaluate((sel) => !!document.querySelector(sel), UNSAVED_DOT)
 
 test.describe('All blocks round-trip + save byte-stability (item 39)', () => {
   let app: ElectronApplication
@@ -113,7 +109,7 @@ test.describe('All blocks round-trip + save byte-stability (item 39)', () => {
 
   test('the freshly loaded doc is clean and serializes back to the original bytes', async() => {
     // A freshly opened (unedited) file must not be marked dirty.
-    expect(await isDirty(page)).toBe(false)
+    expect(await isActiveTabDirty(page)).toBe(false)
 
     // The engine's serialization of the loaded document equals the on-disk
     // bytes — i.e. the fixture is already in canonical form, so loading it does
@@ -149,7 +145,7 @@ test.describe('All blocks round-trip + save byte-stability (item 39)', () => {
     await save(app)
 
     // The saved/clean indicator is set on the async mt::tab-saved reply.
-    await expect.poll(() => isDirty(page), { timeout: 5000 }).toBe(false)
+    await expect.poll(() => isActiveTabDirty(page), { timeout: 5000 }).toBe(false)
 
     // The bytes written to disk equal the original fixture (no reformat on
     // save). Poll because the disk write is async on the main side.
@@ -164,7 +160,7 @@ test.describe('All blocks round-trip + save byte-stability (item 39)', () => {
     // saved an already-clean tab). A bulk source-mode edit that appends a
     // paragraph dirties the tab; confirm the unsaved dot appears.
     await setSourceMarkdown(page, app, original + '\nDIRTY EXTRA PARAGRAPH\n')
-    await expect.poll(() => isDirty(page), { timeout: 5000 }).toBe(true)
+    await expect.poll(() => isActiveTabDirty(page), { timeout: 5000 }).toBe(true)
 
     // What the editor will persist is its own serialization of the current
     // document (store FILE_SAVE sends currentFile.markdown). Capture it, then
@@ -174,7 +170,7 @@ test.describe('All blocks round-trip + save byte-stability (item 39)', () => {
     expect(editorContent).toContain('DIRTY EXTRA PARAGRAPH')
 
     await save(app)
-    await expect.poll(() => isDirty(page), { timeout: 5000 }).toBe(false)
+    await expect.poll(() => isActiveTabDirty(page), { timeout: 5000 }).toBe(false)
     await expect.poll(() => readDisk(), { timeout: 5000 }).toBe(editorContent)
   })
 })

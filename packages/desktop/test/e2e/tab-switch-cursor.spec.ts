@@ -1,8 +1,11 @@
 import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
-import { launchWithMarkdown, sendIpcToRenderer, waitForMenuReady } from './helpers'
-
-const tabSelector = '.tabs-container > li'
+import {
+  launchWithMarkdown,
+  sendIpcToRenderer,
+  waitForMenuReady,
+  readTabCount
+} from './helpers'
 
 // Place a collapsed caret at character offset `ch` inside the Nth (0-based)
 // paragraph content span, then nudge the engine to commit its active block
@@ -90,11 +93,7 @@ test.describe('Tab switch restores the per-tab caret', () => {
 
     // Open a second, auto-selected tab — this switches away from tab A.
     await sendIpcToRenderer(app, 'mt::new-untitled-tab', true, 'other tab body\n')
-    await page.waitForFunction(
-      (sel) => document.querySelectorAll(sel).length >= 2,
-      tabSelector,
-      { timeout: 5000 }
-    )
+    await expect.poll(() => readTabCount(page), { timeout: 5000 }).toBe(2)
     await page.waitForTimeout(200)
 
     // Switch back to tab A (index 0).
@@ -158,11 +157,7 @@ test.describe('Tab switch restores the per-tab undo history', () => {
 
     // Open tab B (auto-selected) with its own body, then build B's history.
     await sendIpcToRenderer(app, 'mt::new-untitled-tab', true, 'beta\n')
-    await page.waitForFunction(
-      (sel) => document.querySelectorAll(sel).length >= 2,
-      tabSelector,
-      { timeout: 5000 }
-    )
+    await expect.poll(() => readTabCount(page), { timeout: 5000 }).toBe(2)
     await expect.poll(() => paragraphText(0)).toBe('beta')
 
     // Caret at the end of "beta" (offset 4), then type B's run.
@@ -228,11 +223,7 @@ test.describe('Tab switch restores the per-tab scroll position', () => {
 
     // Open tab B (auto-selected, short body) — it starts at the top.
     await sendIpcToRenderer(app, 'mt::new-untitled-tab', true, 'short\n')
-    await page.waitForFunction(
-      (sel) => document.querySelectorAll(sel).length >= 2,
-      tabSelector,
-      { timeout: 5000 }
-    )
+    await expect.poll(() => readTabCount(page), { timeout: 5000 }).toBe(2)
     await expect.poll(() => scrollTop()).toBe(0)
 
     // Switch back to tab A — its scrollTop must be (approximately) restored.

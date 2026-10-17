@@ -8,7 +8,9 @@ import {
   launchElectron,
   launchWithMarkdown,
   waitForEditor,
-  waitForMenuReady
+  waitForMenuReady,
+  readActiveTabFilename,
+  readTabCount
 } from './helpers'
 
 // #5292: `[x](#中文标题)` did nothing because heading slugs dropped non-ASCII
@@ -44,10 +46,7 @@ const headingOffset = (page: Page, text: string): Promise<number | null> =>
     return Math.round(heading.getBoundingClientRect().top - container.getBoundingClientRect().top)
   }, text)
 
-const activeTabName = (page: Page): Promise<string | null> =>
-  page.evaluate(
-    () => document.querySelector('.tabs-container li.active')?.textContent?.trim() ?? null
-  )
+const activeTabName = readActiveTabFilename
 
 const expectHeadingRevealed = async(page: Page, text: string): Promise<void> => {
   await expect
@@ -116,7 +115,7 @@ test.describe('Anchor links (#5292)', () => {
     const { page } = launched
     await waitForEditor(page)
     await waitForMenuReady(app)
-    await expect.poll(() => page.locator('.tabs-container li').count()).toBe(2)
+    await expect.poll(() => readTabCount(page)).toBe(2)
     await expect.poll(() => activeTabName(page)).toContain('note.md')
     await page.waitForSelector('span.mu-link', { state: 'attached' })
 

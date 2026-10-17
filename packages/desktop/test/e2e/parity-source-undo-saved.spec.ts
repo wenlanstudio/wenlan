@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test'
 import type { Page } from 'playwright'
 import {
+  isActiveTabDirty,
+  readActiveTabId,
   launchWithMarkdown,
   waitForMenuReady,
   enterSourceMode,
@@ -148,7 +150,7 @@ test.describe('Parity PG15 — undo back to on-disk content restores the saved i
     await page.waitForTimeout(500)
 
     // Sanity: the edit dirtied the tab and changed the content.
-    expect(await page.evaluate(() => !!document.querySelector('.editor-tabs li.unsaved'))).toBe(true)
+    expect(await isActiveTabDirty(page)).toBe(true)
     expect((await getMarkdownContent(page, app)).trim()).toContain('EXTRA')
 
     // Undo back to the on-disk content.
@@ -159,9 +161,7 @@ test.describe('Parity PG15 — undo back to on-disk content restores the saved i
 
     // ...and the saved/clean indicator comes back (tab no longer marked
     // unsaved). Poll: the indicator clears on the undo's async json-change.
-    await expect
-      .poll(() => page.evaluate(() => !!document.querySelector('.editor-tabs li.unsaved')))
-      .toBe(false)
+    await expect.poll(() => isActiveTabDirty(page)).toBe(false)
     await app.close()
   })
 
@@ -180,14 +180,10 @@ test.describe('Parity PG15 — undo back to on-disk content restores the saved i
     await placeCaretInEditor(page)
     await typeIntoEditor(page, ' B')
     await page.waitForTimeout(500)
-    const tabId = await page.evaluate(
-      () => document.querySelector('.editor-tabs li.active')?.getAttribute('data-id') ?? null
-    )
+    const tabId = await readActiveTabId(page)
     expect(tabId).toBeTruthy()
     await sendIpcToRenderer(app, 'mt::tab-saved', tabId)
-    await expect
-      .poll(() => page.evaluate(() => !!document.querySelector('.editor-tabs li.unsaved')))
-      .toBe(false)
+    await expect.poll(() => isActiveTabDirty(page)).toBe(false)
 
     // Undo B (back to 'A', dirty), then make a DIFFERENT edit C. The engine undo
     // depth returns to the saved depth, but the document is A + C != saved A + B.
@@ -200,21 +196,10 @@ test.describe('Parity PG15 — undo back to on-disk content restores the saved i
     const content = (await getMarkdownContent(page, app)).trim()
     expect(content).toContain('C')
     expect(content).not.toContain('B')
-    const dirty = await page.evaluate(
-      () => !!document.querySelector('.editor-tabs li.unsaved')
-    )
-    expect(dirty).toBe(true)
+    expect(await isActiveTabDirty(page)).toBe(true)
     await app.close()
   })
 })
-
-const isTabDirty = (page: Page): Promise<boolean> =>
-  page.evaluate(() => !!document.querySelector('.editor-tabs li.unsaved'))
-
-const activeTabId = (page: Page): Promise<string | null> =>
-  page.evaluate(
-    () => document.querySelector('.editor-tabs li.active')?.getAttribute('data-id') ?? null
-  )
 
 // Read the live WYSIWYG document text WITHOUT toggling source mode. Toggling
 // into/out of source mode (as getMarkdownContent does) pushes extra
@@ -246,7 +231,7 @@ test.describe('Item 248 — a real source-mode keystroke dirties the tab dot', (
     await waitForMenuReady(app)
 
     // Freshly-loaded saved doc: no dirty dot yet.
-    expect(await isTabDirty(page)).toBe(false)
+    expect(await isActiveTabDirty(page)).toBe(false)
 
     await enterSourceMode(page, app)
 
@@ -282,7 +267,7 @@ test.describe('Item 248 — a real source-mode keystroke dirties the tab dot', (
     // Hand off back to WYSIWYG: the edit becomes a dirtying history boundary, so
     // the active tab gains `.unsaved`, and the typed text survives the round trip.
     await exitSourceMode(page, app)
-    await expect.poll(() => isTabDirty(page)).toBe(true)
+    await expect.poll(() => isActiveTabDirty(page)).toBe(true)
     await expect
       .poll(() => getMarkdownContent(page, app).then((md) => md.trim()))
       .toContain('saved baseline SRCKEY')
@@ -301,14 +286,14 @@ test.describe('Item 256 — save -> clean -> edit -> dirty -> undo-to-saved cycl
     await waitForMenuReady(app)
 
     // Freshly-loaded saved doc: no dirty dot yet.
-    expect(await isTabDirty(page)).toBe(false)
+    expect(await isActiveTabDirty(page)).toBe(false)
 
     // 1) Edit to dirty the tab. Let the type fully commit as its own engine undo
     //    boundary before sealing it (a too-early follow-up edit/undo can collapse
     //    adjacent types into one step and overshoot the saved state).
     await placeCaretInEditor(page)
     await typeIntoEditor(page, ' EXTRA')
-    await expect.poll(() => isTabDirty(page)).toBe(true)
+    await expect.poll(() => isActiveTabDirty(page)).toBe(true)
     await page.waitForTimeout(400)
 
     // Seal the EXTRA edit as a distinct committed undo boundary by round-tripping
@@ -325,15 +310,15 @@ test.describe('Item 256 — save -> clean -> edit -> dirty -> undo-to-saved cycl
 
     // 2) Real save (same IPC the main process sends after writing to disk):
     //    records the current synthetic id as lastSavedHistoryId and clears dirty.
-    const tabId = await activeTabId(page)
+    const tabId = await readActiveTabId(page)
     expect(tabId).toBeTruthy()
     await sendIpcToRenderer(app, 'mt::tab-saved', tabId)
-    await expect.poll(() => isTabDirty(page)).toBe(false)
+    await expect.poll(() => isActiveTabDirty(page)).toBe(false)
 
     // 3) A fresh edit past the saved state re-marks the tab dirty.
     await placeCaretInEditor(page)
     await typeIntoEditor(page, ' MORE')
-    await expect.poll(() => isTabDirty(page)).toBe(true)
+    await expect.poll(() => isActiveTabDirty(page)).toBe(true)
     await expect.poll(() => wysiwygText(page)).toBe(`${savedText}\nMORE`)
     await page.waitForTimeout(400)
 
@@ -343,7 +328,7 @@ test.describe('Item 256 — save -> clean -> edit -> dirty -> undo-to-saved cycl
     //    This is the full save->clean->edit->dirty->undo-to-saved loop.
     await undo(app)
     await expect.poll(() => wysiwygText(page)).toBe(savedText)
-    await expect.poll(() => isTabDirty(page)).toBe(false)
+    await expect.poll(() => isActiveTabDirty(page)).toBe(false)
     await app.close()
   })
 })

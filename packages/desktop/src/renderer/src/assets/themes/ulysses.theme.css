@@ -136,15 +136,6 @@
   --hr-color: var(--hrColor);
 }
 
-.editor-tabs {
-  box-shadow: none !important;
-}
-
-.tabs-container > li {
-  border-right: 1px solid #e5e5e5 !important;
-  background: var(--editorBgColor) !important;
-}
-
 /* ------------------------------------ */
 
 .mu-container h1,

@@ -156,13 +156,6 @@
   box-shadow: none !important;
 }
 
-.tabs-container > li {
-  background: none !important;
-}
-.tabs-container > li.active {
-  background: var(--floatBgColor) !important;
-}
-
 .open-project button,
 .recent-files-projects button {
   box-shadow: none !important;

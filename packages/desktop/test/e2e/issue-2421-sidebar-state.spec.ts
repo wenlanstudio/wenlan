@@ -1,16 +1,38 @@
 import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
-import { launchWithMarkdown } from './helpers'
+import { clickMenuById, launchWithMarkdown } from './helpers'
 
-// #2421 — toggling the sidebar via its left-column icons must not lose state.
-// Two bugs: (1) collapsing to the icon strip persisted the clamped 220px width
-// instead of the real width, so re-expanding shrank the sidebar; (2) the tree's
-// collapsed sections (Opened files / Directories) are local refs under a v-if,
-// so collapsing the sidebar destroyed the tree and reset them on re-expand.
-// These drive the real built app.
+// #2421 — toggling the sidebar must not lose state. Two bugs: (1) hiding it
+// persisted the clamped 220px width instead of the real width, so showing it
+// again shrank the sidebar; (2) the tree's collapsed sections (Opened files /
+// Directories) are local refs under a v-if, so hiding the sidebar destroyed the
+// tree and reset them when it came back. These drive the real built app through
+// the same View-menu entry the user's sidebar button routes to.
 
-const filesIcon = (page: Page) =>
-  page.locator('.side-bar .left-column > ul').first().locator('li').nth(0)
+// Hide the sidebar through the View menu and wait for it to leave the layout.
+const hideSideBar = async(page: Page, app: Parameters<typeof clickMenuById>[0]): Promise<void> => {
+  await clickMenuById(app, 'sideBarMenuItem')
+  await page.waitForFunction(
+    () => {
+      const el = document.querySelector('.side-bar') as HTMLElement | null
+      return !el || el.offsetParent === null
+    },
+    null,
+    { timeout: 5000 }
+  )
+}
+
+const showSideBar = async(page: Page, app: Parameters<typeof clickMenuById>[0]): Promise<void> => {
+  await clickMenuById(app, 'sideBarMenuItem')
+  await page.waitForFunction(
+    () => {
+      const el = document.querySelector('.side-bar') as HTMLElement | null
+      return !!(el && el.offsetParent !== null)
+    },
+    null,
+    { timeout: 5000 }
+  )
+}
 
 const sideBarWidth = (page: Page) =>
   page.evaluate(() => {
@@ -55,17 +77,8 @@ test.describe('#2421 sidebar state survives icon toggle', () => {
     const widened = await sideBarWidth(page)
     expect(widened).toBeGreaterThanOrEqual(300)
 
-    await filesIcon(page).click() // collapse to icon strip
-    await page.waitForFunction(() => {
-      const el = document.querySelector('.side-bar') as HTMLElement | null
-      return !!el && el.getBoundingClientRect().width <= 50
-    }, null, { timeout: 5000 })
-
-    await filesIcon(page).click() // re-expand
-    await page.waitForFunction(() => {
-      const el = document.querySelector('.side-bar') as HTMLElement | null
-      return !!el && el.getBoundingClientRect().width > 50
-    }, null, { timeout: 5000 })
+    await hideSideBar(page, app)
+    await showSideBar(page, app)
 
     const reExpanded = await sideBarWidth(page)
     // The widened width must survive the collapse round-trip (it was reset to
@@ -84,10 +97,9 @@ test.describe('#2421 sidebar state survives icon toggle', () => {
       return !!(a && a.classList.contains('fold'))
     }, null, { timeout: 5000 })
 
-    // Toggle the whole sidebar off and back on via its icon.
-    await filesIcon(page).click()
-    await page.waitForTimeout(250)
-    await filesIcon(page).click()
+    // Toggle the whole sidebar off and back on.
+    await hideSideBar(page, app)
+    await showSideBar(page, app)
     await page.waitForFunction(() => {
       const el = document.querySelector('.side-bar .opened-files') as HTMLElement | null
       return !!(el && el.offsetParent !== null)

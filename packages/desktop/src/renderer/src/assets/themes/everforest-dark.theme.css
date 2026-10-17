@@ -165,33 +165,6 @@
   box-shadow: none !important;
 }
 
-.editor-tabs {
-  box-shadow: none !important;
-}
-.editor-tabs:after {
-  position: absolute;
-  content: '';
-  border-bottom: 1px solid #232a2e;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 1;
-}
-.editor-tabs ul.tabs-container:after {
-  position: absolute;
-  content: '';
-  border-bottom: 1px solid #232a2e;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 2;
-}
-
-.tabs-container > li,
-.tabs-container > li.active {
-  background: var(--editorBgColor) !important;
-}
-
 .open-project button,
 .recent-files-projects button {
   box-shadow: none !important;
