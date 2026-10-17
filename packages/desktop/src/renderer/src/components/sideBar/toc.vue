@@ -3,9 +3,6 @@
     class="side-bar-toc"
     :class="[{ 'side-bar-toc-overflow': !wordWrapInToc, 'side-bar-toc-wordwrap': wordWrapInToc }]"
   >
-    <div class="title">
-      {{ t('sideBar.toc.title') }}
-    </div>
     <el-tree
       v-if="keyedToc.length"
       ref="tocTreeRef"
@@ -46,11 +43,8 @@ import { deriveKeyedToc, type KeyedTocNode } from '@/util/tocKeys'
 import { sanitize, TOC_DOMPURIFY_CONFIG } from '@/util/dompurify'
 import bus from '../../bus'
 import { storeToRefs } from 'pinia'
-import { useI18n } from 'vue-i18n'
 import { ArrowRight } from '@element-plus/icons-vue'
 import type { TreeInstance } from 'element-plus'
-
-const { t } = useI18n()
 
 const editorStore = useEditorStore()
 const preferencesStore = usePreferencesStore()
@@ -159,21 +153,12 @@ const handleClick = (data: { slug?: unknown }): void => {
   overflow: hidden;
 }
 
-.side-bar-toc .title {
-  color: var(--sideBarTitleColor);
-  font-weight: 600;
-  font-size: 16px;
-  margin: 8px 0 10px 0;
-  padding-left: 25px;
-  flex-shrink: 0;
-}
-
 .side-bar-toc .el-tree-node {
   margin-top: 8px;
 }
 
-/* The outline scrolls, the panel title does not — same split the file tree
-   (`.tree-wrapper`) and the search results already use. */
+/* The outline scrolls inside the panel; the panel itself never scrolls — the
+   same split the file tree uses for `.tree-wrapper`. */
 .side-bar-toc .el-tree {
   background: transparent;
   color: var(--sideBarColor);
