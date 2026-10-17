@@ -423,7 +423,15 @@ onMounted(() => {
   tabId.value = id
   updateSelectionWordCount(codeMirrorInstance)
 
+  // Apply initial read-only state.
+  codeMirrorInstance.setOption('readOnly', editorStore.readOnly)
+
   listenChange(codeMirrorInstance)
+})
+
+// Watch read-only state and sync to CodeMirror.
+watch(() => editorStore.readOnly, (value) => {
+  editor.value?.setOption('readOnly', value)
 })
 
 onBeforeUnmount(() => {

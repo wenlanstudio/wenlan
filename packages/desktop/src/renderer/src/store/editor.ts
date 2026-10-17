@@ -152,6 +152,8 @@ export interface EditorState {
   // Heading the cursor is inside, for the TOC highlight; null above the first.
   activeHeadingSlug: string | null
   selectionWordCount: FileWordCount | null
+  // Global read-only lock (affects the current active editor surface).
+  readOnly: boolean
 }
 
 const autoSaveTimers = new Map<string, ReturnType<typeof setTimeout>>()
@@ -168,7 +170,8 @@ export const useEditorStore = defineStore('editor', {
     listToc: [], // Used for equal check and for searching for the correct github-slug to jump to
     toc: [],
     activeHeadingSlug: null,
-    selectionWordCount: null
+    selectionWordCount: null,
+    readOnly: false
   }),
 
   getters: {
@@ -193,6 +196,10 @@ export const useEditorStore = defineStore('editor', {
   actions: {
     SET_SELECTION_WORD_COUNT(wordCount: FileWordCount | null): void {
       this.selectionWordCount = wordCount
+    },
+
+    TOGGLE_READ_ONLY(): void {
+      this.readOnly = !this.readOnly
     },
 
     updateTabIdToIndex(): void {

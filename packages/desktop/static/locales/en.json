@@ -882,7 +882,9 @@
       "excelView": "Sheet View",
       "comingSoon": "Coming soon",
       "pageWidth": "Page Width",
-      "cursorPosition": "Cursor Position"
+      "cursorPosition": "Cursor Position",
+      "readOnlyLocked": "Read-only mode",
+      "readOnlyUnlocked": "Editable mode"
     },
     "tabs": {
       "cycleForward": "Cycle Forward",

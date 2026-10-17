@@ -2043,6 +2043,17 @@ onMounted(() => {
   document.addEventListener('keyup', keyup)
 
   setEditorWidth(editorLineWidth.value)
+
+  // Read-only guard: intercept all beforeinput events on the editor surface.
+  const domNode = editor.value.domNode
+  const readOnlyGuard = (e: Event) => {
+    if (editorStore.readOnly) {
+      e.preventDefault()
+    }
+  }
+  domNode.addEventListener('beforeinput', readOnlyGuard)
+  // Store the handler on the domNode so onBeforeUnmount can detach it.
+  ;(domNode as HTMLElement & { __readOnlyGuard?: (e: Event) => void }).__readOnlyGuard = readOnlyGuard
 })
 
 onBeforeUnmount(() => {
@@ -2092,6 +2103,15 @@ onBeforeUnmount(() => {
   scrollHandler = null
 
   resizeObserverForEditor.disconnect()
+
+  // Detach the read-only beforeinput guard.
+  if (editor.value) {
+    const domNode = editor.value.domNode as HTMLElement & { __readOnlyGuard?: (e: Event) => void }
+    if (domNode.__readOnlyGuard) {
+      domNode.removeEventListener('beforeinput', domNode.__readOnlyGuard)
+      delete domNode.__readOnlyGuard
+    }
+  }
 
   if (editor.value) {
     editor.value.destroy()

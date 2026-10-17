@@ -60,7 +60,7 @@
         </svg>
       </div>
 
-      <!-- Right-corner dock: view switcher + word count + cursor position -->
+      <!-- Right-corner dock: view switcher + cursor position + read-only lock + word count -->
       <div class="right-corner-dock">
         <ViewSwitcher />
         <div
@@ -70,6 +70,42 @@
         >
           {{ cursorPositionText }}
         </div>
+        <button
+          class="read-only-btn"
+          :class="{ locked: readOnly }"
+          :title="readOnly ? t('view.readOnlyLocked') : t('view.readOnlyUnlocked')"
+          @click="toggleReadOnly"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="14"
+            height="14"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <template v-if="readOnly">
+              <rect
+                x="3"
+                y="11"
+                width="18"
+                height="11"
+                rx="2"
+              />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </template>
+            <template v-else>
+              <rect
+                x="3"
+                y="11"
+                width="18"
+                height="11"
+                rx="2"
+              />
+              <path d="M7 11V7a5 5 0 0 1 10 0" />
+            </template>
+          </svg>
+        </button>
         <WordCount
           :word-count="wordCount"
           :selection-word-count="selectionWordCount"
@@ -125,7 +161,7 @@ const timer = ref<ReturnType<typeof setTimeout> | null>(null)
 const { windowActive, platform, init } = storeToRefs(mainStore)
 const { theme, customCss, textDirection, zoom } = storeToRefs(preferencesStore)
 const { projectTree } = storeToRefs(projectStore)
-const { currentFile, selectionWordCount } = storeToRefs(editorStore)
+const { currentFile, selectionWordCount, readOnly } = storeToRefs(editorStore)
 const { mainView } = storeToRefs(editorViewStore)
 
 const filename = computed(() => currentFile.value?.filename)
@@ -165,6 +201,11 @@ bus.on('cursor-position', (payload: unknown) => {
     cursorPosition.value = p
   }
 })
+
+// Toggle global read-only lock.
+const toggleReadOnly = (): void => {
+  editorStore.TOGGLE_READ_ONLY()
+}
 
 // The only sidebar switch left: the small button in the content's bottom-left
 // corner. Routed through the same bus entry as the View menu so the native
@@ -364,5 +405,30 @@ onMounted(async () => {
   font-variant-numeric: tabular-nums;
   user-select: none;
   line-height: 24px;
+}
+
+.read-only-btn {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--editorColor40);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.read-only-btn:hover {
+  color: var(--editorColor80);
+  background: var(--editorColor04);
+}
+
+.read-only-btn.locked {
+  color: var(--editorColor);
+  background: var(--editorColor10);
 }
 </style>
