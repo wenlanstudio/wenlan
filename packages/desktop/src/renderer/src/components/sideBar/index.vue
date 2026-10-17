@@ -3,44 +3,29 @@
     v-show="showSideBar"
     ref="sideBar"
     class="side-bar"
-    :style="[!rightColumn ? { 'min-width': '45px' } : {}, { width: `${finalSideBarWidth}px` }]"
+    :style="[{ paddingTop: topInset }, { width: `${finalSideBarWidth}px` }]"
   >
-    <div class="left-column">
-      <ul>
-        <li
-          v-for="(c, index) of sideBarIcons"
-          :key="index"
-          :class="{ active: c.id === rightColumn }"
-          @click="handleLeftIconClick(c.id)"
-        >
-          <component :is="c.icon" />
-        </li>
-      </ul>
-      <ul class="bottom">
-        <li
-          v-for="(c, index) of sideBarBottomIcons"
-          :key="index"
-          @click="handleLeftBottomClick(c.id)"
-        >
-          <component :is="c.icon" />
-        </li>
-      </ul>
+    <div class="side-bar-tabs">
+      <div
+        v-for="entry of sideBarTabs"
+        :key="entry.id"
+        class="tab"
+        :class="{ active: entry.id === sidebarTab }"
+        @click="handleTabClick(entry.id)"
+      >
+        {{ entry.label() }}
+      </div>
     </div>
-    <div
-      v-show="rightColumn"
-      class="right-column"
-    >
+    <div class="side-bar-content">
       <tree
-        v-if="rightColumn === 'files'"
+        v-if="sidebarTab === 'files'"
         :project-tree="projectTree"
         :opened-files="openedFiles"
-        :tabs="tabs"
+        :tabs="editorTabs"
       />
-      <side-bar-search v-else-if="rightColumn === 'search'" />
-      <toc v-else-if="rightColumn === 'toc'" />
+      <toc v-else-if="sidebarTab === 'toc'" />
     </div>
     <div
-      v-show="rightColumn"
       ref="dragBar"
       class="drag-bar"
     />
@@ -49,18 +34,21 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
-import { useLayoutStore } from '@/store/layout'
+import { useLayoutStore, type SidebarTab } from '@/store/layout'
+import { usePreferencesStore } from '@/store/preferences'
 import { useProjectStore } from '@/store/project'
 import { useEditorStore } from '@/store/editor'
+import { shouldShowInAppTitleBar } from '@/components/titleBar/visibility'
+import { t } from '@/i18n'
+import { isMac } from '@/util'
 
-import { sideBarIcons, sideBarBottomIcons } from './help'
 import Tree from './tree.vue'
-import SideBarSearch from './search.vue'
 import Toc from './toc.vue'
 import { storeToRefs } from 'pinia'
 import type { TabDescriptor } from './types'
 
 const layoutStore = useLayoutStore()
+const preferencesStore = usePreferencesStore()
 const projectStore = useProjectStore()
 const editorStore = useEditorStore()
 
@@ -70,14 +58,28 @@ const dragBar = ref<HTMLDivElement | null>(null)
 const openedFiles = ref<TabDescriptor[]>([])
 const sideBarViewWidth = ref(280)
 
-const { rightColumn, showSideBar, sideBarWidth } = storeToRefs(layoutStore)
+const { sidebarTab, showSideBar, sideBarWidth } = storeToRefs(layoutStore)
 
 const { projectTree } = storeToRefs(projectStore)
-const { tabs } = storeToRefs(editorStore)
+const editorTabs = storeToRefs(editorStore).tabs
+const { titleBarStyle } = storeToRefs(preferencesStore)
+
+// The in-app title bar is `position: fixed` across the *whole window width*, so
+// it overlays this column's top too — inset everything below it, here, instead
+// of leaving every panel to invent its own clearance.
+const topInset = computed<string>(() =>
+  shouldShowInAppTitleBar(titleBarStyle.value, isMac) ? 'var(--titleBarHeight)' : '0px'
+)
+
+// Typora-style sidebar: the two content tabs are drawn on the panel itself,
+// there is no icon strip left to switch panels or open the settings window.
+const sideBarTabs: { id: SidebarTab; label: () => string }[] = [
+  { id: 'files', label: () => t('sideBar.tabs.files') },
+  { id: 'toc', label: () => t('sideBar.tabs.outline') }
+]
 
 const finalSideBarWidth = computed<number>(() => {
   if (!showSideBar.value) return 0
-  if (rightColumn.value === '') return 45
   return sideBarViewWidth.value < 220 ? 220 : sideBarViewWidth.value
 })
 
@@ -114,39 +116,22 @@ onMounted(() => {
   })
 })
 
-const handleLeftIconClick = (name: string): void => {
-  if (rightColumn.value === name) {
-    // Capture the expanded width BEFORE collapsing: once rightColumn is '',
-    // finalSideBarWidth evaluates to the 45px icon strip and would overwrite
-    // the user's real width with the clamped 220px minimum (#2421).
-    const widthToPersist = finalSideBarWidth.value
-    layoutStore.SET_LAYOUT({ rightColumn: '' })
-    layoutStore.CHANGE_SIDE_BAR_WIDTH(widthToPersist)
-  } else {
-    const needDispatch = rightColumn.value === ''
-    layoutStore.SET_LAYOUT({ rightColumn: name })
-    sideBarViewWidth.value = +sideBarWidth.value
-    if (needDispatch) {
-      layoutStore.CHANGE_SIDE_BAR_WIDTH(finalSideBarWidth.value)
-    }
-  }
-}
-
-const handleLeftBottomClick = (name: string): void => {
-  if (name === 'settings') {
-    projectStore.OPEN_SETTING_WINDOW()
-  }
+const handleTabClick = (id: SidebarTab): void => {
+  layoutStore.SET_LAYOUT({ sidebarTab: id })
 }
 </script>
 
 <style scoped>
 .side-bar {
   display: flex;
+  flex-direction: column;
   flex-shrink: 0;
   flex-grow: 0;
   width: 280px;
   height: 100vh;
   min-width: 220px;
+  /* `height: 100vh` plus the title-bar inset must not exceed the viewport. */
+  box-sizing: border-box;
   position: relative;
   color: var(--sideBarColor);
   user-select: none;
@@ -154,62 +139,36 @@ const handleLeftBottomClick = (name: string): void => {
   border-right: 1px solid var(--itemBgColor);
 }
 
-.side-bar .left-column svg {
-  color: var(--iconColor);
-}
-
-.left-column {
-  height: 100%;
-  width: 45px;
+.side-bar-tabs {
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding-top: 28px;
-  box-sizing: border-box;
+  justify-content: center;
+  gap: 32px;
+  padding: 10px 12px 0;
+  flex-shrink: 0;
 }
 
-.left-column > ul {
-  opacity: 1;
-}
-
-.left-column ul {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-  padding: 0;
-}
-
-.left-column ul > li {
-  width: 45px;
-  height: 45px;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
+.side-bar-tabs .tab {
+  font-size: 14px;
+  color: var(--sideBarColor);
+  opacity: 0.6;
   cursor: pointer;
+  padding-bottom: 6px;
+  border-bottom: 2px solid transparent;
 }
 
-.left-column ul > li > svg {
-  width: 18px;
-  height: 18px;
-  color: var(--sideBarIconColor);
+.side-bar-tabs .tab:hover {
+  opacity: 0.9;
+}
+
+.side-bar-tabs .tab.active {
   opacity: 1;
-  transition: transform 0.25s ease-in-out;
+  font-weight: 600;
+  color: var(--editorColor);
+  border-bottom-color: var(--editorColor);
 }
 
-.left-column ul > li.active > svg {
-  color: var(--themeColor);
-}
-
-.side-bar:hover .left-column ul li svg {
-  opacity: 1;
-}
-
-.right-column {
+.side-bar-content {
   flex: 1;
-  width: calc(100% - 50px);
   overflow: hidden;
 }
 

@@ -1,9 +1,5 @@
 <template>
   <div class="tree-view">
-    <div class="title">
-      <!-- Placeholder -->
-    </div>
-
     <!-- Opened tabs -->
     <div
       v-if="openedFilesInSidebar"
@@ -303,7 +299,7 @@ const revealPath = async (
     setShowDirectories(true)
   }
   // Off screen (icon strip, View menu) there is nothing to reveal.
-  if (!layoutStore.showSideBar || layoutStore.rightColumn !== 'files') return
+  if (!layoutStore.showSideBar || layoutStore.sidebarTab !== 'files') return
   if (!projectStore.REVEAL_PATH(pathname)) return
 
   await nextTick()
@@ -428,7 +424,7 @@ watch(
 // The tree stays mounted while the side bar is hidden, so a switch made then
 // never scrolled; reveal again as soon as the file list is visible.
 watch(
-  () => layoutStore.showSideBar && layoutStore.rightColumn === 'files',
+  () => layoutStore.showSideBar && layoutStore.sidebarTab === 'files',
   (visible) => {
     if (visible) revealPath(editorStore.currentFile?.pathname)
   },
@@ -477,14 +473,6 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-}
-.tree-view > .title {
-  height: 35px;
-  line-height: 35px;
-  padding: 0 15px;
-  display: flex;
-  flex-shrink: 0;
-  flex-direction: row-reverse;
 }
 
 .icon-arrow {

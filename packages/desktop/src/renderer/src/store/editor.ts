@@ -932,7 +932,7 @@ export const useEditorStore = defineStore('editor', {
         mainStore.SET_INITIALIZED()
         preferencesStore.SET_USER_PREFERENCE({ endOfLine: lineEnding })
         layoutStore.SET_LAYOUT({
-          rightColumn: 'files',
+          sidebarTab: 'files',
           showSideBar: !!sideBarVisibility,
           showTabBar: !!tabBarVisibility
         })

@@ -49,7 +49,6 @@
       "replace": "置換",
       "findNext": "次を検索",
       "findPrevious": "前を検索",
-      "findInFolder": "フォルダー内の検索",
       "screenshot": "スクリーンショット",
       "lineEnding": "改行コード",
       "lineEndingCrlf": "CRLF (Windows)",
@@ -232,14 +231,6 @@
     "searchLimited": "最初の {count} 件まで表示しています"
   },
   "sideBar": {
-    "search": {
-      "searchInFolder": "フォルダー内の検索...",
-      "noFolderOpen": "フォルダーが開かれていません",
-      "noResultsFound": "一致するものがありません。",
-      "cancel": "キャンセル",
-      "openFolder": "フォルダーを開く",
-      "showMoreMatches": "さらに一致するものを表示"
-    },
     "tree": {
       "openedFiles": "開いているファイル",
       "saveAll": "すべて保存",
@@ -253,12 +244,11 @@
       "expandAll": "すべて展開",
       "collapseAll": "すべて折りたたむ"
     },
-    "icons": {
+    "tabs": {
       "files": "ファイル",
-      "search": "検索",
-      "toc": "目次",
-      "settings": "設定"
-    }
+      "outline": "アウトライン"
+    },
+    "toggle": "サイドバーの表示/非表示"
   },
   "commandPalette": {
     "placeholder": "実行するコマンドの入力",
@@ -816,7 +806,6 @@
       "findNext": "次を検索",
       "findPrevious": "前を検索",
       "replace": "置換",
-      "findInFolder": "フォルダー内の検索",
       "screenshot": "スクリーンショット"
     },
     "paragraph": {

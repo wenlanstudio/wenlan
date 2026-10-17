@@ -15,7 +15,7 @@ import { create, paste, rename, type FileCreateType, type PasteOptions } from '.
 import { PATH_SEPARATOR } from '../config'
 import notice from '../services/notification'
 import { getFileStateFromData } from './help'
-import { useLayoutStore } from './layout'
+import { useLayoutStore, type LayoutPartial } from './layout'
 import { useEditorStore } from './editor'
 import { debouncedSendBufferedState } from './bufferedState'
 import type { TreeNode, TreeFolderNode } from '../components/sideBar/types'
@@ -121,8 +121,8 @@ export const useProjectStore = defineStore('project', () => {
     activeItem.value = {}
     CLEAR_NAME_INPUT_STATE()
 
-    const layout = {
-      rightColumn: 'files',
+    const layout: LayoutPartial = {
+      sidebarTab: 'files',
       showSideBar: true,
       showTabBar: true
     }
@@ -232,7 +232,7 @@ export const useProjectStore = defineStore('project', () => {
     if (!target) return
 
     const layoutStore = useLayoutStore()
-    layoutStore.SET_LAYOUT({ showSideBar: true, rightColumn: 'files' })
+    layoutStore.SET_LAYOUT({ showSideBar: true, sidebarTab: 'files' })
     // The tree mounts on the next flush, so the row cannot be found before it.
     nextTick(() => bus.emit('SIDEBAR::reveal-path', target))
   }

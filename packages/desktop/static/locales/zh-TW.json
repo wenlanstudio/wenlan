@@ -49,7 +49,6 @@
       "replace": "取代",
       "findNext": "尋找下一個",
       "findPrevious": "尋找上一個",
-      "findInFolder": "在資料夾中尋找",
       "screenshot": "螢幕截圖",
       "lineEnding": "行結束符",
       "lineEndingCrlf": "CRLF(Windows)",
@@ -232,14 +231,6 @@
     "searchLimited": "搜尋僅限前 {count} 個結果"
   },
   "sideBar": {
-    "search": {
-      "searchInFolder": "在資料夾中搜尋…",
-      "noFolderOpen": "沒有開啟的資料夾",
-      "noResultsFound": "找不到結果。",
-      "cancel": "取消",
-      "openFolder": "開啟資料夾",
-      "showMoreMatches": "顯示更多符合項目"
-    },
     "tree": {
       "openedFiles": "已開啟的檔案",
       "saveAll": "全部儲存",
@@ -253,12 +244,11 @@
       "expandAll": "全部展開",
       "collapseAll": "全部折疊"
     },
-    "icons": {
+    "tabs": {
       "files": "檔案",
-      "search": "搜尋",
-      "toc": "目錄",
-      "settings": "設定"
-    }
+      "outline": "大綱"
+    },
+    "toggle": "顯示/隱藏側邊欄"
   },
   "commandPalette": {
     "placeholder": "輸入要執行的命令",
@@ -816,7 +806,6 @@
       "findNext": "尋找下一個",
       "findPrevious": "尋找上一個",
       "replace": "取代",
-      "findInFolder": "在資料夾中尋找",
       "screenshot": "螢幕截圖"
     },
     "paragraph": {

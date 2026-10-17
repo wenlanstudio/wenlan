@@ -49,7 +49,6 @@
       "replace": "替换",
       "findNext": "查找下一个",
       "findPrevious": "查找上一个",
-      "findInFolder": "在文件夹中查找",
       "screenshot": "截图",
       "lineEnding": "行结束符",
       "lineEndingCrlf": "CRLF (Windows)",
@@ -232,14 +231,6 @@
     "searchLimited": "仅搜索前 {count} 个结果"
   },
   "sideBar": {
-    "search": {
-      "searchInFolder": "在文件夹中搜索…",
-      "noFolderOpen": "没有打开的文件夹",
-      "noResultsFound": "未找到结果。",
-      "cancel": "取消",
-      "openFolder": "打开文件夹",
-      "showMoreMatches": "显示更多匹配"
-    },
     "tree": {
       "openedFiles": "已打开的文件",
       "saveAll": "保存全部",
@@ -253,12 +244,11 @@
       "expandAll": "全部展开",
       "collapseAll": "全部折叠"
     },
-    "icons": {
+    "tabs": {
       "files": "文件",
-      "search": "搜索",
-      "toc": "目录",
-      "settings": "设置"
-    }
+      "outline": "大纲"
+    },
+    "toggle": "显示/隐藏侧边栏"
   },
   "commandPalette": {
     "placeholder": "输入要执行的命令",
@@ -816,7 +806,6 @@
       "findNext": "查找下一个",
       "findPrevious": "查找上一个",
       "replace": "替换",
-      "findInFolder": "在文件夹中查找",
       "screenshot": "截图"
     },
     "paragraph": {

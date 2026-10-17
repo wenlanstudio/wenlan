@@ -64,7 +64,7 @@ export const showTabBar = (win: Win): void => {
 }
 
 export const showTableOfContents = (win: Win): void => {
-  setLayout(win, 'rightColumn', 'toc')
+  setLayout(win, 'sidebarTab', 'toc')
 }
 
 export const toggleTypewriterMode = (win: Win): void => {

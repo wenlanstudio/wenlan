@@ -110,13 +110,6 @@ export interface PreferencesState {
   openedFilesInSidebar: boolean
   autoRevealInSidebar: boolean
 
-  // ----- Search -----
-  searchExclusions: string[]
-  searchMaxFileSize: string
-  searchIncludeHidden: boolean
-  searchNoIgnore: boolean
-  searchFollowSymlinks: boolean
-
   watcherUsePolling: boolean
 
   // ----- Edit modes (per-window, not persisted) -----
@@ -234,12 +227,6 @@ export const usePreferencesStore = defineStore('preferences', {
     sourceCodeModeEnabled: false,
     openedFilesInSidebar: true,
     autoRevealInSidebar: true,
-
-    searchExclusions: [],
-    searchMaxFileSize: '',
-    searchIncludeHidden: false,
-    searchNoIgnore: false,
-    searchFollowSymlinks: true,
 
     watcherUsePolling: false,
 

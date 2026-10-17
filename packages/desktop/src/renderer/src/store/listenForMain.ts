@@ -1,17 +1,9 @@
 import { defineStore } from 'pinia'
 import bus from '../bus'
 import { useEditorStore } from './editor'
-import { useLayoutStore } from './layout'
 
 export const useListenForMainStore = defineStore('listenForMain', () => {
   function EDITOR_EDIT_ACTION(type: string): void {
-    const layoutStore = useLayoutStore()
-    if (type === 'findInFolder') {
-      layoutStore.SET_LAYOUT({
-        rightColumn: 'search',
-        showSideBar: true
-      })
-    }
     bus.emit(type, type)
   }
 

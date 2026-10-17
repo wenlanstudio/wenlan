@@ -49,7 +49,6 @@
       "replace": "바꾸기",
       "findNext": "다음 찾기",
       "findPrevious": "이전 찾기",
-      "findInFolder": "폴더에서 찾기",
       "screenshot": "스크린샷",
       "lineEnding": "줄 끝",
       "lineEndingCrlf": "CRLF(Windows)",
@@ -232,14 +231,6 @@
     "searchLimited": "처음 {count}개의 결과까지만 검색"
   },
   "sideBar": {
-    "search": {
-      "searchInFolder": "폴더에서 검색...",
-      "noFolderOpen": "열린 폴더 없음",
-      "noResultsFound": "결과를 찾을 수 없습니다.",
-      "cancel": "취소",
-      "openFolder": "폴더 열기",
-      "showMoreMatches": "더 많은 일치 항목 보기"
-    },
     "tree": {
       "openedFiles": "열린 파일",
       "saveAll": "모두 저장",
@@ -253,12 +244,11 @@
       "expandAll": "모두 펼치기",
       "collapseAll": "모두 접기"
     },
-    "icons": {
+    "tabs": {
       "files": "파일",
-      "search": "검색",
-      "toc": "목차",
-      "settings": "설정"
-    }
+      "outline": "아웃트라인"
+    },
+    "toggle": "사이드바 표시/숨기기"
   },
   "commandPalette": {
     "placeholder": "실행할 명령을 입력하세요",
@@ -816,7 +806,6 @@
       "findNext": "다음 찾기",
       "findPrevious": "이전 찾기",
       "replace": "바꾸기",
-      "findInFolder": "폴더에서 찾기",
       "screenshot": "스크린샷"
     },
     "paragraph": {

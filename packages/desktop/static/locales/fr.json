@@ -49,7 +49,6 @@
       "replace": "Remplacer",
       "findNext": "Rechercher suivant",
       "findPrevious": "Rechercher précédent",
-      "findInFolder": "Rechercher dans le dossier",
       "screenshot": "Capture d'écran",
       "lineEnding": "Fin de ligne",
       "lineEndingCrlf": "CRLF (Windows)",
@@ -232,14 +231,6 @@
     "searchLimited": "Recherche limitée aux {count} premiers résultats"
   },
   "sideBar": {
-    "search": {
-      "searchInFolder": "Rechercher dans le dossier...",
-      "noFolderOpen": "Aucun dossier ouvert",
-      "noResultsFound": "Aucun résultat trouvé.",
-      "cancel": "Annuler",
-      "openFolder": "Ouvrir un dossier",
-      "showMoreMatches": "Afficher plus de correspondances"
-    },
     "tree": {
       "openedFiles": "Fichiers ouverts",
       "saveAll": "Tout enregistrer",
@@ -253,12 +244,11 @@
       "expandAll": "Tout développer",
       "collapseAll": "Tout réduire"
     },
-    "icons": {
+    "tabs": {
       "files": "Fichiers",
-      "search": "Rechercher",
-      "toc": "Table des matières",
-      "settings": "Paramètres"
-    }
+      "outline": "Plan"
+    },
+    "toggle": "Afficher ou masquer le panneau latéral"
   },
   "commandPalette": {
     "placeholder": "Tapez une commande à exécuter",
@@ -816,7 +806,6 @@
       "findNext": "Rechercher suivant",
       "findPrevious": "Rechercher précédent",
       "replace": "Remplacer",
-      "findInFolder": "Rechercher dans le dossier",
       "screenshot": "Capture d'écran"
     },
     "paragraph": {

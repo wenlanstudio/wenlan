@@ -4,8 +4,10 @@ import bus from '../bus'
 import { usePreferencesStore } from './preferences'
 import { debouncedSendBufferedState } from './bufferedState'
 
-interface LayoutPartial {
-  rightColumn?: string
+export type SidebarTab = 'files' | 'toc'
+
+export interface LayoutPartial {
+  sidebarTab?: SidebarTab
   showSideBar?: boolean
   showTabBar?: boolean
   sideBarWidth?: number | string
@@ -20,8 +22,12 @@ const normalizeSideBarWidth = (width: unknown): number => {
   return Number.isFinite(numericWidth) ? Math.max(numericWidth, 220) : 280
 }
 
+// Legacy buffered states may still carry the pre-rename tab names ('search'
+// panel is gone, and the empty string meant the old icon strip).
+const normalizeSidebarTab = (tab: unknown): SidebarTab => (tab === 'toc' ? 'toc' : 'files')
+
 interface BufferedLayout {
-  rightColumn: string | undefined
+  sidebarTab: SidebarTab
   showSideBar: boolean
   showTabBar: boolean
   sideBarWidth: number
@@ -31,11 +37,8 @@ const createBufferedLayoutState = (state: unknown): BufferedLayout | null => {
   if (!state || typeof state !== 'object') return null
   const s = state as LayoutPartial
 
-  // Pass through `rightColumn` (may be undefined). The pre-migration JS did
-  // not coerce to 'files' here — RESTORE_BUFFERED_STATE then routes through
-  // SET_LAYOUT which only assigns when the key is defined.
   return {
-    rightColumn: s.rightColumn,
+    sidebarTab: normalizeSidebarTab(s.sidebarTab),
     showSideBar: !!s.showSideBar,
     showTabBar: !!s.showTabBar,
     sideBarWidth: normalizeSideBarWidth(s.sideBarWidth)
@@ -46,18 +49,16 @@ const initialWidth = localStorage.getItem('side-bar-width')
 const initialSideBarWidth = normalizeSideBarWidth(initialWidth)
 
 export const useLayoutStore = defineStore('layout', () => {
-  const rightColumn = ref<string>('files')
+  const sidebarTab = ref<SidebarTab>('files')
   const showSideBar = ref(false)
   const showTabBar = ref(false)
   const sideBarWidth = ref<number>(initialSideBarWidth)
 
-  // Actual rendered sidebar width. `sideBarWidth` is the right-column width
-  // (clamped to ≥220 by `normalizeSideBarWidth`); when `rightColumn` is empty
-  // the sidebar collapses to its 45px icon strip. Consumers that need to
+  // Actual rendered sidebar width. `sideBarWidth` is the user-chosen width
+  // (clamped to ≥220 by `normalizeSideBarWidth`). Consumers that need to
   // subtract the sidebar from viewport space must use this, not the raw ref.
   const effectiveSideBarWidth = computed<number>(() => {
     if (!showSideBar.value) return 0
-    if (!rightColumn.value) return 45
     return Number(sideBarWidth.value)
   })
 
@@ -81,7 +82,7 @@ export const useLayoutStore = defineStore('layout', () => {
     // Match the pre-migration `Object.assign(this, layout)` semantics: assign
     // each known field as-is (no normalization here; SET_SIDE_BAR_WIDTH owns
     // sideBarWidth's normalization), and skip unknown keys silently.
-    if (layout.rightColumn !== undefined) rightColumn.value = layout.rightColumn
+    if (layout.sidebarTab !== undefined) sidebarTab.value = layout.sidebarTab
     if (layout.showSideBar !== undefined) showSideBar.value = !!layout.showSideBar
     if (layout.showTabBar !== undefined) showTabBar.value = !!layout.showTabBar
     if (layout.sideBarWidth !== undefined) sideBarWidth.value = layout.sideBarWidth as number
@@ -92,7 +93,7 @@ export const useLayoutStore = defineStore('layout', () => {
 
   function CREATE_BUFFERED_STATE(): BufferedLayout | null {
     return createBufferedLayoutState({
-      rightColumn: rightColumn.value,
+      sidebarTab: sidebarTab.value,
       showSideBar: showSideBar.value,
       showTabBar: showTabBar.value,
       sideBarWidth: sideBarWidth.value
@@ -106,7 +107,7 @@ export const useLayoutStore = defineStore('layout', () => {
     SET_SIDE_BAR_WIDTH(layout.sideBarWidth, { scheduleBufferUpdate: false })
     SET_LAYOUT(
       {
-        rightColumn: layout.rightColumn,
+        sidebarTab: layout.sidebarTab,
         showSideBar: layout.showSideBar,
         showTabBar: layout.showTabBar
       },
@@ -144,15 +145,7 @@ export const useLayoutStore = defineStore('layout', () => {
   function LISTEN_FOR_LAYOUT(): void {
     window.electron.ipcRenderer.on('mt::set-view-layout', (_e, layout) => {
       const l = layout as unknown as LayoutPartial
-      if (l.rightColumn) {
-        SET_LAYOUT({
-          ...l,
-          rightColumn: l.rightColumn === rightColumn.value ? '' : l.rightColumn,
-          showSideBar: true
-        })
-      } else {
-        SET_LAYOUT(l)
-      }
+      SET_LAYOUT(l)
       DISPATCH_LAYOUT_MENU_ITEMS()
     })
 
@@ -184,7 +177,7 @@ export const useLayoutStore = defineStore('layout', () => {
   }
 
   return {
-    rightColumn,
+    sidebarTab,
     showSideBar,
     showTabBar,
     sideBarWidth,

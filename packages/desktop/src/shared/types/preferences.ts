@@ -65,11 +65,6 @@ export interface IUserPreferences {
   imageBed?: { selected?: string; [key: string]: unknown }
   imageBedAlias?: { [key: string]: unknown }
   watcher?: { usePolling?: boolean; [key: string]: unknown }
-  searchExclusions?: string[]
-  searchMaxFileSize?: string
-  searchIncludeHidden?: boolean
-  searchNoIgnore?: boolean
-  searchFollowSymlinks?: boolean
   followSystemTheme?: boolean
   lightModeTheme?: string
   darkModeTheme?: string
@@ -82,7 +77,7 @@ export interface IUserPreferences {
 }
 
 export interface LayoutState {
-  rightColumn: 'files' | 'search' | 'toc'
+  sidebarTab: 'files' | 'toc'
   showSideBar: boolean
   showTabBar: boolean
   [key: string]: unknown

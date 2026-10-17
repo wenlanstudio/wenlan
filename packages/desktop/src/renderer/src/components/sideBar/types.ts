@@ -38,23 +38,6 @@ export interface TreeFolderNode {
 export type TreeNode = TreeFolderNode
 
 // ---------------------------------------------------------------------------
-// Search (sideBar/search.vue, searchResultItem.vue)
-// ---------------------------------------------------------------------------
-
-// Range tuple emitted by the ripgrep bridge: [[startLine, startCh], [endLine, endCh]]
-export type SearchRange = [[number, number], [number, number]]
-
-export interface SearchMatch {
-  lineText: string
-  range: SearchRange
-}
-
-export interface SearchResult {
-  filePath: string
-  matches: SearchMatch[]
-}
-
-// ---------------------------------------------------------------------------
 // Tab descriptor (sideBar/treeOpenedTab.vue)
 // ---------------------------------------------------------------------------
 

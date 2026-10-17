@@ -49,7 +49,6 @@
       "replace": "Replace",
       "findNext": "Find Next",
       "findPrevious": "Find Previous",
-      "findInFolder": "Find in Folder",
       "screenshot": "Screenshot",
       "lineEnding": "Line Ending",
       "lineEndingCrlf": "CRLF(Windows)",
@@ -232,14 +231,6 @@
     "searchLimited": "Searched limited to first {count} results"
   },
   "sideBar": {
-    "search": {
-      "searchInFolder": "Search in folder...",
-      "noFolderOpen": "No folder open",
-      "noResultsFound": "No results found.",
-      "cancel": "Cancel",
-      "openFolder": "Open Folder",
-      "showMoreMatches": "Show more matches"
-    },
     "tree": {
       "openedFiles": "Opened files",
       "saveAll": "Save All",
@@ -253,12 +244,11 @@
       "expandAll": "Expand all",
       "collapseAll": "Collapse all"
     },
-    "icons": {
+    "tabs": {
       "files": "Files",
-      "search": "Search",
-      "toc": "Table of Contents",
-      "settings": "Settings"
-    }
+      "outline": "Outline"
+    },
+    "toggle": "Show or hide sidebar"
   },
   "commandPalette": {
     "placeholder": "Type a command to execute",
@@ -816,7 +806,6 @@
       "findNext": "Find Next",
       "findPrevious": "Find Previous",
       "replace": "Replace",
-      "findInFolder": "Find in Folder",
       "screenshot": "Screenshot"
     },
     "paragraph": {

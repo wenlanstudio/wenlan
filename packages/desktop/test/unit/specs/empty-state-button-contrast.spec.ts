@@ -151,11 +151,6 @@ const COMPONENTS = [
     name: 'New File (recent/index.vue)',
     path: resolve(RENDERER, 'components/recent/index.vue'),
     surfaceVar: '--editorBgColor'
-  },
-  {
-    name: 'Open Folder (sideBar/search.vue no-data)',
-    path: resolve(RENDERER, 'components/sideBar/search.vue'),
-    surfaceVar: '--sideBarBgColor'
   }
 ]
 

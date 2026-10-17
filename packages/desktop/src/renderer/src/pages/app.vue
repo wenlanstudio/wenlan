@@ -34,6 +34,37 @@
       <export-setting-dialog />
       <rename />
       <import-modal />
+
+      <div
+        class="sidebar-toggle"
+        :title="t('sideBar.toggle')"
+        @click="toggleSideBar"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          width="16"
+          height="16"
+        >
+          <rect
+            x="3"
+            y="4.5"
+            width="18"
+            height="15"
+            rx="2"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+          />
+          <line
+            x1="9.5"
+            y1="4.5"
+            x2="9.5"
+            y2="19.5"
+            stroke="currentColor"
+            stroke-width="1.6"
+          />
+        </svg>
+      </div>
     </div>
   </div>
 </template>
@@ -53,6 +84,7 @@ import ExportSettingDialog from '@/components/exportSettings/index.vue'
 import Rename from '@/components/rename/index.vue'
 import ImportModal from '@/components/import/index.vue'
 import bus from '@/bus'
+import { t } from '@/i18n'
 import { DEFAULT_STYLE } from '@/config'
 import { useLayoutStore } from '@/store/layout'
 import { useListenForMainStore } from '@/store/listenForMain'
@@ -100,6 +132,13 @@ const muyaIndexCursor = computed<Record<string, unknown> | undefined>(
 const hasCurrentFile = computed<boolean>(() => {
   return currentFile.value?.markdown !== undefined
 })
+
+// The only sidebar switch left: the small button in the content's bottom-left
+// corner. Routed through the same bus entry as the View menu so the native
+// menu checkbox stays in sync.
+const toggleSideBar = (): void => {
+  bus.emit('view:toggle-layout-entry', 'showSideBar')
+}
 
 // Watchers
 watch(theme, (value, oldValue) => {
@@ -250,6 +289,27 @@ onMounted(async () => {
   position: relative;
   & > .editor {
     flex: 1;
+  }
+}
+
+.sidebar-toggle {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--iconColor);
+  opacity: 0.4;
+  cursor: pointer;
+  border-radius: 4px;
+  z-index: 100;
+
+  &:hover {
+    opacity: 1;
+    background: var(--itemBgColor);
   }
 }
 </style>

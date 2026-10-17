@@ -150,7 +150,7 @@ const handleClick = (data: { slug?: unknown }): void => {
 
 <style>
 .side-bar-toc {
-  height: calc(100% - 35px);
+  height: 100%;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -163,7 +163,7 @@ const handleClick = (data: { slug?: unknown }): void => {
   color: var(--sideBarTitleColor);
   font-weight: 600;
   font-size: 16px;
-  margin: 37px 0 10px 0;
+  margin: 8px 0 10px 0;
   padding-left: 25px;
   flex-shrink: 0;
 }
