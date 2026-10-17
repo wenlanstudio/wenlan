@@ -143,13 +143,15 @@ test.describe('Parity G8 — language switch refreshes inline hints', () => {
 
 // ---------------------------------------------------------------------------
 // Coverage backfill (checklist item 270). Typing `#`/`##` to create an ATX
-// heading converts the paragraph to an AtxHeading block, which appends a
-// HeadingCopyLink attachment whose constructor calls
-// `muya.i18n.t('Copy anchor link to this heading')`. Two converged migration
+// heading converts the paragraph to an AtxHeading block. That block USED to
+// append a HeadingCopyLink attachment whose constructor called
+// `muya.i18n.t('Copy anchor link to this heading')`; two converged migration
 // bugs (#4424 / #4427) crashed that single i18n.t call under a NON-en locale.
-// The engine layer pins the crash class comprehensively in
-// packages/muya/src/__tests__/headingLocaleCrash.spec.ts (boots all 9 locales,
-// types `# Heading`, asserts the translated copy-anchor aria-label, no throw).
+// The attachment is gone now (the heading-level badge is pure CSS), so the
+// i18n path no longer runs — what remains worth pinning is that the conversion
+// itself stays crash-free in every locale. The engine layer pins that in
+// packages/muya/src/__tests__/headingLocaleCrash.spec.ts (boots all shipped
+// locales, types `# Heading`, asserts no throw and the atx-heading state).
 //
 // This desktop-e2e adds only the integration confirmation: through the REAL
 // Electron renderer + Vue shell, switch the app locale to zh-CN (the same
@@ -172,8 +174,8 @@ test.describe('Heading creation under zh-CN does not crash the renderer (item 27
     await waitForMenuReady(app)
 
     // Switch the UI language to zh-CN before any heading is created so the
-    // HeadingCopyLink attachment is built under the non-en locale that used to
-    // crash. Mirror the real main-process order (language-changed precedes the
+    // conversion runs under the non-en locale that used to crash. Mirror the
+    // real main-process order (language-changed precedes the
     // preferences sync), same as the G8 test above.
     await sendIpcToRenderer(app, 'language-changed', 'zh-CN')
     await sendIpcToRenderer(app, 'mt::user-preference', { language: 'zh-CN' })
@@ -199,8 +201,8 @@ test.describe('Heading creation under zh-CN does not crash the renderer (item 27
     const markdown = await getMarkdownContent(page, app)
     expect(markdown).toContain('# Hello')
 
-    // The whole point of the guard: building HeadingCopyLink via muya.i18n.t
-    // under zh-CN must not surface a renderer error.
+    // The whole point of the guard: converting to a heading under zh-CN must
+    // not surface a renderer error.
     await expectNoRendererErrors(app)
   })
 
@@ -219,8 +221,7 @@ test.describe('Heading creation under zh-CN does not crash the renderer (item 27
     const markdown = await getMarkdownContent(page, app)
     expect(markdown).toContain('## H2')
 
-    // A second heading conversion under zh-CN (another HeadingCopyLink + i18n.t)
-    // must also stay crash-free.
+    // A second heading conversion under zh-CN must also stay crash-free.
     await expectNoRendererErrors(app)
   })
 })

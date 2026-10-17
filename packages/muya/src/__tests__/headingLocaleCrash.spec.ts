@@ -1,18 +1,20 @@
 // @vitest-environment happy-dom
 
 import type Content from '../block/base/content';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import * as locales from '../locales';
 import { Muya } from '../muya';
 
-const { en, zhCN } = locales;
+const { zhCN } = locales;
 
 // REGRESSION GUARD — #4424 / #4427 (Phase-G migration crash).
 //
 // Typing `#` (then a space) to create an ATX heading converts the paragraph to
-// an AtxHeading block, which appends a `HeadingCopyLink` attachment. That
-// attachment's constructor calls
-// `muya.i18n.t('Copy anchor link to this heading')`.
+// an AtxHeading block. Historically that block appended a `HeadingCopyLink`
+// attachment whose constructor called
+// `muya.i18n.t('Copy anchor link to this heading')` — that affordance is gone now
+// (replaced by a pure-CSS heading-level badge), but the conversion path and the
+// `I18n.t` fall-through it exposed are still worth pinning.
 //
 // Two independent migration bugs converged on that single call:
 //   1. `I18n.t` fell through to `resources.en[key]`, but the constructor only
@@ -56,7 +58,7 @@ afterEach(() => {
         delete (window as Partial<Window>).MUYA_VERSION;
 });
 
-function bootMuya(markdown: string, locale: typeof en): Muya {
+function bootMuya(markdown: string, locale: typeof locales.en): Muya {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const muya = new Muya(host, {
@@ -67,9 +69,6 @@ function bootMuya(markdown: string, locale: typeof en): Muya {
     bootedHosts.push(muya.domNode);
     return muya;
 }
-
-const COPY_LINK_SELECTOR
-    = '.ag-copy-header-link, .mu-copy-header-link, [class*="copy-header-link"]';
 
 // Drive the real "type `# x`" input path: write the text into the active
 // content block's contenteditable node, place the caret, and run the block's
@@ -94,10 +93,6 @@ function flush(): Promise<void> {
     return new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
 }
 
-function copyLinkAffordance(muya: Muya): HTMLElement | null {
-    return muya.domNode.querySelector<HTMLElement>(COPY_LINK_SELECTOR);
-}
-
 describe('typing `#` to create a heading under a non-en locale (#4424 / #4427)', () => {
     it('does not throw when converting a paragraph to an ATX heading under zh-CN', async () => {
         const muya = bootMuya('\n', zhCN);
@@ -110,57 +105,6 @@ describe('typing `#` to create a heading under a non-en locale (#4424 / #4427)',
         expect(muya.getState()[0].name).toBe('atx-heading');
     });
 
-    it('renders the copy-anchor affordance with the zh-CN translated label', async () => {
-        const muya = bootMuya('\n', zhCN);
-        typeHeading(muya, '# Heading');
-        // The conversion (and its HeadingCopyLink attachment render) flushes on
-        // the next animation frame; await it before querying the affordance.
-        await flush();
-
-        const affordance = copyLinkAffordance(muya);
-        expect(affordance).toBeTruthy();
-
-        const expected = zhCN.resource['Copy anchor link to this heading'];
-        // The label is a real translation — not the raw-key fall-through that
-        // the pre-#4424 missing locale key would have produced.
-        expect(expected).not.toBe('Copy anchor link to this heading');
-        expect(affordance!.getAttribute('aria-label')).toBe(expected);
-        expect(affordance!.getAttribute('title')).toBe(expected);
-    });
-
-    it('resolves the affordance label per-locale (en vs zh-CN) for the same heading', async () => {
-        const enMuya = bootMuya('\n', en);
-        typeHeading(enMuya, '# Heading');
-        await flush();
-        const enLabel = copyLinkAffordance(enMuya)!.getAttribute('aria-label');
-
-        const zhMuya = bootMuya('\n', zhCN);
-        typeHeading(zhMuya, '# Heading');
-        await flush();
-        const zhLabel = copyLinkAffordance(zhMuya)!.getAttribute('aria-label');
-
-        expect(enLabel).toBe(en.resource['Copy anchor link to this heading']);
-        expect(zhLabel).toBe(zhCN.resource['Copy anchor link to this heading']);
-        expect(enLabel).not.toBe(zhLabel);
-    });
-
-    it('still emits heading-copy-link when the zh-CN affordance is activated', async () => {
-        const muya = bootMuya('\n', zhCN);
-        typeHeading(muya, '# Heading');
-        // The affordance only exists after the conversion flush; await it before
-        // dispatching the click.
-        await flush();
-
-        const handler = vi.fn();
-        muya.on('heading-copy-link', handler);
-        copyLinkAffordance(muya)!.dispatchEvent(
-            new MouseEvent('click', { bubbles: true, cancelable: true }),
-        );
-
-        expect(handler).toHaveBeenCalledTimes(1);
-        expect(handler.mock.calls[0]?.[0]?.key).toBeTruthy();
-    });
-
     it('i18n.t stays crash-safe and falls back to the raw key for a key missing from a non-en locale', () => {
         // Guards the optional-chaining fix in I18n.t directly: under a non-en
         // locale `resources.en` is undefined, so a missing key must fall back
@@ -171,20 +115,16 @@ describe('typing `#` to create a heading under a non-en locale (#4424 / #4427)',
         expect(muya.i18n.t(missingKey)).toBe(missingKey);
     });
 
-    it('every shipped locale defines the heading copy-anchor key (no raw-key fall-through)', async () => {
-        // The crash's second half was the missing locale key. Lock it in for
-        // every shipped locale so a future locale addition can't silently
-        // reintroduce the raw-key fall-through (and, under a non-en locale, the
-        // crash before the optional-chaining guard). This is the whole point of
-        // the guard — typing `#` must not crash under ANY shipped locale — so
-        // exercise the real conversion path for every one of them.
+    it('does not throw for ANY shipped locale (no raw-key fall-through crash)', async () => {
+        // Typing `#` must not crash under any shipped locale. The HeadingCopyLink
+        // attachment that used to call `i18n.t` here was replaced by a pure-CSS
+        // level badge, so what remains is the conversion path itself plus the
+        // optional-chaining guard in `I18n.t` (pinned by the test above).
         for (const locale of Object.values(locales)) {
             const muya = bootMuya('\n', locale);
-            typeHeading(muya, '# Heading');
-            // The HeadingCopyLink attachment renders on the next frame.
+            expect(() => typeHeading(muya, '# Heading')).not.toThrow();
             await flush();
-            const label = copyLinkAffordance(muya)!.getAttribute('aria-label');
-            expect(label).toBe(locale.resource['Copy anchor link to this heading']);
+            expect(muya.getState()[0].name).toBe('atx-heading');
         }
     });
 });

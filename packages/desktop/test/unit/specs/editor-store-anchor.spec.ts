@@ -31,7 +31,6 @@ vi.mock('@/services/notification', () => ({
 
 import { useEditorStore } from '@/store/editor'
 import bus from '@/bus'
-import notice from '@/services/notification'
 
 describe('useEditorStore FORMAT_LINK_CLICK (anchor links)', () => {
   beforeEach(() => {
@@ -211,37 +210,6 @@ describe('useEditorStore cross-file anchor links (#5292)', () => {
 
     expect(emitSpy).toHaveBeenLastCalledWith('scroll-to-header', 'uid-9')
     expect(store.currentFile).not.toHaveProperty('anchor')
-  })
-})
-
-describe('useEditorStore copyGithubSlug', () => {
-  beforeEach(() => {
-    setActivePinia(createPinia())
-    vi.clearAllMocks()
-  })
-
-  it('copies "#<githubSlug>" of the matched block id to the clipboard and notifies', () => {
-    const store = useEditorStore()
-    store.listToc = [{ slug: 'uid-1', githubSlug: 'getting-started', lvl: 2 }]
-
-    const writeSpy = vi.spyOn(window.electron.clipboard, 'writeText')
-
-    store.copyGithubSlug('uid-1')
-
-    expect(writeSpy).toHaveBeenCalledWith('#getting-started')
-    expect(notice.notify).toHaveBeenCalledTimes(1)
-  })
-
-  it('does nothing (no clipboard write, no notify) when the id is not in the TOC', () => {
-    const store = useEditorStore()
-    store.listToc = [{ slug: 'uid-1', githubSlug: 'getting-started', lvl: 2 }]
-
-    const writeSpy = vi.spyOn(window.electron.clipboard, 'writeText')
-
-    store.copyGithubSlug('missing')
-
-    expect(writeSpy).not.toHaveBeenCalled()
-    expect(notice.notify).not.toHaveBeenCalled()
   })
 })
 

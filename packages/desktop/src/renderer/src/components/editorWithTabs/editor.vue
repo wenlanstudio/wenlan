@@ -78,17 +78,9 @@ import {
   FootnoteTool,
   ImageEditTool,
   ImagePathPicker,
-  ImageToolBar,
-  InlineFormatToolbar,
   LinkTools,
-  ParagraphFrontButton,
-  ParagraphFrontMenu,
   ParagraphQuickInsertMenu,
-  PreviewToolBar,
   TableChessboard,
-  TableColumnToolbar,
-  TableDragBar,
-  TableRowColumMenu,
   wordCount as muyaWordCount,
   type IHistorySelection,
   type IPreviewDiagramPayload,
@@ -1745,18 +1737,18 @@ onMounted(() => {
       imagePathPicker,
       imagePathAutoComplete
     })
-    Muya.use(ImageToolBar)
-    Muya.use(InlineFormatToolbar)
-    Muya.use(ParagraphFrontButton)
-    Muya.use(ParagraphFrontMenu)
-    Muya.use(PreviewToolBar)
+    // InlineFormatToolbar 也不注册：选中文字时不再浮出加粗/斜体工具条，
+    // 渲染结果保持"直接编辑文字"的观感，格式操作一律走快捷键。
     Muya.use(LinkTools, {
       jumpClick
     })
     Muya.use(FootnoteTool)
-    Muya.use(TableColumnToolbar)
-    Muya.use(TableDragBar)
-    Muya.use(TableRowColumMenu)
+    // 以下"元素级"浮层一律不注册：悬浮/激活块时在左侧显示类型图标与拖拽把手的
+    // ParagraphFrontButton（连带只能由它点开的 ParagraphFrontMenu）、块右上角
+    // view/edit/delete 的 PreviewToolBar、表格的列工具条与行列拖拽条（含它
+    // emit 出来的 TableRowColumMenu）、以及粘贴图片后浮出的 ImageToolBar。
+    // 渲染结果要像直接编辑文字一样干净，这些提示全部去掉；编辑图片改由点击展开
+    // markdown 源码完成，插入图片仍走 ImageEditTool 的选图弹窗。
   }
 
   const options: Partial<IMuyaOptions> = {
@@ -1935,13 +1927,6 @@ onMounted(() => {
     }
   }
   container.addEventListener('scroll', scrollHandler, { passive: true })
-
-  // Clicking the hover-to-copy affordance on a heading emits `heading-copy-link`
-  // with the heading's stable slug; copy the matching GitHub anchor to the
-  // clipboard (resolved via `listToc.find(i => i.slug === key)`).
-  editor.value.on('heading-copy-link', ({ key }: { key: string }) => {
-    editorStore.copyGithubSlug(key)
-  })
 
   editor.value.on(
     'format-click',

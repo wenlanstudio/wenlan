@@ -22,14 +22,14 @@
 
   --highlightColor: #b5d6fc80;
   --selectionColor: #b5d6fc80;
-  --editorColor: #333333;
-  --editorColor80: rgba(51, 51, 51, 0.8);
-  --editorColor60: rgba(51, 51, 51, 0.6);
-  --editorColor50: rgba(51, 51, 51, 0.5);
-  --editorColor40: rgba(51, 51, 51, 0.4);
-  --editorColor30: rgba(51, 51, 51, 0.3);
-  --editorColor10: rgba(51, 51, 51, 0.1);
-  --editorColor04: rgba(51, 51, 51, 0.04);
+  --editorColor: #24292e;
+  --editorColor80: rgba(31, 35, 40, 0.8);
+  --editorColor60: rgba(31, 35, 40, 0.6);
+  --editorColor50: rgba(31, 35, 40, 0.5);
+  --editorColor40: rgba(31, 35, 40, 0.4);
+  --editorColor30: rgba(31, 35, 40, 0.3);
+  --editorColor10: rgba(31, 35, 40, 0.1);
+  --editorColor04: rgba(31, 35, 40, 0.04);
   --editorBgColor: #ffffff;
   --deleteColor: #d73a49;
   --iconColor: rgba(51, 51, 51, 0.56);
@@ -106,7 +106,7 @@
   --highlight-color: var(--highlightColor);
   --selection-color: var(--selectionColor);
   --editor-color: var(--editorColor);
-  --editor-color-80: var(--editorColor80);
+  --editor-color-80: rgba(31, 35, 40, 0.8);
   --editor-color-50: var(--editorColor50);
   --editor-color-30: var(--editorColor30);
   --editor-color-10: var(--editorColor10);

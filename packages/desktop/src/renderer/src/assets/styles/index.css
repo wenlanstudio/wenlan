@@ -19,9 +19,9 @@
 
   --highlightColor: rgba(33, 181, 111, 0.4);
   --selectionColor: rgba(0, 0, 0, 0.1);
-  --editorColor: #4d4d4d;
-  --editorColor80: #333333;
-  --editorColor60: #666666;
+  --editorColor: #24292e;
+  --editorColor80: #1f2328;
+  --editorColor60: #595959;
   --editorColor50: #808080;
   --editorColor40: #999999;
   --editorColor30: #b3b3b3;
@@ -134,6 +134,10 @@ body {
   padding: 0;
   background: transparent !important;
   caret-color: var(--editorColor);
+  /* 提升浅色主题下正文的字体 hinting 与字距，缓解 Chromium
+     灰度抗锯齿带来的“灰蒙蒙/发软”观感（不启 grayscale 平滑，
+     那在 Windows 上反而会让字更细更灰）。 */
+  text-rendering: optimizeLegibility;
 }
 
 body {

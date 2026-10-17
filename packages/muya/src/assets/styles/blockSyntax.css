@@ -93,25 +93,22 @@
     font-size: 1em;
 }
 
-/* heading copy-anchor affordance — revealed on heading hover, sits in the
-   left gutter (matches the legacy `ag-copy-header-link` placement). */
-.mu-container h1 > .mu-copy-header-link,
-.mu-container h2 > .mu-copy-header-link,
-.mu-container h3 > .mu-copy-header-link,
-.mu-container h4 > .mu-copy-header-link,
-.mu-container h5 > .mu-copy-header-link,
-.mu-container h6 > .mu-copy-header-link {
+/* 悬浮标题时在左侧留白处显示标题级别（H1…H6）。
+   这里原先是"复制链接锚点"的图标按钮（`.mu-copy-header-link`），按 Typora 习惯改成
+   纯提示文本：只是标签，不吃点击（`pointer-events: none`），也不参与选择。 */
+.mu-container h1::before,
+.mu-container h2::before,
+.mu-container h3::before,
+.mu-container h4::before,
+.mu-container h5::before,
+.mu-container h6::before {
     position: absolute;
     top: 0;
     left: -40px;
 
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 18px;
-    height: 18px;
-
-    cursor: pointer;
+    color: var(--editor-color-30);
+    font-weight: 400;
+    font-size: 12px;
 
     transform: translateY(calc(0.7em - 9px));
     opacity: 0;
@@ -119,29 +116,40 @@
     transition: opacity 0.2s ease;
 
     user-select: none;
+    pointer-events: none;
 }
 
-.mu-container h1:hover > .mu-copy-header-link,
-.mu-container h2:hover > .mu-copy-header-link,
-.mu-container h3:hover > .mu-copy-header-link,
-.mu-container h4:hover > .mu-copy-header-link,
-.mu-container h5:hover > .mu-copy-header-link,
-.mu-container h6:hover > .mu-copy-header-link {
-    opacity: 0.6;
+.mu-container h1::before {
+    content: 'H1';
 }
 
-.mu-container h1 > .mu-copy-header-link:hover,
-.mu-container h2 > .mu-copy-header-link:hover,
-.mu-container h3 > .mu-copy-header-link:hover,
-.mu-container h4 > .mu-copy-header-link:hover,
-.mu-container h5 > .mu-copy-header-link:hover,
-.mu-container h6 > .mu-copy-header-link:hover {
+.mu-container h2::before {
+    content: 'H2';
+}
+
+.mu-container h3::before {
+    content: 'H3';
+}
+
+.mu-container h4::before {
+    content: 'H4';
+}
+
+.mu-container h5::before {
+    content: 'H5';
+}
+
+.mu-container h6::before {
+    content: 'H6';
+}
+
+.mu-container h1:hover::before,
+.mu-container h2:hover::before,
+.mu-container h3:hover::before,
+.mu-container h4:hover::before,
+.mu-container h5:hover::before,
+.mu-container h6:hover::before {
     opacity: 1;
-}
-
-.mu-container .mu-copy-header-link > .mu-icon-inner {
-    width: 14px;
-    height: 14px;
 }
 
 /* block quote */
@@ -312,24 +320,6 @@ code.mu-code .mu-code-copy:hover {
     filter: drop-shadow(16px 0 var(--icon-color));
 }
 
-.mu-fenced-code.mu-active .mu-code::after {
-    content: 'fenced';
-}
-
-.mu-indented-code.mu-active .mu-code::after {
-    content: 'indented';
-}
-
-.mu-fenced-code.mu-active .mu-code::after,
-.mu-indented-code.mu-active .mu-code::after {
-    position: absolute;
-    right: 0.5em;
-    bottom: 0;
-    z-index: 1;
-
-    color: var(--editor-color-30);
-}
-
 /* code block line numbers (option: codeBlockLineNumbers) */
 .mu-code-block:has(.mu-line-numbers-rows) {
     padding-left: 2.5em;
@@ -377,13 +367,14 @@ code.mu-code .mu-code-copy:hover {
     content: counter(mu-linenumber);
 }
 
+/* 语言声明放在代码框右下角（Typora 习惯），而不是左上角。 */
 span.mu-language-input {
     position: absolute;
-    top: 0;
-    left: 0;
-    z-index: -1;
+    right: 0.5em;
+    bottom: 0.3em;
+    z-index: 1;
 
-    min-width: 20em;
+    min-width: 2em;
 
     font-weight: 600;
     font-size: 0.8em;
@@ -391,10 +382,13 @@ span.mu-language-input {
     opacity: 0;
 }
 
-.mu-code-block.mu-active .mu-language-input {
-    top: -1.8em;
-    z-index: initial;
+/* 已声明语言时常驻淡色显示；未声明（空）时只在悬浮/激活态显示 hint 占位。 */
+.mu-code-block .mu-language-input:not(:empty),
+.mu-code-block:hover .mu-language-input {
+    opacity: 0.6;
+}
 
+.mu-code-block.mu-active .mu-language-input {
     opacity: 1;
 }
 
@@ -402,10 +396,6 @@ span.mu-language-input {
     color: var(--editor-color-10);
 
     content: attr(hint);
-}
-
-.mu-code-block.mu-fenced-code.mu-active .mu-language-input {
-    left: 30px;
 }
 
 /* loose tight list */
@@ -596,6 +586,8 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
 }
 
 .mu-table-inner {
+    /* 表格铺满正文列宽（Typora 习惯），随窗口宽度变化。 */
+    width: 100%;
     padding: 0;
 
     word-break: initial;
