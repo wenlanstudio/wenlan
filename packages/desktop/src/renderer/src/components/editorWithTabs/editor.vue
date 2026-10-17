@@ -111,7 +111,7 @@ import {
   TOP_LEVEL_HEADINGS_SELECTOR
 } from '@/util/tocNavigation'
 import { findActiveHeadingSlug, type HeadingPosition } from '@/util/findActiveHeading'
-import { addCommonStyle, setEditorWidth } from '@/util/theme'
+import { addCommonStyle, setEditorWidth, setSpreadMode } from '@/util/theme'
 import { usePreferencesStore } from '@/store/preferences'
 import { useEditorStore } from '@/store/editor'
 import { useProjectStore } from '@/store/project'
@@ -162,6 +162,7 @@ const props = defineProps<{
   cursor?: unknown
   textDirection: string
   platform?: string
+  spreadMode?: boolean
 }>()
 
 // Get stores
@@ -630,6 +631,12 @@ watch(hideQuickInsertHint, (value, oldValue) => {
 watch(editorLineWidth, (value, oldValue) => {
   if (value !== oldValue) {
     setEditorWidth(value)
+  }
+})
+
+watch(() => props.spreadMode, (value, oldValue) => {
+  if (value !== oldValue) {
+    setSpreadMode(value ?? false)
   }
 })
 
@@ -2043,6 +2050,7 @@ onMounted(() => {
   document.addEventListener('keyup', keyup)
 
   setEditorWidth(editorLineWidth.value)
+  setSpreadMode(props.spreadMode ?? false)
 
   // Read-only guard: intercept all beforeinput events on the editor surface.
   const domNode = editor.value.domNode
@@ -2117,6 +2125,7 @@ onBeforeUnmount(() => {
     editor.value.destroy()
     editor.value = null
   }
+  setSpreadMode(false)
 })
 </script>
 

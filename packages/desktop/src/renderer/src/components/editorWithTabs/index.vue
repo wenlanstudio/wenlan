@@ -15,33 +15,15 @@
         :text-direction="textDirection"
         :platform="platform"
       />
-      <!-- Word 阅读视图 -->
-      <div
+      <!-- Word 阅读视图（双页） -->
+      <editor
         v-else-if="mainView === 'word' && subView === 'reading'"
-        class="view-placeholder"
-      >
-        <div class="placeholder-inner">
-          <div class="placeholder-icon">
-            <svg
-              viewBox="0 0 24 24"
-              width="48"
-              height="48"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.2"
-            >
-              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-            </svg>
-          </div>
-          <div class="placeholder-title">
-            {{ t('view.readingView') }}
-          </div>
-          <div class="placeholder-hint">
-            {{ t('view.comingSoon') }}
-          </div>
-        </div>
-      </div>
+        :markdown="markdown"
+        :cursor="cursor"
+        :text-direction="textDirection"
+        :platform="platform"
+        spread-mode
+      />
       <!-- PPT 视图 -->
       <div
         v-else-if="mainView === 'ppt'"
