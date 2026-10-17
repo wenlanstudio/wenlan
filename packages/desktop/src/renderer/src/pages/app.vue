@@ -7,8 +7,6 @@
         :project="projectTree"
         :filename="filename"
         :active="windowActive"
-        :word-count="wordCount"
-        :selection-word-count="selectionWordCount"
         :is-saved="isSaved"
       />
 
@@ -63,6 +61,15 @@
           />
         </svg>
       </div>
+
+      <!-- PascalCase on purpose: a kebab `<word-count>` tag collides with the
+           local `wordCount` computed, and the linter then reads the import as
+           unused. Sibling components below use kebab-case. -->
+      <WordCount
+        class="word-count-dock"
+        :word-count="wordCount"
+        :selection-word-count="selectionWordCount"
+      />
     </div>
   </div>
 </template>
@@ -81,6 +88,7 @@ import CommandPalette from '@/components/commandPalette/index.vue'
 import ExportSettingDialog from '@/components/exportSettings/index.vue'
 import Rename from '@/components/rename/index.vue'
 import ImportModal from '@/components/import/index.vue'
+import WordCount from '@/components/wordCount/index.vue'
 import bus from '@/bus'
 import { t } from '@/i18n'
 import { DEFAULT_STYLE } from '@/config'
@@ -308,5 +316,13 @@ onMounted(async () => {
     opacity: 1;
     background: var(--itemBgColor);
   }
+}
+
+/* Mirrors the sidebar toggle in the opposite corner. */
+.word-count-dock {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  z-index: 100;
 }
 </style>
