@@ -13,7 +13,6 @@ files:
   # ================================
   # Do not bundle these files
   # ================================
-  - '!node_modules/dragula/resources'
   - '!node_modules/**/*.js.map'
   - '!node_modules/**/*.cjs.map'
   - '!node_modules/**/*.mjs.map'

@@ -1,7 +1,6 @@
 // Module shims for third-party libraries that ship no type declarations.
 // Each entry is `any`-typed; refine as we discover the real shape.
 
-declare module 'dom-autoscroller'
 declare module 'flowchart.js'
 declare module 'snapsvg-cjs'
 declare module '@hfelix/electron-localshortcut'
