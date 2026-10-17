@@ -108,7 +108,9 @@ const windowControlAPI = {
   popupMenu: (template: unknown, position?: { x: number; y: number }) =>
     send('mt::menu::popup', template as never, position),
   popupApplicationMenu: (position?: { x: number; y: number }) =>
-    send('mt::menu::popup-application', position)
+    send('mt::menu::popup-application', position),
+  getMenuStructure: () => invoke('mt::menu::get-structure'),
+  executeMenuItem: (id: string) => send('mt::menu::execute', id)
 }
 
 // These three predicates are pure path-string operations: implementing them

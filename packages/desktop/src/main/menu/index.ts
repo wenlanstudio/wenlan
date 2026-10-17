@@ -10,10 +10,17 @@ import { updateSelectionMenus, type SelectionState } from '../menu/actions/parag
 import { onInternalChannel } from '../utils/internalIpc'
 import { viewLayoutChanged } from '../menu/actions/view'
 import configureMenu, { configSettingMenu } from '../menu/templates'
+import {
+  collectMenuActions,
+  executeMenuRole,
+  serializeMenu,
+  type MenuItemActionMap
+} from '../menu/menuModel'
 import { setLanguage } from '../i18n.js'
 import type Preference from '../preferences'
 import type Keybindings from '../keyboard/shortcutHandler'
 import type { IUserPreferences } from '@shared/types/preferences'
+import type { MenuStructureItem } from '@shared/types/menu'
 
 const RECENTLY_USED_DOCUMENTS_FILE_NAME = 'recently-used-documents.json'
 const MAX_RECENTLY_USED_DOCUMENTS = 12
@@ -29,6 +36,11 @@ export type MenuTypeValue = (typeof MenuType)[keyof typeof MenuType]
 interface WindowMenuEntry {
   menu: Menu | null
   type: MenuTypeValue
+  /**
+   * id → how to run that entry. Collected alongside the template so the
+   * in-window menu bar can execute entries it cannot see a `click` on.
+   */
+  actions?: MenuItemActionMap
 }
 
 interface AddEditorMenuOptions {
@@ -299,7 +311,8 @@ class AppMenu {
       const { menu: oldMenu, type } = value
       if (type !== MenuType.EDITOR || !oldMenu) return
 
-      const { menu: newMenu } = this._buildEditorMenu(recentUsedDocuments)
+      const rebuilt = this._buildEditorMenu(recentUsedDocuments)
+      const { menu: newMenu } = rebuilt
       if (!newMenu) return
 
       // all other menu items are set automatically
@@ -311,6 +324,7 @@ class AppMenu {
 
       // update window menu
       value.menu = newMenu
+      value.actions = rebuilt.actions
     })
 
     this._reapplyMenus()
@@ -327,17 +341,19 @@ class AppMenu {
       const { menu: oldMenu, type } = value
 
       let newMenu: Menu | null
+      let newActions: MenuItemActionMap | undefined
       if (type === MenuType.EDITOR) {
         if (!oldMenu) return
-        const { menu: rebuilt } = this._buildEditorMenu(recentUsedDocuments)
-        if (!rebuilt) return
+        const rebuilt = this._buildEditorMenu(recentUsedDocuments)
+        if (!rebuilt.menu) return
 
-        updateMenuItem(oldMenu, rebuilt, 'sourceCodeModeMenuItem')
-        updateMenuItem(oldMenu, rebuilt, 'typewriterModeMenuItem')
-        updateMenuItem(oldMenu, rebuilt, 'focusModeMenuItem')
-        updateMenuItem(oldMenu, rebuilt, 'sideBarMenuItem')
-        updateMenuItem(oldMenu, rebuilt, 'tabBarMenuItem')
-        newMenu = rebuilt
+        updateMenuItem(oldMenu, rebuilt.menu, 'sourceCodeModeMenuItem')
+        updateMenuItem(oldMenu, rebuilt.menu, 'typewriterModeMenuItem')
+        updateMenuItem(oldMenu, rebuilt.menu, 'focusModeMenuItem')
+        updateMenuItem(oldMenu, rebuilt.menu, 'sideBarMenuItem')
+        updateMenuItem(oldMenu, rebuilt.menu, 'tabBarMenuItem')
+        newMenu = rebuilt.menu
+        newActions = rebuilt.actions
       } else if (type === MenuType.SETTINGS) {
         newMenu = this._buildSettingMenu().menu
         if (!newMenu) return
@@ -346,6 +362,7 @@ class AppMenu {
       }
 
       value.menu = newMenu
+      value.actions = newActions
     })
 
     this._reapplyMenus()
@@ -431,14 +448,45 @@ class AppMenu {
     })
   }
 
+  /**
+   * Snapshot the window's menu for the in-window menu bar.
+   *
+   * Read off the *built* menu rather than the template so the renderer sees the
+   * same enabled/checked state the native menu bar would show.
+   */
+  getMenuStructure(windowId: number): MenuStructureItem[] {
+    if (!this.has(windowId)) return []
+    return serializeMenu(this.getWindowMenuById(windowId) ?? null)
+  }
+
+  /**
+   * Run one menu entry on behalf of the in-window menu bar.
+   */
+  executeMenuItem(windowId: number, id: string): void {
+    const entry = this.windowMenus.get(windowId)
+    const action = entry?.actions?.get(id)
+    if (!action) return
+
+    const win = BrowserWindow.fromId(windowId)
+    if (!win || win.isDestroyed()) return
+
+    if (action.click) {
+      action.click(win)
+    } else if (action.role) {
+      executeMenuRole(win, action.role)
+    }
+  }
+
   _buildEditorMenu(recentUsedDocuments: string[] | null = null): WindowMenuEntry {
     if (!recentUsedDocuments) {
       recentUsedDocuments = this.getRecentlyUsedDocuments()
     }
 
     const menuTemplate = configureMenu(this._keybindings, this._preferences, recentUsedDocuments)
+    const actions: MenuItemActionMap = new Map()
+    collectMenuActions(menuTemplate, actions)
     const menu = Menu.buildFromTemplate(menuTemplate)
-    return { menu, type: MenuType.EDITOR }
+    return { menu, type: MenuType.EDITOR, actions }
   }
 
   _buildSettingMenu(): WindowMenuEntry {
@@ -508,6 +556,21 @@ class AppMenu {
   }
 
   _listenForIpcMain(): void {
+    // In-window (Typora-style) menu bar: the renderer draws the entries and
+    // asks us to run one by id. The window is taken from the sender so it
+    // always matches the menu that window actually has.
+    ipcMain.handle('mt::menu::get-structure', (event) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (!win) return []
+      return this.getMenuStructure(win.id)
+    })
+
+    ipcMain.on('mt::menu::execute', (event, id: string) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (!win || typeof id !== 'string') return
+      this.executeMenuItem(win.id, id)
+    })
+
     ipcMain.on('mt::add-recently-used-document', (_e, pathname: string) => {
       this.addRecentlyUsedDocument(pathname)
     })

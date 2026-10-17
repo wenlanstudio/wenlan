@@ -19,6 +19,23 @@ export interface MenuTemplateItem {
 
 export type MenuTemplate = MenuTemplateItem[]
 
+/**
+ * An application menu entry serialized for the renderer: enough to draw the
+ * in-window menu bar and to address an entry by stable id, without leaking an
+ * Electron `MenuItem` — or its non-serializable `click` — across IPC.
+ */
+export interface MenuStructureItem {
+  /** Stable within one window menu; empty only for generated separators. */
+  id: string
+  label: string
+  type: 'normal' | 'separator' | 'checkbox' | 'radio' | 'submenu'
+  accelerator: string | null
+  enabled: boolean
+  visible: boolean
+  checked: boolean
+  submenu: MenuStructureItem[]
+}
+
 export interface MenuPopupPosition {
   x: number
   y: number

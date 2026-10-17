@@ -32,7 +32,7 @@ import type {
   UnsavedFile
 } from './files'
 import type { BufferedState as BufferedStateType } from './bufferedState'
-import type { MenuTemplate, MenuPopupPosition } from './menu'
+import type { MenuTemplate, MenuPopupPosition, MenuStructureItem } from './menu'
 import type { PandocCommandInfo } from './pandoc'
 
 export interface SaveDialogRequest {
@@ -88,6 +88,8 @@ export interface IpcInvokeChannels {
     ret: { defaultKeybindings: Map<string, string>; userKeybindings: Map<string, string> }
   }
   'mt::keybinding-save-user-keybindings': { args: [bindings: unknown]; ret: boolean }
+  // Snapshot of the window's application menu for the in-window menu bar.
+  'mt::menu::get-structure': { args: []; ret: MenuStructureItem[] }
   'mt::pandoc::command': { args: []; ret: PandocCommandInfo }
   'mt::paths::is-image': { args: [path: string]; ret: boolean }
   'mt::rg::start': { args: [req: unknown]; ret: { searchId: string } }
@@ -147,6 +149,8 @@ export interface IpcSendChannels {
   'mt::make-screenshot': []
   'mt::menu::popup': [template: MenuTemplate, position?: MenuPopupPosition]
   'mt::menu::popup-application': [position?: MenuPopupPosition]
+  // Run one entry of the in-window menu bar, addressed by its menu id.
+  'mt::menu::execute': [id: string]
   'mt::open-file': [filePath: string, options?: unknown]
   'mt::open-file-by-window-id': [windowId: number, filePath: string, options?: unknown]
   'mt::open-keybindings-config': []

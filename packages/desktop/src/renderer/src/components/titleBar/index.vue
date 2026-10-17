@@ -17,6 +17,7 @@
     >
       <div
         class="title"
+        :style="titlePadding"
         @dblclick.stop="toggleMaxmizeOnMacOS"
       >
         <span v-if="!filename">MarkText</span>
@@ -51,13 +52,10 @@
         </span>
       </div>
       <div :class="showCustomTitleBar ? 'left-toolbar title-no-drag' : 'right-toolbar'">
-        <div
+        <menu-bar
           v-if="showCustomTitleBar"
-          class="frameless-titlebar-menu title-no-drag"
-          @click.stop="handleMenuClick"
-        >
-          <span class="text-center-vertical">&#9776;</span>
-        </div>
+          @resize="menuWidth = $event"
+        />
         <el-tooltip
           v-if="wordCount"
           class="item"
@@ -157,6 +155,7 @@ import { isMac as isOsxPlatform } from '@/util'
 import { shouldShowInAppTitleBar } from './visibility'
 import { pathBreadcrumb } from './pathBreadcrumb'
 import { buildWindowTitle } from './windowTitle'
+import MenuBar from './menuBar.vue'
 import { useEditorStore } from '@/store/editor'
 import { useI18n } from 'vue-i18n'
 import { ArrowRight } from '@element-plus/icons-vue'
@@ -198,6 +197,8 @@ const windowIconClose = closePath
 const isFullScreen = ref(false)
 const isMaximized = ref(false)
 const show = ref<'word' | 'paragraph' | 'character' | 'all'>('word')
+// Width of the in-window menu bar, so the centered filename can stay clear of it.
+const menuWidth = ref(0)
 
 onMounted(async () => {
   try {
@@ -241,6 +242,11 @@ const showTitleBar = computed(() => {
   return shouldShowInAppTitleBar(titleBarStyle.value, isOsx)
 })
 
+const titlePadding = computed(() => ({
+  paddingLeft: menuWidth.value > 0 ? `${menuWidth.value + 24}px` : '142px',
+  paddingRight: '142px'
+}))
+
 watch(
   () => props.filename,
   (value) => {
@@ -278,10 +284,6 @@ const toggleMaxmizeOnMacOS = () => {
 
 const handleMinimizeClick = () => {
   window.electron.windowControl.minimize()
-}
-
-const handleMenuClick = () => {
-  window.electron.windowControl.popupApplicationMenu({ x: 23, y: 20 })
 }
 
 const rename = () => {
@@ -426,7 +428,9 @@ div.title > span > .path > bdi > span {
   position: absolute;
   top: 0;
   left: 0;
-  width: 118px; /* + 2*10px padding*/
+  /* Wide enough to hold the in-window menu bar; the panel below each entry is
+     absolutely positioned so it overflows this box instead of being clipped. */
+  width: auto;
   display: flex;
   flex-direction: row;
 }
@@ -485,9 +489,6 @@ div.title > span > .path > bdi > span {
   top: 50%;
   left: 50%;
   transform: translateX(-50%) translateY(-50%);
-}
-.frameless-titlebar-menu {
-  color: var(--sideBarColor);
 }
 .frameless-titlebar-close:hover {
   background-color: rgb(228, 79, 79);
