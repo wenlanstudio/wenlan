@@ -180,8 +180,16 @@ class Preference extends TypedEmitter<PreferenceEvents> {
         win.webContents.send('mt::user-preference', this.getAll())
       }
     })
-    ipcMain.on('mt::set-user-preference', (_e, settings: Record<string, unknown>) => {
+    ipcMain.on('mt::set-user-preference', (e, settings: Record<string, unknown>) => {
       this.setItems(settings)
+      // Keep the per-window logical zoom in sync so zoomIn/zoomOut compute
+      // from the right baseline after the renderer changes zoom via preferences.
+      if (typeof settings.zoom === 'number') {
+        const win = BrowserWindow.fromWebContents(e.sender)
+        if (win) {
+          (win as unknown as { __marktextZoom?: number }).__marktextZoom = settings.zoom
+        }
+      }
     })
     ipcMain.on('mt::cmd-toggle-autosave', () => {
       this.setItem('autoSave', !this.getItem('autoSave'))

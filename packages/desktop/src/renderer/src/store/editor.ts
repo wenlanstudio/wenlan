@@ -1770,7 +1770,8 @@ export const useEditorStore = defineStore('editor', {
       if (zoom !== zoomFactor) {
         preferencesStore.SET_SINGLE_PREFERENCE({ type: 'zoom', value: zoomFactor })
       }
-      window.electron.webFrame.setZoomFactor(zoomFactor)
+      // Zoom is applied via CSS `zoom` on the editor content surface only,
+      // so chrome (title bar, side bar, status bar) stays at 1x.
     },
 
     LISTEN_WINDOW_ZOOM(): void {

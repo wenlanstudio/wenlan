@@ -1,7 +1,10 @@
 <template>
   <div
     class="editor-with-tabs"
-    :style="{ 'max-width': `calc(100vw - ${effectiveSideBarWidth}px)` }"
+    :style="{
+      'max-width': `calc(100vw - ${effectiveSideBarWidth}px)`,
+      '--editor-zoom': zoom
+    }"
   >
     <div class="container">
       <editor
@@ -23,6 +26,7 @@
 
 <script setup lang="ts">
 import { useLayoutStore } from '@/store/layout'
+import { usePreferencesStore } from '@/store/preferences'
 import { storeToRefs } from 'pinia'
 import Editor from './editor.vue'
 import SourceCode from './sourceCode.vue'
@@ -41,6 +45,7 @@ defineProps<{
 }>()
 
 const { effectiveSideBarWidth } = storeToRefs(useLayoutStore())
+const { zoom } = storeToRefs(usePreferencesStore())
 </script>
 
 <style scoped>

@@ -461,6 +461,7 @@ onBeforeUnmount(() => {
   margin: 50px auto;
   max-width: var(--editorAreaWidth);
   background: transparent;
+  zoom: var(--editor-zoom, 1);
 }
 .source-code .CodeMirror-gutters {
   border-right: none;

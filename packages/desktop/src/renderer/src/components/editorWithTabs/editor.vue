@@ -2155,6 +2155,7 @@ onBeforeUnmount(() => {
 .editor-component .mu-container {
   padding-top: 20px;
   padding-bottom: 100vh;
+  zoom: var(--editor-zoom, 1);
 }
 
 .typewriter .editor-component {

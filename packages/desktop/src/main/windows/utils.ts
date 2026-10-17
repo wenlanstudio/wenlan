@@ -2,27 +2,32 @@ import { screen } from 'electron'
 import type { BrowserWindow, BrowserWindowConstructorOptions } from 'electron'
 import { isLinux } from '../config'
 
+const getLogicalZoom = (win: BrowserWindow): number => {
+  return (win as unknown as { __marktextZoom?: number }).__marktextZoom ?? 1.0
+}
+
+const setLogicalZoom = (win: BrowserWindow, zoom: number): void => {
+  (win as unknown as { __marktextZoom?: number }).__marktextZoom = zoom
+}
+
 export const zoomIn = (win: BrowserWindow | null | undefined): void => {
   if (!win) return
-  const { webContents } = win
-  const zoom = webContents.getZoomFactor()
-  // WORKAROUND: We need to set zoom on the browser window due to Electron#16018.
-  webContents.send('mt::window-zoom', Math.min(2.0, zoom + 0.125))
+  const zoom = Math.min(2.0, getLogicalZoom(win) + 0.125)
+  setLogicalZoom(win, zoom)
+  win.webContents.send('mt::window-zoom', zoom)
 }
 
 export const zoomOut = (win: BrowserWindow | null | undefined): void => {
   if (!win) return
-  const { webContents } = win
-  const zoom = webContents.getZoomFactor()
-  // WORKAROUND: We need to set zoom on the browser window due to Electron#16018.
-  webContents.send('mt::window-zoom', Math.max(0.5, zoom - 0.125))
+  const zoom = Math.max(0.5, getLogicalZoom(win) - 0.125)
+  setLogicalZoom(win, zoom)
+  win.webContents.send('mt::window-zoom', zoom)
 }
 
 export const resetZoom = (win: BrowserWindow | null | undefined): void => {
   if (!win) return
-  const { webContents } = win
-  // WORKAROUND: We need to set zoom on the browser window due to Electron#16018.
-  webContents.send('mt::window-zoom', 1.0)
+  setLogicalZoom(win, 1.0)
+  win.webContents.send('mt::window-zoom', 1.0)
 }
 
 export const centerWindowOptions = (
