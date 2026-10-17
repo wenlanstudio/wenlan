@@ -20,36 +20,13 @@
         :style="titlePadding"
         @dblclick.stop="toggleMaxmizeOnMacOS"
       >
-        <span v-if="!filename">MarkText</span>
-        <span v-else>
-          <span
-            class="save-dot"
-            :class="{ show: !isSaved }"
-          />
-          <span class="path">
-            <bdi dir="ltr">
-              <span
-                v-for="(path, index) of paths"
-                :key="index"
-              >
-                {{ path }}
-                <el-icon
-                  class="path-arrow"
-                  :size="12"
-                >
-                  <ArrowRight />
-                </el-icon>
-              </span>
-              <span
-                class="filename"
-                :class="{ isOsx: platform === 'darwin' }"
-                @click="rename"
-              >
-                {{ filename }}
-              </span>
-            </bdi>
-          </span>
-        </span>
+        <!-- The title slot is intentionally empty for now (TODO #5: turn it into
+             a Dynamic-Island-style activity hub). Until then it still carries
+             the unsaved-changes dot, which has no other place to live. -->
+        <span
+          class="save-dot"
+          :class="{ show: !isSaved }"
+        />
       </div>
       <div :class="showCustomTitleBar ? 'left-toolbar title-no-drag' : 'right-toolbar'">
         <menu-bar
@@ -150,15 +127,11 @@ import { useLayoutStore } from '@/store/layout.js'
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { storeToRefs } from 'pinia'
 import { minimizePath, restorePath, maximizePath, closePath } from '../../assets/window-controls.js'
-import { PATH_SEPARATOR } from '../../config'
 import { isMac as isOsxPlatform } from '@/util'
 import { shouldShowInAppTitleBar } from './visibility'
-import { pathBreadcrumb } from './pathBreadcrumb'
 import { buildWindowTitle } from './windowTitle'
 import MenuBar from './menuBar.vue'
-import { useEditorStore } from '@/store/editor'
 import { useI18n } from 'vue-i18n'
-import { ArrowRight } from '@element-plus/icons-vue'
 import type { FileWordCount } from '@shared/types/files'
 
 interface ProjectInfo {
@@ -169,17 +142,14 @@ interface ProjectInfo {
 const props = defineProps<{
   project?: ProjectInfo | null
   filename?: string
-  pathname?: string
   active?: boolean
   wordCount?: FileWordCount | null
   selectionWordCount?: FileWordCount | null
-  platform?: string
   isSaved?: boolean
 }>()
 
 const preferencesStore = usePreferencesStore()
 const layoutStore = useLayoutStore()
-const editorStore = useEditorStore()
 const { t } = useI18n()
 
 const isOsx = isOsxPlatform
@@ -215,8 +185,6 @@ onMounted(async () => {
 
 const { titleBarStyle } = storeToRefs(preferencesStore)
 const { showTabBar } = storeToRefs(layoutStore)
-
-const paths = computed(() => pathBreadcrumb(props.pathname ?? '', PATH_SEPARATOR))
 
 const showCustomTitleBar = computed(() => {
   return titleBarStyle.value === 'custom' && !isOsx
@@ -284,12 +252,6 @@ const toggleMaxmizeOnMacOS = () => {
 
 const handleMinimizeClick = () => {
   window.electron.windowControl.minimize()
-}
-
-const rename = () => {
-  if (props.platform === 'darwin') {
-    editorStore.RESPONSE_FOR_RENAME()
-  }
 }
 
 const onMaximize = () => {
@@ -363,9 +325,6 @@ img {
   font-size: 14px;
   text-align: center;
   transition: all 0.25s ease-in-out;
-  & .filename {
-    transition: all 0.25s ease-in-out;
-  }
   &::after {
     content: '';
     position: absolute;
@@ -376,37 +335,16 @@ img {
     -webkit-app-region: no-drag;
   }
 }
-div.title > span {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
+/* Centers the unsaved-changes dot — the only thing left in the title slot. */
+div.title > .save-dot {
+  vertical-align: middle;
 }
 
-/* Workaround for GH#339: the RTL context clips an over-long path from the left
-   so the filename stays visible. The save dot is a sibling rather than a child
-   so that clipping can never swallow it. */
-div.title > span > .path {
-  direction: rtl;
-  overflow: hidden;
-  text-overflow: clip;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-/* The RTL context above only exists to clip long paths from the left. Isolating
-   each segment keeps an RTL folder name from dragging its separator — or the
-   segments around it — out of order. */
-div.title > span > .path > bdi > span {
-  unicode-bidi: isolate;
-}
-
-.title-bar .title .filename.isOsx:hover {
-  color: var(--themeColor);
-}
+/* GH#339's RTL clipping workaround is gone with the path breadcrumb, along with
+   `.filename` styling and the `:hover` color that targeted its child spans. */
 
 .active .save-dot {
   flex: none;
-  margin-right: 0.25rem;
   width: 8px;
   height: 8px;
   display: inline-block;
@@ -417,9 +355,6 @@ div.title > span > .path > bdi > span {
 }
 .active .save-dot.show {
   visibility: visible;
-}
-.title:hover {
-  color: var(sideBarTitleColor);
 }
 
 .left-toolbar {

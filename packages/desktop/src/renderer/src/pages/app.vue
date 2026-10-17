@@ -5,12 +5,10 @@
     <div class="editor-middle">
       <title-bar
         :project="projectTree"
-        :pathname="pathname"
         :filename="filename"
         :active="windowActive"
         :word-count="wordCount"
         :selection-word-count="selectionWordCount"
-        :platform="platform"
         :is-saved="isSaved"
       />
 
@@ -113,7 +111,6 @@ const { sourceCode, theme, customCss, textDirection, zoom } = storeToRefs(prefer
 const { projectTree } = storeToRefs(projectStore)
 const { currentFile, selectionWordCount } = storeToRefs(editorStore)
 
-const pathname = computed(() => currentFile.value?.pathname)
 const filename = computed(() => currentFile.value?.filename)
 const isSaved = computed(() => currentFile.value?.isSaved)
 // `markdown` is read by `<editor-with-tabs>` whose prop is `required: true`.
