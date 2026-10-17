@@ -660,6 +660,17 @@
         },
         "plantumlServer": {
           "title": "PlantUML 서버 URL"
+        },
+        "drawioServer": {
+          "title": "DrawIO 임베드 서버 URL"
+        },
+        "matplotlib": {
+          "enabled": {
+            "title": "Matplotlib 다이어그램 사용 (로컬 Python으로 코드 실행)"
+          },
+          "pythonPath": {
+            "title": "Python 실행 파일 경로"
+          }
         }
       },
       "misc": {

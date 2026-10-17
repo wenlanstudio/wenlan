@@ -546,6 +546,12 @@ watch(() => preferencesStore.plantumlServer, (value, oldValue) => {
   }
 })
 
+watch(() => preferencesStore.drawioServer, (value, oldValue) => {
+  if (value !== oldValue && editor.value) {
+    editor.value.setOptions({ drawioServer: value }, true)
+  }
+})
+
 watch(listIndentation, (value, oldValue) => {
   if (value !== oldValue && editor.value) {
     editor.value.setListIndentation(value)
@@ -1788,6 +1794,19 @@ onMounted(() => {
     autoCheck: autoCheck.value,
     sequenceTheme: toSequenceTheme(sequenceTheme.value),
     plantumlServer: preferencesStore.plantumlServer,
+    drawioServer: preferencesStore.drawioServer,
+    // Matplotlib renders out-of-process: the main process runs the document's
+    // Python snippet and hands back an image, which lands in `target`.
+    renderExternalDiagram: async(type, code, target) => {
+      const result = await window.diagram.renderExternal(type, code)
+      if (!result.ok) throw new Error(result.error)
+
+      target.innerHTML = ''
+      const img = document.createElement('img')
+      img.src = `data:${result.mime};base64,${result.data}`
+      img.alt = type
+      target.appendChild(img)
+    },
     spellcheckEnabled: spellcheckerEnabled.value,
     spellcheckHideMarks: spellcheckerNoUnderline.value,
     // Resolve the OS clipboard to a local file path on paste (image-from-file).
@@ -1964,6 +1983,7 @@ onMounted(() => {
         mermaidTheme: options?.mermaidTheme ?? 'default',
         vegaTheme: options?.vegaTheme ?? 'latimes',
         plantumlServer: options?.plantumlServer ?? '',
+        drawioServer: options?.drawioServer ?? 'https://embed.diagrams.net',
         sequenceTheme: toSequenceTheme(sequenceTheme.value)
       },
       payload.label

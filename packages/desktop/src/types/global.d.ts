@@ -10,6 +10,7 @@ import type {
   IpcMainEventChannels,
   BootInfo,
   PlantumlFetchResult,
+  ExternalDiagramResult,
   SaveDialogRequest
 } from '@shared/types/ipc'
 import type { MenuTemplate, MenuPopupPosition, MenuStructureItem } from '@shared/types/menu'
@@ -113,6 +114,7 @@ declare global {
       encoded: string,
       format: 'svg' | 'png'
     ): Promise<PlantumlFetchResult>
+    renderExternal(type: string, code: string): Promise<ExternalDiagramResult>
   }
 
   interface FileUtilsAPI {

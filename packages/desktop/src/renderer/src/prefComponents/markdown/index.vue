@@ -148,6 +148,23 @@
           :on-change="(value) => onSelectChange('plantumlServer', value)"
           :default-value="'https://www.plantuml.com/plantuml'"
         />
+        <text-box
+          :description="t('preferences.markdown.diagrams.drawioServer.title')"
+          :input="drawioServer"
+          :on-change="(value) => onSelectChange('drawioServer', value)"
+          :default-value="'https://embed.diagrams.net'"
+        />
+        <bool
+          :description="t('preferences.markdown.diagrams.matplotlib.enabled.title')"
+          :bool="matplotlibEnabled"
+          :on-change="(value) => onSelectChange('matplotlibEnabled', value)"
+        />
+        <text-box
+          :description="t('preferences.markdown.diagrams.matplotlib.pythonPath.title')"
+          :input="matplotlibPythonPath"
+          :on-change="(value) => onSelectChange('matplotlibPythonPath', value)"
+          :default-value="''"
+        />
       </template>
     </compound>
 
@@ -211,7 +228,10 @@ const {
   isHtmlEnabled,
   softNewlineAsSpace,
   sequenceTheme,
-  plantumlServer
+  plantumlServer,
+  drawioServer,
+  matplotlibEnabled,
+  matplotlibPythonPath
 } = storeToRefs(preferenceStore)
 
 const onSelectChange = (type: keyof PreferencesState, value: unknown): void => {

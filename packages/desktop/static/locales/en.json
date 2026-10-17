@@ -660,6 +660,17 @@
         },
         "plantumlServer": {
           "title": "PlantUML Server URL"
+        },
+        "drawioServer": {
+          "title": "DrawIO Embed Server URL"
+        },
+        "matplotlib": {
+          "enabled": {
+            "title": "Enable Matplotlib Diagrams (runs your code with a local Python)"
+          },
+          "pythonPath": {
+            "title": "Python Executable Path"
+          }
         }
       },
       "misc": {

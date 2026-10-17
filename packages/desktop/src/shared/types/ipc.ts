@@ -49,6 +49,10 @@ export type PlantumlFetchResult =
 // Invoke channels (renderer → main, returns Promise<T>)
 // =================================================================
 
+export type ExternalDiagramResult =
+  | { ok: true; mime: string; data: string }
+  | { ok: false; error: string }
+
 export interface IpcInvokeChannels {
   'mt::ask-for-image-path': { args: []; ret: string[] }
   'mt::boot-info-async': { args: []; ret: BootInfo }
@@ -60,6 +64,10 @@ export interface IpcInvokeChannels {
   'mt::diagram::fetch-plantuml': {
     args: [server: string, encoded: string, format: 'svg' | 'png']
     ret: PlantumlFetchResult
+  }
+  'mt::diagram::render-external': {
+    args: [type: string, code: string]
+    ret: ExternalDiagramResult
   }
   'mt::dialog::show-save': { args: [request: SaveDialogRequest]; ret: string | null }
   'mt::fonts::list': { args: []; ret: string[] }

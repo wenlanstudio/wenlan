@@ -64,6 +64,9 @@
   "softNewlineAsSpace": false,
   "sequenceTheme": "hand",
   "plantumlServer": "https://www.plantuml.com/plantuml",
+  "drawioServer": "https://embed.diagrams.net",
+  "matplotlibEnabled": true,
+  "matplotlibPythonPath": "",
 
   "theme": "light",
   "followSystemTheme": true,

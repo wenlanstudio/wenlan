@@ -660,6 +660,17 @@
         },
         "plantumlServer": {
           "title": "PlantUML サーバーの URL"
+        },
+        "drawioServer": {
+          "title": "DrawIO 埋め込みサーバー URL"
+        },
+        "matplotlib": {
+          "enabled": {
+            "title": "Matplotlib 図を有効にする（ローカル Python でコードを実行）"
+          },
+          "pythonPath": {
+            "title": "Python 実行ファイルのパス"
+          }
         }
       },
       "misc": {

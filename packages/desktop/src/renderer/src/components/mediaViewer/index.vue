@@ -142,6 +142,7 @@ import {
   ZoomOut as ZoomOutIcon
 } from '@element-plus/icons-vue'
 import { ZoomPanController } from '@/util/zoomPan'
+import { loadDrawioDiagram, renderDrawio } from '@muyajs/core'
 import {
   exportDiagram,
   naturalSvgSize,
@@ -438,6 +439,29 @@ const openDiagram = (source: DiagramSource, name: string | null) =>
       figure.style.cssText =
         'margin:0;padding:16px;border-radius:4px;background:var(--editorBgColor);'
 
+      // The embed frame cannot be cloned: a fresh iframe reloads empty. Give
+      // the viewer its own embed and load the same source into it.
+      if (source.type === 'drawio') {
+        const target = document.createElement('div')
+        target.className = 'mu-diagram-preview'
+        figure.appendChild(target)
+        stage.appendChild(figure)
+
+        // The block points at its diagram rather than carrying it, so read the
+        // source before handing the frame XML it can draw.
+        loadDrawioDiagram(source.code)
+          .then((xml) => renderDrawio(target, xml, source.drawioServer))
+          .then(() => fitIfUntouched())
+          .catch((err) => {
+            target.innerHTML = ''
+            const message = document.createElement('div')
+            message.className = 'mu-diagram-error'
+            message.textContent = err instanceof Error ? err.message : String(err)
+            target.appendChild(message)
+          })
+        return figure
+      }
+
       const preview = source.preview.cloneNode(true) as HTMLElement
       // The dialog already carries this name; announcing it twice helps nobody.
       preview.removeAttribute('role')
@@ -457,6 +481,23 @@ const openDiagram = (source: DiagramSource, name: string | null) =>
       }
       // A PlantUML preview is a remote <img>, measurable only once it decodes.
       preview.querySelector('img')?.addEventListener('load', fitIfUntouched, { once: true })
+
+      // `cloneNode` does not copy a canvas' bitmap, so a Chart.js or ECharts
+      // clone would come out blank — repaint it from the live one. ECharts
+      // draws its bitmap at device resolution, so the clone also needs the
+      // laid-out size back, or a 2x canvas would display twice as large.
+      const liveCanvas = source.preview.querySelector('canvas')
+      const cloneCanvas = preview.querySelector('canvas')
+      if (liveCanvas && cloneCanvas) {
+        cloneCanvas.width = liveCanvas.width
+        cloneCanvas.height = liveCanvas.height
+        if (liveCanvas.clientWidth && liveCanvas.clientHeight) {
+          cloneCanvas.style.width = `${liveCanvas.clientWidth}px`
+          cloneCanvas.style.height = `${liveCanvas.clientHeight}px`
+        }
+        cloneCanvas.getContext('2d')?.drawImage(liveCanvas, 0, 0)
+        fitIfUntouched()
+      }
 
       figure.appendChild(preview)
       stage.appendChild(figure)

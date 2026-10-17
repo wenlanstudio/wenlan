@@ -239,7 +239,9 @@ const dialogAPI = {
 
 const diagramAPI = {
   fetchPlantuml: (server: string, encoded: string, format: 'svg' | 'png') =>
-    invoke('mt::diagram::fetch-plantuml', server, encoded, format)
+    invoke('mt::diagram::fetch-plantuml', server, encoded, format),
+  renderExternal: (type: string, code: string) =>
+    invoke('mt::diagram::render-external', type, code)
 }
 
 const electronAPI = {

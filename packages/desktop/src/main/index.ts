@@ -14,6 +14,7 @@ import App from './app'
 import { t } from './i18n'
 import { registerSandboxIpcHandlers } from './ipc'
 import { setPlantumlServerSource } from './ipc/diagram'
+import { setMatplotlibSource, warmUpPythonDetection } from './ipc/matplotlib'
 
 // Set version strings into global and process.versions
 process.env.MARKTEXT_VERSION = MARKTEXT_VERSION
@@ -117,6 +118,14 @@ try {
 // Preferences only exist now; the fetch handler refuses everything until it
 // knows which server the user configured.
 setPlantumlServerSource(() => accessor.preferences.getItem<string>('plantumlServer') ?? '')
+// matplotlib runs the document's Python only while the preference says so.
+// An empty path means "find one", which is the default: probing spawns a
+// process per candidate, so start it here rather than on the first diagram.
+setMatplotlibSource(() => ({
+  enabled: accessor.preferences.getItem<boolean>('matplotlibEnabled') ?? true,
+  pythonPath: accessor.preferences.getItem<string>('matplotlibPythonPath') ?? ''
+}))
+warmUpPythonDetection()
 
 const appController = new App(accessor, args as unknown as { _: string[] })
 appController.init()

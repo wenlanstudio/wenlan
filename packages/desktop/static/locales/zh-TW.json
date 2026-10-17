@@ -660,6 +660,17 @@
         },
         "plantumlServer": {
           "title": "PlantUML 伺服器 URL"
+        },
+        "drawioServer": {
+          "title": "DrawIO 線上渲染服務位址"
+        },
+        "matplotlib": {
+          "enabled": {
+            "title": "啟用 Matplotlib 圖表（將以本機 Python 執行程式碼）"
+          },
+          "pythonPath": {
+            "title": "Python 可執行檔路徑"
+          }
         }
       },
       "misc": {

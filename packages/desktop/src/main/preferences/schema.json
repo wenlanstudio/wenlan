@@ -327,6 +327,22 @@
     "pattern": "^(https?://|$)",
     "default": "https://www.plantuml.com/plantuml"
   },
+  "drawioServer": {
+    "description": "Markdown--DrawIO embed server URL for rendering diagrams",
+    "type": "string",
+    "pattern": "^(https?://|$)",
+    "default": "https://embed.diagrams.net"
+  },
+  "matplotlibEnabled": {
+    "description": "Markdown--Whether matplotlib diagrams may run the document's code with a local Python (rendering executes the code)",
+    "type": "boolean",
+    "default": true
+  },
+  "matplotlibPythonPath": {
+    "description": "Markdown--Python executable used to render matplotlib diagrams (empty: detect one with matplotlib automatically)",
+    "type": "string",
+    "default": ""
+  },
   "theme": {
     "description": "Theme--Select the theme used in MarkText",
     "type": "string",

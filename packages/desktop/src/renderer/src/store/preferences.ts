@@ -90,6 +90,9 @@ export interface PreferencesState {
   softNewlineAsSpace: boolean
   sequenceTheme: SequenceTheme | string
   plantumlServer: string
+  drawioServer: string
+  matplotlibEnabled: boolean
+  matplotlibPythonPath: string
 
   // ----- Theme -----
   theme: string
@@ -209,6 +212,11 @@ export const usePreferencesStore = defineStore('preferences', {
     softNewlineAsSpace: false,
     sequenceTheme: 'hand',
     plantumlServer: 'https://www.plantuml.com/plantuml',
+    drawioServer: 'https://embed.diagrams.net',
+    // An empty path means "detect one with matplotlib", which is what most
+    // machines can answer without being told where Python lives.
+    matplotlibEnabled: true,
+    matplotlibPythonPath: '',
 
     theme: 'typora',
     followSystemTheme: true,

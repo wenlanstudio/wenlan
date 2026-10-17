@@ -660,6 +660,17 @@
         },
         "plantumlServer": {
           "title": "PlantUML Sunucu URL'si"
+        },
+        "drawioServer": {
+          "title": "DrawIO gömme sunucu URL'si"
+        },
+        "matplotlib": {
+          "enabled": {
+            "title": "Matplotlib diyagramlarını etkinleştir (kodları yerel Python ile çalıştırır)"
+          },
+          "pythonPath": {
+            "title": "Python çalıştırılabilir dosyası yolu"
+          }
         }
       },
       "misc": {

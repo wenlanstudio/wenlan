@@ -9,8 +9,10 @@
       content="default-src 'self';
                   script-src 'self';
                   style-src 'self' 'unsafe-inline';
-                  img-src * data: file:;
+                  img-src * data: file: blob:;
                   font-src 'self' data:;
+                  connect-src 'self' blob: data: file: https: http:;
+                  frame-src 'self' blob: data: https: http:;
                   "
     />
   </head>
