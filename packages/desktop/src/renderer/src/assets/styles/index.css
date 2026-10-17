@@ -107,20 +107,38 @@
   --notificationErrorBg: #ff6969;
 }
 
+/* Scrollbars stay out of the way: thin, with no painted track or thumb, until
+   the pointer is over the scroll area marked `mt-scroll-area` or the area is
+   actually scrolling — `mt-scroll-active` is put on whichever element scrolls
+   and dropped once it settles (see `util/scrollbarReveal`). Widths never change
+   on reveal, so revealing cannot reflow the content under the pointer. */
 ::-webkit-scrollbar,
 ::-webkit-scrollbar-corner {
-  background: var(--floatHoverColor);
+  background: transparent;
 }
 
 ::-webkit-scrollbar:vertical {
-  width: 12px;
+  width: 8px;
+}
+
+::-webkit-scrollbar:horizontal {
+  height: 8px;
 }
 
 ::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.mt-scroll-area:hover::-webkit-scrollbar-thumb,
+.mt-scroll-area:hover ::-webkit-scrollbar-thumb,
+.mt-scroll-active::-webkit-scrollbar-thumb {
   background: var(--editorColor30);
 }
 
-::-webkit-scrollbar-thumb:hover {
+.mt-scroll-area:hover::-webkit-scrollbar-thumb:hover,
+.mt-scroll-area:hover ::-webkit-scrollbar-thumb:hover,
+.mt-scroll-active::-webkit-scrollbar-thumb:hover {
   background: var(--editorColor50);
 }
 

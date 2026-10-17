@@ -139,10 +139,6 @@
   --hr-color: var(--hrColor);
 }
 
-::-webkit-scrollbar {
-  background: var(--editorBgColor);
-}
-
 .mu-front-menu,
 .mu-float-wrapper {
   box-shadow: 0 4px 8px 0 var(--floatShadow) !important;

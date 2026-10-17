@@ -16,7 +16,7 @@
         {{ entry.label() }}
       </div>
     </div>
-    <div class="side-bar-content">
+    <div class="side-bar-content mt-scroll-area">
       <tree
         v-if="sidebarTab === 'files'"
         :project-tree="projectTree"
@@ -148,7 +148,7 @@ const handleTabClick = (id: SidebarTab): void => {
 }
 
 .side-bar-tabs .tab {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--sideBarColor);
   opacity: 0.6;
   cursor: pointer;

@@ -468,7 +468,7 @@ onUnmounted(() => {
   transform: translateX(-50px);
 }
 .tree-view {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--sideBarColor);
   display: flex;
   flex-direction: column;
@@ -491,7 +491,8 @@ onUnmounted(() => {
 .project-tree > .title {
   height: 30px;
   line-height: 30px;
-  font-size: 14px;
+  /* Section headers sit a step below the 13px rows they group. */
+  font-size: 12px;
 }
 
 .opened-files .title {
@@ -532,10 +533,6 @@ onUnmounted(() => {
   flex: 1;
 }
 
-.opened-files .opened-files-list::-webkit-scrollbar:vertical {
-  width: 8px;
-}
-
 .project-tree {
   display: flex;
   flex-direction: column;
@@ -573,10 +570,6 @@ onUnmounted(() => {
 .project-tree > .tree-wrapper {
   overflow: auto;
   flex: 1;
-}
-
-.project-tree > .tree-wrapper::-webkit-scrollbar:vertical {
-  width: 8px;
 }
 .project-tree div.title:hover > a {
   opacity: 1;
@@ -639,7 +632,7 @@ onUnmounted(() => {
   background: color-mix(in srgb, var(--themeColor20) 55%, transparent);
 }
 .empty-project {
-  font-size: 14px;
+  font-size: 13px;
   display: flex;
   flex-direction: column;
   padding-top: 40px;

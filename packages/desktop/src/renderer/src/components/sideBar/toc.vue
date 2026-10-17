@@ -159,6 +159,8 @@ const handleClick = (data: { slug?: unknown }): void => {
 .side-bar-toc .el-tree {
   background: transparent;
   color: var(--sideBarColor);
+  /* Match the file tree's 13px rows; Element Plus defaults its tree to 14px. */
+  font-size: 13px;
   flex: 1;
   min-height: 0;
 }

@@ -91,6 +91,7 @@ import WordCount from '@/components/wordCount/index.vue'
 import bus from '@/bus'
 import { t } from '@/i18n'
 import { DEFAULT_STYLE } from '@/config'
+import { listenForScrollbarReveal } from '@/util/scrollbarReveal'
 import { useLayoutStore } from '@/store/layout'
 import { useListenForMainStore } from '@/store/listenForMain'
 import { usePreferencesStore } from '@/store/preferences'
@@ -245,6 +246,7 @@ onMounted(async () => {
   notificationStore.listenForNotification()
 
   setupDragDropHandler()
+  listenForScrollbarReveal()
 
   nextTick(() => {
     // `initialState` from bootstrap carries nullable URL params (string|null);

@@ -147,23 +147,6 @@
   --hr-color: var(--hrColor);
 }
 
-::-webkit-scrollbar,
-::-webkit-scrollbar-corner {
-  background: var(--editorBgColor);
-}
-::-webkit-scrollbar:vertical {
-  width: 10px;
-}
-::-webkit-scrollbar:vertical:hover {
-  width: 12px;
-}
-::-webkit-scrollbar-thumb {
-  background: #dfe2e5;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #c8ccd0;
-}
-
 /* --- Element UI ------------------------------------------------ */
 
 .v-modal {

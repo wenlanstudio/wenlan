@@ -1,7 +1,7 @@
 <template>
   <div
     ref="sourceCodeContainer"
-    class="source-code"
+    class="source-code mt-scroll-area"
   />
 </template>
 

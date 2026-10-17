@@ -6,7 +6,7 @@
   >
     <div
       ref="editorRef"
-      class="editor-component"
+      class="editor-component mt-scroll-area"
     />
     <media-viewer
       ref="mediaViewer"
