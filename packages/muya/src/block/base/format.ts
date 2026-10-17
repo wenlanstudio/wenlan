@@ -489,47 +489,6 @@ class Format extends Content {
         this.update();
     }
 
-    updateImage(
-        { imageId, token }: IImageInfo,
-        attrName: string,
-        attrValue: string,
-    ) {
-    // inline/left/center/right
-        const { start, end } = token.range;
-        const oldText = this.text;
-        let imageText = '';
-        const attrs = Object.assign({}, token.attrs);
-        attrs[attrName] = attrValue;
-
-        imageText = '<img ';
-
-        for (const attr of Object.keys(attrs)) {
-            let value = attrs[attr];
-            if (value && attr === 'src')
-                value = correctImageSrc(value);
-
-            imageText += `${attr}="${escapeHTML(String(value))}" `;
-        }
-        imageText = imageText.trim();
-        imageText += ' />';
-        this.text
-            = oldText.substring(0, start) + imageText + oldText.substring(end);
-
-        this.update();
-
-        const selector = `#${imageId.includes('_') ? imageId : `${imageId}_${token.range.start}`
-        } img`;
-        // Scope the lookup to this block: identical-src images share a DOM id,
-        // so a document-wide query would re-click the first occurrence. Within a
-        // single block the `_${range.start}` suffix is unique.
-        const image: Nullable<HTMLElement>
-            = this.domNode?.querySelector<HTMLElement>(selector)
-                ?? document.querySelector<HTMLElement>(selector);
-
-        if (image)
-            image.click();
-    }
-
     // Replace the link's source text (e.g. `[Anthropic](https://…)`) with the
     // visible anchor text only (`Anthropic`), stripping the markdown / HTML
     // around it. We keep the visible text rather than substituting the URL,

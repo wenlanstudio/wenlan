@@ -65,10 +65,8 @@ export class ImageToolBar extends BaseFloat {
     }
 
     private _render() {
-        const { _icons: icons, _oldVNode: oldVNode, _toolbarContainer: toolbarContainer, _imageInfo: imageInfo } = this;
+        const { _icons: icons, _oldVNode: oldVNode, _toolbarContainer: toolbarContainer } = this;
         const { i18n } = this.muya;
-        const { attrs } = imageInfo!.token;
-        const dataAlign = attrs['data-align'];
         const children = icons.map((i) => {
             const iconWrapperSelector = 'div.icon-wrapper';
             const icon = h(
@@ -85,10 +83,7 @@ export class ImageToolBar extends BaseFloat {
                 ),
             );
             const iconWrapper = h(iconWrapperSelector, icon);
-            let itemSelector = `li.item.${i.type}`;
-
-            if (i.type === dataAlign || (!dataAlign && i.type === 'inline'))
-                itemSelector += '.active';
+            const itemSelector = `li.item.${i.type}`;
 
             return h(
                 itemSelector,
@@ -129,10 +124,6 @@ export class ImageToolBar extends BaseFloat {
             // Delete image.
             case 'delete':
                 this._block!.deleteImage(imageInfo!);
-                // Hide image transformer
-                this.muya.eventCenter.emit('muya-transformer', {
-                    reference: null,
-                });
 
                 return this.hide();
 
@@ -146,28 +137,11 @@ export class ImageToolBar extends BaseFloat {
                         return rect;
                     },
                 };
-                // Hide image resize bar
-                this.muya.eventCenter.emit('muya-transformer', {
-                    reference: null,
-                });
-
                 this.muya.eventCenter.emit('muya-image-selector', {
                     block: this._block,
                     reference,
                     imageInfo,
                 });
-
-                return this.hide();
-            }
-
-            case 'inline':
-                // fall through
-            case 'left':
-                // fall through
-            case 'center':
-                // fall through
-            case 'right': {
-                this._block!.updateImage(this._imageInfo!, 'data-align', item.type);
 
                 return this.hide();
             }

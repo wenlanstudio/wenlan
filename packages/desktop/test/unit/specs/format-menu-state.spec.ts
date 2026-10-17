@@ -312,12 +312,14 @@ describe('menu template accelerators match the platform keybinding tables (Parag
     expect(referencedIds(viewTemplate as unknown as Template)).toContain('view.focus-mode')
 
     expect(isEqualAccelerator(accel(keybindingsDarwin, 'paragraph.heading-1'), 'Command+1')).toBe(true)
-    expect(keybindingsWindows.get('paragraph.heading-1')).toBe('')
+    // 标题已绑定到 Ctrl+1..Ctrl+6（对齐 Typora），不再留空。
+    expect(keybindingsWindows.get('paragraph.heading-1')).toBe('Ctrl+1')
     expect(isEqualAccelerator(accel(keybindingsDarwin, 'edit.duplicate'), 'Command+Option+D')).toBe(true)
     expect(isEqualAccelerator(accel(keybindingsLinux, 'edit.duplicate'), 'Ctrl+Shift+E')).toBe(true)
     expect(isEqualAccelerator(accel(keybindingsLinux, 'edit.find-next'), 'F3')).toBe(true)
     expect(isEqualAccelerator(accel(keybindingsDarwin, 'edit.find-next'), 'Cmd+G')).toBe(true)
-    expect(isEqualAccelerator(accel(keybindingsWindows, 'view.source-code-mode'), 'Ctrl+E')).toBe(true)
+    // 源码模式改为 Typora 的 Ctrl+/（原 Ctrl+E 已让给导出）。
+    expect(isEqualAccelerator(accel(keybindingsWindows, 'view.source-code-mode'), 'Ctrl+/')).toBe(true)
     expect(isEqualAccelerator(accel(keybindingsDarwin, 'view.source-code-mode'), 'Command+Option+S')).toBe(true)
     expect(isEqualAccelerator(accel(keybindingsWindows, 'view.focus-mode'), 'Ctrl+Shift+J')).toBe(true)
   })

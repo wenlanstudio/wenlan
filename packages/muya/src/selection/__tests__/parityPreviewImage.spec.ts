@@ -3,6 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CLASS_NAMES } from '../../config';
 import { Muya } from '../../muya';
+import { getImageInfo } from '../../utils/image';
 
 // PARITY SCOREBOARD — gap PG10 (file PG09/PG14, "Space preview").
 //
@@ -67,10 +68,13 @@ function bootImage(src: string): { muya: Muya; img: HTMLImageElement } {
     return { muya, img };
 }
 
-// Plain-click the image to populate `selection.image` (the same state a
-// real user click leaves behind before pressing Space).
-function selectImage(img: HTMLImageElement): void {
-    img.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+// 构造"图片被选中"的状态。不再用点击来达成：点击图片现在是"展开它的 markdown
+// 源码"而不是选中它。粘贴图片、以及引擎内部仍是这种选中态，Space 预览因此还在。
+function selectImage(muya: Muya, img: HTMLImageElement): void {
+    const wrapper = img.closest<HTMLElement>(`span.${CLASS_NAMES.MU_INLINE_IMAGE}`)!;
+    const imageInfo = getImageInfo(wrapper);
+    const block = muya.editor.scrollPage!.firstContentInDescendant()!;
+    muya.editor.selection.selectImage({ ...imageInfo, block } as never);
 }
 
 describe('parity PG10: Space previews a selected image', () => {
@@ -79,8 +83,8 @@ describe('parity PG10: Space previews a selected image', () => {
         () => {
             const src = 'https://example.com/pic.png';
             const { muya, img } = bootImage(src);
-            selectImage(img);
-            // Sanity: the click populated the selected-image state.
+            selectImage(muya, img);
+            // Sanity: the selection populated the selected-image state.
             expect(muya.editor.selection.image).toBeTruthy();
 
             const handler = vi.fn();
@@ -105,7 +109,7 @@ describe('parity PG10: Space previews a selected image', () => {
         () => {
             const src = 'https://example.com/pic.png';
             const { muya, img } = bootImage(src);
-            selectImage(img);
+            selectImage(muya, img);
 
             let payload: unknown = null;
             muya.on('preview-image', (p: unknown) => {

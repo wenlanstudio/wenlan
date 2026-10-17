@@ -68,7 +68,8 @@ const icons = [
     {
         type: 'link',
         tooltip: 'Link',
-        shortcut: `${COMMAND_KEY}+L`,
+        // 与桌面端 format.hyperlink 一致（Typora 习惯：Ctrl/Cmd+K）。
+        shortcut: `${COMMAND_KEY}+K`,
         icon: linkIcon,
     },
     {
@@ -80,7 +81,8 @@ const icons = [
     {
         type: 'clear',
         tooltip: 'Eliminate',
-        shortcut: `⇧+${COMMAND_KEY}+R`,
+        // 与桌面端 format.clear-format 一致（Typora 习惯：Ctrl/Cmd+\）。
+        shortcut: `${COMMAND_KEY}+\\`,
         icon: clearIcon,
     },
 ];

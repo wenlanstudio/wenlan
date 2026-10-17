@@ -24,7 +24,6 @@
       "export": "导出",
       "exportHtml": "导出为 HTML",
       "exportPdf": "导出为 PDF",
-      "convertWithPandoc": "使用 Pandoc 转换",
       "import": "导入",
       "print": "打印",
       "closeTab": "关闭标签页",

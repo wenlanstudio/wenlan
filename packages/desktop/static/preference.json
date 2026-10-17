@@ -1,5 +1,5 @@
 {
-  "autoSave": false,
+  "autoSave": true,
   "autoSaveDelay": 5000,
   "titleBarStyle": "custom",
   "openFilesInNewWindow": false,
@@ -37,8 +37,8 @@
   "trimTrailingNewline": 2,
   "textDirection": "ltr",
   "hideQuickInsertHint": false,
-  "imageInsertAction": "path",
-  "imagePreferRelativeDirectory": false,
+  "imageInsertAction": "folder",
+  "imagePreferRelativeDirectory": true,
   "imageRelativeDirectoryBase": "file",
   "imageRelativeDirectoryName": "assets",
   "hideLinkPopup": false,
@@ -80,7 +80,7 @@
   "sourceCodeModeEnabled": false,
   "openedFilesInSidebar": true,
   "autoRevealInSidebar": true,
-  "showPandocConvert": false,
+  "showPandocConvert": true,
 
   "searchExclusions": [],
   "searchMaxFileSize": "",

@@ -46,21 +46,7 @@ function firstBlock(muya: Muya): Format {
     return muya.editor.scrollPage!.firstContentInDescendant() as unknown as Format;
 }
 
-describe('#2505 — aligned/edited images emit a self-closing <img/> (JSX-safe)', () => {
-    it('aligning a markdown image produces a self-closed <img …/>', () => {
-        const muya = bootMuya('![cat](https://example.com/cat.png)\n');
-        const block = firstBlock(muya);
-        const imageEl = muya.domNode.querySelector<HTMLElement>('[data-raw]');
-        expect(imageEl).not.toBeNull();
-
-        const imageInfo = getImageInfo(imageEl!);
-        block.updateImage(imageInfo, 'data-align', 'center');
-
-        expect(block.text).toMatch(/<img\b[^>]*\/>/);
-        // and never an unterminated open tag
-        expect(block.text).not.toMatch(/<img\b[^>]*[^/]>/);
-    });
-
+describe('#2505 — edited images emit a self-closing <img/> (JSX-safe)', () => {
     it('editing an existing inline HTML <img> keeps it self-closed', () => {
         const muya = bootMuya('<img src="https://example.com/a.png" alt="a" data-align="left">\n');
         const block = firstBlock(muya);

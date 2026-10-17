@@ -78,7 +78,6 @@ import {
   FootnoteTool,
   ImageEditTool,
   ImagePathPicker,
-  ImageResizeBar,
   ImageToolBar,
   InlineFormatToolbar,
   LinkTools,
@@ -1746,7 +1745,6 @@ onMounted(() => {
       imagePathPicker,
       imagePathAutoComplete
     })
-    Muya.use(ImageResizeBar)
     Muya.use(ImageToolBar)
     Muya.use(InlineFormatToolbar)
     Muya.use(ParagraphFrontButton)

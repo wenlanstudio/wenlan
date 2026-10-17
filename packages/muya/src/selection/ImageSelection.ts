@@ -1,5 +1,6 @@
 import type Format from '../block/base/format';
 import type { Muya } from '../muya';
+import type { IImageInfo } from '../utils/image';
 import type Selection from './index';
 import type { IImageSelectionData } from './types';
 import { BLOCK_DOM_PROPERTY, CLASS_NAMES } from '../config';
@@ -83,10 +84,53 @@ class ImageSelection {
         }
     }
 
-    private _imageWrappers(contentDom: HTMLElement): HTMLElement[] {
-        return Array.from(
-            contentDom.querySelectorAll<HTMLElement>(`.${CLASS_NAMES.MU_INLINE_IMAGE}`),
-        );
+    // 点击图片不再选中并浮出工具栏：居中已改为渲染层默认表现，对齐也不再写进 md，
+    // 浮层没有可编辑的东西。改为把光标落进它的 markdown 源码，用户直接编辑
+    // `![](assets/a.png)` 这段文本；移开光标后重新渲染成图片（由 `image` 渲染器
+    // 按光标是否落在 token 区间内决定渲染图片还是源码）。
+    // 空图片占位符返回 false，走原来的选图路径——那里点一下是要选图。
+    private _revealImageSource(contentBlock: Format, imageInfo: IImageInfo): boolean {
+        if (!imageInfo.token.attrs.src)
+            return false;
+
+        const { start, end } = imageInfo.token.range;
+        const offset = Math.max(start, end - 1);
+        const { eventCenter } = this._muya;
+
+        eventCenter.emit('muya-image-toolbar', { reference: null });
+        contentBlock.setCursor(offset, offset, true);
+
+        return true;
+    }
+
+    // Ctrl/Cmd+点击图片时把图片地址交给外层预览。
+    // 链接里的图片（`[![alt](img)][ref]`）其 wrapper 嵌在 `<a>` 内，修饰键点击由
+    // 链接处理器打开 URL，这里不能再弹预览盖住导航（#3835）。复用 linkMouseEvents
+    // 的选择器以覆盖所有链接变体（普通、引用、自动链接、裸 HTML 锚点）。
+    private _emitImagePreview(
+        event: Event,
+        target: HTMLElement,
+        imageWrapper: HTMLElement,
+        imageInfo: IImageInfo,
+    ): void {
+        if (
+            target.tagName !== 'IMG'
+            || !(event instanceof MouseEvent)
+            || !(event.metaKey || event.ctrlKey)
+            || imageWrapper.closest(LINK_SELECTOR)
+        ) {
+            return;
+        }
+
+        const tokenSrc = imageInfo.token.src || imageInfo.token.attrs.src || '';
+        const src = getImageSrc(tokenSrc).src || target.getAttribute('src') || '';
+        if (src) {
+            this._muya.eventCenter.emit('format-click', {
+                event,
+                formatType: 'image',
+                data: src,
+            });
+        }
     }
 
     private _handleClickInlineImage(event: Event, imageWrapper: HTMLElement) {
@@ -113,69 +157,12 @@ class ImageSelection {
             return;
         }
 
-        if (isHTMLElement(target) && target.tagName === 'IMG') {
-            // A linked image (e.g. `[![alt](src)](href)`) renders its image
-            // wrapper inside a link element. On modifier-click the link handler
-            // (linkMouseEvents) opens the URL; don't also emit the image preview,
-            // which would pop a viewer over the navigation (#3835). Reuse
-            // linkMouseEvents' selector so every link variant is covered (plain,
-            // reference, autolink, raw-HTML anchor), not just `mu-link`.
-            if (
-                event instanceof MouseEvent
-                && (event.metaKey || event.ctrlKey)
-                && !imageWrapper.closest(LINK_SELECTOR)
-            ) {
-                const tokenSrc = imageInfo.token.src || imageInfo.token.attrs.src || '';
-                const src = getImageSrc(tokenSrc).src || target.getAttribute('src') || '';
-                if (src) {
-                    eventCenter.emit('format-click', {
-                        event,
-                        formatType: 'image',
-                        data: src,
-                    });
-                }
-            }
+        if (isHTMLElement(target))
+            this._emitImagePreview(event, target, imageWrapper, imageInfo);
 
-            // Identify the clicked image by its position among the paragraph's
-            // images, which survives the re-render below — the node does not,
-            // and ids are not unique (images sharing a src and paragraph offset
-            // render with the same id, so a `#id` lookup finds the first one).
-            const imageIndex = this._imageWrappers(contentDom).indexOf(imageWrapper);
-
-            // Selecting the image blurs the paragraph, and `Format.blurHandler`
-            // re-renders it whenever the caret sat on a token's markers — which
-            // a caret on the image's own line always does. The re-render
-            // reassigns the paragraph's `innerHTML`, detaching `imageWrapper`,
-            // and the markers it hides can shift the image sideways. So select
-            // first and take both references off the live DOM afterwards: from
-            // the detached node the resize bar reads a zero rect and draws its
-            // handles in the window's corner, and the toolbar a stale one (#5391).
-            this._selection.selectImage(Object.assign({}, imageInfo, { block: contentBlock }));
-
-            const liveWrapper = this._imageWrappers(contentDom)[imageIndex] ?? imageWrapper;
-            const imageContainer = liveWrapper.querySelector(
-                `.${CLASS_NAMES.MU_IMAGE_CONTAINER}`,
-            );
-            const rect = imageContainer?.getBoundingClientRect();
-
-            eventCenter.emit('muya-image-toolbar', {
-                block: contentBlock,
-                reference: {
-                    getBoundingClientRect: () => rect,
-                    width: liveWrapper.offsetWidth,
-                    height: liveWrapper.offsetHeight,
-                },
-                imageInfo,
-            });
-
-            eventCenter.emit('muya-transformer', {
-                block: contentBlock,
-                reference: imageContainer,
-                imageInfo,
-            });
-
+        // 点击图片不再选中并浮出工具栏（见 `_revealImageSource`）。
+        if (this._revealImageSource(contentBlock, imageInfo))
             return;
-        }
 
         if (
             imageWrapper.classList.contains(CLASS_NAMES.MU_EMPTY_IMAGE)

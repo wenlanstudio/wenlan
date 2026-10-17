@@ -235,12 +235,11 @@ function positionImageControls(clipboard: Clipboard, block: Format, wrapper: HTM
     };
     const { eventCenter } = clipboard.muya;
     eventCenter.emit('muya-image-toolbar', { block, reference, imageInfo });
-    eventCenter.emit('muya-transformer', { block, reference: imageContainer, imageInfo });
 }
 
 // Re-select the replaced image and float its controls over it. The image is
-// selected synchronously so it stays the active selection; the toolbar / resize
-// bar are positioned only once the image has loaded — they anchor to the loaded
+// selected synchronously so it stays the active selection; the toolbar is
+// positioned only once the image has loaded — it anchors to the loaded
 // image box, which is 0-sized (and has no `<img>`) until `loadImageAsync` fills
 // it in, which never re-emits the positioning events on its own.
 function reselectImageAt(clipboard: Clipboard, block: Format, startOffset: number): void {

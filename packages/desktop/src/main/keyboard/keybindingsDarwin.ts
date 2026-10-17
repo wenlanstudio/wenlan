@@ -78,9 +78,9 @@ const keybindings: Map<string, string> = new Map([
   ['format.inline-code', 'Command+`'],
   ['format.inline-math', 'Shift+Command+M'],
   ['format.strike', 'Command+D'],
-  ['format.hyperlink', 'Command+L'],
+  ['format.hyperlink', 'Command+K'],
   ['format.image', 'Command+Shift+I'],
-  ['format.clear-format', 'Shift+Command+R'],
+  ['format.clear-format', 'Command+\\'],
 
   // Window menu
   ['window.minimize', 'Command+M'],

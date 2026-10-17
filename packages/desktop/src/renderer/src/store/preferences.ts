@@ -149,7 +149,8 @@ interface ModeTogglePayload {
 
 export const usePreferencesStore = defineStore('preferences', {
   state: (): PreferencesState => ({
-    autoSave: false,
+    // Typora 习惯：编辑即保存，不弹未保存提示。
+    autoSave: true,
     autoSaveDelay: 5000,
     titleBarStyle: 'custom',
     openFilesInNewWindow: false,
@@ -165,7 +166,7 @@ export const usePreferencesStore = defineStore('preferences', {
     lastOpenedFolder: '',
     treePathExcludePatterns: [],
     language: 'en',
-    showPandocConvert: false,
+    showPandocConvert: true,
 
     editorFontFamily: 'Open Sans',
     fontSize: 16,
@@ -190,7 +191,7 @@ export const usePreferencesStore = defineStore('preferences', {
     textDirection: 'ltr',
     hideQuickInsertHint: false,
     imageInsertAction: 'folder',
-    imagePreferRelativeDirectory: false,
+    imagePreferRelativeDirectory: true,
     imageRelativeDirectoryBase: 'file',
     imageRelativeDirectoryName: 'assets',
     hideLinkPopup: false,

@@ -24,7 +24,6 @@
       "export": "エクスポート",
       "exportHtml": "HTML としてエクスポート",
       "exportPdf": "PDF としてエクスポート",
-      "convertWithPandoc": "Pandoc で変換",
       "import": "インポート",
       "print": "印刷",
       "closeTab": "タブを閉じる",

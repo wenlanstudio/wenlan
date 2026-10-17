@@ -6,6 +6,7 @@ import type { IRenderCursor } from '../../../selection/types';
 import type { ImageToken } from '../../types';
 import type Renderer from '../index';
 import { describe, expect, it, vi } from 'vitest';
+import { CLASS_NAMES } from '../../../config';
 import { h } from '../../../utils/snabbdom';
 import image from '../image';
 
@@ -27,6 +28,7 @@ interface IFakeRenderer {
         editor: { selection: { image: null | unknown } };
         i18n: { t: (s: string) => string };
     };
+    highlight: () => VNode[];
 }
 
 function makeRenderer(loadResult: {
@@ -43,6 +45,7 @@ function makeRenderer(loadResult: {
             editor: { selection: { image: null } },
             i18n: { t: (s: string) => s },
         },
+        highlight: () => [],
     };
 }
 
@@ -92,9 +95,11 @@ function findImgSrc(vnodes: VNode | VNode[]): string | undefined {
 
 // Narrow casts shared by every test: the fake renderer and block stubs
 // don't satisfy the full Renderer / Format / IRenderCursor surface, but
-// `image()` only touches the loadImageAsync / urlMap / muya fields and
-// the token range.
-const fakeBlock = {} as unknown as Format;
+// `image()` only touches the loadImageAsync / urlMap / muya / getClassName /
+// highlight fields and the token range — plus `block.text`, which it reads to
+// tell whether the image occupies the whole paragraph (then it renders
+// centred). The text below matches the token range of `makeImageToken`.
+const fakeBlock = { text: '![alt](https://example.com/x.png)' } as unknown as Format;
 const fakeCursor = {} as unknown as IRenderCursor;
 function asRenderer(r: IFakeRenderer): Renderer {
     return r as unknown as Renderer;
@@ -358,5 +363,80 @@ describe('image renderer — pins a width for images with no intrinsic size', ()
         );
 
         expect(findImgStyle(out)?.width).toBeUndefined();
+    });
+});
+
+// 点击图片把光标放进它的 markdown 源码，此时渲染器要输出可编辑的源码文本而不是
+// `<img>`：居中已改为渲染层默认表现、对齐不再写进 md，编辑图片就是编辑这段文本。
+// 光标与 token 区间冲突时 `getClassName` 返回 `mu-gray`（显示），否则 `mu-hide`。
+describe('image renderer — caret inside the image source', () => {
+    const cursorAt = (offset: number, block: Format = fakeBlock): IRenderCursor =>
+        ({
+            block,
+            anchor: { offset, block },
+            focus: { offset, block },
+        }) as unknown as IRenderCursor;
+
+    it('renders the markdown source instead of the image', () => {
+        const renderer = makeRenderer({ id: 'mu-image-src', isSuccess: true });
+
+        const out = image.call(
+            asRenderer(renderer),
+            { h, block: fakeBlock, token: makeImageToken(), cursor: cursorAt(5) },
+        );
+
+        expect(getWrapperSelector(out)).toBe(`span.${CLASS_NAMES.MU_IMAGE_MARKED_TEXT}`);
+        expect(findImgSrc(out)).toBeUndefined();
+    });
+
+    // 光标停在 offset 0（文档刚打开时就是这样）不能算"在源码里"，否则段首的
+    // 图片永远不会渲染成图片。
+    it('renders the image when the caret only touches the boundary', () => {
+        const renderer = makeRenderer({ id: 'mu-image-edge', isSuccess: true });
+
+        const out = image.call(
+            asRenderer(renderer),
+            { h, block: fakeBlock, token: makeImageToken(), cursor: cursorAt(0) },
+        );
+
+        expect(getWrapperSelector(out)).toContain(`.${CLASS_NAMES.MU_INLINE_IMAGE}`);
+    });
+
+    it('renders the image when the caret is in another block', () => {
+        const renderer = makeRenderer({ id: 'mu-image-other', isSuccess: true });
+
+        const out = image.call(
+            asRenderer(renderer),
+            {
+                h,
+                block: fakeBlock,
+                token: makeImageToken(),
+                cursor: cursorAt(5, {} as unknown as Format),
+            },
+        );
+
+        expect(getWrapperSelector(out)).toContain(`.${CLASS_NAMES.MU_INLINE_IMAGE}`);
+    });
+
+    // 独占整段的图片居中；与文字混排时保持内联。
+    it('adds `mu-image-centered` only when the image fills the paragraph', () => {
+        const renderer = makeRenderer({ id: 'mu-image-center', isSuccess: true });
+
+        const alone = image.call(
+            asRenderer(renderer),
+            { h, block: fakeBlock, token: makeImageToken(), cursor: fakeCursor },
+        );
+        expect(getWrapperSelector(alone)).toContain(`.${CLASS_NAMES.MU_IMAGE_CENTERED}`);
+
+        const withText = image.call(
+            asRenderer(renderer),
+            {
+                h,
+                block: { text: 'before ![alt](https://example.com/x.png)' } as unknown as Format,
+                token: makeImageToken({ src: 'https://example.com/x.png' }),
+                cursor: fakeCursor,
+            },
+        );
+        expect(getWrapperSelector(withText)).not.toContain(`.${CLASS_NAMES.MU_IMAGE_CENTERED}`);
     });
 });

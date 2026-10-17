@@ -465,6 +465,15 @@ blockquote .mu-hide.mu-math > .mu-math-render {
     text-align: center;
 }
 
+/* 图片独占一段时默认居中（Typora 习惯）。居中是渲染表现，不写进 markdown，
+   所以走这个 class 而不是 md 里的 data-align 属性。 */
+.mu-inline-image.mu-image-centered {
+    display: block;
+    margin: 30px auto 40px;
+
+    text-align: center;
+}
+
 .mu-inline-image .mu-image-container {
     position: relative;
 

@@ -24,7 +24,6 @@
       "export": "내보내기",
       "exportHtml": "HTML로 내보내기",
       "exportPdf": "PDF로 내보내기",
-      "convertWithPandoc": "Pandoc으로 변환",
       "import": "가져오기",
       "print": "인쇄",
       "closeTab": "탭 닫기",

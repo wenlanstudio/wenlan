@@ -20,7 +20,7 @@ export { FootnoteTool } from './ui/footnoteTool';
 export { ImageEditTool } from './ui/imageEditTool';
 export { ImagePathPicker } from './ui/imagePicker';
 export type { IImagePathSuggestion } from './ui/imagePicker';
-export { ImageResizeBar } from './ui/imageResizeBar';
+
 export { ImageToolBar } from './ui/imageToolbar';
 export { InlineFormatToolbar } from './ui/inlineFormatToolbar';
 export { default as LinkTools } from './ui/linkTools';

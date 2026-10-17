@@ -2,7 +2,7 @@
   "autoSave": {
     "description": "General--Automatically save the content being edited.",
     "type": "boolean",
-    "default": false
+    "default": true
   },
   "autoSaveDelay": {
     "description": "General--The time in ms after a change that the file is saved.",
@@ -376,12 +376,12 @@
   "imageInsertAction": {
     "description": "Image--The default behavior after insert image from local folder",
     "enum": ["upload", "folder", "path"],
-    "default": "path"
+    "default": "folder"
   },
   "imagePreferRelativeDirectory": {
     "description": "Image--Whether to prefer the relative image directory.",
     "type": "boolean",
-    "default": false
+    "default": true
   },
   "imageRelativeDirectoryBase": {
     "description": "Image--Where relative images are copied.",
@@ -421,7 +421,7 @@
   "showPandocConvert": {
     "description": "General--Show the Pandoc conversion menu. Requires Pandoc to be installed.",
     "type": "boolean",
-    "default": false
+    "default": true
   },
   "searchExclusions": {
     "description": "Searcher--List of glob patterns to exclude from search.--internal",

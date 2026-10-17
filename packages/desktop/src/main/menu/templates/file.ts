@@ -1,4 +1,10 @@
-import { app, type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
+import {
+  app,
+  type BaseWindow,
+  type BrowserWindow,
+  type MenuItem,
+  type MenuItemConstructorOptions
+} from 'electron'
 import * as actions from '../actions/file'
 import { userSetting } from '../actions/marktext'
 import { isOsx } from '../../config'
@@ -13,6 +19,38 @@ export default function(
   recentlyUsedFiles: string[]
 ): MenuItemConstructorOptions {
   const { autoSave, showPandocConvert } = userPreference.getAll()
+
+  // Typora 的「导出」把 HTML、PDF、Word、ODT、RTF 等列在同一级，这里同样平铺，
+  // 不再单列一个「用 Pandoc 转换」菜单。依赖 pandoc 的格式仍受 showPandocConvert
+  // 控制：没装 pandoc 的机器上若常显这些项，点了只会报错。
+  const exportSubmenu: MenuItemConstructorOptions[] = [
+    {
+      label: t('menu.file.exportHtml'),
+      click(_menuItem, browserWindow) {
+        actions.exportFile(browserWindow as BrowserWindow | undefined, 'styledHtml')
+      }
+    },
+    {
+      label: t('menu.file.exportPdf'),
+      accelerator: keybindings.getAccelerator('file.export-file.pdf') ?? undefined,
+      click(_menuItem, browserWindow) {
+        actions.exportFile(browserWindow as BrowserWindow | undefined, 'pdf')
+      }
+    }
+  ]
+
+  if (showPandocConvert) {
+    exportSubmenu.push({ type: 'separator' })
+    PANDOC_EXPORT_FORMATS.forEach((format) => {
+      exportSubmenu.push({
+        label: format.label,
+        click(_menuItem: MenuItem, browserWindow: BaseWindow | undefined) {
+          actions.exportWithPandoc(browserWindow as BrowserWindow | undefined, format.id)
+        }
+      })
+    })
+  }
+
   const submenu: MenuItemConstructorOptions[] = [
     {
       label: t('menu.file.newTab'),
@@ -154,31 +192,7 @@ export default function(
     },
     {
       label: t('menu.file.export'),
-      submenu: [
-        {
-          label: t('menu.file.exportHtml'),
-          click(_menuItem, browserWindow) {
-            actions.exportFile(browserWindow as BrowserWindow | undefined, 'styledHtml')
-          }
-        },
-        {
-          label: t('menu.file.exportPdf'),
-          accelerator: keybindings.getAccelerator('file.export-file.pdf') ?? undefined,
-          click(_menuItem, browserWindow) {
-            actions.exportFile(browserWindow as BrowserWindow | undefined, 'pdf')
-          }
-        }
-      ]
-    },
-    {
-      label: t('menu.file.convertWithPandoc'),
-      visible: !!showPandocConvert,
-      submenu: PANDOC_EXPORT_FORMATS.map((format) => ({
-        label: format.label,
-        click(_menuItem, browserWindow) {
-          actions.exportWithPandoc(browserWindow as BrowserWindow | undefined, format.id)
-        }
-      }))
+      submenu: exportSubmenu
     },
     {
       label: t('menu.file.print'),

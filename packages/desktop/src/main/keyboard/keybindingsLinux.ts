@@ -82,9 +82,9 @@ const keybindings: Map<string, string> = new Map([
   ['format.inline-code', 'Ctrl+Y'],
   ['format.inline-math', 'Ctrl+Shift+M'],
   ['format.strike', 'Ctrl+D'],
-  ['format.hyperlink', 'Ctrl+L'],
+  ['format.hyperlink', 'Ctrl+K'],
   ['format.image', 'Ctrl+Shift+I'],
-  ['format.clear-format', 'Ctrl+Shift+R'],
+  ['format.clear-format', 'Ctrl+\\'],
 
   // Window menu
   ['window.minimize', 'Ctrl+M'],

@@ -1,6 +1,6 @@
 import type { VNode } from 'snabbdom';
 import type Format from '../../block/base/format';
-import type { IImageSelectionData } from '../../selection/types';
+import type { IImageSelectionData, IRenderCursor } from '../../selection/types';
 import type { H, ImageToken, ISyntaxRenderOptions } from '../types';
 import type Renderer from './index';
 import DeleteIcon from '../../assets/icons/delete/2.png';
@@ -75,11 +75,47 @@ function isImageSelected(
     );
 }
 
+// 光标是否位于图片 markdown 源码的【内部】。
+// 必须严格落在 `(start, end)` 开区间内：用闭区间（或 muya 标记显隐那套
+// `[start, end]` 冲突判定）会把紧贴边界的光标也算进去——文档刚打开、光标停在
+// 首段 offset 0 时，段首的图片就会被当成"正在编辑源码"而显示成文本，图片根本
+// 不渲染。点击图片时落点被特意放在 `end - 1`，所以是严格内部。
+function isCaretInImageSource(block: Format, token: ImageToken, cursor?: IRenderCursor) {
+    // 空图片（`![abc]()`，插入图片后还没选文件）永远显示占位符"点击添加图片"并
+    // 弹出选图工具：插入后光标就落在它里面，若这时按源码显示，占位符和选图入口
+    // 就都没了。所以没有 src 的图片不进入源码编辑态。
+    if (!token.attrs.src)
+        return false;
+
+    const anchor = cursor?.anchor ?? cursor?.start;
+    const focus = cursor?.focus ?? cursor?.end;
+    if (!anchor || !focus || (cursor?.block && cursor.block !== block))
+        return false;
+
+    const { start, end } = token.range;
+
+    return (
+        (anchor.offset > start && anchor.offset < end)
+        || (focus.offset > start && focus.offset < end)
+    );
+}
+
 // I don't want operate dom directly, is there any better way? need help!
 export default function image(
     this: Renderer,
-    { h, block, token }: ISyntaxRenderOptions & { token: ImageToken },
+    { h, cursor, block, token }: ISyntaxRenderOptions & { token: ImageToken },
 ) {
+    // 光标落进图片的 markdown 源码时（点击图片即进入该状态），把源码显示成可编辑
+    // 文本，让用户直接改 `![](assets/a.png)` 这段文字；移开光标后重新渲染成图片。
+    if (isCaretInImageSource(block, token, cursor)) {
+        return [
+            h(
+                `span.${CLASS_NAMES.MU_IMAGE_MARKED_TEXT}`,
+                this.highlight(h, block, token.range.start, token.range.end, token),
+            ),
+        ];
+    }
+
     const imageSrc = getImageSrc(token.attrs.src);
     const selectedImage = this.muya.editor.selection.image;
     const { i18n } = this.muya;
@@ -147,6 +183,12 @@ export default function image(
 
     if (typeof token.attrs['data-align'] === 'string')
         wrapperSelector += `.${token.attrs['data-align']}`;
+
+    // Typora 习惯：图片独占整个段落时居中显示。居中只是渲染层的默认表现，
+    // 不再往 markdown 里写 `data-align`，所以判据是 token 是否覆盖整段文本，
+    // 而不是 md 里的属性——与文字混排的行内图片保持内联。
+    if (token.range.start === 0 && token.range.end === block.text.length)
+        wrapperSelector += `.${CLASS_NAMES.MU_IMAGE_CENTERED}`;
 
     // the src image is still loading, so use the url Map base64.
     if (this.urlMap.has(src)) {

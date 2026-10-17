@@ -24,7 +24,6 @@
       "export": "Exportar",
       "exportHtml": "Exportar como HTML",
       "exportPdf": "Exportar como PDF",
-      "convertWithPandoc": "Converter com o Pandoc",
       "import": "Importar",
       "print": "Imprimir",
       "closeTab": "Fechar Aba",
