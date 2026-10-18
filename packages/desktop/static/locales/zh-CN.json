@@ -190,6 +190,21 @@
     "lookUp": "查询“{selection}”",
     "insertParagraphBefore": "在前面插入段落",
     "insertParagraphAfter": "在后面插入段落",
+    "table": {
+      "table": "表格",
+      "insertRowAbove": "上方插入行",
+      "insertRowBelow": "下方插入行",
+      "insertColumnLeft": "左侧插入列",
+      "insertColumnRight": "右侧插入列",
+      "moveRowUp": "上移该行",
+      "moveRowDown": "下移该行",
+      "moveColumnLeft": "左移该列",
+      "moveColumnRight": "右移该列",
+      "deleteRow": "删除行",
+      "deleteColumn": "删除列",
+      "copyTable": "复制表格",
+      "deleteTable": "删除表格"
+    },
     "spelling": "拼写…",
     "changeLanguage": "更改语言…",
     "addToDictionary": "添加到词典",
@@ -908,6 +923,20 @@
     },
     "spellchecker": {
       "switchLanguage": "切换拼写检查语言"
+    },
+    "table": {
+      "insertRowAbove": "上方插入行",
+      "insertRowBelow": "下方插入行",
+      "insertColumnLeft": "左侧插入列",
+      "insertColumnRight": "右侧插入列",
+      "deleteRow": "删除行",
+      "deleteColumn": "删除列",
+      "moveRowUp": "上移该行",
+      "moveRowDown": "下移该行",
+      "moveColumnLeft": "左移该列",
+      "moveColumnRight": "右移该列",
+      "copyTable": "复制表格",
+      "deleteTable": "删除表格"
     }
   },
   "common": {

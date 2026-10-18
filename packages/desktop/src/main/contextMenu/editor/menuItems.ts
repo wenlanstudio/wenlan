@@ -109,6 +109,46 @@ export const getInsertAfter = (): MenuItemConstructorOptions => ({
   }
 })
 
+// 光标位于表格内时的「表格」子菜单，条目与 Typora 一致。accelerator 只做
+// 显示（popup 菜单不注册按键），真正的按键走 keybindings 的 table.* 命令。
+const tableActionItem = (
+  label: string,
+  id: string,
+  type: string,
+  accelerator?: string
+): MenuItemConstructorOptions => ({
+  label,
+  id,
+  accelerator,
+  click(_menuItem, targetWindow) {
+    if (targetWindow) {
+      ;(targetWindow as BrowserWindow).webContents.send('mt::editor-table-action', { type })
+    }
+  }
+})
+
+export const getTableSubmenu = (): MenuItemConstructorOptions => ({
+  label: t('contextMenu.table.table'),
+  id: 'tableMenuItem',
+  submenu: [
+    tableActionItem(t('contextMenu.table.insertRowAbove'), 'tableInsertRowAboveMenuItem', 'insertRowAbove'),
+    tableActionItem(t('contextMenu.table.insertRowBelow'), 'tableInsertRowBelowMenuItem', 'insertRowBelow', 'Ctrl+Enter'),
+    tableActionItem(t('contextMenu.table.insertColumnLeft'), 'tableInsertColumnLeftMenuItem', 'insertColumnLeft'),
+    tableActionItem(t('contextMenu.table.insertColumnRight'), 'tableInsertColumnRightMenuItem', 'insertColumnRight'),
+    SEPARATOR,
+    tableActionItem(t('contextMenu.table.moveRowUp'), 'tableMoveRowUpMenuItem', 'moveRowUp', 'Alt+Up'),
+    tableActionItem(t('contextMenu.table.moveRowDown'), 'tableMoveRowDownMenuItem', 'moveRowDown', 'Alt+Down'),
+    tableActionItem(t('contextMenu.table.moveColumnLeft'), 'tableMoveColumnLeftMenuItem', 'moveColumnLeft', 'Alt+Left'),
+    tableActionItem(t('contextMenu.table.moveColumnRight'), 'tableMoveColumnRightMenuItem', 'moveColumnRight', 'Alt+Right'),
+    SEPARATOR,
+    tableActionItem(t('contextMenu.table.deleteRow'), 'tableDeleteRowMenuItem', 'deleteRow', 'Ctrl+Shift+Delete'),
+    tableActionItem(t('contextMenu.table.deleteColumn'), 'tableDeleteColumnMenuItem', 'deleteColumn'),
+    SEPARATOR,
+    tableActionItem(t('contextMenu.table.copyTable'), 'tableCopyMenuItem', 'copyTable'),
+    tableActionItem(t('contextMenu.table.deleteTable'), 'tableDeleteTableMenuItem', 'deleteTable')
+  ]
+})
+
 // Retained for backward compatibility
 export const CUT = getCUT()
 export const COPY = getCOPY()

@@ -212,6 +212,22 @@ const COMMAND_KEY_MAP: Record<string, string> = {
   'docs.markdown-syntax': 'commands.docs.markdownSyntax',
 
   // ============================================
+  // # Table Operations（Typora 风格，仅光标在表格内时生效）
+  // ============================================
+  'table.insert-row-above': 'commands.table.insertRowAbove',
+  'table.insert-row-below': 'commands.table.insertRowBelow',
+  'table.insert-column-left': 'commands.table.insertColumnLeft',
+  'table.insert-column-right': 'commands.table.insertColumnRight',
+  'table.delete-row': 'commands.table.deleteRow',
+  'table.delete-column': 'commands.table.deleteColumn',
+  'table.move-row-up': 'commands.table.moveRowUp',
+  'table.move-row-down': 'commands.table.moveRowDown',
+  'table.move-column-left': 'commands.table.moveColumnLeft',
+  'table.move-column-right': 'commands.table.moveColumnRight',
+  'table.copy': 'commands.table.copyTable',
+  'table.delete': 'commands.table.deleteTable',
+
+  // ============================================
   // # Spell Checker
   // ============================================
   'spellchecker.switch-language': 'commands.spellchecker.switchLanguage'

@@ -270,6 +270,7 @@ export interface IpcMainEventChannels {
   'mt::editor-move-file': []
   'mt::editor-paragraph-action': [payload: { type: string }]
   'mt::editor-rename-file': []
+  'mt::editor-table-action': [payload: { type: string }]
   'mt::execute-command-by-id': [commandId: string]
   'mt::export-success': [payload: { type: string; filePath: string; linksMedia?: boolean }]
   'mt::export-with-pandoc': [target: string]

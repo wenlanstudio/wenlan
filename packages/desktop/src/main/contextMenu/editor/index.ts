@@ -1,4 +1,4 @@
-import { Menu, MenuItem, type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
+import { Menu, MenuItem, ipcMain, type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
 import {
   getCUT,
   getCOPY,
@@ -9,7 +9,8 @@ import {
   getLookUp,
   SEPARATOR,
   getInsertBefore,
-  getInsertAfter
+  getInsertAfter,
+  getTableSubmenu
 } from './menuItems'
 import spellcheckMenuBuilder from './spellcheck'
 import { t } from '../../i18n'
@@ -44,10 +45,26 @@ type ContextMenuEvent = {
   readonly defaultPrevented?: boolean
 }
 
+// 光标是否在表格内，按窗口缓存。渲染层每次选区变化都会推 `isTable`（见
+// store/editor.ts 的 createApplicationMenuState），这里只消费最新值，
+// 供 context-menu 事件弹出时决定要不要带「表格」子菜单。
+const isTableByWindowId = new Map<number, boolean>()
+let selectionListenerAttached = false
+const ensureSelectionListener = (): void => {
+  if (selectionListenerAttached) return
+  selectionListenerAttached = true
+  ipcMain.on('mt::editor-selection-changed', (_e, windowId: number, changes: { isTable?: boolean }) => {
+    isTableByWindowId.set(windowId, changes?.isTable === true)
+  })
+}
+ensureSelectionListener()
+
 // Dynamically fetch menu items to ensure correct translation
-const getContextItems = (): MenuItemConstructorOptions[] => [
+const getContextItems = (isTable: boolean): MenuItemConstructorOptions[] => [
   getInsertBefore(),
   getInsertAfter(),
+  // 表格子菜单紧跟段落插入项之后（Typora 亦如此），仅光标在表格内时出现。
+  ...(isTable ? [getTableSubmenu(), SEPARATOR] : []),
   SEPARATOR,
   getCUT(),
   getCOPY(),
@@ -110,7 +127,7 @@ export const showEditorContextMenu = (
       menu.append(new MenuItem(SEPARATOR))
     }
 
-    const contextItems = getContextItems()
+    const contextItems = getContextItems(isTableByWindowId.get(win.id) === true)
     const copyItemIds = new Set([
       'cutMenuItem',
       'copyMenuItem',

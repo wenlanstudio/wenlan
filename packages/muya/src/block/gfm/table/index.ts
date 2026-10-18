@@ -272,6 +272,102 @@ class Table extends Parent {
     }
 
     /**
+     * Move the row at `from` to `to` (both zero-based), shifting the rows in
+     * between by one. The caret follows the moved row when it was inside it;
+     * out-of-range or no-op arguments are silently ignored, matching
+     * `removeColumn`.
+     */
+    moveRow(from: number, to: number) {
+        const { rowCount } = this;
+        if (from === to || from < 0 || to < 0 || from >= rowCount || to >= rowCount)
+            return;
+
+        const state = this.getState();
+        const [rowState] = state.children.splice(from, 1);
+        state.children.splice(to, 0, rowState);
+
+        this._replaceWithState(state, from, to, 'row');
+    }
+
+    /**
+     * Move the column at `from` to `to`, shifting the columns in between by
+     * one in every row. Caret semantics mirror {@link moveRow}.
+     */
+    moveColumn(from: number, to: number) {
+        const { columnCount } = this;
+        if (from === to || from < 0 || to < 0 || from >= columnCount || to >= columnCount)
+            return;
+
+        const state = this.getState();
+        for (const row of state.children) {
+            const [cellState] = row.children.splice(from, 1);
+            row.children.splice(to, 0, cellState);
+        }
+
+        this._replaceWithState(state, from, to, 'column');
+    }
+
+    /**
+     * Rebuild the table from `state` and keep the caret on the same cell text
+     * (same offsets) when the table is active — the drag bar honours the same
+     * contract after a drop, so keyboard moves and drag moves stay consistent.
+     * `from`/`to`/`axis` describe the move so the caret cell can be remapped:
+     * a caret in the moved row/column lands at `to`, in-between ones shift by
+     * one away from the direction of travel.
+     */
+    private _replaceWithState(
+        state: ITableState,
+        from: number,
+        to: number,
+        axis: 'row' | 'column',
+    ) {
+        let caret: {
+            row: number;
+            column: number;
+            startOffset: number;
+            endOffset: number;
+        } | null = null;
+
+        if (this.active) {
+            const { anchorBlock, anchor, focus, isSelectionInSameBlock }
+                = this.muya.editor.selection ?? {};
+            const cell = anchorBlock?.closestBlock('table.cell') as TableBodyCell | undefined;
+            if (cell) {
+                const { rowOffset, columnOffset } = cell;
+                const moved = axis === 'row' ? rowOffset : columnOffset;
+                const shift = to > from ? -1 : 1;
+                let target = moved;
+                if (moved === from)
+                    target = to;
+                else if (moved >= Math.min(from, to) && moved <= Math.max(from, to))
+                    target = moved + shift;
+
+                caret = {
+                    row: axis === 'row' ? target : rowOffset,
+                    column: axis === 'column' ? target : columnOffset,
+                    startOffset: isSelectionInSameBlock
+                        ? Math.min(anchor!.offset, focus!.offset)
+                        : 0,
+                    endOffset: isSelectionInSameBlock
+                        ? Math.max(anchor!.offset, focus!.offset)
+                        : 0,
+                };
+            }
+        }
+
+        const newTable = ScrollPage.loadBlock('table').create(this.muya, state);
+        this.replaceWith(newTable);
+
+        if (caret) {
+            const cell = (newTable.firstChild as TableInner)
+                .find(caret.row)
+                ?.find(caret.column);
+            const content = cell?.firstContentInDescendant();
+            content?.setCursor(caret.startOffset, caret.endOffset, true);
+        }
+    }
+
+    /**
      * Resolve a body cell by its (row, column) offsets, both zero-based. Returns
      * `null` when either index is out of range. Used by the cross-cell selection
      * controller to walk the rectangle between an anchor and focus cell.

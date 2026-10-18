@@ -87,7 +87,8 @@ import {
   type IMuyaOptions,
   type IReplaceOption,
   type ISearchOption,
-  type ISerializedHistory
+  type ISerializedHistory,
+  type TableActionType
 } from '@muyajs/core'
 import { getMuyaLocale } from '@/util/muyaLocale'
 import { exportStyledHTML, type HeaderFooterPart } from '@/util/exportHtml'
@@ -1105,6 +1106,20 @@ const handleCopyPaste = (type: unknown) => {
   }
 }
 
+// 表格操作（右键菜单 + Alt+方向键共用）：引擎侧统一入口 Muya.tableAction，
+// 光标不在表格内时引擎直接忽略。copyTable 返回整表序列化出的 GFM 文本，
+// 由这里写入系统剪贴板（引擎自身不碰系统剪贴板；走 preload 暴露的
+// Electron clipboard，菜单触发的 IPC 回调里没有用户手势，Web API 会被拒）。
+const handleTableAction = (type: unknown) => {
+  if (sourceCode.value || !editor.value) {
+    return
+  }
+  const markdown = editor.value.tableAction(type as TableActionType)
+  if (typeof markdown === 'string' && markdown) {
+    window.electron.clipboard.writeText(markdown)
+  }
+}
+
 const insertImage = (src: unknown) => {
   if (!sourceCode.value) {
     editor.value && editor.value.insertImage({ src: src as string })
@@ -1889,6 +1904,7 @@ onMounted(() => {
   bus.on('print-service-clearup', handlePrintServiceClearup)
   bus.on('paragraph', handleEditParagraph)
   bus.on('format', handleInlineFormat)
+  bus.on('table-action', handleTableAction)
   bus.on('searchValue', handleSearch)
   bus.on('replaceValue', handReplace)
   bus.on('find-action', handleFindAction)

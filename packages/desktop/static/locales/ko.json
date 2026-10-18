@@ -190,6 +190,21 @@
     "lookUp": "\"{selection}\" 찾아보기",
     "insertParagraphBefore": "앞에 단락 삽입",
     "insertParagraphAfter": "뒤에 단락 삽입",
+    "table": {
+      "table": "Table",
+      "insertRowAbove": "Insert Row Above",
+      "insertRowBelow": "Insert Row Below",
+      "insertColumnLeft": "Insert Column Left",
+      "insertColumnRight": "Insert Column Right",
+      "moveRowUp": "Move Row Up",
+      "moveRowDown": "Move Row Down",
+      "moveColumnLeft": "Move Column Left",
+      "moveColumnRight": "Move Column Right",
+      "deleteRow": "Delete Row",
+      "deleteColumn": "Delete Column",
+      "copyTable": "Copy Table",
+      "deleteTable": "Delete Table"
+    },
     "spelling": "맞춤법...",
     "changeLanguage": "언어 변경...",
     "addToDictionary": "사전에 추가",
@@ -900,6 +915,20 @@
     },
     "spellchecker": {
       "switchLanguage": "언어 전환"
+    },
+    "table": {
+      "insertRowAbove": "Insert Row Above",
+      "insertRowBelow": "Insert Row Below",
+      "insertColumnLeft": "Insert Column Left",
+      "insertColumnRight": "Insert Column Right",
+      "deleteRow": "Delete Row",
+      "deleteColumn": "Delete Column",
+      "moveRowUp": "Move Row Up",
+      "moveRowDown": "Move Row Down",
+      "moveColumnLeft": "Move Column Left",
+      "moveColumnRight": "Move Column Right",
+      "copyTable": "Copy Table",
+      "deleteTable": "Delete Table"
     }
   },
   "common": {

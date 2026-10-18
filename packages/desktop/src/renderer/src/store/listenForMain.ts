@@ -44,6 +44,11 @@ export const useListenForMainStore = defineStore('listenForMain', () => {
     window.electron.ipcRenderer.on('mt::editor-format-action', (_e, { type }) => {
       bus.emit('format', type)
     })
+    // 表格操作与段落/格式命令同构：主进程只传动作名，光标所在的表格由
+    // 编辑器组件自己解析（见 editor.vue 的 handleTableAction）。
+    window.electron.ipcRenderer.on('mt::editor-table-action', (_e, { type }) => {
+      bus.emit('table-action', type)
+    })
   }
 
   return {

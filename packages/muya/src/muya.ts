@@ -1,5 +1,6 @@
 import type Content from './block/base/content';
 import type Parent from './block/base/parent';
+import type TableBodyCell from './block/gfm/table/cell';
 import type { TBlockPath } from './block/types';
 import type { Listener } from './event/types';
 import type { ILocale } from './i18n/types';
@@ -30,6 +31,7 @@ import {
     resolveSentinelCursor,
 } from './selection/offsetCursor';
 import { isAnyListState, isAtxHeadingState, isCodeBlockState, isSetextHeadingState } from './state/types';
+import ExportMarkdown from './state/stateToMarkdown';
 import { Ui } from './ui/ui';
 import { deepClone } from './utils';
 import { encodeImageSrc } from './utils/image';
@@ -102,6 +104,22 @@ const PARAGRAPH_LABEL_MAP: Record<string, string> = {
 
 // The outmost-block labels that wrap a cross-block selection into a list.
 const CROSS_BLOCK_LIST_LABELS = new Set(['bullet-list', 'order-list', 'task-list']);
+
+// Structural table operations exposed through `Muya.tableAction`. The names
+// mirror the Typora table context menu one-to-one.
+export type TableActionType =
+    | 'insertRowAbove'
+    | 'insertRowBelow'
+    | 'insertColumnLeft'
+    | 'insertColumnRight'
+    | 'deleteRow'
+    | 'deleteColumn'
+    | 'moveRowUp'
+    | 'moveRowDown'
+    | 'moveColumnLeft'
+    | 'moveColumnRight'
+    | 'copyTable'
+    | 'deleteTable';
 
 // Paragraph-menu labels whose block toggles back to a paragraph when the cursor
 // is already inside one (the menu item is checked) — clicking unwraps/removes it.
@@ -965,6 +983,72 @@ export class Muya {
 
         block.remove();
         cursorBlock?.setCursor(0, 0, true);
+    }
+
+    /**
+     * Run a structural table operation on the table at the current caret. The
+     * desktop's table context menu and the table keybindings both funnel into
+     * this single entry point so the menu and the keyboard stay in lockstep.
+     *
+     * @param type Operation name, mirroring the Typora table menu.
+     * @returns For `copyTable`, the serialized GFM markdown of the whole
+     *   table (the caller puts it on the clipboard); `null` for every other
+     *   operation and when the caret is not inside a table.
+     */
+    tableAction(type: TableActionType): string | null {
+        const content = this.editor.activeContentBlock ?? this.editor.selection.anchorBlock;
+        const cell = content?.closestBlock('table.cell') as Nullable<TableBodyCell>;
+        if (!cell)
+            return null;
+
+        const table = cell.table;
+        const { rowOffset, columnOffset } = cell;
+
+        switch (type) {
+            case 'insertRowAbove':
+                table.insertRow(rowOffset)?.setCursor(0, 0, true);
+                return null;
+            case 'insertRowBelow':
+                table.insertRow(rowOffset + 1)?.setCursor(0, 0, true);
+                return null;
+            case 'insertColumnLeft':
+                table.insertColumn(columnOffset)?.setCursor(0, 0, true);
+                return null;
+            case 'insertColumnRight':
+                table.insertColumn(columnOffset + 1)?.setCursor(0, 0, true);
+                return null;
+            case 'deleteRow':
+                table.removeRow(rowOffset)?.setCursor(0, 0, true);
+                return null;
+            case 'deleteColumn':
+                table.removeColumn(columnOffset)?.setCursor(0, 0, true);
+                return null;
+            case 'moveRowUp':
+                table.moveRow(rowOffset, rowOffset - 1);
+                return null;
+            case 'moveRowDown':
+                table.moveRow(rowOffset, rowOffset + 1);
+                return null;
+            case 'moveColumnLeft':
+                table.moveColumn(columnOffset, columnOffset - 1);
+                return null;
+            case 'moveColumnRight':
+                table.moveColumn(columnOffset, columnOffset + 1);
+                return null;
+            case 'copyTable':
+                return new ExportMarkdown({ listIndentation: 1 }).generate([table.getState()]);
+            case 'deleteTable': {
+                // Same caret contract as removeRow's whole-table branch: walk
+                // out of the table BEFORE detaching it.
+                const outside
+                    = table.nextContentInContext() ?? table.previousContentInContext();
+                table.remove();
+                outside?.setCursor(0, 0, true);
+                return null;
+            }
+            default:
+                return null;
+        }
     }
 
     /**

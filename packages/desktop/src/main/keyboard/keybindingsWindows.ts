@@ -19,8 +19,8 @@ const keybindings: Map<string, string> = new Map([
 
   // File menu
   ['file.new-window', 'Ctrl+N'],
-  // Ctrl+T 让给「插入表格」，新建标签页顺移到 Ctrl+Shift+T。
-  ['file.new-tab', 'Ctrl+Shift+T'],
+  // Ctrl+T 让给「插入表格」；按裁决新建标签页不设快捷键（仅菜单项）。
+  ['file.new-tab', ''],
   ['file.open-file', 'Ctrl+O'],
   ['file.open-folder', 'Ctrl+Shift+O'],
   ['file.save', 'Ctrl+S'],
@@ -133,7 +133,25 @@ const keybindings: Map<string, string> = new Map([
   ['tabs.switchToEighth', ''],
   ['tabs.switchToNinth', ''],
   ['tabs.switchToTenth', ''],
-  ['file.quick-open', 'Ctrl+P']
+  ['file.quick-open', 'Ctrl+P'],
+
+  // ======== Table operations (Typora 风格，仅光标在表格内时生效) =========
+  // 键位来源：用户提供的 Typora 右键菜单截图（Ctrl+Enter 下方插行、
+  // Alt+方向键移动行列、Ctrl+Shift+⌦ 删除行）。⌦ 是 forward delete，
+  // Windows 键盘对应 Delete 键。其余操作 Typora 未设默认键，同样留空。
+  // 表格外按下这些键时动作在渲染层空转，无副作用。
+  ['table.insert-row-above', ''],
+  ['table.insert-row-below', ''],
+  ['table.insert-column-left', ''],
+  ['table.insert-column-right', ''],
+  ['table.delete-row', 'Ctrl+Shift+Delete'],
+  ['table.delete-column', ''],
+  ['table.move-row-up', 'Alt+Up'],
+  ['table.move-row-down', 'Alt+Down'],
+  ['table.move-column-left', 'Alt+Left'],
+  ['table.move-column-right', 'Alt+Right'],
+  ['table.copy', ''],
+  ['table.delete', '']
 ])
 
 export default keybindings
