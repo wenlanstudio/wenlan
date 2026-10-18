@@ -1,17 +1,22 @@
 <template>
   <div class="view-switcher">
-    <!-- Main view buttons -->
-    <div class="main-views">
-      <button
-        v-for="mv in MAIN_VIEWS"
-        :key="mv"
-        class="main-view-btn"
-        :class="{ active: mainView === mv }"
-        :title="MAIN_VIEW_META[mv].label"
-        @click="handleMainViewClick(mv)"
+    <!-- 从右往左不断细化：WPED 最右固定，子视图在其左，页宽滑块（仅 Word 页面模式）最左 -->
+    <!-- Page width slider (Word page view only) -->
+    <div
+      v-if="showWidthSlider"
+      class="width-slider-group"
+      :title="t('view.pageWidth')"
+    >
+      <input
+        v-model.number="sliderValue"
+        type="range"
+        min="400"
+        max="1200"
+        step="10"
+        class="width-slider"
+        @change="handleSliderChange"
       >
-        {{ MAIN_VIEW_META[mv].icon }}
-      </button>
+      <span class="width-label">{{ sliderValue }}</span>
     </div>
 
     <!-- Sub-view toggle -->
@@ -30,22 +35,18 @@
       </button>
     </div>
 
-    <!-- Page width slider (Word page view only) -->
-    <div
-      v-if="showWidthSlider"
-      class="width-slider-group"
-      :title="t('view.pageWidth')"
-    >
-      <input
-        v-model.number="sliderValue"
-        type="range"
-        min="400"
-        max="1200"
-        step="10"
-        class="width-slider"
-        @change="handleSliderChange"
+    <!-- Main view buttons -->
+    <div class="main-views">
+      <button
+        v-for="mv in MAIN_VIEWS"
+        :key="mv"
+        class="main-view-btn"
+        :class="{ active: mainView === mv }"
+        :title="MAIN_VIEW_META[mv].label"
+        @click="handleMainViewClick(mv)"
       >
-      <span class="width-label">{{ sliderValue }}</span>
+        {{ MAIN_VIEW_META[mv].icon }}
+      </button>
     </div>
   </div>
 </template>
@@ -107,6 +108,9 @@ const handleSliderChange = () => {
   display: flex;
   align-items: center;
   gap: 2px;
+  padding-left: 4px;
+  border-left: 1px solid var(--editorColor10);
+  margin-left: 2px;
 }
 
 .main-view-btn {
@@ -178,9 +182,9 @@ const handleSliderChange = () => {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding-left: 6px;
-  border-left: 1px solid var(--editorColor10);
-  margin-left: 2px;
+  padding-right: 6px;
+  border-right: 1px solid var(--editorColor10);
+  margin-right: 2px;
 }
 
 .width-slider {

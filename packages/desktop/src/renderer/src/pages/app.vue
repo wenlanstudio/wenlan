@@ -60,9 +60,9 @@
         </svg>
       </div>
 
-      <!-- Right-corner dock: view switcher + cursor position + read-only lock + word count -->
+      <!-- Right-corner dock: 从右往左不断细化（字数统计 → 读写锁 → 主视图 WPED → 子视图），
+           右侧三组固定不动，随模式增减的只有左侧的子视图/光标位置 -->
       <div class="right-corner-dock">
-        <ViewSwitcher />
         <div
           v-if="showCursorPosition"
           class="cursor-position"
@@ -70,6 +70,8 @@
         >
           {{ cursorPositionText }}
         </div>
+        <ViewSwitcher />
+        <div class="dock-divider" />
         <button
           class="read-only-btn"
           :class="{ locked: readOnly }"
@@ -405,6 +407,12 @@ onMounted(async () => {
   font-variant-numeric: tabular-nums;
   user-select: none;
   line-height: 24px;
+}
+
+.dock-divider {
+  width: 1px;
+  height: 14px;
+  background: var(--editorColor10);
 }
 
 .read-only-btn {
