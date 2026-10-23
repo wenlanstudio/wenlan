@@ -25,10 +25,16 @@ export interface SubViewMeta {
   implemented: boolean
 }
 
+// Icons are single CJK glyphs used as graphic symbols in every locale — they
+// are deliberately not translated. Each names what its view shows: 文 the
+// document text, 示 presentation (陈列以展示), 表 tables, 图 figures (images and
+// diagrams alike), and 本 the markdown source — the root the other views are
+// rendered from, never a view of its own. `label` stays English on purpose: it
+// is only the tooltip, and these words are widely understood.
 export const MAIN_VIEW_META: Record<MainView, { label: string; icon: string; subViews: SubViewMeta[] }> = {
   document: {
     label: 'Document',
-    icon: 'D',
+    icon: '文',
     subViews: [
       { key: 'page', label: 'Page', slider: 'page-width', implemented: true },
       { key: 'columns', label: 'Columns', slider: 'page-width', implemented: true }
@@ -36,7 +42,7 @@ export const MAIN_VIEW_META: Record<MainView, { label: string; icon: string; sub
   },
   slides: {
     label: 'Slides',
-    icon: 'S',
+    icon: '示',
     subViews: [
       { key: 'slide', label: 'Slide', slider: 'slide-zoom', implemented: false },
       { key: 'present', label: 'Present', slider: 'none', implemented: false }
@@ -44,14 +50,14 @@ export const MAIN_VIEW_META: Record<MainView, { label: string; icon: string; sub
   },
   table: {
     label: 'Tables',
-    icon: 'T',
+    icon: '表',
     subViews: [
       { key: 'all', label: 'All', slider: 'page-width', implemented: true }
     ]
   },
   figure: {
     label: 'Figure',
-    icon: 'F',
+    icon: '图',
     subViews: [
       { key: 'gallery', label: 'Gallery', slider: 'page-width', implemented: false },
       { key: 'focus', label: 'Focus', slider: 'none', implemented: false }
@@ -59,7 +65,7 @@ export const MAIN_VIEW_META: Record<MainView, { label: string; icon: string; sub
   },
   code: {
     label: 'Code',
-    icon: 'C',
+    icon: '本',
     subViews: [
       { key: 'source', label: 'Source', slider: 'page-width', implemented: true }
     ]

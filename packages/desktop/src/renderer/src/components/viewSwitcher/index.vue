@@ -1,7 +1,7 @@
 <template>
   <div class="view-switcher">
-    <!-- 从右往左不断细化：DSTFC 最右固定，子视图在其左，页宽滑块（视图职责为
-         调整页面宽度的视图共享）最左 -->
+    <!-- 从右往左不断细化：主视图（文·示·表·图·本）最右固定，子视图在其左，
+         页宽滑块（视图职责为调整页面宽度的视图共享）最左 -->
     <!-- Shared dock slider — shown in every view whose duty is page width
          (document/page, document/columns, code/source, table/all;
          figure/gallery joins when shipped) -->
@@ -133,8 +133,10 @@ const handleSliderChange = () => {
   border-radius: 3px;
   background: transparent;
   color: var(--editorColor40);
-  font-size: 11px;
-  font-weight: 700;
+  /* The icons are CJK glyphs: 12px at weight 500. Heavier weights close up the
+     small strokes at this size and the character reads as a blob. */
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
   padding: 0;
