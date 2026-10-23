@@ -15,14 +15,10 @@
         :text-direction="textDirection"
         :platform="platform"
       />
-      <!-- Word 阅读视图（双页） -->
-      <editor
-        v-else-if="mainView === 'word' && subView === 'reading'"
+      <!-- Word 分栏 / 长文阅读视图（Page 编辑器渲染为只读 + 分栏） -->
+      <columns-preview
+        v-else-if="mainView === 'word' && subView === 'columns'"
         :markdown="markdown"
-        :cursor="cursor"
-        :text-direction="textDirection"
-        :platform="platform"
-        spread-mode
       />
       <!-- PPT 视图 -->
       <div
@@ -120,6 +116,7 @@ import { useEditorViewStore } from '@/store/editorView'
 import { storeToRefs } from 'pinia'
 import { t } from '@/i18n'
 import Editor from './editor.vue'
+import ColumnsPreview from './columnsPreview.vue'
 import SourceCode from './sourceCode.vue'
 import TabNotifications from './notifications.vue'
 

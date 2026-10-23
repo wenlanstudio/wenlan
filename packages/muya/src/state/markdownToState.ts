@@ -11,6 +11,7 @@ import type {
     TState,
 } from './types';
 import { firstWordOfInfo, parseFenceLine } from '../utils';
+import { parseMarker } from '../utils/columns/syntax';
 import { createDiagramState, diagramTypeOfLang } from '../utils/diagram/fence';
 import logger from '../utils/logger';
 import { lexBlock } from '../utils/marked';
@@ -87,12 +88,17 @@ export class MarkdownToState {
         let token: TBlockToken | undefined;
         const parentList: TState[][] = [states];
 
+        // 上一个顶层 token：分栏标记行内化用它判定「紧贴段落」——前一个 token
+        // 是 paragraph 且中间没有 space token 时空行不存在（见 inlineAdjacency.spec.ts）。
+        let prevToken: TBlockToken | undefined;
+
         // eslint-disable-next-line no-cond-assign
         while ((token = tokens.shift())) {
             if (CONTAINER_TOKEN_TYPES.has(token.type))
                 this._handleContainerToken(token, parentList, tokens);
             else
-                this._handleLeafToken(token, parentList, tokens, trimUnnecessaryCodeBlockEmptyLines);
+                this._handleLeafToken(token, parentList, tokens, trimUnnecessaryCodeBlockEmptyLines, prevToken);
+            prevToken = token;
         }
 
         return states.length ? states : [{ name: 'paragraph', text: '' }];
@@ -211,6 +217,68 @@ export class MarkdownToState {
         }
     }
 
+    /**
+     * 分栏标记行内化（§4.6）：`<!-- begin / split / end -->` 注释紧贴顶层
+     * 段落（前一个 token 是 paragraph、中间无 space）时并入该段 text，由
+     * inlineRenderer 在段尾渲染徽标；前有空行、上文是标题 / 列表 / 引用等
+     * 位置保持块级 html-block，由 htmlPreview 渲染块徽标兜底。
+     *
+     * 逐个标记独立判定而非整组：组内允许行内与块级混合，栏边界始终以标记
+     * 的位置为准（columns 视图与导出管线按同一位置切栏），混合形态只影响
+     * 视觉统一性。
+     */
+    private _tryInlineColumnMarker(
+        text: string,
+        prevToken: TBlockToken | undefined,
+        parentList: TState[][],
+    ): boolean {
+        if (!parseMarker(text))
+            return false;
+
+        // 只行内化顶层标记。容器内（列表 / 引用 / 表格单元格）的标记按
+        // §1.3 #7 保持 inert，块徽标形态与改造前一致。
+        if (parentList.length !== 1)
+            return false;
+
+        // 前一个 token 是 paragraph 即保证中间无 space token：空行间隔会被
+        // lexBlock 切成独立的 space token（inlineAdjacency.spec.ts）。
+        if (prevToken?.type !== 'paragraph')
+            return false;
+
+        const last = parentList[0][parentList[0].length - 1];
+        if (!last || last.name !== 'paragraph')
+            return false;
+
+        last.text += `\n${text}`;
+
+        return true;
+    }
+
+    /**
+     * The `html` leaf token: a single `<img>` demotes to a paragraph (legacy
+     * behaviour), a column marker hugging a top-level paragraph is inlined
+     * into it (§4.6), everything else stays a block-level `html-block`.
+     */
+    private _handleHtmlToken(
+        token: Extract<TBlockToken, { type: 'html' }>,
+        prevToken: TBlockToken | undefined,
+        parentList: TState[][],
+    ) {
+        const text = token.text.trim();
+        // TODO: Treat html state which only contains one img as paragraph, we maybe add image state in the future.
+        const isSingleImage = /^<img[^<>]+>$/.test(text);
+        if (isSingleImage) {
+            parentList[0].push({ name: 'paragraph' as const, text });
+        }
+        else if (this._tryInlineColumnMarker(text, prevToken, parentList)) {
+            // The marker was merged into the previous paragraph's text; the
+            // inlineRenderer draws the trailing badge, no state of its own.
+        }
+        else {
+            parentList[0].push({ name: 'html-block' as const, text });
+        }
+    }
+
     // `token` is one run of same-kind items (see compatibleTaskList).
     private _buildListState(
         token: Extract<TBlockToken, { type: 'list' }>,
@@ -271,6 +339,7 @@ export class MarkdownToState {
         parentList: TState[][],
         tokens: TBlockToken[],
         trimUnnecessaryCodeBlockEmptyLines: boolean,
+        prevToken?: TBlockToken,
     ) {
         let state: TState;
         let value: string;
@@ -383,23 +452,7 @@ export class MarkdownToState {
             }
 
             case 'html': {
-                const text = token.text.trim();
-                // TODO: Treat html state which only contains one img as paragraph, we maybe add image state in the future.
-                const isSingleImage = /^<img[^<>]+>$/.test(text);
-                if (isSingleImage) {
-                    state = {
-                        name: 'paragraph' as const,
-                        text,
-                    };
-                    parentList[0].push(state);
-                }
-                else {
-                    state = {
-                        name: 'html-block' as const,
-                        text,
-                    };
-                    parentList[0].push(state);
-                }
+                this._handleHtmlToken(token, prevToken, parentList);
                 break;
             }
 

@@ -317,6 +317,45 @@ const commands: CommandDescriptor[] = [
       focusEditorAndExecute(() => bus.emit('paragraph', 'html'))
     }
   },
+
+  // --------------------------------------------------------------------------
+  // Columns (`<!-- begin / split / end -->`)
+  //
+  // No `shortcut` on purpose: §4.5 requires auditing the key matrix against the
+  // existing bindings (table.*, format.*, and the already-adjudicated Ctrl+T
+  // for tables) before committing to one. Until then these are command-palette
+  // only.
+  //
+  // Markers insert inline (§4.6): the comment is appended to the top-level
+  // paragraph at the cursor, so the caret stays before it and typing continues
+  // on its own line. `insert-group` also opens one empty paragraph for the
+  // first column's content; `split` / `end` are meant to be run with the caret
+  // at the end of the column they close.
+
+  {
+    id: 'columns.insert-group',
+    execute: async() => {
+      focusEditorAndExecute(() => bus.emit('columns.insert', {
+        texts: ['<!-- begin -->', '']
+      }))
+    }
+  },
+  {
+    id: 'columns.insert-split',
+    execute: async() => {
+      focusEditorAndExecute(() => bus.emit('columns.insert', {
+        texts: ['<!-- split -->']
+      }))
+    }
+  },
+  {
+    id: 'columns.end-group',
+    execute: async() => {
+      focusEditorAndExecute(() => bus.emit('columns.insert', {
+        texts: ['<!-- end -->']
+      }))
+    }
+  },
   {
     id: 'paragraph.order-list',
     execute: async() => {

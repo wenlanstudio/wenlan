@@ -448,7 +448,11 @@ export const PREVIEW_DOMPURIFY_CONFIG = {
 export const EXPORT_DOMPURIFY_CONFIG = {
     FORBID_ATTR: ['contenteditable'],
     ALLOW_DATA_ATTR: false,
-    ADD_ATTR: ['data-align'],
+    // `data-align` is pre-existing. `data-mdcols` / `data-ratio` are the
+    // column placeholders (§3.2): they must survive sanitizing because they
+    // are the only trigger the DOM post-processing looks for. `div` is already
+    // in the html profile, so no ADD_TAGS is needed.
+    ADD_ATTR: ['data-align', 'data-mdcols', 'data-ratio'],
     USE_PROFILES: {
         html: true,
         svg: true,

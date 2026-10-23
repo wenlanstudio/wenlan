@@ -34,6 +34,19 @@ export { default as TableChessboard } from './ui/tableChessboard';
 export { TableColumnToolbar } from './ui/tableColumnToolbar';
 export { TableDragBar } from './ui/tableDragBar';
 export { TableRowColumMenu } from './ui/tableRowColumMenu';
+export {
+    MDCOLS_ATTR,
+    RATIO_ATTR,
+    analyzeColumns,
+    hasColumnMarkers,
+    parseMarker,
+    parseRatio,
+    placeholderHtml,
+    transformColumnTokens,
+} from './utils/columns/syntax';
+export { postProcessColumns } from './utils/columns/postProcess';
+export { applyEditorColumns, revertEditorColumns } from './utils/columns/editorLayout';
+export type { ColumnAnalysis, ColumnDiagnostic, ColumnGroup, ColumnMarkerInfo, ColumnRule, StructToken } from './utils/columns/syntax';
 export { drawioEmbedUrl, exportDrawio, loadDrawioDiagram, renderDrawio } from './utils/diagram/drawio';
 export { renderDiagramForExport } from './utils/diagram/render';
 export type { IExportRenderOptions, IRenderOptions } from './utils/diagram/render';

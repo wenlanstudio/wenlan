@@ -1,4 +1,5 @@
 import type { Muya } from '../muya';
+import type { IMuyaOptions } from '../types';
 import githubMarkdownCss from 'github-markdown-css/github-markdown-light.css?inline';
 import katexCss from 'katex/dist/katex.css?inline';
 import prismCss from 'prismjs/themes/prism.css?inline';
@@ -12,6 +13,9 @@ import { renderDiagram } from '../utils/diagram/render';
 import { getHighlightHtml } from '../utils/marked';
 import { sanitizeExportHtml } from '../utils/sanitizeExportHtml';
 import { generateGithubSlug } from '../utils/slug';
+import type { ColumnDiagnostic } from '../utils/columns/syntax';
+import { analyzeColumns } from '../utils/columns/syntax';
+import { postProcessColumns } from '../utils/columns/postProcess';
 import { transformFootnotes } from './transformFootnotes';
 
 // The core stylesheets (github-markdown-css, katex, prism) are inlined into the
@@ -41,10 +45,24 @@ const SOFT_NEWLINE_AS_SPACE_OVERRIDE = `
 }
 `;
 
+/**
+ * Anything that carries the engine options. The class only ever reads
+ * `.options`, so the desktop Columns preview (§4.4 #3) can pass a plain
+ * options object instead of instantiating a whole editor for rendering.
+ */
+export type MuyaOptionsLike = { options: Partial<IMuyaOptions> };
+
 export class MarkdownToHtml {
     private _exportContainer: HTMLDivElement | null = null;
 
-    constructor(public markdown: string, private _muya?: Muya) {}
+    /**
+     * Column format diagnostics for the current markdown (§4.1 #7). The list is
+     * rebuilt by `renderHtml`; consumers that want to show them (the desktop
+     * columns view) read it from there. Empty for documents without markers.
+     */
+    warnings: ColumnDiagnostic[] = [];
+
+    constructor(public markdown: string, private _muya?: Muya | MuyaOptionsLike) {}
 
     private async _renderMermaid() {
         const codes = this._exportContainer!.querySelectorAll(
@@ -201,6 +219,10 @@ export class MarkdownToHtml {
             highlightSyntax: this._muya?.options?.highlightSyntax ?? false,
             inlineDiff: this._muya?.options?.inlineDiff ?? false,
             multilineBlockquote: this._muya?.options?.multilineBlockquote ?? false,
+            // §3.1 — opt-in so the conformance path (`renderToStaticHTML`) is
+            // untouched. Only this export/print/PDF path turns markers into
+            // placeholder elements.
+            columns: true,
         });
 
         // Post-process footnotes into the standard GFM / pandoc shape (inline
@@ -220,6 +242,16 @@ export class MarkdownToHtml {
 
         let result: string;
         try {
+            // §4.1 — column post-processing, before mermaid / heading ids so
+            // those passes see the final structure. Diagnostics come from
+            // `analyzeColumns` (the source-level truth that knows line
+            // numbers); this pass only appends anything it had to repair on
+            // its own, which is normally nothing.
+            this.warnings = [
+                ...analyzeColumns(this.markdown).diagnostics,
+                ...postProcessColumns(exportContainer),
+            ];
+
             // render only render the light theme of mermaid and diagram...
             await this._renderMermaid();
             await this._renderDiagram();

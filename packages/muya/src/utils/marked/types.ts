@@ -12,6 +12,12 @@ export interface ILexOption {
     highlightSyntax?: boolean;
     inlineDiff?: boolean;
     multilineBlockquote?: boolean;
+    /**
+     * Opt-in `<!-- begin / split / end -->` column support (§3.1). Off by
+     * default so the markers stay inert everywhere except the pipeline that
+     * explicitly asks for them.
+     */
+    columns?: boolean;
 }
 
 export type Heading = Tokens.Heading & {

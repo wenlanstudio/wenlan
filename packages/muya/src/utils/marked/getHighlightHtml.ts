@@ -1,8 +1,11 @@
 import type { ILexOption } from './types';
+import type { Token } from 'marked';
 import { Marked } from 'marked';
 import { markedHighlight } from 'marked-highlight';
 import Prism from 'prismjs';
 import { diagramLangs } from '../diagram/fence';
+import { transformColumnTokens } from '../columns/syntax';
+import type { StructToken } from '../columns/syntax';
 import cjkEmStrongExtension from './extensions/cjkEmStrong';
 import emojiExtension from './extensions/emoji';
 import footnoteExtension from './extensions/footnote';
@@ -35,7 +38,7 @@ function highlight(code: string, lang: string) {
 
 export function getHighlightHtml(src: string, options: ILexOption = {}) {
     options = Object.assign({}, DEFAULT_OPTIONS, options);
-    const { footnote, frontMatter, texMathDollars, texMathGfm, texMathSingleBackslash, texMathDoubleBackslash, superSubScript, highlightSyntax, inlineDiff, multilineBlockquote }
+    const { footnote, frontMatter, texMathDollars, texMathGfm, texMathSingleBackslash, texMathDoubleBackslash, superSubScript, highlightSyntax, inlineDiff, multilineBlockquote, columns }
         = options;
 
     // Build a fresh Marked instance per call. `Marked.use({ walkTokens })`
@@ -104,6 +107,22 @@ export function getHighlightHtml(src: string, options: ILexOption = {}) {
 
     if (footnote)
         marked.use(footnoteExtension());
+
+    // §3.1 — turn `<!-- begin / split / end -->` into placeholder elements
+    // before DOMPurify strips them. Hooked at `processAllTokens`, which sits
+    // between the lexer and `walkTokens` inside `marked.parse`, so this keeps
+    // the whole parse pipeline intact: preprocess/postprocess hooks and
+    // walkTokens still run (walkTokens is what turns ```math blocks into
+    // multiplemath and tags heading styles). Doing lexer()+parser() by hand
+    // would silently skip all of that.
+    if (columns) {
+        marked.use({
+            hooks: {
+                processAllTokens: (tokens: Token[]) =>
+                    transformColumnTokens(tokens as unknown as StructToken[]) as unknown as Token[],
+            },
+        });
+    }
 
     let html = '';
 

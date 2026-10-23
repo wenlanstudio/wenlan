@@ -21,11 +21,11 @@
 
     <!-- Sub-view toggle -->
     <div
-      v-if="availableSubViews.length > 1"
+      v-if="visibleSubViews.length > 1"
       class="sub-views"
     >
       <button
-        v-for="sv in availableSubViews"
+        v-for="sv in visibleSubViews"
         :key="sv.key"
         class="sub-view-btn"
         :class="{ active: subView === sv.key }"
@@ -60,9 +60,15 @@ import { t } from '@/i18n'
 
 const editorViewStore = useEditorViewStore()
 const preferencesStore = usePreferencesStore()
-const { mainView, subView, availableSubViews } = storeToRefs(editorViewStore)
+const { mainView, subView, availableSubViews, hasColumns } = storeToRefs(editorViewStore)
 const { setMainView, setSubView } = editorViewStore
 const { editorLineWidth } = storeToRefs(preferencesStore)
+
+// §4.4 #5 — Columns only shows for a document that actually has a `begin`
+// marker (and therefore only when a file is open).
+const visibleSubViews = computed(() =>
+  availableSubViews.value.filter((sv) => sv.key !== 'columns' || hasColumns.value)
+)
 
 const handleMainViewClick = (mv: MainView) => {
   if (mainView.value === mv) return

@@ -103,6 +103,13 @@ const COMMAND_KEY_MAP: Record<string, string> = {
   'paragraph.order-list': 'commands.paragraph.orderList',
   'paragraph.bullet-list': 'commands.paragraph.bulletList',
   'paragraph.task-list': 'commands.paragraph.taskList',
+
+  // ============================================
+  // # Columns (`<!-- begin / split / end -->`)
+  // ============================================
+  'columns.insert-group': 'commands.columns.insertGroup',
+  'columns.insert-split': 'commands.columns.insertSplit',
+  'columns.end-group': 'commands.columns.endGroup',
   'paragraph.loose-list-item': 'commands.paragraph.looseListItem',
 
   // Paragraph types

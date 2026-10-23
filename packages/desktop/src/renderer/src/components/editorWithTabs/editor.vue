@@ -91,17 +91,18 @@ import {
   type TableActionType
 } from '@muyajs/core'
 import { getMuyaLocale } from '@/util/muyaLocale'
+import { buildMuyaViewOptions, resolveCodeFont, resolveEditorFont } from '@/util/muyaViewOptions'
 import { exportStyledHTML, type HeaderFooterPart } from '@/util/exportHtml'
 import { applyCursor, isIndexCursor } from '@/util/cursor'
 import EditorSearch from '../search/index.vue'
 import MediaViewer from '../mediaViewer/index.vue'
 import bus from '@/bus'
-import { DEFAULT_EDITOR_FONT_FAMILY, DEFAULT_CODE_FONT_FAMILY } from '@/config'
 import notice from '@/services/notification'
 import Printer from '@/services/printService'
 import { SpellcheckerLanguageCommand } from '@/commands'
 import { SpellChecker } from '@/spellchecker'
 import { isMac, animatedScrollTo } from '@/util'
+import { readViewAnchor, scrollViewToAnchor, syncScrollAnchor } from '@/util/viewScrollSync'
 import { moveImageToFolder, uploadImage } from '@/util/fileSystem'
 import { guessClipboardFilePath } from '@/util/clipboard'
 import { dataURLToFile } from '@/util/dataURLToFile'
@@ -112,7 +113,7 @@ import {
   TOP_LEVEL_HEADINGS_SELECTOR
 } from '@/util/tocNavigation'
 import { findActiveHeadingSlug, type HeadingPosition } from '@/util/findActiveHeading'
-import { addCommonStyle, setEditorWidth, setSpreadMode } from '@/util/theme'
+import { addCommonStyle, setEditorWidth } from '@/util/theme'
 import { usePreferencesStore } from '@/store/preferences'
 import { useEditorStore } from '@/store/editor'
 import { useProjectStore } from '@/store/project'
@@ -163,7 +164,6 @@ const props = defineProps<{
   cursor?: unknown
   textDirection: string
   platform?: string
-  spreadMode?: boolean
 }>()
 
 // Get stores
@@ -237,10 +237,6 @@ const { projectTree } = storeToRefs(projectStore)
 const toSequenceTheme = (value: string): IMuyaOptions['sequenceTheme'] =>
   value as IMuyaOptions['sequenceTheme']
 
-const defaultFontFamily = DEFAULT_EDITOR_FONT_FAMILY
-const resolveEditorFont = (family: string): string =>
-  family ? `${family}, ${defaultFontFamily}` : defaultFontFamily
-const resolveCodeFont = (family: string): string => `${family}, ${DEFAULT_CODE_FONT_FAMILY}`
 const selectionChange = ref<unknown>(null)
 // `shallowRef`: the engine instance is `markRaw`d anyway, and a deep ref
 // would map `Muya` through `UnwrapRef` and lose the class's own type.
@@ -632,12 +628,6 @@ watch(hideQuickInsertHint, (value, oldValue) => {
 watch(editorLineWidth, (value, oldValue) => {
   if (value !== oldValue) {
     setEditorWidth(value)
-  }
-})
-
-watch(() => props.spreadMode, (value, oldValue) => {
-  if (value !== oldValue) {
-    setSpreadMode(value ?? false)
   }
 })
 
@@ -1667,6 +1657,29 @@ const handleInsertParagraph = (location: unknown) => {
   editor.value && editor.value.insertParagraph(location as Parameters<Muya['insertParagraph']>[0])
 }
 
+// §4.5 / §4.6 — column marker commands. Markers go inline: the comment is
+// appended to the top-level paragraph at the cursor, where the inline renderer
+// draws it as a trailing badge while the export pipeline still reads it as a
+// top-level token. A cursor outside a top-level paragraph (heading / list /
+// blockquote / code block) falls back to a standalone paragraph, which
+// htmlPreview renders as a block badge (§4.6 fallback; §1.3 #7 stays intact).
+// An empty string still inserts a plain paragraph — `columns.insert-group`
+// uses one to open an empty first column.
+const handleInsertColumns = (payload: unknown) => {
+  if (!editor.value) return
+  const texts = (payload as { texts?: unknown } | undefined)?.texts
+  if (!Array.isArray(texts)) return
+  for (const text of texts) {
+    if (typeof text !== 'string') continue
+    if (text === '') {
+      editor.value.insertParagraph('after', '', true)
+      continue
+    }
+    if (!editor.value.insertColumnMarker(text))
+      editor.value.insertParagraph('after', text, true)
+  }
+}
+
 const blurEditor = () => {
   editor.value?.blur(false, true)
 }
@@ -1780,43 +1793,19 @@ onMounted(() => {
   }
 
   const options: Partial<IMuyaOptions> = {
+    // Everything that affects how the document looks is shared with the
+    // Columns view (§4.4 #3) so the two can never drift apart. Only
+    // editing-only options stay inline below.
+    ...buildMuyaViewOptions(),
     focusMode: focus.value,
     markdown: props.markdown,
     locale: getMuyaLocale(language.value),
-    preferLooseListItem: preferLooseListItem.value,
     autoPairBracket: autoPairBracket.value,
     autoPairMarkdownSyntax: autoPairMarkdownSyntax.value,
-    trimUnnecessaryCodeBlockEmptyLines: trimUnnecessaryCodeBlockEmptyLines.value,
     autoPairQuote: autoPairQuote.value,
-    bulletListMarker: bulletListMarker.value,
-    orderListDelimiter: orderListDelimiter.value,
-    tabSize: tabSize.value,
-    fontSize: fontSize.value,
-    lineHeight: lineHeight.value,
-    editorFontFamily: resolveEditorFont(editorFontFamily.value),
-    codeFontSize: codeFontSize.value,
-    codeFontFamily: resolveCodeFont(codeFontFamily.value),
-    wrapCodeBlocks: wrapCodeBlocks.value,
-    codeBlockLineNumbers: codeBlockLineNumbers.value,
-    listIndentation: listIndentation.value,
-    frontmatterType: frontmatterType.value,
-    superSubScript: superSubScript.value,
-    footnote: footnote.value,
-    texMathDollars: texMathDollars.value,
-    texMathGfm: texMathGfm.value,
-    texMathSingleBackslash: texMathSingleBackslash.value,
-    texMathDoubleBackslash: texMathDoubleBackslash.value,
-    highlightSyntax: highlightSyntax.value,
-    inlineDiff: inlineDiff.value,
-    multilineBlockquote: multilineBlockquote.value,
-    disableHtml: !isHtmlEnabled.value,
-    softNewlineAsSpace: softNewlineAsSpace.value,
     hideQuickInsertHint: hideQuickInsertHint.value,
     hideLinkPopup: hideLinkPopup.value,
     autoCheck: autoCheck.value,
-    sequenceTheme: toSequenceTheme(sequenceTheme.value),
-    plantumlServer: preferencesStore.plantumlServer,
-    drawioServer: preferencesStore.drawioServer,
     // Matplotlib renders out-of-process: the main process runs the document's
     // Python snippet and hands back an image, which lands in `target`.
     renderExternalDiagram: async(type, code, target) => {
@@ -1842,18 +1831,6 @@ onMounted(() => {
     // copy-to-assets on a pasted image file silently no-op or insert raw paths.
     imageAction: muyaImageAction,
     getPathForFile: (file: File) => window.electron.webUtils.getPathForFile(file)
-  }
-
-  if (/dark/i.test(theme.value)) {
-    Object.assign(options, {
-      mermaidTheme: 'dark',
-      vegaTheme: 'dark'
-    })
-  } else {
-    Object.assign(options, {
-      mermaidTheme: 'default',
-      vegaTheme: 'latimes'
-    })
   }
 
   // `markRaw` keeps Vue from wrapping the Muya instance in a reactive Proxy.
@@ -1921,6 +1898,7 @@ onMounted(() => {
   bus.on('createParagraph', handleParagraph)
   bus.on('deleteParagraph', handleParagraph)
   bus.on('insertParagraph', handleInsertParagraph)
+  bus.on('columns.insert', handleInsertColumns)
   bus.on('scroll-to-header', scrollToHeader)
   bus.on('scroll-to-anchor-element', scrollToAnchorElement)
   bus.on('screenshot-captured', handleScreenShot)
@@ -1966,9 +1944,22 @@ onMounted(() => {
   scrollHandler = () => {
     if (currentFile.value) {
       editorStore.updateScrollPosition(currentFile.value.id, container.scrollTop)
+      // 视图间滚动同步（TODO1 #3）：记录本 tab 的块锚点，切到 word/columns
+      // 时由 columnsPreview 恢复，切回来时由下面的挂载逻辑恢复。
+      syncScrollAnchor(container, currentFile.value.id)
     }
   }
   container.addEventListener('scroll', scrollHandler, { passive: true })
+
+  // 视图切入（word/columns → word/page）：本组件由 `v-if` 重建，tab 切换
+  // 不会走到这里（那条路径由 file-changed 的 scrollTop 恢复），所以有锚点
+  // 就意味着用户是从 columns 视图切回来的——停到同一个文档区域。无锚点时
+  // 保持默认（顶部）。rAF 一帧等布局稳定后再量位置。
+  requestAnimationFrame(() => {
+    const id = currentFile.value?.id
+    const anchor = id != null ? readViewAnchor(id) : null
+    if (anchor !== null) scrollViewToAnchor(getScrollContainer(), anchor)
+  })
 
   editor.value.on(
     'format-click',
@@ -2066,7 +2057,6 @@ onMounted(() => {
   document.addEventListener('keyup', keyup)
 
   setEditorWidth(editorLineWidth.value)
-  setSpreadMode(props.spreadMode ?? false)
 
   // Read-only guard: intercept all beforeinput events on the editor surface.
   const domNode = editor.value.domNode
@@ -2106,6 +2096,7 @@ onBeforeUnmount(() => {
   bus.off('createParagraph', handleParagraph)
   bus.off('deleteParagraph', handleParagraph)
   bus.off('insertParagraph', handleInsertParagraph)
+  bus.off('columns.insert', handleInsertColumns)
   bus.off('scroll-to-header', scrollToHeader)
   bus.off('scroll-to-anchor-element', scrollToAnchorElement)
   bus.off('screenshot-captured', handleScreenShot)
@@ -2141,7 +2132,6 @@ onBeforeUnmount(() => {
     editor.value.destroy()
     editor.value = null
   }
-  setSpreadMode(false)
 })
 </script>
 

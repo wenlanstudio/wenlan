@@ -43,6 +43,16 @@ declare global {
              */
             rebuildMuya: (options?: Partial<IMuyaOptions>) => void;
             renderDiagramForExport: (options: IExportRenderOptions) => Promise<void>;
+            /**
+             * Applies the Columns layout to the live editor DOM (the way the
+             * desktop Columns view does) and reports the resulting geometry.
+             * `null` when the engine's `.mu-container` is missing.
+             */
+            applyEditorColumns: (markdown?: string) => {
+                groups: number;
+                hidden: number;
+                cols: Array<{ text: string; width: number }>;
+            } | null;
         };
 
         // XSS canary used by tests/security/sanitize.spec.ts. If a malicious

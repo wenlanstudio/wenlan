@@ -2,6 +2,32 @@
 
 This file provides guidance to AI agents when working with code in this repository.
 
+## 人机协作开发协议
+
+- 用户与AI：
+  - 双方共同遵循
+    - 名正言顺（名正方能言顺：概念正确，理论才正确；命名规范，代码逻辑才能顺畅）
+    - 名副其实（名实相符：文档与代码相符、概念与理论相符、变量与代码逻辑相符等）
+  - 用户：不断提出新的需求，推动项目演进
+  - AI：
+    - AI需要拥有独立自主的思想，实事求是、客观中立
+    - 不向用户的不合理需求妥协
+    - 根据用户需求，捕捉用户的精神状态，如用户词不达意，提醒用户头脑清醒后再下达指令
+- AI与文档：用户的文档可能不准确，请仔细甄别，可修改优化文档；
+- 文档与设计：名副其实，文档和设计相匹配
+  - 文档：
+    - 采用合适的结构进行思想陈述
+    - 文档言简意赅
+  - 设计：
+    - 追求规范的项目架构设计
+    - 可考虑配以合适的图表
+- 设计与开发：
+  - 边开发边修改设计
+  - 边设计边进行项目重构
+- 开发与Bug：不能为了快速修复bug、省事、省时而不断地打补丁；
+- Bug与测试：复现 → 根因分析 → 修复 → 回归测试 → 关闭
+- 周而复始，直至项目成熟完善
+
 ## Project Overview
 
 MarkText is a WYSIWYG markdown editor built on Electron + Vue 3. It supports CommonMark, GitHub Flavored Markdown, math (KaTeX), Mermaid diagrams, PlantUML, and multiple editing modes (focus, typewriter, source-code).

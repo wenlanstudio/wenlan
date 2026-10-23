@@ -2,6 +2,7 @@ import type { Muya } from '../../../muya';
 import type { IHtmlBlockState, TState } from '../../../state/types';
 import { CLASS_NAMES, PREVIEW_DOMPURIFY_CONFIG } from '../../../config';
 import { sanitize } from '../../../utils';
+import { parseMarker } from '../../../utils/columns/syntax';
 import { getImageSrc } from '../../../utils/image';
 import logger from '../../../utils/logger';
 import Parent from '../../base/parent';
@@ -22,6 +23,29 @@ export function isEmptyHtmlBlock(html: string): boolean {
 
 class HTMLPreview extends Parent {
     private _html: string;
+
+    // 点击块级徽标 → 激活 html-block 的源码编辑。html-preview 是
+    // contenteditable=false 附件，点击默认不会把焦点送进 html-container；
+    // 块级徽标不依附段落、没有行内徽标那样的选中 / 删除路径，点击激活是它
+    // 唯一的编辑入口（§4.6）。监听绑在 domNode 上——update() 每次重建
+    // innerHTML，绑在徽标元素上会随重建丢失。
+    private _handleBadgeClick = (event: MouseEvent) => {
+        const target = event.target as HTMLElement | null;
+        if (!target?.closest('.mu-mdcols-marker'))
+            return;
+
+        const htmlBlock = this.parent;
+        if (!htmlBlock)
+            return;
+
+        htmlBlock.active = true;
+        const content = htmlBlock.firstContentInDescendant();
+        if (content) {
+            // 光标落在注释原文末尾——`begin 30:70` 的占比就在那里改。
+            content.setCursor(content.text.length, content.text.length, true);
+            content.domNode?.focus();
+        }
+    };
 
     static override blockName = 'html-preview';
 
@@ -46,6 +70,7 @@ class HTMLPreview extends Parent {
             contenteditable: 'false',
         };
         this.createDomNode();
+        this.domNode!.addEventListener('click', this._handleBadgeClick);
         this.update();
     }
 
@@ -62,6 +87,24 @@ class HTMLPreview extends Parent {
                 = `<div class="${CLASS_NAMES.MU_EMPTY}">&lt;Empty HTML Block&gt;</div>`;
         }
         else {
+            // Editing-only visualization (§4.6): a marker that did NOT get
+            // inlined into a paragraph (blank line before it, or the previous
+            // block is a heading / list) renders the SAME badge as the inline
+            // form — one visual form for markers, whichever way they are
+            // written. Clicking it activates the block's source editing (see
+            // `_handleBadgeClick`). The badge doubles as the Columns view's
+            // regroup boundary carrier: `data-kind` / `data-ratio` are what
+            // `editorLayout.ts` reads.
+            const marker = parseMarker(html);
+            if (marker) {
+                // `data-ratio` is how the Columns view recovers the requested
+                // column widths from the rendered DOM (§4.6 / editorLayout).
+                const ratioAttr = marker.ratioText ? ` data-ratio="${marker.ratioText}"` : '';
+                this.domNode!.innerHTML
+                    = `<span class="mu-mdcols-marker mu-mdcols-inline mu-mdcols-${marker.kind}" data-kind="${marker.kind}"${ratioAttr}></span>`;
+                return;
+            }
+
             const parser = new DOMParser();
             const doc = parser.parseFromString(htmlContent, 'text/html');
             const imgs = doc.documentElement.querySelectorAll('img');

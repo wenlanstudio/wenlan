@@ -957,6 +957,36 @@ export class Muya {
     }
 
     /**
+     * Append a column marker comment (`<!-- begin / split / end -->`) to the end
+     * of the top-level paragraph at the cursor (§4.6 inline insertion). The
+     * comment owns its own line inside the paragraph text, so the inline
+     * renderer draws it as a trailing badge while the export pipeline still
+     * reads it as a top-level token.
+     *
+     * @returns `false` when the cursor is not inside a top-level paragraph
+     *   (heading / list / blockquote / code block) — those spots keep the
+     *   block-level marker inserted via `insertParagraph`.
+     */
+    insertColumnMarker(comment: string): boolean {
+        const block = this._outmostBlockAtCursor();
+        if (!block || block.blockName !== 'paragraph')
+            return false;
+
+        const content = block.firstContentInDescendant();
+        if (!content)
+            return false;
+
+        const oldText = content.text;
+        content.text = oldText ? `${oldText}\n${comment}` : comment;
+        content.update();
+        // Caret back at the end of the original text: typing continues *before*
+        // the marker, which keeps the comment on its own line.
+        content.setCursor(oldText.length, oldText.length, true);
+
+        return true;
+    }
+
+    /**
      * Delete the block at the current cursor, moving the cursor to an adjacent
      * block, or to a fresh empty paragraph when it was the only block.
      */

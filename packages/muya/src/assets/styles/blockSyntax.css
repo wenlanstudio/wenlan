@@ -212,6 +212,52 @@
     opacity: 0;
 }
 
+/* mdcols column markers — `<!-- begin [ratio] -->` / `<!-- split -->` /
+   `<!-- end -->` that did NOT get inlined into a paragraph (blank line before
+   them, or a heading / list above) render the SAME badge element as the inline
+   form below (htmlPreview.ts): one visual form, whichever way markers are
+   written. The badge doubles as the Columns view's regroup boundary carrier,
+   so it carries `data-kind` / `data-ratio` (editorLayout.ts). */
+.mu-html-preview .mu-mdcols-marker {
+    margin: 0.15em 0;
+}
+
+/* Inline column badges (§4.6): a marker comment that owns its own line right
+   under a paragraph is inlined into that paragraph's text by markdownToState
+   and rendered here as a trailing badge instead of a standalone rule. Kept
+   visually weaker than text (0.85em, marker color) so the boundary reads as an
+   annotation; hover deepens the color to hint it is interactive. Kind is
+   carried by both `data-kind` (editorLayout) and the label prefix. */
+.mu-mdcols-inline {
+    display: inline-block;
+
+    margin: 0 0.2em;
+
+    font-size: 0.85em;
+    line-height: 1;
+    color: var(--mdcols-marker-color, var(--editor-color-30));
+    white-space: nowrap;
+
+    user-select: none;
+    cursor: default;
+}
+
+.mu-mdcols-inline::before {
+    content: '⇥ 分栏';
+}
+
+.mu-mdcols-inline.mu-mdcols-begin::before {
+    content: '⇤ 分栏开始';
+}
+
+.mu-mdcols-inline.mu-mdcols-end::before {
+    content: '⇥ 分栏结束';
+}
+
+.mu-mdcols-inline:hover {
+    color: var(--editor-color-50);
+}
+
 /* code block */
 .mu-code-block,
 .mu-frontmatter,
@@ -1110,4 +1156,52 @@ pre.mu-active.mu-math-container::after {
 
 .mu-container figure.mu-footnote > i.mu-footnote-backlink:hover {
     color: var(--theme-color);
+}
+
+/* Columns view — the Page editor rendered read-only, with `begin / split / end`
+   groups laid out as real columns (`editorLayout.ts`). Layout only: every
+   colour, font and table rule comes from the editor styles, so the two views
+   cannot drift apart. */
+.mu-mdcols-hidden {
+    display: none;
+}
+
+.mu-mdcols-col {
+    /* Column content is centred on both axes, matching the export layout. */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    text-align: center;
+}
+
+.mu-mdcols-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1em;
+    align-items: stretch;
+}
+
+.mu-mdcols-group > .mu-mdcols-col {
+    /* `flex-basis: 0` lets the grow factor alone decide the width, so a
+       validated `data-ratio` maps straight onto flex-grow (editorLayout.ts). */
+
+    flex: 1 1 0;
+
+    /* Narrow windows wrap and stack instead of squeezing. */
+    min-width: 18em;
+}
+
+.mu-mdcols-group .mu-mdcols-col > blockquote,
+.mu-mdcols-group .mu-mdcols-col > figure.mu-table,
+.mu-mdcols-group .mu-mdcols-col > ol,
+.mu-mdcols-group .mu-mdcols-col > pre.mu-code-block,
+.mu-mdcols-group .mu-mdcols-col > ul {
+    /* Long-form blocks read badly centred, and a table would shrink to its
+       content instead of filling the column. Keep them full width and keep
+       their own text left aligned — only the block itself is centred. */
+    align-self: stretch;
+
+    text-align: left;
 }

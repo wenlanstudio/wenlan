@@ -5,7 +5,22 @@ import type { H, HTMLTagToken, ImageToken, ISyntaxRenderOptions, Token } from '.
 import type Renderer from './index';
 import { BLOCK_TYPE6, CLASS_NAMES } from '../../config';
 import { snakeToCamel } from '../../utils';
+import { parseMarker } from '../../utils/columns/syntax';
 import sanitize, { isValidAttribute } from '../../utils/dompurify';
+
+/**
+ * 注释 token 是否位于段落行首：段首，或其前一个 token 是 soft_line_break。
+ * 与 `markdownToState` 的合并条件（注释紧贴段落）互为镜像 —— 合并后注释在
+ * 段落 text 里总是独占一行，此处据此决定渲染徽标还是普通 raw html。
+ */
+function isAtLineStart(token: HTMLTagToken): boolean {
+    const siblings = token.parent;
+    const index = siblings.indexOf(token);
+    if (index < 0)
+        return false;
+
+    return index === 0 || siblings[index - 1].type === 'soft_line_break';
+}
 
 function renderHtmlTagChildren(
     renderer: Renderer,
@@ -118,6 +133,29 @@ export default function htmlTag(
     }: ISyntaxRenderOptions & { token: HTMLTagToken },
 ) {
     const { tag, openTag, closeTag, children } = token;
+
+    // 分栏标记行内徽标（§4.6）：marker 注释独占段落行（段首或其前是
+    // soft_line_break）时渲染为段尾徽标。该条件与 markdownToState 的合并
+    // 条件互洽 —— 只有源码里独占一行的注释才会进入段落 text 的行首位置，
+    // 「显示徽标 ⟷ 导出时分栏生效」因此同构；同行手打的注释走下面的普通
+    // 渲染（§1.3 #7，不参与分栏）。MU_OUTPUT_REMOVE 让剪贴板 HTML 不泄漏
+    // 徽标 DOM（真实文本由状态层的段落 text 保真）。
+    const columnMarker = parseMarker(openTag);
+    if (columnMarker && isAtLineStart(token)) {
+        return [
+            h(
+                `span.${CLASS_NAMES.MU_INLINE_RULE}.${CLASS_NAMES.MU_OUTPUT_REMOVE}.mu-mdcols-marker.mu-mdcols-inline.mu-mdcols-${columnMarker.kind}`,
+                {
+                    attrs: {
+                        'spellcheck': 'false',
+                        'data-kind': columnMarker.kind,
+                        // 栏宽占比原文，columns 视图据此恢复各栏 flex-grow（§4.6）。
+                        ...(columnMarker.ratioText ? { 'data-ratio': columnMarker.ratioText } : {}),
+                    },
+                },
+            ),
+        ];
+    }
 
     // `<br>` is a void tag, but its marker still hides with the cursor.
     const className = children?.length || tag === 'br'

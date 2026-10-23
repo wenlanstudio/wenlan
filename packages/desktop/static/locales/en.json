@@ -778,6 +778,15 @@
     "copyright": "Copyright © Luo Ran 2017-{year}",
     "copyrightContributors": "Made with <3 by Github Contributors"
   },
+  "view": {
+    "pptView": "Slide View",
+    "excelView": "Sheet View",
+    "comingSoon": "Coming soon",
+    "pageWidth": "Page Width",
+    "cursorPosition": "Cursor Position",
+    "readOnlyLocked": "Read-only mode",
+    "readOnlyUnlocked": "Editable mode"
+  },
   "commands": {
     "mt": {
       "hide": "Hide MarkText",
@@ -900,6 +909,11 @@
       "cursorPosition": "Cursor Position",
       "readOnlyLocked": "Read-only mode",
       "readOnlyUnlocked": "Editable mode"
+    },
+    "columns": {
+      "insertGroup": "Insert Column Group",
+      "insertSplit": "Insert Column Split",
+      "endGroup": "End Column Group"
     },
     "tabs": {
       "cycleForward": "Cycle Forward",

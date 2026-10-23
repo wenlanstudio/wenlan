@@ -236,3 +236,64 @@
 
     text-align: center;
 }
+
+/* `<!-- begin / split / end -->` columns — layout only, no colors or fonts,
+   so it stays consistent with the always-light export theme. One stylesheet
+   covers every outlet because `generate()` inlines it: exported HTML file,
+   PDF, print and the iframe preview. */
+.markdown-body .mdcols-col {
+    /* A column is a flex box so its content can be centred on both axes:
+       `justify-content` works on the vertical main axis, `align-items` on the
+       horizontal cross axis (`text-align` then centres the text inside the
+       blocks that stay full width). */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    text-align: center;
+}
+
+.markdown-body .mdcols-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1em;
+}
+
+.markdown-body .mdcols-group > .mdcols-col {
+    /* Equal widths by default; a validated `data-ratio` is written by the
+       post-processing as an inline flex-grow, and `flex-basis: 0` is what
+       makes the grow factor alone decide the width. */
+
+    flex: 1 1 0;
+
+    /* Below this the columns wrap and stack instead of squeezing. */
+    min-width: 18em;
+}
+
+.markdown-body .mdcols-col > blockquote,
+.markdown-body .mdcols-col > ol,
+.markdown-body .mdcols-col > pre,
+.markdown-body .mdcols-col > table,
+.markdown-body .mdcols-col > ul {
+    /* Long-form blocks read badly when centred: keep them full width, and
+       keep their own text left aligned — only the block itself is centred. */
+    align-self: stretch;
+
+    text-align: left;
+}
+
+.markdown-body .mdcols-col > *:first-child {
+    /* github-markdown-css gives every `> *` a top margin, which would show up
+       as a stray gap at the top of each column once wrapped. */
+    margin-top: 0;
+}
+
+@media print {
+    /* Paper width is fixed (A4 body area is roughly 46em), so the 18em floor
+       would wrap a three-column group into a 2+1 layout. Print / PDF always
+       lays the columns out side by side. */
+    .markdown-body .mdcols-group > .mdcols-col {
+        min-width: 0;
+    }
+}

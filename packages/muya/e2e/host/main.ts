@@ -1,6 +1,7 @@
 /* eslint-disable antfu/no-top-level-await */
 import type { ILocale, IMuyaOptions, TState } from '@muyajs/core';
 import {
+    applyEditorColumns,
     CodeBlockLanguageSelector,
     de,
     EmojiSelector,
@@ -9,7 +10,6 @@ import {
     FootnoteTool,
     fr,
     ImageEditTool,
-    ImageResizeBar,
     ImageToolBar,
     InlineFormatToolbar,
     ja,
@@ -66,7 +66,8 @@ Muya.use(FootnoteTool);
 Muya.use(InlineFormatToolbar);
 Muya.use(ImageEditTool, { imagePathPicker, imageAction });
 Muya.use(ImageToolBar);
-Muya.use(ImageResizeBar);
+// `ImageResizeBar` was removed from the engine; the host no longer registers
+// it (keeping the import broke module loading for the whole suite).
 Muya.use(CodeBlockLanguageSelector);
 Muya.use(LinkTools, {
     jumpClick: (linkInfo: { href?: string } | null) => {
@@ -134,6 +135,31 @@ window.__e2e = {
         const fresh = makeEditorNode();
         muya = bootMuya(fresh, { ...HOST_OPTIONS, ...options });
         window.muya = muya;
+    },
+    /**
+     * Drive the Columns view layout from a spec: swap the document (when
+     * `markdown` is given) and regroup the live `.mu-container` exactly the way
+     * `columnsPreview.vue` does. Returns measured groups so a spec can assert
+     * real layout instead of just class names.
+     */
+    applyEditorColumns: (markdown?: string) => {
+        if (typeof markdown === 'string')
+            muya.setContent(markdown);
+        const container = muya.domNode.querySelector<HTMLElement>('.mu-container');
+        if (!container)
+            return null;
+        applyEditorColumns(container);
+
+        return {
+            groups: container.querySelectorAll('.mu-mdcols-group').length,
+            hidden: container.querySelectorAll('.mu-mdcols-hidden').length,
+            cols: [...container.querySelectorAll<HTMLElement>('.mu-mdcols-col')].map(
+                (col) => ({
+                    text: col.textContent?.trim() ?? '',
+                    width: Math.round(col.getBoundingClientRect().width),
+                }),
+            ),
+        };
     },
 };
 

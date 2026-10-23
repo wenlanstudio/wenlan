@@ -221,37 +221,9 @@ export const setEditorWidth = (value: string): void => {
   styleEle.innerHTML = result
 }
 
-const SPREAD_STYLE_ID = 'editor-spread-mode'
-
-export const setSpreadMode = (enabled: boolean): void => {
-  let styleEle = document.querySelector(`#${SPREAD_STYLE_ID}`) as HTMLStyleElement | null
-  if (!enabled) {
-    if (styleEle) {
-      styleEle.remove()
-    }
-    return
-  }
-  if (!styleEle) {
-    styleEle = document.createElement('style')
-    styleEle.setAttribute('id', SPREAD_STYLE_ID)
-    document.head.appendChild(styleEle)
-  }
-  // Double-page spread: two CSS columns that fill the available container width.
-  // The container stretches to 100 % so the columns adapt automatically;
-  // break-inside: avoid keeps block elements from being sliced across the
-  // column boundary.
-  styleEle.innerHTML = `
-    .mu-container {
-      column-count: 2 !important;
-      column-gap: 40px !important;
-      width: 100% !important;
-      max-width: none !important;
-    }
-    .mu-container > .mu-editor > * {
-      break-inside: avoid;
-    }
-  `
-}
+// `setSpreadMode` (the old double-page `reading` view) was removed along with
+// that view — see the `columns` preview, which renders the real export
+// pipeline instead of forcing `.mu-container` into two CSS columns.
 
 export interface CommonStyleOptions {
   codeFontFamily: string
