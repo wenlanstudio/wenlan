@@ -209,7 +209,11 @@ export const setEditorWidth = (value: string): void => {
     // camelCase var (source mode) and the kebab-case var the active
     // @muyajs/core engine reads for `.mu-container` max-width (issue #4828).
     const width = `calc(100px + ${value})`
-    result = `:root { --editorAreaWidth: ${width}; --editor-area-width: ${width}; }`
+    // `!important` — theme sheets also declare these vars on `:root`; this
+    // runtime style element can end up earlier in <head> than the theme one
+    // (it is applied at app root before the theme installs), so plain source
+    // order would let the theme default silently win over the preference.
+    result = `:root { --editorAreaWidth: ${width} !important; --editor-area-width: ${width} !important; }`
   }
   let styleEle = document.querySelector(`#${EDITOR_WIDTH_STYLE_ID}`) as HTMLStyleElement | null
   if (!styleEle) {

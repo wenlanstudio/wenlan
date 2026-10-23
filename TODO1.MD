@@ -17,7 +17,15 @@
   - excel/tables（还未开发）
   - dev/md源码
   这些都是文档的不同视图，使他们多视图同步滚动进度（现在有bug，请重做这个功能吧）；
-- [ ] 使用同一个滑块控制不同视图：
+- [x] 使用同一个滑块控制不同视图：
   - word/page 、word/columns 、 excel/tables（还未开发） 、dev/md源码 ： 调整页面宽度；
   - ppt/slide（还未开发） ： 调整幻灯片大小（放大缩小）
   - ppt/present（还未开发）： 幻灯片放映模式无需要滑块（）。
+  > 已通：滑块的职责收进 `editorView` store 的视图元数据（`slider` 字段 +
+  > `sliderDuty` 计算属性）：word/page、word/columns、dev/source 均为
+  > `page-width`，右下角滑块在这三个视图显示并共用 `editorLineWidth` 偏好；
+  > 页宽样式改由常驻的 app.vue 应用（此前只在 word/page 挂载时应用，直接以
+  > 分栏/源码视图启动的窗口会丢失偏好）。未开发的视图接入方式：在
+  > `MAIN_VIEW_META` 里把对应子视图 `implemented` 置 true 即可——excel/sheet
+  > 声明为 `page-width`，ppt/slide 声明为 `slide-zoom`（滑块含义为缩放，
+  > 待该视图落地时接线），ppt/present 声明为 `none`（不显示滑块）。

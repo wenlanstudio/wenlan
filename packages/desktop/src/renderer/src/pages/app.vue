@@ -121,7 +121,7 @@
 import { computed, watch, nextTick, onMounted, ref } from 'vue'
 import { useMainStore } from '@/store'
 import { storeToRefs } from 'pinia'
-import { addStyles, addThemeStyle, addCustomStyle, type AddStylesOptions } from '@/util/theme'
+import { addStyles, addThemeStyle, addCustomStyle, setEditorWidth, type AddStylesOptions } from '@/util/theme'
 import Recent from '@/components/recent/index.vue'
 import EditorWithTabs from '@/components/editorWithTabs/index.vue'
 import TitleBar from '@/components/titleBar/index.vue'
@@ -161,7 +161,7 @@ const editorViewStore = useEditorViewStore()
 const timer = ref<ReturnType<typeof setTimeout> | null>(null)
 
 const { windowActive, platform, init } = storeToRefs(mainStore)
-const { theme, customCss, textDirection, zoom } = storeToRefs(preferencesStore)
+const { theme, customCss, textDirection, zoom, editorLineWidth } = storeToRefs(preferencesStore)
 const { projectTree } = storeToRefs(projectStore)
 const { currentFile, selectionWordCount, readOnly } = storeToRefs(editorStore)
 const { mainView } = storeToRefs(editorViewStore)
@@ -234,6 +234,18 @@ watch(customCss, (value, oldValue) => {
 watch(zoom, (zoomValue) => {
   bus.emit('mt::window-zoom', zoomValue)
 })
+
+// The page width is a window-wide style shared by every view (word/page,
+// word/columns and dev/source all center their column on it — TODO1 #5), so it
+// is applied from the always-mounted root. Doing it in the Word/page component
+// left a window restored straight into Columns or source view without it.
+watch(
+  editorLineWidth,
+  (value) => {
+    setEditorWidth(value)
+  },
+  { immediate: true }
+)
 
 const setupDragDropHandler = (): void => {
   window.addEventListener(

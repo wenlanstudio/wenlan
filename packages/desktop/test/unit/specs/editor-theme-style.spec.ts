@@ -83,7 +83,7 @@ describe('theme.ts style injection helpers', () => {
         setEditorWidth(value)
 
         expect(styleHtml(WIDTH_STYLE_ID)).toBe(
-          `:root { --editorAreaWidth: calc(100px + ${value}); --editor-area-width: calc(100px + ${value}); }`
+          `:root { --editorAreaWidth: calc(100px + ${value}) !important; --editor-area-width: calc(100px + ${value}) !important; }`
         )
       }
     )
@@ -95,7 +95,16 @@ describe('theme.ts style injection helpers', () => {
       // on the default theme (issue #4828).
       setEditorWidth('60%')
 
-      expect(styleHtml(WIDTH_STYLE_ID)).toContain('--editor-area-width: calc(100px + 60%);')
+      expect(styleHtml(WIDTH_STYLE_ID)).toContain('--editor-area-width: calc(100px + 60%) !important;')
+    })
+
+    it('marks the override !important so theme :root defaults cannot win by style order', () => {
+      // The width style element is created at app root, before the theme
+      // installs its own element later in <head> — without !important the
+      // theme's `--editorAreaWidth: 750px` would silently override it.
+      setEditorWidth('800px')
+
+      expect(styleHtml(WIDTH_STYLE_ID)).toContain('!important')
     })
 
     it('clears the override (empty innerHTML) for an empty string', () => {

@@ -1,7 +1,9 @@
 <template>
   <div class="view-switcher">
-    <!-- 从右往左不断细化：WPED 最右固定，子视图在其左，页宽滑块（仅 Word 页面模式）最左 -->
-    <!-- Page width slider (Word page view only) -->
+    <!-- 从右往左不断细化：WPED 最右固定，子视图在其左，页宽滑块（视图职责为
+         调整页面宽度的视图共享）最左 -->
+    <!-- Shared dock slider — shown in every view whose duty is page width
+         (word/page, word/columns, dev/source; excel/sheet joins when shipped) -->
     <div
       v-if="showWidthSlider"
       class="width-slider-group"
@@ -60,7 +62,7 @@ import { t } from '@/i18n'
 
 const editorViewStore = useEditorViewStore()
 const preferencesStore = usePreferencesStore()
-const { mainView, subView, availableSubViews, hasColumns } = storeToRefs(editorViewStore)
+const { mainView, subView, availableSubViews, hasColumns, sliderDuty } = storeToRefs(editorViewStore)
 const { setMainView, setSubView } = editorViewStore
 const { editorLineWidth } = storeToRefs(preferencesStore)
 
@@ -75,9 +77,10 @@ const handleMainViewClick = (mv: MainView) => {
   setMainView(mv)
 }
 
-const showWidthSlider = computed(() =>
-  mainView.value === 'word' && subView.value === 'page'
-)
+// TODO1 #5 — the slider is shared by all views; the active view's duty decides
+// whether it renders and what it adjusts. `slide-zoom` (ppt/slide) gets its
+// control here when that view ships.
+const showWidthSlider = computed(() => sliderDuty.value === 'page-width')
 
 const DEFAULT_WIDTH = 750
 

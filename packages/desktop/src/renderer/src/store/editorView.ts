@@ -8,36 +8,64 @@ export type MainView = 'word' | 'ppt' | 'excel' | 'dev'
 
 export const MAIN_VIEWS: MainView[] = ['word', 'ppt', 'excel', 'dev']
 
-export const MAIN_VIEW_META: Record<
-  MainView,
-  { label: string; icon: string; subViews: { key: string; label: string }[] }
-> = {
+/**
+ * What the shared dock slider (bottom-right) adjusts in a sub-view (TODO1 #5):
+ * - `page-width` — the centered content column's width (word/page,
+ *   word/columns, excel/sheet, dev/source)
+ * - `slide-zoom` — the slide's scale (ppt/slide)
+ * - `none` — the view has no use for the slider (ppt/present)
+ */
+export type SliderDuty = 'page-width' | 'slide-zoom' | 'none'
+
+export interface SubViewMeta {
+  key: string
+  label: string
+  slider: SliderDuty
+  /** False while the sub-view is still a "coming soon" placeholder. */
+  implemented: boolean
+}
+
+export const MAIN_VIEW_META: Record<MainView, { label: string; icon: string; subViews: SubViewMeta[] }> = {
   word: {
     label: 'Word',
     icon: 'W',
     subViews: [
-      { key: 'page', label: 'Page' },
-      { key: 'columns', label: 'Columns' }
+      { key: 'page', label: 'Page', slider: 'page-width', implemented: true },
+      { key: 'columns', label: 'Columns', slider: 'page-width', implemented: true }
     ]
   },
   ppt: {
     label: 'PPT',
     icon: 'P',
     subViews: [
-      { key: 'slide', label: 'Slide' },
-      { key: 'present', label: 'Present' }
+      { key: 'slide', label: 'Slide', slider: 'slide-zoom', implemented: false },
+      { key: 'present', label: 'Present', slider: 'none', implemented: false }
     ]
   },
   excel: {
     label: 'Excel',
     icon: 'E',
-    subViews: [{ key: 'sheet', label: 'Sheet' }]
+    subViews: [
+      { key: 'sheet', label: 'Sheet', slider: 'page-width', implemented: false }
+    ]
   },
   dev: {
     label: 'Dev',
     icon: 'D',
-    subViews: [{ key: 'source', label: 'Source' }]
+    subViews: [
+      { key: 'source', label: 'Source', slider: 'page-width', implemented: true }
+    ]
   }
+}
+
+/**
+ * Resolve the dock slider's duty for a (main, sub) pair. A placeholder
+ * sub-view reports `none` — its duty activates by flipping `implemented`
+ * when the view ships.
+ */
+export const resolveSliderDuty = (main: MainView, sub: string): SliderDuty => {
+  const meta = MAIN_VIEW_META[main].subViews.find((s) => s.key === sub)
+  return meta?.implemented ? meta.slider : 'none'
 }
 
 interface EditorViewState {
@@ -115,6 +143,12 @@ export const useEditorViewStore = defineStore('editorView', () => {
   const currentMeta = computed(() => MAIN_VIEW_META[mainView.value])
 
   const availableSubViews = computed(() => currentMeta.value.subViews)
+
+  // The dock slider's meaning in the active sub-view — the single source the
+  // view switcher renders from (TODO1 #5).
+  const sliderDuty = computed<SliderDuty>(() =>
+    resolveSliderDuty(mainView.value, subView.value)
+  )
 
   const isSubViewValid = (main: MainView, sub: string): boolean => {
     return MAIN_VIEW_META[main].subViews.some((s) => s.key === sub)
@@ -199,6 +233,7 @@ export const useEditorViewStore = defineStore('editorView', () => {
     isSourceMode,
     currentMeta,
     availableSubViews,
+    sliderDuty,
     hasColumns,
     setMainView,
     setSubView,

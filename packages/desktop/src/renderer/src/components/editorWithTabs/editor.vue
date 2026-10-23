@@ -112,7 +112,7 @@ import {
   TOP_LEVEL_HEADINGS_SELECTOR
 } from '@/util/tocNavigation'
 import { findActiveHeadingSlug, type HeadingPosition } from '@/util/findActiveHeading'
-import { addCommonStyle, setEditorWidth } from '@/util/theme'
+import { addCommonStyle } from '@/util/theme'
 import { usePreferencesStore } from '@/store/preferences'
 import { useEditorStore } from '@/store/editor'
 import { useProjectStore } from '@/store/project'
@@ -210,7 +210,6 @@ const {
   hideQuickInsertHint,
   hideLinkPopup,
   autoCheck,
-  editorLineWidth,
   wrapCodeBlocks,
   imageInsertAction,
   imagePreferRelativeDirectory,
@@ -578,12 +577,6 @@ watch(softNewlineAsSpace, (value, oldValue) => {
 watch(hideQuickInsertHint, (value, oldValue) => {
   if (value !== oldValue && editor.value) {
     editor.value.setOptions({ hideQuickInsertHint: value })
-  }
-})
-
-watch(editorLineWidth, (value, oldValue) => {
-  if (value !== oldValue) {
-    setEditorWidth(value)
   }
 })
 
@@ -2024,8 +2017,6 @@ onMounted(() => {
   })
 
   document.addEventListener('keyup', keyup)
-
-  setEditorWidth(editorLineWidth.value)
 
   // Read-only guard: intercept all beforeinput events on the editor surface.
   const domNode = editor.value.domNode
