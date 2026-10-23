@@ -76,11 +76,14 @@ class Clipboard {
 
     private _listen() {
         const ownsEvent = () => this.muya.hasFocus();
+        // Copy stays available on a locked document; every mutating path here
+        // (cross-block cut, table deletion, paste) must not run.
+        const editable = () => !this.muya.options.readOnly;
 
         const copyCutHandler = (event: Event) => this.copyCutHandler(event);
 
         const keydownHandler = (event: Event) => {
-            if (!ownsEvent() || !isKeyboardEvent(event))
+            if (!ownsEvent() || !isKeyboardEvent(event) || !editable())
                 return;
             const { key, metaKey } = event;
 
@@ -117,7 +120,7 @@ class Clipboard {
         };
 
         const beforeInputHandler = (event: Event) => {
-            if (!ownsEvent() || !isInputEvent(event) || !event.cancelable)
+            if (!ownsEvent() || !isInputEvent(event) || !event.cancelable || !editable())
                 return;
 
             const replacement = crossBlockReplacement(event.inputType, event.data);
@@ -180,6 +183,14 @@ class Clipboard {
             return;
         }
 
+        // Read-only lock: cutting is a mutation — serve it as a plain copy so
+        // the clipboard still receives the selection but nothing is deleted.
+        if (event.type === 'cut' && this.muya.options.readOnly) {
+            event.preventDefault();
+            this.copyHandler(event);
+            return;
+        }
+
         event.preventDefault();
         event.stopPropagation();
 
@@ -208,6 +219,12 @@ class Clipboard {
         rawText?: string,
         rawHtml?: string,
     ): Promise<void> {
+        // Read-only lock: paste inserts content — a mutation, never allowed.
+        if (this.muya.options.readOnly) {
+            event.preventDefault();
+            return Promise.resolve();
+        }
+
         return pasteSelection(this, event, rawText, rawHtml);
     }
 
@@ -234,6 +251,9 @@ class Clipboard {
     // event, so the old flag + execCommand approach pasted nothing. Read the
     // clipboard text ourselves and feed it through the paste pipeline.
     async pasteAsPlainText(): Promise<void> {
+        if (this.muya.options.readOnly)
+            return Promise.resolve();
+
         const text = await this._readClipboardText();
         if (text)
             await pastePlainText(this, text);

@@ -580,6 +580,18 @@ watch(hideQuickInsertHint, (value, oldValue) => {
   }
 })
 
+// The read-only lock is enforced by the engine (surface + event + state
+// gates); the initial value rides in via `buildMuyaViewOptions`, this watch
+// flips it live. Replaces the old DOM beforeinput guard, which IME
+// composition (non-cancelable beforeinput) and the engine's own keydown
+// edits slipped straight through.
+watch(
+  () => editorStore.readOnly,
+  (value) => {
+    editor.value?.setOptions({ readOnly: value })
+  }
+)
+
 watch(wrapCodeBlocks, (value, oldValue) => {
   if (value !== oldValue && editor.value) {
     editor.value.setOptions({ wrapCodeBlocks: value })
@@ -2017,17 +2029,6 @@ onMounted(() => {
   })
 
   document.addEventListener('keyup', keyup)
-
-  // Read-only guard: intercept all beforeinput events on the editor surface.
-  const domNode = editor.value.domNode
-  const readOnlyGuard = (e: Event) => {
-    if (editorStore.readOnly) {
-      e.preventDefault()
-    }
-  }
-  domNode.addEventListener('beforeinput', readOnlyGuard)
-  // Store the handler on the domNode so onBeforeUnmount can detach it.
-  ;(domNode as HTMLElement & { __readOnlyGuard?: (e: Event) => void }).__readOnlyGuard = readOnlyGuard
 })
 
 onBeforeUnmount(() => {
@@ -2094,15 +2095,6 @@ onBeforeUnmount(() => {
   }
 
   resizeObserverForEditor.disconnect()
-
-  // Detach the read-only beforeinput guard.
-  if (editor.value) {
-    const domNode = editor.value.domNode as HTMLElement & { __readOnlyGuard?: (e: Event) => void }
-    if (domNode.__readOnlyGuard) {
-      domNode.removeEventListener('beforeinput', domNode.__readOnlyGuard)
-      delete domNode.__readOnlyGuard
-    }
-  }
 
   if (editor.value) {
     editor.value.destroy()

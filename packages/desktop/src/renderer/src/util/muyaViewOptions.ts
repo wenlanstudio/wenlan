@@ -1,6 +1,7 @@
 import type { IMuyaOptions } from '@muyajs/core'
 import { DEFAULT_CODE_FONT_FAMILY, DEFAULT_EDITOR_FONT_FAMILY } from '@/config'
 import { usePreferencesStore } from '@/store/preferences'
+import { useEditorStore } from '@/store/editor'
 
 export const resolveEditorFont = (family: string): string =>
   family ? `${family}, ${DEFAULT_EDITOR_FONT_FAMILY}` : DEFAULT_EDITOR_FONT_FAMILY
@@ -21,6 +22,7 @@ export const resolveCodeFont = (family: string): string =>
  */
 export function buildMuyaViewOptions(): Partial<IMuyaOptions> {
   const preferencesStore = usePreferencesStore()
+  const editorStore = useEditorStore()
   const {
     fontSize,
     lineHeight,
@@ -58,6 +60,10 @@ export function buildMuyaViewOptions(): Partial<IMuyaOptions> {
   return {
     fontSize,
     lineHeight,
+    // The global read-only lock is an engine concern (the old DOM beforeinput
+    // guard could not stop IME composition — non-cancelable — nor the engine's
+    // own keydown-driven structural edits).
+    readOnly: editorStore.readOnly,
     editorFontFamily: resolveEditorFont(editorFontFamily),
     codeFontSize,
     codeFontFamily: resolveCodeFont(codeFontFamily),

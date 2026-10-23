@@ -264,10 +264,18 @@ export class Muya {
     }
 
     undo() {
+        // Undo/redo are user edits; a read-only document must not move its
+        // history either (the stack pointer would desync from the state).
+        if (this.options.readOnly)
+            return;
+
         this.editor.history.undo();
     }
 
     redo() {
+        if (this.options.readOnly)
+            return;
+
         this.editor.history.redo();
     }
 
@@ -374,6 +382,15 @@ export class Muya {
                 CLASS_NAMES.MU_SHOW_QUICK_INSERT_HINT,
                 !options.hideQuickInsertHint,
             );
+        }
+
+        // The read-only lock owns the editable surface. The container's
+        // attribute flips in place; the content blocks derive their own
+        // `contenteditable` from the option at construction, so they need the
+        // tree rebuilt to follow a toggle.
+        if ('readOnly' in options) {
+            this.domNode.setAttribute('contenteditable', options.readOnly ? 'false' : 'true');
+            this._forceRender();
         }
 
         applyAppearance(this.domNode, options);
@@ -1872,7 +1889,7 @@ function getContainer(originContainer: HTMLElement, options: IMuyaOptions) {
 
     newContainer.classList.add(CLASS_NAMES.MU_EDITOR);
 
-    newContainer.setAttribute('contenteditable', 'true');
+    newContainer.setAttribute('contenteditable', options.readOnly ? 'false' : 'true');
     newContainer.setAttribute('autocorrect', 'false');
     newContainer.setAttribute('autocomplete', 'off');
     newContainer.setAttribute('spellcheck', spellcheckEnabled ? 'true' : 'false');

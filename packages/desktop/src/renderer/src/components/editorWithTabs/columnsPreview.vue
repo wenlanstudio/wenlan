@@ -226,20 +226,19 @@ onMounted(() => {
   // 视图间锚点放在跨会话 scrollTop 之后：从另一个视图切进来时，「停在同一个
   // 文档区域」优先于「上次离开这个视图时的位置」。
   restoreViewAnchor()
-
-  // 全局只读锁（工具栏的锁图标）对本视图同样生效：拦下所有 beforeinput。
-  const domNode = muya.domNode
-  const readOnlyGuard = (e: Event) => {
-    if (editorStore.readOnly)
-      e.preventDefault()
-  }
-  domNode.addEventListener('beforeinput', readOnlyGuard)
-  ;(domNode as HTMLElement & { __readOnlyGuard?: (e: Event) => void }).__readOnlyGuard = readOnlyGuard
 })
 
 watch(() => props.markdown, (value) => {
   if (muya && isSameContent(muya.getMarkdown(), value)) return
   setContent()
+})
+
+// 全局只读锁（工具栏的锁图标）：引擎选项（表层 + 事件 + 状态三层门禁），
+// 初始值随 `buildMuyaViewOptions` 带入，这里负责翻转。旧方案（DOM 上拦
+// beforeinput）拦不住 IME 组合输入（其 beforeinput 不可取消）与引擎在
+// keydown 里自行处理的结构性编辑。
+watch(() => editorStore.readOnly, (value) => {
+  muya?.setOptions({ readOnly: value })
 })
 
 onBeforeUnmount(() => {
@@ -249,13 +248,6 @@ onBeforeUnmount(() => {
   bus.off('flush-active-editor', handleFlushActiveEditor)
   bus.off('undo', handleUndo)
   bus.off('redo', handleRedo)
-
-  // Detach the read-only guard.
-  const domNode = muya?.domNode as (HTMLElement & { __readOnlyGuard?: (e: Event) => void }) | undefined
-  if (domNode?.__readOnlyGuard) {
-    domNode.removeEventListener('beforeinput', domNode.__readOnlyGuard)
-    delete domNode.__readOnlyGuard
-  }
 
   // Flush any edit still queued in the engine's rAF batch: this view is
   // destroyed on every view switch (`v-if`), and `destroy()` would drop the

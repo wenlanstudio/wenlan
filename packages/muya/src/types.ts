@@ -63,6 +63,15 @@ export interface IMuyaOptions {
     softNewlineAsSpace: boolean;
     autoMoveCheckedToEnd: boolean;
     disableHtml: boolean;
+    /**
+     * Read-only lock: the document content cannot be edited. Enforced at three
+     * layers — the editable surface (`contenteditable="false"` on the container
+     * and every content block), the editor's event dispatch (input / keydown /
+     * composition / paste never reach the blocks), and the state commit
+     * (`JSONState` drops queued edit operations). Toggling via `setOptions`
+     * re-renders the block tree so the surface follows.
+     */
+    readOnly: boolean;
     locale: {
         name: string;
         resource: {

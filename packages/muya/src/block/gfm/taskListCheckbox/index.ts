@@ -142,6 +142,12 @@ class TaskListCheckbox extends TreeNode {
         this.attributes = isFirefox
             ? { contenteditable: 'false' }
             : { type: 'checkbox', contenteditable: 'false' };
+        // Read-only lock: a native checkbox toggles itself on click BEFORE any
+        // state gate can refuse, so disable the control outright — otherwise
+        // the DOM shows a checked box the document state never accepted.
+        if (!isFirefox && muya.options.readOnly)
+            this.attributes.disabled = true;
+
         this.classList = ['mu-task-list-checkbox'];
 
         if (checked) {
@@ -160,6 +166,11 @@ class TaskListCheckbox extends TreeNode {
         const { eventCenter } = muya;
         const clickHandler = (event: Event) => {
             if (!isMouseEvent(event))
+                return;
+
+            // Read-only lock: no toggle, and no caret seating either (there is
+            // no caret in a locked document).
+            if (muya.options.readOnly)
                 return;
 
             event.stopPropagation();

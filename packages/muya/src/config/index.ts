@@ -386,6 +386,8 @@ export const MUYA_DEFAULT_OPTIONS = {
     autoMoveCheckedToEnd: false,
     // Whether HTML rendering is disabled or not.
     disableHtml: false,
+    // Read-only lock — see `IMuyaOptions.readOnly` for the enforcement layers.
+    readOnly: false,
     locale: en,
 };
 

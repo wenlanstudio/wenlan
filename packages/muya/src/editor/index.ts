@@ -298,6 +298,15 @@ export class Editor {
         const { domNode } = this._muya;
 
         const eventHandler = (event: Event) => {
+            // Read-only lock: nothing that reaches a block handler may edit.
+            // This gate is what stops muya's OWN keydown-driven structural
+            // edits (Enter split, block merge), which never surface as native
+            // `beforeinput` and so cannot be blocked at the DOM surface.
+            if (this._muya.options.readOnly) {
+                this.activeContentBlock = null;
+                return;
+            }
+
             const selectionResult = this.selection.getSelection();
             const anchorBlock = selectionResult?.anchor.block;
             const isSelectionInSameBlock = selectionResult?.isSelectionInSameBlock;
@@ -356,6 +365,11 @@ export class Editor {
     }
 
     focus() {
+        // No caret exists in a read-only document; setCursor against the
+        // non-editable tree would fight the surface instead.
+        if (this._muya.options.readOnly)
+            return;
+
         const { selection, scrollPage } = this;
         const { anchorBlock, anchorPath, anchor, focus } = selection;
 
@@ -399,6 +413,12 @@ export class Editor {
 
     updateContents(operations: JSONOp, selection: Nullable<IHistorySelection>, source: string) {
         const muya = this._muya;
+        // Read-only backstop: a user-sourced op (undo/redo apply) must not
+        // mutate a locked document. `api`-sourced replacements (setContent on
+        // tab/view switch) still pass — they swap the document, not edit it.
+        if (muya.options.readOnly && source === 'user')
+            return;
+
         // ot-json1 no-op (`null`) is forwarded to dispatch — JSONState
         // short-circuits internally so listeners still see a json-change
         // event for the no-op.
@@ -484,6 +504,10 @@ export class Editor {
      * DOM from the json state.
      */
     rebuildContents(operations: JSONOp, selection: Nullable<IHistorySelection>, source: string) {
+        // Same read-only backstop as `updateContents`; see the note there.
+        if (this._muya.options.readOnly && source === 'user')
+            return;
+
         this.jsonState.dispatch(operations, source);
 
         const state = this.jsonState.getState();

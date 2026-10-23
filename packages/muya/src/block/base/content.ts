@@ -449,8 +449,11 @@ class Content extends TreeNode {
 
         this.tagName = 'span';
         this.classList = ['mu-content'];
+        // The read-only lock reaches the surface here: a `contenteditable`
+        // child inside a non-editable container is still editable, so content
+        // blocks must carry the flag themselves (rebuilt on option toggle).
         this.attributes = {
-            contenteditable: true,
+            contenteditable: muya.options.readOnly ? 'false' : 'true',
         };
         this._text = text;
         this.isComposed = false;

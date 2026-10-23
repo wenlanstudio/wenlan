@@ -284,6 +284,14 @@ class JSONState {
         if (!this._operationCache.length)
             return;
 
+        // Read-only lock, hard guarantee: whatever slipped past the surface
+        // and the event gates (toolbars, programmatic block APIs) is dropped
+        // here — the queued ops are discarded, not applied.
+        if (this._muya.options.readOnly) {
+            this._operationCache = [];
+            return;
+        }
+
         // Wrap compose in a lambda — `Array.prototype.reduce` passes
         // (acc, current, index, array) to the callback, but
         // `json1.type.compose` only accepts (op1, op2). Without the
