@@ -1,26 +1,25 @@
-- [ ] 现在Word/page视图中可以输入分栏代码， Word/columns视图可以看到分栏效果； 存在一个问题：现在的分栏符在page视图中无法编辑
-- [ ] 现在存在两种块级分栏渲染，一种是 带中文字符的 “分栏开始”这种；一种是旧的 短实线、短虚线；把旧的给移除吧；
-
-- [ ] txt文本的不同视图
+- [x] 现在Word/page视图中可以输入分栏代码， Word/columns视图可以看到分栏效果； 存在一个问题：现在的分栏符在page视图中无法编辑
+- [x] 现在存在两种块级分栏渲染，一种是 带中文字符的 “分栏开始”这种；一种是旧的 短实线、短虚线；把旧的给移除吧；
+- [x] 以下各视图下需要支持编辑、撤销、保存等常用编辑功能，视图切换时，自动保存。（好像分栏模式编辑的时候，无法ctrl+z 撤销，无法保存）
+  - word/page
+  - word/columns（分栏内外都可编辑）
+  - dev/md源码
+  > 已通：分栏不再靠 DOM 后处理冒充，而是引擎层的真块（`columns` / `column` 块节点）。
+  > 于是「只读渲染」的限制消失——栏内可编辑、Ctrl+Z / Ctrl+Y 走引擎原生撤销栈、保存即
+  > `getMarkdown()`，与 page 视图共用同一份块树与同一套撤销栈（按 tab 存储）。
+  > 设计依据：`packages/muya/src/utils/columns/DESIGN.md`。
+  > 待办：columns 视图的工具栏 / 快捷键完整度尚未与 page 视图对齐。
+- [x] 视图滚动同步
   - word/page
   - word/columns
   - ppt/slide（还未开发）
   - ppt/present（还未开发）
   - excel/tables（还未开发）
   - dev/md源码
-  这些都是txt的不同视图，能不能让他们进度同步，多视图同步滚动进度，屏幕显示的是文档的近似同一区域
-- [ ] 同一滑块
-  能不能都使用同一个滑块，但是不同视图下的滑块作用不同，
+  这些都是文本的不同视图，使他们进度同步，多视图同步滚动进度；
+  已通：三个已开发的视图（word/page、word/columns、dev/md源码）共用一套锚点——内容块序号 + 源码行号 + 纯文本桥，切换视图停在同一处文档区域。
+  待办：ppt/slide、ppt/present、excel/tables 尚未开发，等视图出来后再接锚点。
+- [ ] 使用同一个滑块控制不同视图：
   - word/page 、word/columns 、 excel/tables（还未开发） 、dev/md源码 ： 调整页面宽度；
-  - ppt/slide（还未开发） ： 调整幻灯片大小
-  - ppt/present（还未开发）： 幻灯片播放模式就没有滑块的概念了。
-
-
-- [ ] 现在word/page和word/columns的页宽是同步的，但是word/columns无页宽滚动滑块，word/columns也显示页宽调整滑块吧
-- [ ]
-    <div class="el-tree-node is-expanded is-focusable" role="treeitem" tabindex="-1" aria-expanded="true" aria-disabled="" aria-checked="false" draggable="false" data-key="17-局限与延伸直方图-vs-核密度估计"><div class="el-tree-node__content" style="padding-left: 20px;"><i class="el-icon el-tree-node__expand-icon is-leaf"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><path fill="currentColor" d="M340.864 149.312a30.59 30.59 0 0 0 0 42.752L652.736 512 340.864 831.872a30.59 30.59 0 0 0 0 42.752 29.12 29.12 0 0 0 41.728 0L714.24 534.336a32 32 0 0 0 0-44.672L382.592 149.376a29.12 29.12 0 0 0-41.728 0z"></path></svg></i><!--v-if--><!--v-if--><!-- eslint-disable vue/no-v-html -- sanitized by labelHtmlOf --><span class="el-tree-node__label" title="1.7 局限与延伸：直方图 vs 核密度估计">1.7 局限与延伸：直方图 vs 核密度估计</span><!-- eslint-enable vue/no-v-html --></div><div class="el-tree-node__children" role="group" aria-expanded="true"></div></div>
-    将
-    side-bar-toc .el-tree-node {
-        margin-top: 8px;
-    }
-    给清除吧
+  - ppt/slide（还未开发） ： 调整幻灯片大小（放大缩小）
+  - ppt/present（还未开发）： 幻灯片放映模式无需要滑块（）。

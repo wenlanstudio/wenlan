@@ -57,14 +57,27 @@ describe('scrollSourceEditorToLine', () => {
   const makeEditor = () => {
     const setCursor = vi.fn()
     const heightAtLine = vi.fn(() => 480)
-    const editor: SourceEditor = { setCursor, heightAtLine }
+    const scroller = {
+      getBoundingClientRect: () => ({ top: 0 })
+    } as unknown as HTMLElement
+    const getScrollerElement = vi.fn(() => scroller)
+    const editor: SourceEditor = {
+      setCursor,
+      heightAtLine,
+      getScrollerElement,
+      lineAtHeight: vi.fn(() => 0)
+    }
     return { editor, setCursor, heightAtLine }
   }
 
   it('smooth-scrolls the container so the line sits at the top', () => {
     const { editor, setCursor, heightAtLine } = makeEditor()
     const containerScrollTo = vi.fn()
-    const container = { scrollTo: containerScrollTo } as unknown as HTMLElement
+    const container = {
+      scrollTo: containerScrollTo,
+      getBoundingClientRect: () => ({ top: 0 }),
+      scrollTop: 0
+    } as unknown as HTMLElement
 
     scrollSourceEditorToLine(editor, 12, container)
 

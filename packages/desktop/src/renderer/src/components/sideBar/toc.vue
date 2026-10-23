@@ -150,10 +150,6 @@ const handleClick = (data: { slug?: unknown }): void => {
   overflow: hidden;
 }
 
-.side-bar-toc .el-tree-node {
-  margin-top: 8px;
-}
-
 /* The outline scrolls inside the panel; the panel itself never scrolls — the
    same split the file tree uses for `.tree-wrapper`. */
 .side-bar-toc .el-tree {

@@ -4,6 +4,7 @@ import type {
     IBlockQuoteState,
     IBulletListState,
     ICodeBlockState,
+    IColumnsState,
     IDiagramState,
     IFootnoteBlockState,
     IFrontmatterState,
@@ -37,6 +38,26 @@ import { isAnyListState } from './types';
 
 const debug = logger('export markdown: ');
 const SETEXT_SAFE_BULLET_MARKER = '*';
+
+/**
+ * The last leaf state of a container.
+ *
+ * A container stands for the blocks it holds: when the next block is
+ * serialized, it has to see the group's last block as its predecessor —
+ * exactly as in the flat form.
+ */
+function lastLeafState(state: TState): TState {
+    let current = state;
+
+    while ('children' in current && current.children.length) {
+        const last = current.children[current.children.length - 1] as TState;
+        if (!('children' in last))
+            return last;
+        current = last;
+    }
+
+    return current;
+}
 
 function escapeText(str: string) {
     return str.replace(/(?<!\\)\|/g, '\\|');
@@ -97,6 +118,25 @@ export default class ExportMarkdown {
         listIndent = '',
     ): string {
         const result: string[] = [];
+        this._pushStates(states, result, indent, listIndent);
+
+        return result.join('');
+    }
+
+    /**
+     * Serialize a list of states into `result`.
+     *
+     * The blank line between two blocks is decided by `_insertLineBreak`, which
+     * looks at the *shared* result array — so a container that starts its own
+     * array (a column, a block quote) must be joined back in as one string, or
+     * the blocks around it would lose their separation.
+     */
+    private _pushStates(
+        states: TState[],
+        result: string[],
+        indent: string,
+        listIndent: string,
+    ): void {
         // helper for CommonMark 264
         let lastListBullet = '';
         let previousState: TState | undefined;
@@ -108,6 +148,26 @@ export default class ExportMarkdown {
                 && state.name !== 'task-list'
             ) {
                 lastListBullet = '';
+            }
+
+            if (state.name === 'columns') {
+                // A column group is a container: it emits its columns' content
+                // and nothing else — the `<!-- begin/split/end -->` markers
+                // live in the text of the blocks they belong to, so the output
+                // is byte-identical to the same document without the grouping
+                // (see utils/columns/DESIGN.md).
+                this._insertLineBreak(result, indent);
+                this._serializeColumns(state, result, indent, listIndent);
+                // A container stands for the blocks it holds: the next block
+                // sees the group's last block as its predecessor, exactly as it
+                // would in the flat form.
+                previousState = lastLeafState(state);
+                continue;
+            }
+            if (state.name === 'column') {
+                result.push(this._convertStatesToMarkdown(state.children, indent, listIndent));
+                previousState = lastLeafState(state);
+                continue;
             }
 
             if (isAnyListState(state)) {
@@ -140,8 +200,6 @@ export default class ExportMarkdown {
 
             previousState = state;
         }
-
-        return result.join('');
     }
 
     private _serializeSimpleBlock(state: TState, result: string[], indent: string) {
@@ -483,6 +541,28 @@ export default class ExportMarkdown {
         const newIndent = `${indent}> `;
 
         return this._convertStatesToMarkdown(children, newIndent);
+    }
+
+    /**
+     * A column group: its columns' content, separated by a blank line.
+     *
+     * Each column serializes into its own buffer and is joined back as one
+     * string — the blank line between two columns has to be written into the
+     * shared result, or the last paragraph of one column and the first of the
+     * next would end up in the same markdown paragraph.
+     */
+    private _serializeColumns(
+        state: IColumnsState,
+        result: string[],
+        indent: string,
+        listIndent: string,
+    ) {
+        state.children.forEach((column, index) => {
+            if (index > 0)
+                this._insertLineBreak(result, indent);
+
+            result.push(this._convertStatesToMarkdown(column.children, indent, listIndent));
+        });
     }
 
     private _serializeFootnote(state: IFootnoteBlockState, indent: string) {

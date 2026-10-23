@@ -1,7 +1,6 @@
 /* eslint-disable antfu/no-top-level-await */
 import type { ILocale, IMuyaOptions, TState } from '@muyajs/core';
 import {
-    applyEditorColumns,
     CodeBlockLanguageSelector,
     de,
     EmojiSelector,
@@ -137,23 +136,26 @@ window.__e2e = {
         window.muya = muya;
     },
     /**
-     * Drive the Columns view layout from a spec: swap the document (when
-     * `markdown` is given) and regroup the live `.mu-container` exactly the way
-     * `columnsPreview.vue` does. Returns measured groups so a spec can assert
-     * real layout instead of just class names.
+     * Drive the Columns view layout from a spec: boot the engine with the
+     * `columns` layout (what `columnsPreview.vue` does — a column group is a
+     * node of the block tree, so the engine lays the columns out itself) and
+     * report the measured groups, so a spec can assert real layout instead of
+     * just class names.
      */
-    applyEditorColumns: (markdown?: string) => {
+    columnsLayout: (markdown?: string) => {
+        muya.destroy();
+        const fresh = makeEditorNode();
+        muya = bootMuya(fresh, { ...HOST_OPTIONS, columnsLayout: 'columns' });
+        window.muya = muya;
         if (typeof markdown === 'string')
             muya.setContent(markdown);
         const container = muya.domNode.querySelector<HTMLElement>('.mu-container');
         if (!container)
             return null;
-        applyEditorColumns(container);
 
         return {
-            groups: container.querySelectorAll('.mu-mdcols-group').length,
-            hidden: container.querySelectorAll('.mu-mdcols-hidden').length,
-            cols: [...container.querySelectorAll<HTMLElement>('.mu-mdcols-col')].map(
+            groups: container.querySelectorAll('.mu-columns').length,
+            cols: [...container.querySelectorAll<HTMLElement>('.mu-column')].map(
                 (col) => ({
                     text: col.textContent?.trim() ?? '',
                     width: Math.round(col.getBoundingClientRect().width),

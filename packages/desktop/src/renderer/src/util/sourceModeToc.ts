@@ -1,7 +1,4 @@
-import type CodeMirror from 'codemirror'
-
-/** The CodeMirror surface `scrollSourceEditorToLine` needs. */
-type ISourceEditor = Pick<CodeMirror.Editor, 'setCursor' | 'heightAtLine'>
+import { scrollSourceToLine, type ISourceEditor } from './sourceScroll'
 
 /**
  * Scroll the Source Code editor so `line` sits at the TOP of the viewport,
@@ -15,7 +12,7 @@ type ISourceEditor = Pick<CodeMirror.Editor, 'setCursor' | 'heightAtLine'>
  * the line at the top (CodeMirror's `scrollIntoView` only scrolled minimally,
  * leaving the heading at the bottom edge with no animation). `setCursor` gets
  * `scroll: false` so its native caret-into-view scroll doesn't fight the
- * animation.
+ * animation — the caret follows the heading on purpose.
  */
 export function scrollSourceEditorToLine(
   editor: ISourceEditor,
@@ -25,9 +22,7 @@ export function scrollSourceEditorToLine(
   // `ch` is a positional filler: CodeMirror ignores it when `pos` is an object.
   editor.setCursor({ line, ch: 0 }, undefined, { scroll: false })
 
-  if (!scrollContainer) return
-  const top = editor.heightAtLine(line, 'local')
-  scrollContainer.scrollTo({ top, behavior: 'smooth' })
+  scrollSourceToLine(editor, line, scrollContainer ?? null, 'smooth')
 }
 
 /**

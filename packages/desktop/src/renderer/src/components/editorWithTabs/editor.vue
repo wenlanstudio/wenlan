@@ -87,13 +87,12 @@ import {
   type IMuyaOptions,
   type IReplaceOption,
   type ISearchOption,
-  type ISerializedHistory,
   type TableActionType
 } from '@muyajs/core'
 import { getMuyaLocale } from '@/util/muyaLocale'
 import { buildMuyaViewOptions, resolveCodeFont, resolveEditorFont } from '@/util/muyaViewOptions'
 import { exportStyledHTML, type HeaderFooterPart } from '@/util/exportHtml'
-import { applyCursor, isIndexCursor } from '@/util/cursor'
+import { applyCursor, isIndexCursor, serializeCursor } from '@/util/cursor'
 import EditorSearch from '../search/index.vue'
 import MediaViewer from '../mediaViewer/index.vue'
 import bus from '@/bus'
@@ -119,7 +118,14 @@ import { useEditorStore } from '@/store/editor'
 import { useProjectStore } from '@/store/project'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
-import { SyntheticHistory, type IFileHistoryLike } from './syntheticHistory'
+import {
+  getSyntheticHistory,
+  makeSyntheticHistory,
+  pruneClosedTabState,
+  readEngineHistory,
+  resetSyntheticHistory,
+  writeEngineHistory
+} from './tabHistory'
 
 // Importing the engine entrypoint auto-injects its editor CSS (the muya.ts
 // module imports its stylesheets at load time). Desktop themes still target the
@@ -261,13 +267,6 @@ let switchLanguageCommand: SpellcheckerLanguageCommand | null = null
 // The engine has no `scroll` event; we listen on the scroll container directly.
 let scrollHandler: ((e: Event) => void) | null = null
 
-// The engine's undo/redo history (`getHistory()`) has a different shape than
-// the desktop store's `tab.history` (which drives the save/dirty tracking and
-// is migrated separately). We therefore keep the real engine history in a
-// per-tab map here for restoration across in-session tab switches, and feed the
-// store a SYNTHETIC desktop-shaped history.
-const engineHistoryByTab = new Map<string, ISerializedHistory>()
-
 // The WYSIWYG caret captured the instant the user switches INTO source mode.
 // Focus moves to CodeMirror while source mode is up, so by the time the tab is
 // handed back (`replaceContent`) the live DOM selection no longer points into
@@ -284,35 +283,10 @@ let preSourceModeSelection: IHistorySelection | null = null
 // reloads the document via `setContent` (which clears the engine history), so
 // the reloaded content is the id-0 baseline matching the store's seeded
 // `lastSavedHistoryId: 0`.
-const syntheticHistoryByTab = new Map<string, SyntheticHistory>()
-const getSyntheticHistory = (id: string, baselineContent: string): SyntheticHistory => {
-  let tracker = syntheticHistoryByTab.get(id)
-  if (!tracker) {
-    tracker = new SyntheticHistory(baselineContent)
-    syntheticHistoryByTab.set(id, tracker)
-  }
-  return tracker
-}
-// Re-baseline a tab's id allocator to the given content (id 0). Called after
-// `setContent` reloads the document so the freshly loaded content is clean.
-const resetSyntheticHistory = (id: string, baselineContent: string): void => {
-  syntheticHistoryByTab.set(id, new SyntheticHistory(baselineContent))
-}
-const makeSyntheticHistory = (id: string, content: string): IFileHistoryLike => {
-  return getSyntheticHistory(id, content).build(content)
-}
-// Drop per-tab bookkeeping for tabs that no longer exist. Tab ids are unique
-// over the session, so without pruning these maps (and the content -> id map
-// each `SyntheticHistory` holds) would grow unbounded as tabs are opened and
-// closed. Driven by a watcher on the store's live tab id set.
-const pruneClosedTabState = (liveTabIds: Set<string>): void => {
-  for (const id of engineHistoryByTab.keys()) {
-    if (!liveTabIds.has(id)) engineHistoryByTab.delete(id)
-  }
-  for (const id of syntheticHistoryByTab.keys()) {
-    if (!liveTabIds.has(id)) syntheticHistoryByTab.delete(id)
-  }
-}
+// The synthetic history tracker and the engine's own undo/redo history (a
+// different shape than the desktop store's `tab.history`) both live in
+// `tabHistory.ts` — the Columns view needs the engine history too, so it may
+// not stay private to this component.
 
 interface SelectionFormatLike {
   type: string
@@ -407,24 +381,6 @@ const setSelectionWordCountFromText = (selectedText: string) => {
   if (!hasSelection && editorStore.selectionWordCount == null) return
 
   editorStore.SET_SELECTION_WORD_COUNT(hasSelection ? muyaWordCount(selectedText) : null)
-}
-
-// Build a JSON-serializable cursor from the engine selection (drop the live
-// block references so it survives the buffered-state round-trip). `setCursor`
-// re-resolves the target blocks from `anchorPath`/`focusPath`.
-const serializeCursor = (
-  selection: {
-    anchor?: { offset: number; path?: Array<string | number> }
-    focus?: { offset: number; path?: Array<string | number> }
-  } | null
-) => {
-  if (!selection) return null
-  return {
-    anchor: selection.anchor ? { offset: selection.anchor.offset } : null,
-    focus: selection.focus ? { offset: selection.focus.offset } : null,
-    anchorPath: selection.anchor?.path,
-    focusPath: selection.focus?.path
-  }
 }
 
 // Watchers
@@ -1626,7 +1582,7 @@ const handleFileChange = (payload: unknown) => {
         // history after.
         editor.value.setCursorByOffset(muyaIndexCursor)
       }
-      const savedEngineHistory = id ? engineHistoryByTab.get(id) : undefined
+      const savedEngineHistory = id ? readEngineHistory(id) : undefined
       if (savedEngineHistory) {
         editor.value.setHistory(savedEngineHistory)
       }
@@ -1855,6 +1811,19 @@ onMounted(() => {
     getSyntheticHistory(currentFile.value.id, muya.getMarkdown())
   }
 
+  // 视图切入（word/columns → word/page）：本组件被 index.vue 的 `v-if` 销毁
+  // 过，muya 实例与 undo 栈随 destroy() 丢失。json-change handler 持续把引擎
+  // 历史存进 `tabHistory.ts` 的按 tab map（tab 切换恢复用同一机制），这里在
+  // 挂载时恢复——无分栏文档进不了 columns 视图，所以这个丢失只在分栏文档上
+  // 暴露为「分栏模式无法撤销」（TODO1 #3）。首次打开该 tab 时 map 里没有条目，
+  // 跳过。
+  const savedEngineHistory = currentFile.value?.id
+    ? readEngineHistory(currentFile.value.id)
+    : undefined
+  if (savedEngineHistory) {
+    muya.setHistory(savedEngineHistory)
+  }
+
   const container = getScrollContainer()!
 
   // Listen for language changes and update the engine locale.
@@ -1925,7 +1894,7 @@ onMounted(() => {
     // undo-stack depth, which is reused and falsely showed a divergently
     // re-edited tab as clean (Phase G — G6).
     const engineHistory = editor.value.getHistory()
-    engineHistoryByTab.set(id, engineHistory)
+    writeEngineHistory(id, engineHistory)
     editorStore.LISTEN_FOR_CONTENT_CHANGE({
       id,
       markdown,
@@ -1944,7 +1913,7 @@ onMounted(() => {
   scrollHandler = () => {
     if (currentFile.value) {
       editorStore.updateScrollPosition(currentFile.value.id, container.scrollTop)
-      // 视图间滚动同步（TODO1 #3）：记录本 tab 的块锚点，切到 word/columns
+      // 视图间滚动同步（TODO1 #4）：记录本 tab 的块锚点，切到 word/columns
       // 时由 columnsPreview 恢复，切回来时由下面的挂载逻辑恢复。
       syncScrollAnchor(container, currentFile.value.id)
     }
@@ -2071,6 +2040,14 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  // 视图切换（word/page ↔ word/columns）经 `v-if` 销毁本组件，下面的
+  // destroy() 会连 muya 实例与 undo 栈一起丢掉。json-change handler 每次都
+  // 把最新历史存进 `tabHistory.ts`，这里再存一次做同帧编辑的兜底——
+  // onMounted 靠它恢复撤销栈（TODO1 #3）。
+  if (editor.value && currentFile.value?.id) {
+    writeEngineHistory(currentFile.value.id, editor.value.getHistory())
+  }
+
   bus.off('file-loaded', setMarkdownToEditor)
   bus.off('invalidate-image-cache', handleInvalidateImageCache)
   bus.off('undo', handleUndo)

@@ -2,10 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { MarkdownToState } from '../markdownToState';
 import ExportMarkdown from '../stateToMarkdown';
 
-// §4.6 分栏标记行内化：marker 注释紧贴顶层段落时并入该段 text（inlineRenderer
-// 渲染段尾徽标），其余位置保持块级 html-block（htmlPreview 渲染块徽标兜底）。
-// 判据的 token 层依据见 utils/columns/__tests__/inlineAdjacency.spec.ts。
-
 interface IStateLike {
     name: string;
     text?: string;
@@ -24,20 +20,33 @@ function generate(markdown: string): IStateLike[] {
     }).generate(markdown) as unknown as IStateLike[];
 }
 
+function columnsContent(group: IStateLike): IStateLike[] {
+    return (group.children ?? []).flatMap(column => column.children ?? []);
+}
+
+// §4.6 分栏标记行内化：marker 注释紧贴顶层段落时并入该段 text（inlineRenderer
+// 渲染段尾徽标），其余位置保持块级 html-block（htmlPreview 渲染块徽标兜底）。
+// 判据的 token 层依据见 utils/columns/__tests__/inlineAdjacency.spec.ts。
+//
+// 分栏组进入块树之后（utils/columns/DESIGN.md），顶层状态里会出现
+// `columns > column > 内容块`；标记落在哪一段上，看它挂在哪个状态里。
+
 describe('markdownToState — 分栏标记行内化', () => {
     it('紧贴段落时并入段尾，无 html-block', () => {
         const states = generate('正文\n<!-- begin 30:70 -->\nA栏\n<!-- split -->\nB栏\n<!-- end -->\n');
 
-        expect(states.map(s => s.name)).toEqual(['paragraph', 'paragraph', 'paragraph']);
+        // `begin` 的段落留在组外，组内两栏各收一段。
+        expect(states.map(s => s.name)).toEqual(['paragraph', 'columns']);
         expect(states[0].text).toBe('正文\n<!-- begin 30:70 -->');
-        expect(states[1].text).toBe('A栏\n<!-- split -->');
-        expect(states[2].text).toBe('B栏\n<!-- end -->');
+        expect(columnsContent(states[1]).map(s => s.text)).toEqual([
+            'A栏\n<!-- split -->',
+            'B栏\n<!-- end -->',
+        ]);
     });
 
     it('begin 上的占比原文完整并入', () => {
         const states = generate('正文\n<!-- begin 25:25:50 -->\nA\n<!-- split -->\nB\n<!-- split -->\nC\n<!-- end -->\n');
 
-        expect(states.map(s => s.name)).toEqual(['paragraph', 'paragraph', 'paragraph', 'paragraph']);
         expect(states[0].text).toBe('正文\n<!-- begin 25:25:50 -->');
     });
 
@@ -53,9 +62,9 @@ describe('markdownToState — 分栏标记行内化', () => {
         // 栏边界始终以标记位置为准。
         const states = generate('## 标题\n<!-- begin -->\nA栏\n<!-- end -->\n');
 
-        expect(states.map(s => s.name)).toEqual(['atx-heading', 'html-block', 'paragraph']);
+        expect(states.map(s => s.name)).toEqual(['atx-heading', 'html-block', 'columns']);
         expect(states[1].text).toBe('<!-- begin -->');
-        expect(states[2].text).toBe('A栏\n<!-- end -->');
+        expect(columnsContent(states[2]).map(s => s.text)).toEqual(['A栏\n<!-- end -->']);
     });
 
     it('引用容器内保持块级 html-block（§1.3 #7 inert）', () => {
@@ -75,11 +84,14 @@ describe('markdownToState — 分栏标记行内化', () => {
     it('组内允许行内与块级混合，边界以标记位置为准', () => {
         const states = generate('正文\n<!-- begin -->\nA栏\n\n<!-- split -->\nB栏\n<!-- end -->\n');
 
-        expect(states.map(s => s.name)).toEqual(['paragraph', 'paragraph', 'html-block', 'paragraph']);
+        expect(states.map(s => s.name)).toEqual(['paragraph', 'columns']);
         expect(states[0].text).toBe('正文\n<!-- begin -->');
-        expect(states[1].text).toBe('A栏');
-        expect(states[2].text).toBe('<!-- split -->');
-        expect(states[3].text).toBe('B栏\n<!-- end -->');
+        // 块级 split 是左栏的最后一个子节点，行内 end 是右栏的最后一个子节点。
+        expect(columnsContent(states[1]).map(s => s.text)).toEqual([
+            'A栏',
+            '<!-- split -->',
+            'B栏\n<!-- end -->',
+        ]);
     });
 
     it('单个 img 的 html token 仍按段落处理（既有行为不变）', () => {
@@ -102,9 +114,10 @@ describe('markdownToState — 分栏标记行内化', () => {
 
         // 闭环：保存后重开，marker 仍紧贴对应段尾（行内化不漂移）。
         const reparsed = generate(md);
-        expect(reparsed.map(s => s.name)).toEqual(['paragraph', 'paragraph', 'paragraph']);
         expect(reparsed[0].text).toBe('正文\n<!-- begin 30:70 -->');
-        expect(reparsed[1].text).toBe('A栏\n<!-- split -->');
-        expect(reparsed[2].text).toBe('B栏\n<!-- end -->');
+        expect(columnsContent(reparsed[1]).map(s => s.text)).toEqual([
+            'A栏\n<!-- split -->',
+            'B栏\n<!-- end -->',
+        ]);
     });
 });

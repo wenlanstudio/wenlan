@@ -1,7 +1,9 @@
+import type { ColumnMarkerInfo } from '../utils/columns/syntax';
 import type { ListItemToken, TBlockToken } from '../utils/marked/types';
 import type {
     IAtxHeadingState,
     IBulletListState,
+    IColumnState,
     IListItemState,
     IOrderListState,
     ISetextHeadingState,
@@ -11,10 +13,19 @@ import type {
     TState,
 } from './types';
 import { firstWordOfInfo, parseFenceLine } from '../utils';
-import { parseMarker } from '../utils/columns/syntax';
+import { analyzeColumnMarkers, parseMarker } from '../utils/columns/syntax';
 import { createDiagramState, diagramTypeOfLang } from '../utils/diagram/fence';
 import logger from '../utils/logger';
 import { lexBlock } from '../utils/marked';
+
+/** A top-level state that carries a column marker, and where it sits. */
+interface IColumnMarkerHit {
+    /** Index of the carrying state in the flat top-level state list. */
+    index: number;
+    /** §4.6 — the marker rides a paragraph (inline badge) or stands alone. */
+    inline: boolean;
+    info: ColumnMarkerInfo;
+}
 
 const debug = logger('import markdown: ');
 
@@ -101,7 +112,116 @@ export class MarkdownToState {
             prevToken = token;
         }
 
-        return states.length ? states : [{ name: 'paragraph', text: '' }];
+        const withColumns = this._buildColumnGroups(states);
+
+        return withColumns.length ? withColumns : [{ name: 'paragraph', text: '' }];
+    }
+
+    /**
+     * 把顶层状态里的分栏标记收成 `columns` 结构（见 utils/columns/DESIGN.md）。
+     *
+     * 标记本身仍留在它所贴的段落 text 里（或独立的 html-block 里）——它才是
+     * 可编辑、可序列化往返的真值；这里只补上「哪些块属于哪一栏」这层结构，
+     * 好让 DOM 与块树同形，栏内也能正常编辑。
+     *
+     * 合法性判定复用 `analyzeColumnMarkers`（§1.3 七条），与 lint / 导出管线
+     * 同一份真值：不合法的组一律不建结构，内容原样保留。
+     */
+    private _buildColumnGroups(states: TState[]): TState[] {
+        if (!states.length)
+            return states;
+
+        const hits = this._collectColumnMarkers(states);
+        if (!hits.length)
+            return states;
+
+        // The marker objects are handed to the group analysis as they are, so
+        // the hit of each marker in the flat state list can be recovered by
+        // identity.
+        const { groups } = analyzeColumnMarkers(hits.map(hit => hit.info));
+        if (!groups.length)
+            return states;
+
+        const hitOfMarker = new Map<ColumnMarkerInfo, IColumnMarkerHit>();
+        hits.forEach((hit) => {
+            hitOfMarker.set(hit.info, hit);
+        });
+
+        const out: TState[] = [];
+        let cursor = 0;
+
+        for (const group of groups) {
+            const beginHit = hitOfMarker.get(group.markers[0])!;
+            const endHit = hitOfMarker.get(group.markers[group.markers.length - 1])!;
+
+            // §1.3 #4 — more than three columns degrade the whole group to a
+            // linear layout; no structure, no columns.
+            if (group.degraded) {
+                out.push(...states.slice(cursor, endHit.index + 1));
+                cursor = endHit.index + 1;
+                continue;
+            }
+
+            // The `begin` marker stays outside the group: it terminates the
+            // content *before* the columns, not a column of its own.
+            out.push(...states.slice(cursor, beginHit.index + 1));
+            cursor = beginHit.index + 1;
+
+            const columns: IColumnState[] = [];
+            let columnStart = cursor;
+            for (let i = 1; i < group.markers.length; i++) {
+                const boundary = hitOfMarker.get(group.markers[i])!;
+                // The boundary marker terminates the column it follows: an
+                // inline marker rides that column's last paragraph, a
+                // block-level marker is a standalone block that ends the
+                // column (hidden in the Columns view).
+                columns.push({
+                    name: 'column',
+                    children: states.slice(columnStart, boundary.index + 1),
+                });
+                columnStart = boundary.index + 1;
+            }
+            cursor = columnStart;
+
+            out.push({
+                name: 'columns',
+                meta: group.ratio ? { ratio: group.ratio } : {},
+                children: columns,
+            });
+        }
+
+        out.push(...states.slice(cursor));
+
+        return out;
+    }
+
+    /**
+     * The top-level states that carry a column marker.
+     *
+     * A marker reaches the state list in one of two shapes (§4.6): merged into
+     * the text of the paragraph it hugs (the inline badge), or as a
+     * standalone `html-block` (the block badge).
+     */
+    private _collectColumnMarkers(states: TState[]): IColumnMarkerHit[] {
+        const hits: IColumnMarkerHit[] = [];
+
+        states.forEach((state, index) => {
+            if (state.name === 'paragraph') {
+                const lines = state.text.split('\n');
+                const parsed = parseMarker(lines[lines.length - 1] ?? '');
+                if (parsed) {
+                    hits.push({ index, inline: true, info: { ...parsed, line: 0, inline: true } });
+                }
+            }
+            else if (state.name === 'html-block') {
+                const parsed = parseMarker(state.text.trim());
+                if (parsed) {
+                    hits.push({ index, inline: false, info: { ...parsed, line: 0, inline: false } });
+                }
+            }
+        });
+
+        return hits;
     }
 
     private _handleContainerToken(

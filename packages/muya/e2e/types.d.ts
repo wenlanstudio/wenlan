@@ -44,13 +44,14 @@ declare global {
             rebuildMuya: (options?: Partial<IMuyaOptions>) => void;
             renderDiagramForExport: (options: IExportRenderOptions) => Promise<void>;
             /**
-             * Applies the Columns layout to the live editor DOM (the way the
-             * desktop Columns view does) and reports the resulting geometry.
-             * `null` when the engine's `.mu-container` is missing.
+             * Boots the engine with the `columns` layout (the way the desktop
+             * Columns view does — a column group is a node of the block tree,
+             * so the engine lays the columns out itself) and reports the
+             * resulting geometry. `null` when the engine's `.mu-container` is
+             * missing.
              */
-            applyEditorColumns: (markdown?: string) => {
+            columnsLayout: (markdown?: string) => {
                 groups: number;
-                hidden: number;
                 cols: Array<{ text: string; width: number }>;
             } | null;
         };

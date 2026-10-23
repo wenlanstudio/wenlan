@@ -92,13 +92,11 @@ class HTMLPreview extends Parent {
             // block is a heading / list) renders the SAME badge as the inline
             // form — one visual form for markers, whichever way they are
             // written. Clicking it activates the block's source editing (see
-            // `_handleBadgeClick`). The badge doubles as the Columns view's
-            // regroup boundary carrier: `data-kind` / `data-ratio` are what
-            // `editorLayout.ts` reads.
+            // `_handleBadgeClick`). `data-kind` / `data-ratio` carry what the
+            // badge is about; the Columns view hides the badge, because there
+            // the column boundary is the layout itself.
             const marker = parseMarker(html);
             if (marker) {
-                // `data-ratio` is how the Columns view recovers the requested
-                // column widths from the rendered DOM (§4.6 / editorLayout).
                 const ratioAttr = marker.ratioText ? ` data-ratio="${marker.ratioText}"` : '';
                 this.domNode!.innerHTML
                     = `<span class="mu-mdcols-marker mu-mdcols-inline mu-mdcols-${marker.kind}" data-kind="${marker.kind}"${ratioAttr}></span>`;

@@ -15,7 +15,7 @@
         :text-direction="textDirection"
         :platform="platform"
       />
-      <!-- Word 分栏 / 长文阅读视图（Page 编辑器渲染为只读 + 分栏） -->
+      <!-- Word 分栏视图（同一份文档的另一种排版：分栏组由引擎自己排布） -->
       <columns-preview
         v-else-if="mainView === 'word' && subView === 'columns'"
         :markdown="markdown"

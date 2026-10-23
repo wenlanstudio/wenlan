@@ -206,6 +206,38 @@ export interface IFootnoteBlockState {
     children: TState[];
 }
 
+/**
+ * One column of a column group. A pure container: the content blocks live
+ * directly in `children`, in document order.
+ */
+export interface IColumnState {
+    name: 'column';
+    children: TState[];
+}
+
+export interface IColumnsMeta {
+    /**
+     * Validated column-width percentages (`30:70` → `[30, 70]`). Absent means
+     * "equal widths" — §1.3 #5 downgrades a malformed ratio instead of
+     * guessing one.
+     */
+    ratio?: number[];
+}
+
+/**
+ * A `<!-- begin --> … <!-- end -->` group, as a node of the block tree.
+ *
+ * The markers themselves stay in the text of the block they belong to (an
+ * inline badge) or in a standalone `html-block`; this state only records the
+ * grouping, so the DOM mirrors the tree and editing inside a column works.
+ * See `utils/columns/DESIGN.md`.
+ */
+export interface IColumnsState {
+    name: 'columns';
+    meta: IColumnsMeta;
+    children: IColumnState[];
+}
+
 export type TLeafState
     = | IParagraphState
         | IAtxHeadingState
@@ -228,7 +260,9 @@ export type TContainerState
         | ITaskListItemState
         | IListItemState
         | ITableRowState
-        | IFootnoteBlockState;
+        | IFootnoteBlockState
+        | IColumnsState
+        | IColumnState;
 
 export type TState = TLeafState | TContainerState;
 
@@ -265,6 +299,8 @@ export const isTaskListItemState = (s: TState): s is ITaskListItemState => s.nam
 export const isListItemState = (s: TState): s is IListItemState => s.name === 'list-item';
 export const isTableRowState = (s: TState): s is ITableRowState => s.name === 'table.row';
 export const isFootnoteBlockState = (s: TState): s is IFootnoteBlockState => s.name === 'footnote';
+export const isColumnsState = (s: TState): s is IColumnsState => s.name === 'columns';
+export const isColumnState = (s: TState): s is IColumnState => s.name === 'column';
 
 export function isAnyListState(s: TState): s is IOrderListState | IBulletListState | ITaskListState {
     return s.name === 'order-list' || s.name === 'bullet-list' || s.name === 'task-list';

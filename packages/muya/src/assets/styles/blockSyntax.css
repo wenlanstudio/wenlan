@@ -216,8 +216,8 @@
    `<!-- end -->` that did NOT get inlined into a paragraph (blank line before
    them, or a heading / list above) render the SAME badge element as the inline
    form below (htmlPreview.ts): one visual form, whichever way markers are
-   written. The badge doubles as the Columns view's regroup boundary carrier,
-   so it carries `data-kind` / `data-ratio` (editorLayout.ts). */
+   written. The badge carries `data-kind` / `data-ratio`; the Columns view
+   hides it, because there the column boundary is the layout itself. */
 .mu-html-preview .mu-mdcols-marker {
     margin: 0.15em 0;
 }
@@ -226,8 +226,7 @@
    under a paragraph is inlined into that paragraph's text by markdownToState
    and rendered here as a trailing badge instead of a standalone rule. Kept
    visually weaker than text (0.85em, marker color) so the boundary reads as an
-   annotation; hover deepens the color to hint it is interactive. Kind is
-   carried by both `data-kind` (editorLayout) and the label prefix. */
+   annotation; hover deepens the color to hint it is interactive. */
 .mu-mdcols-inline {
     display: inline-block;
 
@@ -1158,50 +1157,72 @@ pre.mu-active.mu-math-container::after {
     color: var(--theme-color);
 }
 
-/* Columns view — the Page editor rendered read-only, with `begin / split / end`
-   groups laid out as real columns (`editorLayout.ts`). Layout only: every
-   colour, font and table rule comes from the editor styles, so the two views
-   cannot drift apart. */
+/* Columns view — a column group is a node of the block tree, so the engine
+   renders the columns itself; the view only switches the layout. Layout only:
+   every colour, font and table rule comes from the editor styles, so the two
+   views cannot drift apart. */
 .mu-mdcols-hidden {
     display: none;
 }
 
-.mu-mdcols-col {
-    /* Column content is centred on both axes, matching the export layout. */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-
-    text-align: center;
+/* Column groups (`<!-- begin --> … <!-- end -->`) are nodes of the block tree,
+   so the DOM mirrors the tree and the engine can edit inside a column. In the
+   Page view a group must look exactly like the same text written without the
+   grouping: `display: contents` drops the wrapper boxes, so the content flows
+   as if it had been typed straight into the document. The Columns view turns
+   the same blocks into real columns — see `utils/columns/DESIGN.md`. */
+.mu-columns,
+.mu-column {
+    display: contents;
 }
 
-.mu-mdcols-group {
+/* The Columns view: the group becomes a row of columns. The switch is the
+   `.mu-columns-layout` class on the editor root (muya option `columnsLayout`). */
+.mu-editor.mu-columns-layout .mu-columns {
     display: flex;
     flex-wrap: wrap;
     gap: 1em;
     align-items: stretch;
 }
 
-.mu-mdcols-group > .mu-mdcols-col {
-    /* `flex-basis: 0` lets the grow factor alone decide the width, so a
-       validated `data-ratio` maps straight onto flex-grow (editorLayout.ts). */
+.mu-editor.mu-columns-layout .mu-column {
+    /* Column content is centred on both axes, matching the export layout. */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 
+    /* `flex-basis: 0` lets the grow factor alone decide the width, so a
+       validated ratio maps straight onto flex-grow (the columns block sets it
+       from the `begin` marker's percentage parts). */
     flex: 1 1 0;
 
     /* Narrow windows wrap and stack instead of squeezing. */
     min-width: 18em;
+
+    text-align: center;
 }
 
-.mu-mdcols-group .mu-mdcols-col > blockquote,
-.mu-mdcols-group .mu-mdcols-col > figure.mu-table,
-.mu-mdcols-group .mu-mdcols-col > ol,
-.mu-mdcols-group .mu-mdcols-col > pre.mu-code-block,
-.mu-mdcols-group .mu-mdcols-col > ul {
+.mu-editor.mu-columns-layout .mu-column > blockquote,
+.mu-editor.mu-columns-layout .mu-column > figure.mu-table,
+.mu-editor.mu-columns-layout .mu-column > ol,
+.mu-editor.mu-columns-layout .mu-column > pre.mu-code-block,
+.mu-editor.mu-columns-layout .mu-column > ul {
     /* Long-form blocks read badly centred, and a table would shrink to its
        content instead of filling the column. Keep them full width and keep
        their own text left aligned — only the block itself is centred. */
     align-self: stretch;
 
     text-align: left;
+}
+
+/* The marker badges are the Page view's editing affordance; in the Columns
+   view the column boundary is the layout itself, so the badges go away. A
+   block-level marker is a whole block and goes away with it. */
+.mu-editor.mu-columns-layout .mu-mdcols-marker {
+    display: none;
+}
+
+.mu-editor.mu-columns-layout .mu-html-block:has(.mu-mdcols-marker) {
+    display: none;
 }

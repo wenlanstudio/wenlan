@@ -104,6 +104,9 @@ export const CLASS_NAMES = genUpper2LowerKeyHash([
     'MU_BULLET_LIST',
     'MU_BULLET_LIST_ITEM',
     'MU_CHECKBOX_CHECKED',
+    'MU_COLUMN',
+    'MU_COLUMNS',
+    'MU_COLUMNS_LAYOUT',
     'MU_CONTAINER_BLOCK',
     'MU_CONTAINER_PREVIEW',
     'MU_CONTAINER_ICON',
@@ -367,6 +370,16 @@ export const MUYA_DEFAULT_OPTIONS = {
     highlightSyntax: false,
     inlineDiff: false,
     multilineBlockquote: false,
+    /**
+     * How a `<!-- begin --> … <!-- end -->` column group is laid out.
+     *
+     * `flat` (the default) renders the group exactly like the same text
+     * without the grouping — the Page view. `columns` lays the group's columns
+     * out side by side — the Columns view. The block tree is the same in both
+     * cases, so the undo history can be handed from one view to the other.
+     * See `utils/columns/DESIGN.md`.
+     */
+    columnsLayout: 'flat' as const,
     // Render soft line breaks as spaces instead of visual newlines.
     softNewlineAsSpace: false,
     // Move checked task list item to the end of task list.

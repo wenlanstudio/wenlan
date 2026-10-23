@@ -359,9 +359,10 @@ class Table extends Parent {
         this.replaceWith(newTable);
 
         if (caret) {
-            const cell = (newTable.firstChild as TableInner)
-                .find(caret.row)
-                ?.find(caret.column);
+            // `TableInner.find` resolves a row, `TableRow.find` a cell — the
+            // same two-step lookup `cellAt` does.
+            const rowBlock = (newTable.firstChild as TableInner).find(caret.row) as TableRow | undefined;
+            const cell = rowBlock?.find(caret.column) as TableBodyCell | undefined;
             const content = cell?.firstContentInDescendant();
             content?.setCursor(caret.startOffset, caret.endOffset, true);
         }

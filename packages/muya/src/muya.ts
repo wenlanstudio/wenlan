@@ -30,8 +30,8 @@ import {
     locateSentinelOffsets,
     resolveSentinelCursor,
 } from './selection/offsetCursor';
-import { isAnyListState, isAtxHeadingState, isCodeBlockState, isSetextHeadingState } from './state/types';
 import ExportMarkdown from './state/stateToMarkdown';
+import { isAnyListState, isAtxHeadingState, isCodeBlockState, isSetextHeadingState } from './state/types';
 import { Ui } from './ui/ui';
 import { deepClone } from './utils';
 import { encodeImageSrc } from './utils/image';
@@ -1846,7 +1846,7 @@ function applyAppearance(domNode: HTMLElement, options: Partial<IMuyaOptions>) {
  * [ensureContainerDiv ensure container element is div]
  */
 function getContainer(originContainer: HTMLElement, options: IMuyaOptions) {
-    const { spellcheckEnabled, spellcheckHideMarks, hideQuickInsertHint, focusMode } = options;
+    const { spellcheckEnabled, spellcheckHideMarks, hideQuickInsertHint, focusMode, columnsLayout } = options;
     const newContainer = document.createElement('div');
     const attrs = originContainer.attributes;
     // Copy attrs from origin container to new container
@@ -1859,6 +1859,11 @@ function getContainer(originContainer: HTMLElement, options: IMuyaOptions) {
 
     if (spellcheckHideMarks)
         newContainer.classList.add(CLASS_NAMES.MU_HIDE_SPELLING_MARKS);
+
+    // The Columns view lays column groups out side by side; the Page view
+    // leaves them in the text flow. The class is the switch the CSS reads.
+    if (columnsLayout === 'columns')
+        newContainer.classList.add(CLASS_NAMES.MU_COLUMNS_LAYOUT);
 
     // Apply focus mode at construction when initially enabled; `setFocusMode`
     // toggles it thereafter.

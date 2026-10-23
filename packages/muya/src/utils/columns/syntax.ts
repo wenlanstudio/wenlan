@@ -16,7 +16,7 @@ export type ColumnMarkerKind = 'begin' | 'split' | 'end';
 // digit-only: a malformed ratio such as `<!-- begin a:b -->` must still be
 // recognised as a `begin` so §1.3 #5 can downgrade it to equal widths and
 // report it. A stricter pattern would make it silently inert instead.
-const MARKER_RE = /^<!--\s*(begin(?:\s+[^>]*?)?|split|end)\s*-->$/i;
+const MARKER_RE = /^<!--\s*(begin(?:\s[^>]*?)?|split|end)\s*-->$/i;
 
 // A comment that opened `<!--` but never closed; the word right after `<!--`
 // is one of the three keywords, so it was meant to be a marker (§1.3 #6).
@@ -263,13 +263,38 @@ export function analyzeColumns(markdown: string): ColumnAnalysis {
         });
     }
 
+    const { groups, diagnostics: groupDiagnostics } = analyzeColumnMarkers(markers);
+    // `hasMarkers` answers "does this document contain a top-level begin at
+    // all" — the view switch shows the Columns button on that basis, so it
+    // counts markers the group analysis rejected too.
+    const hasMarkers = markers.some(m => m.kind === 'begin');
+
+    return {
+        hasMarkers,
+        groups,
+        diagnostics: [...diagnostics, ...groupDiagnostics],
+    };
+}
+
+/**
+ * §1.3 的成组判定：一串顶层标记 → 合法的分栏组 + 诊断。
+ *
+ * 单一真值：`analyzeColumns`（lint / 导出诊断）与编辑器的状态构建（块树里的
+ * `columns` 结构）都走这里——否则「视图里排出来的分栏」和「导出认定的分栏」
+ * 可能对不上（§4.6 的同构保证）。
+ *
+ * @param markers 按出现顺序排列的顶层标记
+ */
+export function analyzeColumnMarkers(markers: ColumnMarkerInfo[]): {
+    groups: ColumnGroup[];
+    diagnostics: ColumnDiagnostic[];
+} {
     const groups: ColumnGroup[] = [];
+    const diagnostics: ColumnDiagnostic[] = [];
     let open: { begin: ColumnMarkerInfo; splits: ColumnMarkerInfo[] } | null = null;
-    let sawBegin = false;
 
     for (const marker of markers) {
         if (marker.kind === 'begin') {
-            sawBegin = true;
             if (open) {
                 // §1.3 #3 — nesting is not supported; drop the inner begin.
                 diagnostics.push({
@@ -364,7 +389,7 @@ export function analyzeColumns(markdown: string): ColumnAnalysis {
         }
     }
 
-    return { hasMarkers: sawBegin, groups, diagnostics };
+    return { groups, diagnostics };
 }
 
 /** Derived view used by the desktop view switch (§4.4 #5). */
@@ -442,7 +467,7 @@ export function transformColumnTokens<T extends StructToken>(tokens: T[]): T[] {
 
     // Only `text` is swapped: `renderer.html` emits it verbatim. `raw` is kept
     // so anything downstream that still measures source lines stays correct.
-    return tokens.map(t => {
+    return tokens.map((t) => {
         const html = rewritten.get(t);
 
         return html ? { ...t, text: html } : t;

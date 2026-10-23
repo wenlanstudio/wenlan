@@ -12,11 +12,12 @@ export const resolveCodeFont = (family: string): string =>
  * Every Muya option that changes how a document *looks*, shared by the live
  * editor and the Columns view.
  *
- * The Columns view is the Page editor rendered read-only, so it has to resolve
- * fonts, sizes and render flags exactly like the editor does (§4.4 #3) —
- * otherwise the two views drift apart the moment a preference changes.
+ * The Columns view is the same engine over the same document, so it has to
+ * resolve fonts, sizes and render flags exactly like the editor does (§4.4 #3)
+ * — otherwise the two views drift apart the moment a preference changes.
  * Editing-only options (auto-pairing, quick-insert hints, spellcheck, and the
- * clipboard / image callbacks) stay in `editor.vue`.
+ * clipboard / image callbacks) stay in `editor.vue`; the layout switch
+ * (`columnsLayout`) is set by each view itself.
  */
 export function buildMuyaViewOptions(): Partial<IMuyaOptions> {
   const preferencesStore = usePreferencesStore()

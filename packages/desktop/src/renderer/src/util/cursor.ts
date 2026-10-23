@@ -41,3 +41,24 @@ export const applyCursor = (editor: CursorEditor, cursor: unknown): void => {
     editor.setCursor(cursor as Parameters<Muya['setCursor']>[0])
   }
 }
+
+// The engine selection, narrowed to the fields a persisted cursor needs. The
+// live block references are dropped so the cursor survives the buffered-state
+// round-trip.
+interface EngineSelectionLike {
+  anchor?: { offset: number; path?: Array<string | number> }
+  focus?: { offset: number; path?: Array<string | number> }
+}
+
+// Build a JSON-serializable cursor from the engine selection (drop the live
+// block references so it survives the buffered-state round-trip). `setCursor`
+// re-resolves the target blocks from `anchorPath`/`focusPath`.
+export const serializeCursor = (selection: EngineSelectionLike | null) => {
+  if (!selection) return null
+  return {
+    anchor: selection.anchor ? { offset: selection.anchor.offset } : null,
+    focus: selection.focus ? { offset: selection.focus.offset } : null,
+    anchorPath: selection.anchor?.path,
+    focusPath: selection.focus?.path
+  }
+}

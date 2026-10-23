@@ -1,10 +1,10 @@
 import { expect, test } from '../fixtures/muya';
 
-// The desktop Columns view (`columnsPreview.vue`) boots a read-only Muya and
-// regroups the engine's `.mu-container` — the element that actually holds the
-// top-level blocks, NOT `.mu-editor` itself. These specs pin that contract:
-// without `init()` there is no container at all, and grouping `.mu-editor`
-// (whose only child is `.mu-container`) would produce zero columns.
+// The desktop Columns view (`columnsPreview.vue`) boots the same engine with the
+// `columns` layout: a column group is a node of the block tree, so the engine
+// renders the columns itself and the DOM mirrors the tree. These specs pin that
+// contract — without `init()` there is no container at all, and a column group
+// that never reached the tree would lay out zero columns.
 const DOC = [
     '# Title',
     '',
@@ -39,9 +39,9 @@ test.describe('columns: editor layout', () => {
         expect(structure.blocks).toBeGreaterThan(0);
     });
 
-    test('grouping the container lays the markers out as real columns', async ({ page }) => {
+    test('the columns layout lays the markers out as real columns', async ({ page }) => {
         const result = await page.evaluate(
-            (markdown) => window.__e2e!.applyEditorColumns(markdown),
+            (markdown) => window.__e2e!.columnsLayout(markdown),
             DOC,
         );
 
@@ -54,18 +54,16 @@ test.describe('columns: editor layout', () => {
         expect(result!.cols[1]!.width).toBeGreaterThan(0);
         expect(result!.cols[0]!.text).toContain('Column A');
         expect(result!.cols[1]!.text).toContain('Column B');
-        // begin + split + end markers are hidden, not removed.
-        expect(result!.hidden).toBe(3);
     });
 
     test('content outside the group stays in the flow', async ({ page }) => {
-        await page.evaluate((markdown) => window.__e2e!.applyEditorColumns(markdown), DOC);
+        await page.evaluate((markdown) => window.__e2e!.columnsLayout(markdown), DOC);
 
         const outside = await page.evaluate(() => {
             const container = window.muya!.domNode.querySelector('.mu-container')!;
 
             return [...container.children]
-                .filter((el) => !el.classList.contains('mu-mdcols-group'))
+                .filter((el) => !el.classList.contains('mu-columns'))
                 .map((el) => el.textContent?.trim() ?? '');
         });
 
@@ -73,11 +71,11 @@ test.describe('columns: editor layout', () => {
         expect(outside.join(' | ')).toContain('Tail paragraph.');
     });
 
-    test('re-applying after a content swap does not duplicate blocks', async ({ page }) => {
-        await page.evaluate((markdown) => window.__e2e!.applyEditorColumns(markdown), DOC);
+    test('a content swap does not duplicate blocks', async ({ page }) => {
+        await page.evaluate((markdown) => window.__e2e!.columnsLayout(markdown), DOC);
 
         const second = await page.evaluate(
-            (markdown) => window.__e2e!.applyEditorColumns(markdown.replace('Column A', 'Column X')),
+            (markdown) => window.__e2e!.columnsLayout(markdown.replace('Column A', 'Column X')),
             DOC,
         );
 

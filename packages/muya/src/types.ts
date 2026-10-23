@@ -52,6 +52,14 @@ export interface IMuyaOptions {
     highlightSyntax: boolean;
     inlineDiff: boolean;
     multilineBlockquote: boolean;
+    /**
+     * How a column group (`<!-- begin --> … <!-- end -->`) is laid out:
+     * `flat` renders it like the same text without the grouping (Page view),
+     * `columns` lays its columns out side by side (Columns view). The block
+     * tree is identical either way, so the undo history survives a view
+     * switch. See `utils/columns/DESIGN.md`.
+     */
+    columnsLayout: 'flat' | 'columns';
     softNewlineAsSpace: boolean;
     autoMoveCheckedToEnd: boolean;
     disableHtml: boolean;

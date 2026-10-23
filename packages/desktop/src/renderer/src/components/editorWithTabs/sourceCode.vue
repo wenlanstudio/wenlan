@@ -10,6 +10,8 @@ import { ref, shallowRef, markRaw, watch, onMounted, onBeforeUnmount, nextTick }
 import { useEditorStore } from '@/store/editor'
 import { usePreferencesStore } from '@/store/preferences'
 import { findMarkdownHeadingLine, scrollSourceEditorToLine } from '@/util/sourceModeToc'
+import { scrollSourceToLine, sourceTopLine } from '@/util/sourceScroll'
+import { readViewAnchor, resolveSourceLine, sourceAnchorOf, writeViewAnchor } from '@/util/viewScrollSync'
 import { storeToRefs } from 'pinia'
 import type CodeMirror from 'codemirror'
 import codeMirror, { setCursorAtFirstLine, setTextDirection } from '../../codeMirror'
@@ -365,6 +367,41 @@ const handleScrollToHeader = (slug: unknown) => {
   scrollSourceEditorToLine(editor.value, line, sourceCodeContainer.value)
 }
 
+// 视图间滚动同步（TODO1 #4）：源码视图的视口顶部行写进共享锚点，切到
+// word/page 或 word/columns 时由它们换算成自己的坐标——同一个文档的同一处。
+// 滚动事件每帧最多派发多次，量行高要问 CodeMirror，合并到一帧里算一次。
+let anchorRaf = 0
+
+const handleScroll = () => {
+  if (anchorRaf) return
+
+  anchorRaf = requestAnimationFrame(() => {
+    anchorRaf = 0
+    const cm = editor.value
+    const container = sourceCodeContainer.value
+    const id = tabId.value
+    if (!cm || !container || !id) return
+
+    const line = sourceTopLine(cm, container)
+    writeViewAnchor(id, sourceAnchorOf(cm.getValue(), line + 1))
+  })
+}
+
+// 从别的视图切进源码视图时，停在同一个文档区域。锚点带行号时直接用，只有
+// 文本时（来自 page / columns 视图）在源码里找对应行。
+const restoreViewAnchor = (cm: CodeMirror.Editor, markdown: string): void => {
+  const id = tabId.value
+  if (!id) return
+
+  const line = resolveSourceLine(markdown, readViewAnchor(id))
+  if (line == null) return
+
+  // The line heights are only known after the editor laid out — wait a frame.
+  requestAnimationFrame(() => {
+    scrollSourceToLine(cm, line - 1, sourceCodeContainer.value)
+  })
+}
+
 onMounted(() => {
   if (!currentTab.value) return
   const { id } = currentTab.value
@@ -423,6 +460,14 @@ onMounted(() => {
   tabId.value = id
   updateSelectionWordCount(codeMirrorInstance)
 
+  // 视图间滚动同步（TODO1 #4）：从 page / columns 视图切进来时，停在同一个
+  // 文档区域。
+  restoreViewAnchor(codeMirrorInstance, markdown ?? '')
+
+  // `.source-code` is the scroll container (CodeMirror renders the whole
+  // document, so its own scroller never moves).
+  container?.addEventListener('scroll', handleScroll, { passive: true })
+
   // Apply initial read-only state.
   codeMirrorInstance.setOption('readOnly', editorStore.readOnly)
 
@@ -437,6 +482,8 @@ watch(() => editorStore.readOnly, (value) => {
 onBeforeUnmount(() => {
   viewDestroyed.value = true
   if (commitTimer.value) clearTimeout(commitTimer.value)
+
+  sourceCodeContainer.value?.removeEventListener('scroll', handleScroll)
 
   bus.off('file-loaded', handleFileChange)
   bus.off('file-changed', handleFileChange)
