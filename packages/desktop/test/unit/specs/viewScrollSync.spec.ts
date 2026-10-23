@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
   contentBlocks,
   findBlockIndex,
+  flushScrollAnchor,
   readViewAnchor,
   resolveSourceLine,
   scrollViewToAnchor,
@@ -256,5 +257,77 @@ describe('source anchor', () => {
   it('returns null when the anchor matches nothing', () => {
     expect(resolveSourceLine(markdown, { text: '不在文档里' })).toBeNull()
     expect(resolveSourceLine(markdown, null)).toBeNull()
+  })
+})
+
+// 跨视图共享一个锚点，但各视图只能算出自己的坐标（page/columns 有
+// blockIndex、source 有 line）。合并写入让两套坐标常驻，跨视图直接命中本
+// 坐标；编辑会让坐标漂移，读时校验文本不符就退回 text 桥——这是「切换视图
+// 位置丢失 / 跳顶」根因（TODO1 #4）的修复覆盖。
+describe('cross-view anchor merge + drift validation', () => {
+  it('merges coordinates instead of overwriting (each view keeps the others\' field)', () => {
+    // source 视图写 { line, text }、page 视图写 { blockIndex, text }：合并后
+    // 两者都在，任一视图读时直接命中本坐标，不必走脆弱的 text 桥换算。
+    writeViewAnchor('merge', { line: 7, text: 'src' })
+    writeViewAnchor('merge', { blockIndex: 3, text: 'blk' })
+
+    const anchor = readViewAnchor('merge')
+    expect(anchor?.line).toBe(7)
+    expect(anchor?.blockIndex).toBe(3)
+  })
+
+  it('sourceAnchorOf walks up to a content-bearing line when the viewport top is blank', () => {
+    // 视口顶部行常是空行 / 代码围栏，strip 后为空——空 text 会让 text 桥
+    // 断链、切到 page/columns 时静默 return 跳顶。向上找最近的有内容行作桥
+    // 证据；line 仍记真实视口顶部行号，保证源码视图内部恢复精度。
+    const md = ['标题', '', '正文'].join('\n')
+
+    expect(sourceAnchorOf(md, 2)).toEqual({ line: 2, text: '标题' })
+  })
+
+  it('scrollViewToAnchor falls back to the text bridge when blockIndex drifted', () => {
+    // 编辑后块序号漂移：blockIndex 指向 b2，但该处的文本已是 b3——放弃精确
+    // 坐标、按 text 找到 b3，避免滚到错误位置。
+    container.innerHTML = para('b0') + para('b1') + para('b2') + para('b3')
+    mockRects(container, [0, 500, 1000, 1500])
+    container.scrollTop = 0
+
+    scrollViewToAnchor(container, { blockIndex: 2, text: 'b3' })
+
+    expect(container.scrollTop).toBe(1500)
+  })
+
+  it('keeps the clamped block when blockIndex is merely out of range (no text to contradict it)', () => {
+    // 越界夹取（无 text 校验）仍滚到末块，与原 clamp 行为一致——这是「未漂移、
+    // 只是序号越界」的正常路径，不得误判为漂移而跳顶。
+    container.innerHTML = para('b0') + para('b1')
+    mockRects(container, [0, 500])
+    container.scrollTop = 0
+
+    scrollViewToAnchor(container, { blockIndex: 99 })
+
+    expect(container.scrollTop).toBe(500)
+  })
+
+  it('resolveSourceLine falls back to the text bridge when the line drifted', () => {
+    const md = ['标题', '', '正文', '- 列表项'].join('\n')
+    // line 3 现在是「正文」，但锚点 text 是「列表项」——放弃精确行号、按
+    // text 找到 line 4。
+    expect(resolveSourceLine(md, { line: 3, text: '列表项' })).toBe(4)
+  })
+
+  it('flushScrollAnchor writes synchronously and cancels a pending rAF', async() => {
+    container.innerHTML = para('b0') + para('b1')
+    mockRects(container, [0, 100])
+
+    syncScrollAnchor(container, 'flush')   // schedules a rAF, not yet landed
+    expect(readViewAnchor('flush')).toBeNull()
+
+    flushScrollAnchor(container, 'flush')   // cancels the rAF, writes now
+    expect(readViewAnchor('flush')?.blockIndex).toBe(0)
+
+    await new Promise(requestAnimationFrame)
+    // The cancelled rAF must not fire afterwards and overwrite the anchor.
+    expect(readViewAnchor('flush')?.blockIndex).toBe(0)
   })
 })

@@ -101,7 +101,7 @@ import Printer from '@/services/printService'
 import { SpellcheckerLanguageCommand } from '@/commands'
 import { SpellChecker } from '@/spellchecker'
 import { isMac, animatedScrollTo } from '@/util'
-import { readViewAnchor, scrollViewToAnchor, syncScrollAnchor } from '@/util/viewScrollSync'
+import { flushScrollAnchor, readViewAnchor, scrollViewToAnchor, syncScrollAnchor } from '@/util/viewScrollSync'
 import { moveImageToFolder, uploadImage } from '@/util/fileSystem'
 import { guessClipboardFilePath } from '@/util/clipboard'
 import { dataURLToFile } from '@/util/dataURLToFile'
@@ -2093,6 +2093,14 @@ onBeforeUnmount(() => {
     container?.removeEventListener('scroll', scrollHandler)
   }
   scrollHandler = null
+
+  // 视图切换销毁前同步 flush 锚点：rAF 版回调可能在 destroy() 后才跑、读到
+  // 脱离的容器，这里取消 pending rAF 并同步记一次，保证切走时锚点是离开
+  // 瞬间的位置（TODO1 #4）。
+  if (currentFile.value?.id) {
+    const container = getScrollContainer()
+    if (container) flushScrollAnchor(container, currentFile.value.id)
+  }
 
   resizeObserverForEditor.disconnect()
 

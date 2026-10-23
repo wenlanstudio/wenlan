@@ -483,6 +483,21 @@ onBeforeUnmount(() => {
   viewDestroyed.value = true
   if (commitTimer.value) clearTimeout(commitTimer.value)
 
+  // 视图切换销毁前同步 flush 锚点：rAF 版回调可能跑在销毁之后、读到脱离的
+  // 容器，这里取消 pending rAF 并同步记一次，保证切走时锚点是离开瞬间的
+  // 位置（TODO1 #4）。
+  if (anchorRaf) {
+    cancelAnimationFrame(anchorRaf)
+    anchorRaf = 0
+  }
+  {
+    const cm = editor.value
+    const container = sourceCodeContainer.value
+    const id = tabId.value
+    if (cm && container && id)
+      writeViewAnchor(id, sourceAnchorOf(cm.getValue(), sourceTopLine(cm, container) + 1))
+  }
+
   sourceCodeContainer.value?.removeEventListener('scroll', handleScroll)
 
   bus.off('file-loaded', handleFileChange)

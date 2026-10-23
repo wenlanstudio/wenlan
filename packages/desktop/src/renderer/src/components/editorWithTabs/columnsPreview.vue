@@ -42,7 +42,7 @@ import { getMuyaLocale } from '@/util/muyaLocale'
 import { useEditorStore } from '@/store/editor'
 import { usePreferencesStore } from '@/store/preferences'
 import { addCommonStyle } from '@/util/theme'
-import { readViewAnchor, scrollViewToAnchor, syncScrollAnchor } from '@/util/viewScrollSync'
+import { flushScrollAnchor, readViewAnchor, scrollViewToAnchor, syncScrollAnchor } from '@/util/viewScrollSync'
 import { serializeCursor } from '@/util/cursor'
 import bus from '@/bus'
 import { makeSyntheticHistory, readEngineHistory, writeEngineHistory } from './tabHistory'
@@ -261,6 +261,14 @@ onBeforeUnmount(() => {
   // destroyed on every view switch (`v-if`), and `destroy()` would drop the
   // batch silently. `flush()` publishes through `handleEngineChange` first.
   muya?.flush()
+
+  // 视图切换销毁前同步 flush 锚点：rAF 版回调可能在 destroy() 后才跑、读到
+  // 脱离的容器，这里取消 pending rAF 并同步记一次，保证切走时锚点是离开
+  // 瞬间的位置（TODO1 #4）。
+  if (host.value) {
+    const id = currentTabId()
+    if (id != null) flushScrollAnchor(host.value, id)
+  }
 
   muya?.destroy()
   muya = null

@@ -159,8 +159,10 @@ export function viewAnchorOf(container: HTMLElement | null): ViewAnchor | null {
 }
 
 /**
- * 把锚点滚到视口顶部（瞬时；越界时夹取到首 / 末块）。锚点只有文本时（来自
- * 另一个视图）先换算成块序号。
+ * 把锚点滚到视口顶部（瞬时；越界时夹取到首 / 末块）。优先用 blockIndex，但
+ * 校验该坐标处的块文本是否仍与锚点 text 一致——文档编辑会让块序号漂移，校验
+ * 失败就放弃精确坐标、退回 text 桥（`findBlockIndex`），避免滚到错误位置。
+ * blockIndex 缺失（锚点来自 source 视图）时同样走 text 桥。
  */
 export function scrollViewToAnchor(container: HTMLElement | null, anchor: ViewAnchor | null): void {
   if (!container || !anchor)
@@ -171,6 +173,16 @@ export function scrollViewToAnchor(container: HTMLElement | null, anchor: ViewAn
     return
 
   let index = anchor.blockIndex
+  if (index != null) {
+    // 越界夹取到首 / 末块（与原 clamp 行为一致）。
+    if (index < 0) index = 0
+    else if (index >= blocks.length) index = blocks.length - 1
+    // 编辑后块序号会漂移：坐标处的文本若与锚点 text 不符，放弃精确坐标、
+    // 退回 text 桥，避免滚到错误位置。
+    if (anchor.text && !sameAnchorText(blockText(blocks[index]), anchor.text))
+      index = undefined
+  }
+
   if (index == null) {
     const found = findBlockIndex(blocks, anchor.text ?? '')
     if (found < 0)
@@ -183,12 +195,26 @@ export function scrollViewToAnchor(container: HTMLElement | null, anchor: ViewAn
     += target.getBoundingClientRect().top - container.getBoundingClientRect().top
 }
 
-/** 源码视图：某一行对应的锚点（1-based 行号 + 该行的纯文本）。 */
+/**
+ * 源码视图：某一行对应的锚点（1-based 行号 + 该行的纯文本）。视口顶部行常是
+ * 空行 / 代码围栏 / 纯标记行，`stripMarkdownSyntax` 后为空——空 text 会让
+ * text 桥断链，切到 page/columns 时 `findBlockIndex` 返回 -1、
+ * `scrollViewToAnchor` 静默 return，位置停在顶部（跳顶）。因此向上找最近的
+ * 有内容行作为桥的文本证据（停在当前块开头，语义比向下跳到下一块更准）；
+ * `line` 仍记真实视口顶部行号，保证源码视图内部的恢复精度不受影响。
+ */
 export function sourceAnchorOf(markdown: string, line: number): ViewAnchor {
   const lines = markdown.split('\n')
-  const index = Math.max(0, Math.min(line - 1, lines.length - 1))
+  const topIndex = Math.max(0, Math.min(line - 1, lines.length - 1))
 
-  return { line: index + 1, text: stripMarkdownSyntax(lines[index] ?? '') }
+  let bridgeIndex = topIndex
+  let text = stripMarkdownSyntax(lines[bridgeIndex] ?? '')
+  while (!text && bridgeIndex > 0) {
+    bridgeIndex--
+    text = stripMarkdownSyntax(lines[bridgeIndex] ?? '')
+  }
+
+  return { line: topIndex + 1, text }
 }
 
 /**
@@ -200,8 +226,12 @@ export function resolveSourceLine(markdown: string, anchor: ViewAnchor | null): 
     return null
 
   const lines = markdown.split('\n')
-  if (anchor.line != null)
-    return Math.max(1, Math.min(anchor.line, lines.length))
+  if (anchor.line != null) {
+    const ln = Math.max(1, Math.min(anchor.line, lines.length))
+    // 编辑后行号会漂移：该行的文本若与锚点 text 不符，放弃精确行号、退回 text 桥。
+    if (!anchor.text || sameAnchorText(stripMarkdownSyntax(lines[ln - 1] ?? ''), anchor.text))
+      return ln
+  }
 
   if (!anchor.text)
     return null
@@ -230,9 +260,16 @@ export function readViewAnchor(tabId: string): ViewAnchor | null {
   return anchors.get(tabId) ?? null
 }
 
-/** 记录某 tab 的滚动锚点。 */
+/**
+ * 记录某 tab 的滚动锚点。**合并而非覆盖**：各视图只能算出自己的坐标
+ * （page/columns 有 blockIndex、source 有 line），覆盖会让每次跨视图都必走
+ * 脆弱的 text 桥换算——空行断链即跳顶、重复文本即错位。合并后 blockIndex 与
+ * line 常驻，任一视图读时直接命中本坐标，仅当本坐标因编辑漂移（读时校验
+ * 失败）才退回 text 桥。
+ */
 export function writeViewAnchor(tabId: string, anchor: ViewAnchor): void {
-  anchors.set(tabId, anchor)
+  const prev = anchors.get(tabId)
+  anchors.set(tabId, prev ? { ...prev, ...anchor } : anchor)
 }
 
 // 滚动事件每帧最多派发一次，但 viewAnchorOf 要对所有内容块做一次
@@ -251,4 +288,22 @@ export function syncScrollAnchor(container: HTMLElement, tabId: string): void {
     if (anchor !== null)
       writeViewAnchor(tabId, anchor)
   })
+}
+
+/**
+ * 同步把容器当前视口顶部块记为该 tab 的锚点（不进 rAF）。视图
+ * `onBeforeUnmount` 调它：rAF 合并写法的回调可能在组件销毁后才跑，此时容器
+ * 已脱离文档、`getBoundingClientRect` 量到 0，锚点会错。这里取消 pending rAF
+ * 并同步算一次，保证切走时锚点是离开瞬间的位置；仍走合并写入，保留其它视图
+ * 留下的坐标。
+ */
+export function flushScrollAnchor(container: HTMLElement, tabId: string): void {
+  if (anchorRaf) {
+    cancelAnimationFrame(anchorRaf)
+    anchorRaf = 0
+  }
+
+  const anchor = viewAnchorOf(container)
+  if (anchor !== null)
+    writeViewAnchor(tabId, anchor)
 }
