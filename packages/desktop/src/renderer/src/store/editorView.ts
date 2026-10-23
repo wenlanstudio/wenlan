@@ -4,16 +4,16 @@ import { hasColumnMarkers } from '@muyajs/core'
 import { usePreferencesStore } from './preferences'
 import { useEditorStore } from './editor'
 
-export type MainView = 'word' | 'ppt' | 'excel' | 'dev'
+export type MainView = 'document' | 'slides' | 'table' | 'figure' | 'code'
 
-export const MAIN_VIEWS: MainView[] = ['word', 'ppt', 'excel', 'dev']
+export const MAIN_VIEWS: MainView[] = ['document', 'slides', 'table', 'figure', 'code']
 
 /**
  * What the shared dock slider (bottom-right) adjusts in a sub-view (TODO1 #5):
- * - `page-width` — the centered content column's width (word/page,
- *   word/columns, excel/sheet, dev/source)
- * - `slide-zoom` — the slide's scale (ppt/slide)
- * - `none` — the view has no use for the slider (ppt/present)
+ * - `page-width` — the centered content column's width (document/page,
+ *   document/columns, table/all, figure/gallery, code/source)
+ * - `slide-zoom` — the slide's scale (slides/slide)
+ * - `none` — the view has no use for the slider (slides/present, figure/focus)
  */
 export type SliderDuty = 'page-width' | 'slide-zoom' | 'none'
 
@@ -26,32 +26,40 @@ export interface SubViewMeta {
 }
 
 export const MAIN_VIEW_META: Record<MainView, { label: string; icon: string; subViews: SubViewMeta[] }> = {
-  word: {
-    label: 'Word',
-    icon: 'W',
+  document: {
+    label: 'Document',
+    icon: 'D',
     subViews: [
       { key: 'page', label: 'Page', slider: 'page-width', implemented: true },
       { key: 'columns', label: 'Columns', slider: 'page-width', implemented: true }
     ]
   },
-  ppt: {
-    label: 'PPT',
-    icon: 'P',
+  slides: {
+    label: 'Slides',
+    icon: 'S',
     subViews: [
       { key: 'slide', label: 'Slide', slider: 'slide-zoom', implemented: false },
       { key: 'present', label: 'Present', slider: 'none', implemented: false }
     ]
   },
-  excel: {
-    label: 'Excel',
-    icon: 'E',
+  table: {
+    label: 'Tables',
+    icon: 'T',
     subViews: [
-      { key: 'sheet', label: 'Sheet', slider: 'page-width', implemented: false }
+      { key: 'all', label: 'All', slider: 'page-width', implemented: true }
     ]
   },
-  dev: {
-    label: 'Dev',
-    icon: 'D',
+  figure: {
+    label: 'Figure',
+    icon: 'F',
+    subViews: [
+      { key: 'gallery', label: 'Gallery', slider: 'page-width', implemented: false },
+      { key: 'focus', label: 'Focus', slider: 'none', implemented: false }
+    ]
+  },
+  code: {
+    label: 'Code',
+    icon: 'C',
     subViews: [
       { key: 'source', label: 'Source', slider: 'page-width', implemented: true }
     ]
@@ -80,6 +88,17 @@ const STORAGE_KEY = 'marktext-editor-view'
 // empty, because `loadPersisted` only validated `mainView`.
 const RENAMED_SUB_VIEWS: Record<string, string> = { reading: 'columns' }
 
+// The Word/PPT/Excel/Dev views were renamed to Document/Slides/Table/Code;
+// `figure` is new and has no persisted history. `loadPersisted` validates
+// against `MAIN_VIEWS`, so an unmigrated key would silently reset the user's
+// last-used view — migrate before that check, not after.
+const RENAMED_MAIN_VIEWS: Record<string, MainView> = {
+  word: 'document',
+  ppt: 'slides',
+  excel: 'table',
+  dev: 'code'
+}
+
 const loadPersisted = (): EditorViewState | null => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -89,11 +108,12 @@ const loadPersisted = (): EditorViewState | null => {
       parsed &&
       typeof parsed === 'object' &&
       'mainView' in parsed &&
-      'subView' in parsed &&
-      MAIN_VIEWS.includes((parsed as EditorViewState).mainView)
+      'subView' in parsed
     ) {
       const state = parsed as EditorViewState
-      const main = state.mainView
+      const main = RENAMED_MAIN_VIEWS[state.mainView] ?? state.mainView
+      if (!MAIN_VIEWS.includes(main)) return null
+
       let sub = state.subView
 
       if (typeof sub === 'string') {
@@ -122,11 +142,11 @@ export const useEditorViewStore = defineStore('editorView', () => {
 
   const persisted = loadPersisted()
 
-  const mainView = ref<MainView>(persisted?.mainView ?? 'word')
+  const mainView = ref<MainView>(persisted?.mainView ?? 'document')
   const subView = ref<string>(persisted?.subView ?? 'page')
 
   const isSourceMode = computed<boolean>(
-    () => mainView.value === 'dev' && subView.value === 'source'
+    () => mainView.value === 'code' && subView.value === 'source'
   )
 
   // §4.4 #5 — the Columns view only makes sense for a document that actually
@@ -187,10 +207,10 @@ export const useEditorViewStore = defineStore('editorView', () => {
   }
 
   const toggleSourceMode = (): void => {
-    if (mainView.value === 'dev') {
-      setMainView('word', 'page')
+    if (mainView.value === 'code') {
+      setMainView('document', 'page')
     } else {
-      setMainView('dev', 'source')
+      setMainView('code', 'source')
     }
   }
 
@@ -216,11 +236,11 @@ export const useEditorViewStore = defineStore('editorView', () => {
     (isSource) => {
       const currentlySource = isSourceMode.value
       if (isSource && !currentlySource) {
-        mainView.value = 'dev'
+        mainView.value = 'code'
         subView.value = 'source'
         persist()
       } else if (!isSource && currentlySource) {
-        mainView.value = 'word'
+        mainView.value = 'document'
         subView.value = 'page'
         persist()
       }

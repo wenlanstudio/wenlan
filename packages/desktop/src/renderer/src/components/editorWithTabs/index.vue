@@ -6,23 +6,31 @@
       '--editor-zoom': zoom
     }"
   >
+    <!-- 分栏诊断：进入 columns 透镜时提示 5s 后消失，详情留在 console -->
+    <columns-diagnostics
+      v-if="wysiwygLens === 'columns'"
+      :markdown="markdown"
+    />
     <div class="container">
-      <!-- Word 页面视图（现有 WYSIWYG） -->
-      <editor
-        v-if="mainView === 'word' && subView === 'page'"
-        :markdown="markdown"
-        :cursor="cursor"
-        :text-direction="textDirection"
-        :platform="platform"
-      />
-      <!-- Word 分栏视图（同一份文档的另一种排版：分栏组由引擎自己排布） -->
-      <columns-preview
-        v-else-if="mainView === 'word' && subView === 'columns'"
-        :markdown="markdown"
-      />
-      <!-- PPT 视图 -->
+      <!-- 透镜宿主：WYSIWYG 引擎在 document/page、document/columns 与
+           table/all 之间常驻，切换视图只翻转 `data-lens` 而不重绘
+           （TODO1 #21、#26）。 -->
       <div
-        v-else-if="mainView === 'ppt'"
+        v-if="wysiwygLens !== null"
+        class="lens-host"
+        :data-lens="wysiwygLens"
+      >
+        <editor
+          :markdown="markdown"
+          :cursor="cursor"
+          :text-direction="textDirection"
+          :platform="platform"
+          :lens="wysiwygLens"
+        />
+      </div>
+      <!-- Slides 视图 -->
+      <div
+        v-else-if="mainView === 'slides'"
         class="view-placeholder"
       >
         <div class="placeholder-inner">
@@ -57,16 +65,16 @@
             </svg>
           </div>
           <div class="placeholder-title">
-            {{ t('view.pptView') }}
+            {{ t('view.slidesView') }}
           </div>
           <div class="placeholder-hint">
             {{ t('view.comingSoon') }}
           </div>
         </div>
       </div>
-      <!-- Excel 视图 -->
+      <!-- Figure 视图 -->
       <div
-        v-else-if="mainView === 'excel'"
+        v-else-if="mainView === 'figure'"
         class="view-placeholder"
       >
         <div class="placeholder-inner">
@@ -86,20 +94,25 @@
                 height="18"
                 rx="2"
               />
-              <path d="M3 9h18M9 3v18" />
+              <circle
+                cx="8.5"
+                cy="8.5"
+                r="1.5"
+              />
+              <path d="M21 15l-5-5L5 21" />
             </svg>
           </div>
           <div class="placeholder-title">
-            {{ t('view.excelView') }}
+            {{ t('view.figureView') }}
           </div>
           <div class="placeholder-hint">
             {{ t('view.comingSoon') }}
           </div>
         </div>
       </div>
-      <!-- Dev 源码视图 -->
+      <!-- Code 源码视图 -->
       <source-code
-        v-else-if="mainView === 'dev' && subView === 'source'"
+        v-else-if="mainView === 'code' && subView === 'source'"
         :markdown="markdown"
         :muya-index-cursor="muyaIndexCursor"
         :text-direction="textDirection"
@@ -110,13 +123,14 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useLayoutStore } from '@/store/layout'
 import { usePreferencesStore } from '@/store/preferences'
 import { useEditorViewStore } from '@/store/editorView'
 import { storeToRefs } from 'pinia'
 import { t } from '@/i18n'
 import Editor from './editor.vue'
-import ColumnsPreview from './columnsPreview.vue'
+import ColumnsDiagnostics from './columnsDiagnostics.vue'
 import SourceCode from './sourceCode.vue'
 import TabNotifications from './notifications.vue'
 
@@ -134,6 +148,17 @@ defineProps<{
 const { effectiveSideBarWidth } = storeToRefs(useLayoutStore())
 const { zoom } = storeToRefs(usePreferencesStore())
 const { mainView, subView } = storeToRefs(useEditorViewStore())
+
+// Which lens the live WYSIWYG engine renders under, or `null` when this
+// (main, sub) pair is not an engine surface at all. All lens views share one
+// `v-if`, so switching among them only flips the attribute instead of
+// remounting the engine and dropping its undo stack (TODO1 #21).
+const wysiwygLens = computed<string | null>(() => {
+  if (mainView.value === 'document' && subView.value === 'page') return 'page'
+  if (mainView.value === 'document' && subView.value === 'columns') return 'columns'
+  if (mainView.value === 'table' && subView.value === 'all') return 'table'
+  return null
+})
 </script>
 
 <style scoped>
@@ -150,6 +175,13 @@ const { mainView, subView } = storeToRefs(useEditorViewStore())
     flex: 1;
     overflow: hidden;
   }
+}
+
+/* Pure CSS hook: `data-lens` is what the lens rules in editor.vue key off.
+   `display: contents` keeps the host out of the layout, so the engine's own
+   sizing (`.editor-wrapper { height: 100% }`) is untouched. */
+.lens-host {
+  display: contents;
 }
 
 .view-placeholder {

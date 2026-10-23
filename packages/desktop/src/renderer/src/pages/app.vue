@@ -185,12 +185,12 @@ const hasCurrentFile = computed<boolean>(() => {
   return currentFile.value?.markdown !== undefined
 })
 
-// Cursor position indicator (line:column) — shown in Word & Dev modes.
+// Cursor position indicator (line:column) — shown in Document & Code modes.
 const cursorPosition = ref<{ line: number; ch: number } | null>(null)
 const showCursorPosition = computed(() => {
   if (!hasCurrentFile.value) return false
   const mv = mainView.value
-  return mv === 'word' || mv === 'dev'
+  return mv === 'document' || mv === 'code'
 })
 const cursorPositionText = computed(() => {
   const pos = cursorPosition.value
@@ -235,9 +235,9 @@ watch(zoom, (zoomValue) => {
   bus.emit('mt::window-zoom', zoomValue)
 })
 
-// The page width is a window-wide style shared by every view (word/page,
-// word/columns and dev/source all center their column on it — TODO1 #5), so it
-// is applied from the always-mounted root. Doing it in the Word/page component
+// The page width is a window-wide style shared by every view (document/page,
+// document/columns and code/source all center their column on it — TODO1 #5),
+// so it is applied from the always-mounted root. Doing it in the page component
 // left a window restored straight into Columns or source view without it.
 watch(
   editorLineWidth,

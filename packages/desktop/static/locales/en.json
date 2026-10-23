@@ -779,8 +779,9 @@
     "copyrightContributors": "Made with <3 by Github Contributors"
   },
   "view": {
-    "pptView": "Slide View",
-    "excelView": "Sheet View",
+    "slidesView": "Slides View",
+    "tableView": "Tables View",
+    "figureView": "Figure View",
     "comingSoon": "Coming soon",
     "pageWidth": "Page Width",
     "cursorPosition": "Cursor Position",
@@ -902,8 +903,9 @@
       "actualSize": "Actual Size",
       "devToggleDeveloperTools": "Toggle Developer Tools",
       "readingView": "Reading View",
-      "pptView": "Slide View",
-      "excelView": "Sheet View",
+      "slidesView": "Slides View",
+      "tableView": "Tables View",
+      "figureView": "Figure View",
       "comingSoon": "Coming soon",
       "pageWidth": "Page Width",
       "cursorPosition": "Cursor Position",

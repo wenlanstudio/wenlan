@@ -170,6 +170,8 @@ const props = defineProps<{
   cursor?: unknown
   textDirection: string
   platform?: string
+  /** Which lens the live engine is rendering under — see `editorWithTabs`. */
+  lens?: string | null
 }>()
 
 // Get stores
@@ -390,6 +392,41 @@ watch(
   () => tabs.value.map((t) => t.id),
   (ids) => {
     pruneClosedTabState(new Set(ids))
+  }
+)
+
+// The Columns view is the same block tree as Page — muya's only difference is
+// the `mu-columns-layout` class on the engine root (`utils/columns/DESIGN.md`),
+// read by `.mu-editor.mu-columns-layout .mu-columns`. Toggling that one class
+// keeps a single engine (and a single undo stack) serving both lenses, instead
+// of booting a second instance per view. Done in JS rather than CSS because the
+// rules live in the engine's stylesheet — re-declaring them here would drift.
+const applyLens = (): void => {
+  const container = editor.value?.domNode as HTMLElement | undefined
+  if (!container) return
+  container.classList.toggle('mu-columns-layout', props.lens === 'columns')
+}
+
+// page and columns render the same blocks in a different layout, so the same
+// `scrollTop` lands on a different region of the document — re-apply the tab's
+// anchor once the class flip has been laid out (TODO1 #4). The table lens hides
+// blocks instead, which invalidates a block index captured in another lens, so
+// it is deliberately left alone.
+const restoreLensAnchor = (): void => {
+  const id = currentFile.value?.id
+  if (id == null) return
+  const anchor = readViewAnchor(id)
+  if (anchor === null) return
+  requestAnimationFrame(() => scrollViewToAnchor(getScrollContainer(), anchor))
+}
+
+watch(
+  () => props.lens,
+  (lens, prev) => {
+    applyLens()
+    if ([lens, prev].includes('columns') && [lens, prev].includes('page')) {
+      restoreLensAnchor()
+    }
   }
 )
 
@@ -1803,6 +1840,7 @@ onMounted(() => {
   // the document tree and instantiates the registered UI plugins).
   muya.init({ focus: editorStore.TAKE_OPEN_INTENT(currentFile.value?.pathname) !== false })
   editor.value = muya
+  applyLens()
   // The first document's content is set via constructor options, so no
   // `file-loaded` / `setMarkdownToEditor` runs for it — seed its TOC here.
   editorStore.UPDATE_TOC(muya.getTOC())
@@ -1816,12 +1854,12 @@ onMounted(() => {
     getSyntheticHistory(currentFile.value.id, muya.getMarkdown())
   }
 
-  // 视图切入（word/columns → word/page）：本组件被 index.vue 的 `v-if` 销毁
-  // 过，muya 实例与 undo 栈随 destroy() 丢失。json-change handler 持续把引擎
-  // 历史存进 `tabHistory.ts` 的按 tab map（tab 切换恢复用同一机制），这里在
-  // 挂载时恢复——无分栏文档进不了 columns 视图，所以这个丢失只在分栏文档上
-  // 暴露为「分栏模式无法撤销」（TODO1 #3）。首次打开该 tab 时 map 里没有条目，
-  // 跳过。
+  // 视图切入（code/source 或占位视图 → document/page）：本组件被 index.vue 的
+  // `v-if` 销毁过，muya 实例与 undo 栈随 destroy() 丢失。json-change handler
+  // 持续把引擎历史存进 `tabHistory.ts` 的按 tab map（tab 切换恢复用同一机制），
+  // 这里在挂载时恢复。注：document/page ↔ document/columns 已不再销毁组件——
+  // columns 是同一引擎上的透镜，共用同一 undo 栈（TODO1 #3/#21）。首次打开
+  // 该 tab 时 map 里没有条目，跳过。
   const savedEngineHistory = currentFile.value?.id
     ? readEngineHistory(currentFile.value.id)
     : undefined
@@ -1918,17 +1956,19 @@ onMounted(() => {
   scrollHandler = () => {
     if (currentFile.value) {
       editorStore.updateScrollPosition(currentFile.value.id, container.scrollTop)
-      // 视图间滚动同步（TODO1 #4）：记录本 tab 的块锚点，切到 word/columns
-      // 时由 columnsPreview 恢复，切回来时由下面的挂载逻辑恢复。
+      // 视图间滚动同步（TODO1 #4）：记录本 tab 的块锚点。columns 已是同一引擎
+      // 上的透镜（不再重建引擎、滚动位置自然保留），所以只有切到 code/source
+      // ——CodeMirror 会顶掉本组件——再切回来时才需要靠锚点恢复。
       syncScrollAnchor(container, currentFile.value.id)
     }
   }
   container.addEventListener('scroll', scrollHandler, { passive: true })
 
-  // 视图切入（word/columns → word/page）：本组件由 `v-if` 重建，tab 切换
-  // 不会走到这里（那条路径由 file-changed 的 scrollTop 恢复），所以有锚点
-  // 就意味着用户是从 columns 视图切回来的——停到同一个文档区域。无锚点时
-  // 保持默认（顶部）。rAF 一帧等布局稳定后再量位置。
+  // 视图切入（code/source 或占位视图 → document/page）：本组件由 `v-if` 重建，
+  // tab 切换不会走到这里（那条路径由 file-changed 的 scrollTop 恢复），所以
+  // 有锚点就意味着用户是从源码视图切回来的——停到同一个文档区域。无锚点时
+  // 保持默认（顶部）。page ↔ columns 不经过这里：同一实例，由上面的 lens
+  // watcher 恢复。rAF 一帧等布局稳定后再量位置。
   requestAnimationFrame(() => {
     const id = currentFile.value?.id
     const anchor = id != null ? readViewAnchor(id) : null
@@ -2032,8 +2072,9 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  // 视图切换（word/page ↔ word/columns）经 `v-if` 销毁本组件，下面的
-  // destroy() 会连 muya 实例与 undo 栈一起丢掉。json-change handler 每次都
+  // 切到 code/source 或占位视图时本组件经 `v-if` 销毁，下面的 destroy() 会连
+  // muya 实例与 undo 栈一起丢掉（page ↔ columns 已共用同一实例，不再销毁）。
+  // json-change handler 每次都
   // 把最新历史存进 `tabHistory.ts`，这里再存一次做同帧编辑的兜底——
   // onMounted 靠它恢复撤销栈（TODO1 #3）。
   if (editor.value && currentFile.value?.id) {
@@ -2167,6 +2208,15 @@ onBeforeUnmount(() => {
   padding-top: 20px;
   padding-bottom: 100vh;
   zoom: var(--editor-zoom, 1);
+}
+
+/* Lens: show only the document's tables (TODO1 #26). The engine stays mounted
+   and only an ancestor's `data-lens` flips, so switching between the document
+   and table views never re-renders — no block tree rebuild, no lost undo
+   stack. Top-level table blocks are `<figure class="mu-table">`, direct
+   children of the engine's `.mu-container`. */
+[data-lens='table'] .mu-container > *:not(.mu-table) {
+  display: none;
 }
 
 .typewriter .editor-component {

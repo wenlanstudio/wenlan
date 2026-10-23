@@ -134,7 +134,7 @@ column  → 依次输出自己的 children
 |---|---|---|---|
 | 1 | 状态类型 + 导入建结构 + 序列化保真 + 块类 + flat 渲染 | ✅ | `state/types.ts`、`state/markdownToState.ts`、`state/stateToMarkdown.ts`、`block/extra/columns/`、`blockSyntax.css` |
 | 2 | `columnsLayout` 选项 + 分栏渲染 + 徽标隐藏 | ✅ | `types.ts`、`config/index.ts`、`muya.ts`、`blockSyntax.css` |
-| 3 | 桌面端 columns 视图改用引擎渲染 | ✅ | `desktop/.../editorWithTabs/columnsPreview.vue`（引擎选项 `columnsLayout: 'columns'`，撤销走引擎 action） |
+| 3 | 桌面端 columns 视图改用引擎渲染 | ✅ | 现为同一引擎实例上的透镜：`desktop/.../editorWithTabs/editor.vue` 在引擎根节点切 `mu-columns-layout` 类（原 `columnsPreview.vue` 的第二引擎实例已删除），撤销栈与 page 视图共用 |
 | 4 | 清理 `editorLayout.ts`（DOM 后处理随之废弃）+ 滚动锚点适配新结构 | ✅ | 删除 `utils/columns/editorLayout.ts` 及其测试、`src/index.ts` 导出、e2e 钩子；`desktop/.../util/viewScrollSync.ts` 改认 `.mu-columns` > `.mu-column` |
 
 导出管线不受影响：导出走 `MarkdownToHtml` 的 token 变换（`data-mdcols` 占位元素 +

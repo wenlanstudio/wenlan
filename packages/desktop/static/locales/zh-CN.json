@@ -779,8 +779,9 @@
     "copyrightContributors": "版权贡献者"
   },
   "view": {
-    "pptView": "幻灯片视图",
-    "excelView": "表格视图",
+    "slidesView": "幻灯片视图",
+    "tableView": "表格视图",
+    "figureView": "插图视图",
     "comingSoon": "即将推出",
     "pageWidth": "页面宽度",
     "cursorPosition": "光标位置",
@@ -902,8 +903,9 @@
       "reloadImages": "重新加载图片",
       "textDirection": "文本方向",
       "readingView": "阅读视图",
-      "pptView": "幻灯片视图",
-      "excelView": "表格视图",
+      "slidesView": "幻灯片视图",
+      "tableView": "表格视图",
+      "figureView": "插图视图",
       "comingSoon": "即将推出",
       "pageWidth": "页面宽度",
       "cursorPosition": "光标位置",

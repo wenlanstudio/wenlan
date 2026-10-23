@@ -9,14 +9,26 @@
   > `getMarkdown()`，与 page 视图共用同一份块树与同一套撤销栈（按 tab 存储）。
   > 设计依据：`packages/muya/src/utils/columns/DESIGN.md`。
   > 待办：columns 视图的工具栏 / 快捷键完整度尚未与 page 视图对齐。
-- [ ] 视图滚动同步
+- [ ] 视图滚动同步基本完成
   - word/page
   - word/columns
   - ppt/slide（还未开发）
   - ppt/present（还未开发）
-  - excel/tables（还未开发）
+  - excel/table（还未开发）
   - dev/md源码
-  这些都是文档的不同视图，使他们多视图同步滚动进度（现在有bug，请重做这个功能吧）；
+  这些都是文档的不同视图，使他们多视图同步滚动进度（现在有bug，请重做这个功能吧）
+
+- [ ] 视图切换时，尽量避免重绘
+    - 以word/page为基础：
+      - word/columns模式：是对word/page已经渲染的带分栏标签的的重新组合；
+      - ppt/slide模式：相当于在word/columns基础上加了分割线；
+      - Ppt/present模式：相当于隐藏了ppt/slide视口外的其他slide；
+      - excel/table模式：相当于将word/page的页面除table外的元素都隐藏了；
+      - image/gallery模式：相当于将word/page的页面除图表外的元素都隐藏了；
+      - image/image模式：相当于隐藏了ppt/gallery视口外的其他image；
+      这样的话，在各模式都可以编辑
+    > 这样是不是就意味着很多地方都不用重绘了；
+
 - [x] 使用同一个滑块控制不同视图：
   - word/page 、word/columns 、 excel/tables（还未开发） 、dev/md源码 ： 调整页面宽度；
   - ppt/slide（还未开发） ： 调整幻灯片大小（放大缩小）

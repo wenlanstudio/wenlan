@@ -7,8 +7,9 @@ import { SyntheticHistory, type IFileHistoryLike } from './syntheticHistory'
 // 脏标记）形状不同：前者是 ot-json1 操作表，后者是桌面端自己的形状。因此这里
 // 存两份按 tab id 索引的状态：
 //
-//   - 引擎历史：视图切换（word/page ↔ word/columns）与 tab 切换都会销毁引擎
-//     实例，撤销栈随实例一起消失；存下来才能在新的实例里恢复。
+//   - 引擎历史：切到 code/source（或占位视图）与 tab 切换都会销毁引擎实例，
+//     撤销栈随实例一起消失；存下来才能在新的实例里恢复。（document/page ↔
+//     document/columns 已共用同一实例，不再需要交接。）
 //   - 合成历史：单调递增、从不复用的保存跟踪 id（见 `syntheticHistory.ts`），
 //     任何一方改动文档都要用它算脏标记。
 //

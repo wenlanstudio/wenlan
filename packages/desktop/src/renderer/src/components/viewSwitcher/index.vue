@@ -1,9 +1,10 @@
 <template>
   <div class="view-switcher">
-    <!-- 从右往左不断细化：WPED 最右固定，子视图在其左，页宽滑块（视图职责为
+    <!-- 从右往左不断细化：DSTFC 最右固定，子视图在其左，页宽滑块（视图职责为
          调整页面宽度的视图共享）最左 -->
     <!-- Shared dock slider — shown in every view whose duty is page width
-         (word/page, word/columns, dev/source; excel/sheet joins when shipped) -->
+         (document/page, document/columns, code/source, table/all;
+         figure/gallery joins when shipped) -->
     <div
       v-if="showWidthSlider"
       class="width-slider-group"
