@@ -1,7 +1,8 @@
 import { expect, test } from '../fixtures/muya';
 
-// The desktop Columns view (`columnsPreview.vue`) boots the same engine with the
-// `columns` layout: a column group is a node of the block tree, so the engine
+// The desktop Columns view is a lens on the editor engine (`editor.vue` toggles
+// `mu-columns-layout` on the engine root) — the same engine with the `columns`
+// layout: a column group is a node of the block tree, so the engine
 // renders the columns itself and the DOM mirrors the tree. These specs pin that
 // contract — without `init()` there is no container at all, and a column group
 // that never reached the tree would lay out zero columns.

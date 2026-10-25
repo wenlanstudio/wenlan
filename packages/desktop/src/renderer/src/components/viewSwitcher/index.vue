@@ -79,7 +79,7 @@ const handleMainViewClick = (mv: MainView) => {
 }
 
 // TODO1 #5 — the slider is shared by all views; the active view's duty decides
-// whether it renders and what it adjusts. `slide-zoom` (ppt/slide) gets its
+// whether it renders and what it adjusts. `slide-zoom` (slides/slide) gets its
 // control here when that view ships.
 const showWidthSlider = computed(() => sliderDuty.value === 'page-width')
 

@@ -22,9 +22,9 @@
  * 退回到 `text` 换算。
  */
 export interface ViewAnchor {
-  /** 内容块序列中的下标（word/page、word/columns 视图）。 */
+  /** 内容块序列中的下标（document/page、document/columns 视图）。 */
   blockIndex?: number
-  /** markdown 源码行号，1-based（dev/md 源码视图）。 */
+  /** markdown 源码行号，1-based（code/source 源码视图）。 */
   line?: number
   /** 视口顶部那一块 / 那一行的纯文本。 */
   text?: string

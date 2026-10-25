@@ -368,7 +368,7 @@ const handleScrollToHeader = (slug: unknown) => {
 }
 
 // 视图间滚动同步（TODO1 #4）：源码视图的视口顶部行写进共享锚点，切到
-// word/page 或 word/columns 时由它们换算成自己的坐标——同一个文档的同一处。
+// document/page 或 document/columns 时由它们换算成自己的坐标——同一个文档的同一处。
 // 滚动事件每帧最多派发多次，量行高要问 CodeMirror，合并到一帧里算一次。
 let anchorRaf = 0
 

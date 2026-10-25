@@ -14,8 +14,8 @@ import {
   writeViewAnchor
 } from '@/util/viewScrollSync'
 
-// 视图间滚动同步（TODO1 #4）的纯 DOM 逻辑。三个视图（word/page、word/columns、
-// dev/md 源码）是同一份文档的不同排版，切换时应当停在同一个文档区域；锚点用
+// 视图间滚动同步（TODO1 #4）的纯 DOM 逻辑。三个视图（document/page、document/columns、
+// code/source 源码）是同一份文档的不同排版，切换时应当停在同一个文档区域；锚点用
 // 「内容块序号 / 源码行号 / 纯文本」三种坐标表达，这里锁定它们之间的换算。
 
 const el = (html: string): HTMLElement => {

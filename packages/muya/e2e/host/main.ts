@@ -137,7 +137,7 @@ window.__e2e = {
     },
     /**
      * Drive the Columns view layout from a spec: boot the engine with the
-     * `columns` layout (what `columnsPreview.vue` does — a column group is a
+     * `columns` layout (what the desktop Columns lens does — a column group is a
      * node of the block tree, so the engine lays the columns out itself) and
      * report the measured groups, so a spec can assert real layout instead of
      * just class names.
