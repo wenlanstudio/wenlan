@@ -288,6 +288,12 @@ const processShim = {
     Promise.resolve().then(() => fn(...args))
 }
 
+const md2slidesAPI = {
+  // slides/present 视图用：main 托管的本地 deck 服务（起停 + 图片白名单）。
+  server: (opts: { action: 'start' | 'stop'; allowRoots?: string[] }) =>
+    invoke('mt::md2slides::server', opts)
+}
+
 try {
   contextBridge.exposeInMainWorld('electron', electronAPI)
   contextBridge.exposeInMainWorld('process', processShim)
@@ -300,6 +306,7 @@ try {
   contextBridge.exposeInMainWorld('uploader', uploaderAPI)
   contextBridge.exposeInMainWorld('fonts', fontsAPI)
   contextBridge.exposeInMainWorld('diagram', diagramAPI)
+  contextBridge.exposeInMainWorld('md2slides', md2slidesAPI)
 } catch (error) {
   console.error(error)
 }

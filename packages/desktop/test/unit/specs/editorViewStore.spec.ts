@@ -73,9 +73,11 @@ describe('editorView slider duty', () => {
   })
 
   it('present mode never has a slider, even once implemented', () => {
+    // Implemented since M1 (md2slides presentation view, 2026-10-31) — the point
+    // of this test is that flipping the flag must not summon the width slider.
     expect(MAIN_VIEW_META.slides.subViews.find((s) => s.key === 'present')).toMatchObject({
       slider: 'none',
-      implemented: false
+      implemented: true
     })
     expect(resolveSliderDuty('slides', 'present')).toBe('none')
   })

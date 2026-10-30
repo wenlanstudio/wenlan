@@ -45,7 +45,8 @@ export const MAIN_VIEW_META: Record<MainView, { label: string; icon: string; sub
     icon: '示',
     subViews: [
       { key: 'slide', label: 'Slide', slider: 'slide-zoom', implemented: false },
-      { key: 'present', label: 'Present', slider: 'none', implemented: false }
+      // md2slides 放映（slidesPresent.vue）：本地服务 + deck-full 页面，2026-10-31 M1 落地。
+      { key: 'present', label: 'Present', slider: 'none', implemented: true }
     ]
   },
   table: {

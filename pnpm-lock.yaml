@@ -87,6 +87,9 @@ importers:
       '@muyajs/core':
         specifier: workspace:*
         version: link:../muya
+      '@viz-js/viz':
+        specifier: ^3.31.0
+        version: 3.31.0
       '@vscode/ripgrep':
         specifier: ^1.18.0
         version: 1.18.0
@@ -177,6 +180,9 @@ importers:
       pinia:
         specifier: ^4.0.3
         version: 4.0.3(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.43(typescript@6.0.3))
+      plantuml-encoder:
+        specifier: ^1.4.0
+        version: 1.4.0
       plist:
         specifier: ^5.0.0
         version: 5.0.0
@@ -235,6 +241,9 @@ importers:
       '@types/node':
         specifier: ^26.6.4
         version: 26.6.4
+      '@types/plantuml-encoder':
+        specifier: ^1.4.2
+        version: 1.4.2
       '@types/webfontloader':
         specifier: ^1.6.38
         version: 1.6.38
@@ -5848,8 +5857,8 @@ packages:
   file-entry-cache@11.1.5:
     resolution: {integrity: sha512-+PFTHITI08JIGhnNpGNI8T8inUpgZfk3GNEqfT9R2zZV2iFXg3CvqzSl/uEhs7TSGujYRELEANyDvS8Fj7+S7Q==}
 
-  file-icons@https://codeload.github.com/file-icons/atom/tar.gz/de1643106d3ad7db491114538bf48d2ed214d60c:
-    resolution: {gitHosted: true, integrity: sha512-0ySMdNRCBnEyNZEuMD8B1WBphqXPnThZ3cPVEMnfHsA8vWefVeNI+Whd5zUn1y1lMnNRQXdodVCfCaAKjoq5Tg==, tarball: https://codeload.github.com/file-icons/atom/tar.gz/de1643106d3ad7db491114538bf48d2ed214d60c}
+  file-icons@git+https://git@github.com:file-icons/atom.git#fa4bc4850eb5bbc0d192c127fb4be10af3f049b2:
+    resolution: {commit: fa4bc4850eb5bbc0d192c127fb4be10af3f049b2, repo: git@github.com:file-icons/atom.git, type: git}
     version: 2.1.47
     engines: {atom: '>=1.25.0'}
 
@@ -11874,7 +11883,7 @@ snapshots:
 
   '@marktext/file-icons@1.0.6':
     dependencies:
-      file-icons: https://codeload.github.com/file-icons/atom/tar.gz/de1643106d3ad7db491114538bf48d2ed214d60c
+      file-icons: git+https://git@github.com:file-icons/atom.git#fa4bc4850eb5bbc0d192c127fb4be10af3f049b2
 
   '@mermaid-js/parser@2.0.1':
     dependencies:
@@ -15607,7 +15616,7 @@ snapshots:
     dependencies:
       flat-cache: 6.1.23
 
-  file-icons@https://codeload.github.com/file-icons/atom/tar.gz/de1643106d3ad7db491114538bf48d2ed214d60c:
+  file-icons@git+https://git@github.com:file-icons/atom.git#fa4bc4850eb5bbc0d192c127fb4be10af3f049b2:
     dependencies:
       atom-fs: 0.2.1
       lru-cache: 5.1.1

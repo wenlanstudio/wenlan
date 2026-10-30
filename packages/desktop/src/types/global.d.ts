@@ -207,6 +207,11 @@ declare global {
     uploader: UploaderAPI
     fonts: FontsAPI
     diagram: DiagramAPI
+    md2slides: {
+      server(opts: { action: 'start' | 'stop'; allowRoots?: string[] }): Promise<
+        { running: boolean; origin: string | null }
+      >
+    }
     process: ProcessShim
     rgPath: string
     // Set by the legacy editor store at runtime; consumed by muya internals.

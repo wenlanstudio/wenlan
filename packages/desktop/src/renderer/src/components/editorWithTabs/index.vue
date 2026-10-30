@@ -28,7 +28,12 @@
           :lens="wysiwygLens"
         />
       </div>
-      <!-- Slides 视图 -->
+      <!-- Slides 视图：present = md2slides 放映（本地服务 + iframe）；slide = Tier 0
+           逻辑页编辑视图（未开发；裁决：物理分页归放映，编辑视图只做逻辑页） -->
+      <slides-present
+        v-else-if="mainView === 'slides' && subView === 'present'"
+        :markdown="markdown"
+      />
       <div
         v-else-if="mainView === 'slides'"
         class="view-placeholder"
@@ -132,6 +137,7 @@ import { t } from '@/i18n'
 import Editor from './editor.vue'
 import ColumnsDiagnostics from './columnsDiagnostics.vue'
 import SourceCode from './sourceCode.vue'
+import SlidesPresent from './slidesPresent.vue'
 import TabNotifications from './notifications.vue'
 
 defineProps<{

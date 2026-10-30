@@ -12,6 +12,7 @@ import { registerDialogHandlers } from './dialog'
 import { registerDiagramHandlers } from './diagram'
 import { registerMatplotlibHandlers } from './matplotlib'
 import { registerLinkHtmlHandler } from './linkHtml'
+import { registerMd2slidesHandlers } from './md2slides'
 
 export const registerSandboxIpcHandlers = (): void => {
   registerBootInfo()
@@ -28,4 +29,5 @@ export const registerSandboxIpcHandlers = (): void => {
   registerDiagramHandlers()
   registerMatplotlibHandlers()
   registerLinkHtmlHandler()
+  registerMd2slidesHandlers()
 }

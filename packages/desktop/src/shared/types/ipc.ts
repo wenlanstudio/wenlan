@@ -59,6 +59,12 @@ export interface IpcInvokeChannels {
   'mt::clipboard::guess-file-path': { args: []; ret: string | null }
   'mt::clipboard::read-text': { args: []; ret: string }
   'mt::link::fetch-html': { args: [url: string]; ret: string }
+  // md2slides 幻灯片视图（slides/present）的本地 deck 服务：渲染进程沙箱里起不了
+  // 服务，由 main 托管（vendored md2slides 资产包里的 server.js）。
+  'mt::md2slides::server': {
+    args: [opts: { action: 'start' | 'stop'; allowRoots?: string[] }]
+    ret: { running: boolean; origin: string | null }
+  }
   'mt::clipboard::write-image': { args: [png: Uint8Array]; ret: boolean }
   'mt::cmd::exists': { args: [name: string]; ret: boolean }
   'mt::diagram::fetch-plantuml': {

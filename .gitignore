@@ -23,3 +23,6 @@ playwright-report/
 .agents/
 .agent/
 .idea/
+
+# md2slides vendored 资产包（scripts/sync-md2slides.mjs 同步生成，不进库）
+packages/desktop/resources/
