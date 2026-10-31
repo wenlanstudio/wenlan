@@ -1,12 +1,10 @@
 <template>
   <div class="view-switcher">
-    <!-- 从右往左不断细化：主视图（文·示·表·图·本）最右固定，子视图在其左，
-         页宽滑块（视图职责为调整页面宽度的视图共享）最左 -->
-    <!-- Shared dock slider — shown in every view whose duty is page width
-         (document/page, document/columns, code/source, table/all;
-         figure/gallery joins when shipped) -->
+    <!-- 从右往左：主视图（四叶 + 表图本）最右固定，页宽滑块最左。
+         滑块职责由 store.sliderDuty 给出——分屏时一律收起（宽度控制被
+         分割条吸收，视图模型 §3）。 -->
     <div
-      v-if="showWidthSlider"
+      v-if="sliderDuty === 'page-width'"
       class="width-slider-group"
       :title="t('view.pageWidth')"
     >
@@ -22,45 +20,33 @@
       <span class="width-label">{{ sliderValue }}</span>
     </div>
 
-    <!-- Sub-view toggle -->
-    <div
-      v-if="visibleSubViews.length > 1"
-      class="sub-views"
-    >
+    <!-- 四叶（视图模型 §2）：文 { page 全文, column 分栏 } │ 示 { slide 列表,
+         present 放映 }。点击切换选中，至多两叶（1=全屏 2=分屏，FIFO 换选，
+         不可选空）。column 只对真有分栏标记的文档显示（§4.4 #5）。 -->
+    <div class="leaves">
       <button
-        v-for="sv in visibleSubViews"
-        :key="sv.key"
-        class="sub-view-btn"
-        :class="{ active: subView === sv.key }"
-        @click="setSubView(sv.key)"
+        v-for="leaf in visibleLeaves"
+        :key="leaf"
+        class="leaf-btn"
+        :class="{ active: leafSelection.includes(leaf), groupStart: leaf === 'slide' }"
+        :title="LEAF_META[leaf].title"
+        @click="toggleLeaf(leaf)"
       >
-        {{ sv.label }}
+        {{ LEAF_META[leaf].label }}
       </button>
     </div>
 
-    <!-- Preview toggle（形态模型 §2）：编辑形态存在时，右侧同屏开/关成片投影
-         （[page,present] 等合法对；非 document 形态时投影自动挂起） -->
-    <button
-      v-if="editForm"
-      class="sub-view-btn preview-toggle"
-      :class="{ active: activePreview !== null }"
-      :title="activePreview ? '关闭右侧成片投影' : '右侧同屏打开成片放映（边编辑边看）'"
-      @click="togglePreview"
-    >
-      预览
-    </button>
-
-    <!-- Main view buttons -->
+    <!-- 顶级正交视图：表 / 图 / 本（不进文示树） -->
     <div class="main-views">
       <button
-        v-for="mv in MAIN_VIEWS"
-        :key="mv"
+        v-for="tv in TOP_VIEWS"
+        :key="tv"
         class="main-view-btn"
-        :class="{ active: mainView === mv }"
-        :title="MAIN_VIEW_META[mv].label"
-        @click="handleMainViewClick(mv)"
+        :class="{ active: topView === tv }"
+        :title="TOP_VIEW_META[tv].title"
+        @click="toggleTopView(tv)"
       >
-        {{ MAIN_VIEW_META[mv].icon }}
+        {{ TOP_VIEW_META[tv].icon }}
       </button>
     </div>
   </div>
@@ -69,33 +55,43 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useEditorViewStore, MAIN_VIEWS, MAIN_VIEW_META, type MainView } from '@/store/editorView'
+import {
+  useEditorViewStore,
+  TOP_VIEWS,
+  LEAVES,
+  type Leaf
+} from '@/store/editorView'
 import { usePreferencesStore } from '@/store/preferences'
 import { t } from '@/i18n'
 
 const editorViewStore = useEditorViewStore()
 const preferencesStore = usePreferencesStore()
-const { mainView, subView, availableSubViews, hasColumns, sliderDuty, editForm, activePreview } =
-  storeToRefs(editorViewStore)
-const { setMainView, setSubView, togglePreview } = editorViewStore
+const { leafSelection, topView, hasColumns, sliderDuty } = storeToRefs(editorViewStore)
+const { toggleLeaf, toggleTopView } = editorViewStore
 const { editorLineWidth } = storeToRefs(preferencesStore)
 
-// §4.4 #5 — Column only shows for a document that actually has a `begin`
-// marker (and therefore only when a file is open).
-const visibleSubViews = computed(() =>
-  availableSubViews.value.filter((sv) => sv.key !== 'column' || hasColumns.value)
-)
-
-const handleMainViewClick = (mv: MainView) => {
-  if (mainView.value === mv) return
-  setMainView(mv)
+// 叶的短名与提示。label 是单字 CJK 刻度（与主视图图标同族，刻意不翻译）；
+// title 中文提示——与 deck 工具条同策略（该用户群中文工作语言）。
+const LEAF_META: Record<Leaf, { label: string; title: string }> = {
+  page: { label: '文', title: '全文（连续编辑）' },
+  column: { label: '栏', title: '分栏（空间离散，需 begin 标记）' },
+  slide: { label: '列', title: '幻灯片列表（全部真实页 · 溢出警告）' },
+  present: { label: '放', title: '放映（一次一页）' }
 }
 
-// TODO1 #5 — the slider is shared by all views; the active view's duty decides
-// whether it renders and what it adjusts. `slide-zoom` (slides/slide) gets its
-// control here when that view ships.
-const showWidthSlider = computed(() => sliderDuty.value === 'page-width')
+const TOP_VIEW_META: Record<string, { icon: string; title: string }> = {
+  table: { icon: '表', title: 'Tables' },
+  figure: { icon: '图', title: 'Figure' },
+  code: { icon: '本', title: 'Markdown Source' }
+}
 
+const visibleLeaves = computed<Leaf[]>(() =>
+  LEAVES.filter((leaf) => leaf !== 'column' || hasColumns.value)
+)
+
+// TODO1 #5 — the slider is shared by all views; the active view's duty decides
+// whether it renders and what it adjusts. `slide-zoom` (slide 列表缩放) 接线时
+// 在 store.sliderDuty 里改语义即可。
 const DEFAULT_WIDTH = 750
 
 const parsePx = (value: string): number => {
@@ -125,6 +121,47 @@ const handleSliderChange = () => {
   gap: 4px;
   font-size: 12px;
   user-select: none;
+}
+
+.leaves {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+/* 文支与示支之间一道分隔，提示两支两根粒度轴（视图模型 §1） */
+.leaf-btn.groupStart {
+  border-left: 1px solid var(--editorColor10);
+  padding-left: 7px;
+  margin-left: 3px;
+}
+
+.leaf-btn {
+  height: 20px;
+  min-width: 20px;
+  padding: 0 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--editorColor40);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.leaf-btn:hover {
+  color: var(--editorColor80);
+  background: var(--editorColor04);
+}
+
+.leaf-btn.active {
+  color: var(--editorBgColor);
+  background: var(--editorColor50);
 }
 
 .main-views {
@@ -164,49 +201,6 @@ const handleSliderChange = () => {
 .main-view-btn.active {
   color: var(--editorBgColor);
   background: var(--editorColor50);
-}
-
-.sub-views {
-  display: flex;
-  align-items: center;
-  gap: 1px;
-  padding-left: 4px;
-  border-left: 1px solid var(--editorColor10);
-  margin-left: 2px;
-}
-
-.sub-view-btn {
-  height: 20px;
-  padding: 0 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 3px;
-  background: transparent;
-  color: var(--editorColor40);
-  font-size: 11px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.sub-view-btn:hover {
-  color: var(--editorColor80);
-  background: var(--editorColor04);
-}
-
-.sub-view-btn.active {
-  color: var(--editorColor);
-  background: var(--editorColor10);
-}
-
-/* 预览开关：独立成钮（不在 .sub-views 组里），视觉上与子视图组同族 */
-.preview-toggle {
-  border-left: 1px solid var(--editorColor10);
-  margin-left: 2px;
-  padding-left: 8px;
 }
 
 /* Page width slider */
@@ -269,7 +263,7 @@ const handleSliderChange = () => {
 
 /* Collapse on narrow screens */
 @media (max-width: 560px) {
-  .sub-views {
+  .leaves {
     display: none;
   }
 }

@@ -164,7 +164,7 @@ const { windowActive, platform, init } = storeToRefs(mainStore)
 const { theme, customCss, textDirection, zoom, editorLineWidth } = storeToRefs(preferencesStore)
 const { projectTree } = storeToRefs(projectStore)
 const { currentFile, selectionWordCount, readOnly } = storeToRefs(editorStore)
-const { mainView } = storeToRefs(editorViewStore)
+const { isEditorVisible } = storeToRefs(editorViewStore)
 
 const filename = computed(() => currentFile.value?.filename)
 const isSaved = computed(() => currentFile.value?.isSaved)
@@ -189,8 +189,7 @@ const hasCurrentFile = computed<boolean>(() => {
 const cursorPosition = ref<{ line: number; ch: number } | null>(null)
 const showCursorPosition = computed(() => {
   if (!hasCurrentFile.value) return false
-  const mv = mainView.value
-  return mv === 'document' || mv === 'code'
+  return editorViewStore.isEditorVisible
 })
 const cursorPositionText = computed(() => {
   const pos = cursorPosition.value

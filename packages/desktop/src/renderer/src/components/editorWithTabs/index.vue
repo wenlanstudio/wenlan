@@ -8,38 +8,41 @@
   >
     <!-- 分栏诊断：进入 column 透镜时提示 5s 后消失，详情留在 console -->
     <columns-diagnostics
-      v-if="wysiwygLens === 'column'"
+      v-if="editorLens === 'column'"
       :markdown="markdown"
     />
     <div
       class="container"
-      :class="{ split: showSplit }"
+      :class="{ split: isSplit }"
+      :style="isSplit ? { '--split-ratio': `${rightRatio}` } : undefined"
     >
-      <div class="edit-pane">
-        <!-- 透镜宿主：WYSIWYG 引擎在 document/page、document/column 与
-             table/all 之间常驻，切换视图只翻转 `data-lens` 而不重绘
-             （TODO1 #21、#26）。 -->
+      <div class="pane pane-left">
+        <!-- 透镜宿主：WYSIWYG 引擎在 page/column/table 透镜间常驻，切换只翻转
+             `data-lens` 而不重绘（TODO1 #21、#26）。分屏时活引擎占左 pane
+             （(page,column) 的左=page 编辑、右=column 投影）。 -->
         <div
-          v-if="wysiwygLens !== null"
+          v-if="editorLens"
           class="lens-host"
-          :data-lens="wysiwygLens"
+          :data-lens="editorLens"
         >
           <editor
             :markdown="markdown"
             :cursor="cursor"
             :text-direction="textDirection"
             :platform="platform"
-            :lens="wysiwygLens"
+            :lens="editorLens"
           />
         </div>
-        <!-- 示 = md2slides 成片放映（全屏独占形态，本地服务 + iframe） -->
-        <slides-present
-          v-else-if="mainView === 'present'"
+        <!-- 本（源码）：CodeMirror 独立渲染，非透镜 -->
+        <source-code
+          v-else-if="topView === 'code'"
           :markdown="markdown"
+          :muya-index-cursor="muyaIndexCursor"
+          :text-direction="textDirection"
         />
-        <!-- Figure 视图 -->
+        <!-- 图视图占位（figure 未实现） -->
         <div
-          v-else-if="mainView === 'figure'"
+          v-else-if="topView === 'figure'"
           class="view-placeholder"
         >
           <div class="placeholder-inner">
@@ -75,25 +78,42 @@
             </div>
           </div>
         </div>
-        <!-- Code 源码视图 -->
-        <source-code
-          v-else-if="mainView === 'code' && subView === 'source'"
-          :markdown="markdown"
-          :muya-index-cursor="muyaIndexCursor"
-          :text-direction="textDirection"
-        />
       </div>
-      <!-- 投影面（形态模型 §2）：左侧编辑形态、右侧只读投影，合法对 = 离散度
-           严格递增。P2 只有 present 成片投影；column/slide 投影为 P3/P4。 -->
+      <!-- 分割条：分屏时的比例手柄（视图模型 §3）。宽度控制被它吸收——
+           页宽滑块此时收起（store.sliderDuty）。 -->
       <div
-        v-if="showSplit && activePreview === 'present'"
-        class="preview-pane"
+        v-if="isSplit"
+        class="divider"
+        title="拖动调整两侧比例"
+        @pointerdown="startDrag"
+      />
+      <!-- 右 pane：示支叶（slide 列表 / present 放映）或 column 投影。
+           key 按 leaf 分实例——同一 iframe 实例的 view 恒定（deck 侧
+           player/列表布局二选一），slide 与 present 各持一份。 -->
+      <div
+        v-if="isSplit"
+        class="pane pane-right"
       >
-        <slides-present
-          variant="panel"
+        <deck-pane
+          v-if="rightLeaf === 'slide' || rightLeaf === 'present'"
+          :key="rightLeaf"
+          :leaf="rightLeaf"
+          mode="panel"
+          :markdown="markdown"
+        />
+        <leaf-projection
+          v-else-if="rightLeaf === 'column'"
           :markdown="markdown"
         />
       </div>
+      <!-- 全屏示支叶（slide 列表 / present 放映单选时占满编辑区） -->
+      <deck-pane
+        v-if="!isSplit && topView === null && (activeLeaf === 'slide' || activeLeaf === 'present')"
+        :key="activeLeaf"
+        :leaf="activeLeaf"
+        mode="view"
+        :markdown="markdown"
+      />
     </div>
     <tab-notifications />
   </div>
@@ -109,7 +129,8 @@ import { t } from '@/i18n'
 import Editor from './editor.vue'
 import ColumnsDiagnostics from './columnsDiagnostics.vue'
 import SourceCode from './sourceCode.vue'
-import SlidesPresent from './slidesPresent.vue'
+import DeckPane from './deckPane.vue'
+import LeafProjection from './leafProjection.vue'
 import TabNotifications from './notifications.vue'
 
 defineProps<{
@@ -125,25 +146,36 @@ defineProps<{
 
 const { effectiveSideBarWidth } = storeToRefs(useLayoutStore())
 const { zoom } = storeToRefs(usePreferencesStore())
-const { mainView, subView, activePreview } = storeToRefs(useEditorViewStore())
+const editorViewStore = useEditorViewStore()
+const { topView, isSplit, rightLeaf, activeLeaf, editorLens, rightRatio } = storeToRefs(editorViewStore)
+// Actions 不经 storeToRefs（它只包 state/getter）。
+const { setRightRatio } = editorViewStore
 
-// Which lens the live WYSIWYG engine renders under, or `null` when this
-// (main, sub) pair is not an engine surface at all. All lens views share one
-// `v-if`, so switching among them only flips the attribute instead of
-// remounting the engine and dropping its undo stack (TODO1 #21).
-// document/slide 是分片编辑形态（P4）——透镜未实现，落占位分支，不算引擎面。
-const wysiwygLens = computed<string | null>(() => {
-  if (mainView.value === 'document' && subView.value === 'page') return 'page'
-  if (mainView.value === 'document' && subView.value === 'column') return 'column'
-  if (mainView.value === 'document' && subView.value === 'slide') return 'slide'
-  if (mainView.value === 'table' && subView.value === 'all') return 'table'
-  return null
-})
+// 分屏左 pane 的引擎透镜由 store.editorLens 给出：orderedLeaves 首个
+// page/column 叶（LEAVES 序保证左细右粗、文左示右）。
 
-// 分屏只在编辑面是活的引擎透镜时呈现（占位视图旁不挂投影面）。
-const showSplit = computed(
-  () => activePreview.value !== null && wysiwygLens.value !== null
-)
+// —— 分割条拖拽（视图模型 §3）——
+const startDrag = (ev: PointerEvent): void => {
+  ev.preventDefault()
+  const target = ev.currentTarget as HTMLElement
+  const container = target.parentElement
+  if (!container) return
+  target.setPointerCapture(ev.pointerId)
+  target.classList.add('dragging')
+
+  const onMove = (move: PointerEvent): void => {
+    const rect = container.getBoundingClientRect()
+    const ratio = (rect.right - move.clientX) / rect.width
+    setRightRatio(ratio)
+  }
+  const onUp = (): void => {
+    target.classList.remove('dragging')
+    target.removeEventListener('pointermove', onMove)
+    target.removeEventListener('pointerup', onUp)
+  }
+  target.addEventListener('pointermove', onMove)
+  target.addEventListener('pointerup', onUp)
+}
 </script>
 
 <style scoped>
@@ -160,30 +192,59 @@ const showSplit = computed(
     flex: 1;
     overflow: hidden;
 
-    /* 分屏壳（形态模型 §2）：左编辑右投影。非 split 时保持原 block 流，
-       透镜分支的布局假设（.editor-wrapper height:100% 等）零改动。 */
+    /* 分屏壳（视图模型 §2）：左细右粗、文左示右。非 split 时保持原 block
+       流，透镜分支的布局假设（.editor-wrapper height:100% 等）零改动。 */
     &.split {
       display: flex;
     }
   }
 }
 
-.edit-pane {
-  flex: 1;
+.pane {
+  position: relative;
   min-width: 0;
   height: 100%;
-  position: relative;
   overflow: hidden;
 }
 
-.preview-pane {
-  flex: 0 0 45%;
-  min-width: 300px;
-  max-width: 70%;
-  position: relative;
-  overflow: hidden;
+.pane-left {
+  flex: 1;
+}
+
+.pane-right {
+  flex: 0 0 calc(var(--split-ratio, 0.45) * 100%);
+  min-width: 260px;
+  max-width: 80%;
   border-left: 1px solid var(--editorColor10);
-  background: #1a1a1a;
+  background: var(--editorBgColor);
+}
+
+.divider {
+  flex: none;
+  width: 5px;
+  margin: 0 -2px;
+  z-index: 5;
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+}
+
+.divider::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--editorColor10);
+  transition: background 0.15s ease;
+}
+
+.divider:hover::after,
+.divider.dragging::after {
+  background: var(--editorColor50);
+  width: 3px;
+  left: 1px;
 }
 
 /* Pure CSS hook: `data-lens` is what the lens rules in editor.vue key off.
@@ -195,6 +256,7 @@ const showSplit = computed(
 
 .view-placeholder {
   flex: 1;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;

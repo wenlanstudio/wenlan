@@ -1,8 +1,8 @@
 <template>
-  <div class="slides-present">
+  <div class="deck-pane">
     <div
       v-if="error"
-      class="slides-present-error"
+      class="deck-error"
     >
       <p class="error-title">
         幻灯片构建失败
@@ -18,36 +18,38 @@
     <iframe
       v-show="!error"
       ref="deckFrame"
-      class="slides-present-frame"
+      class="deck-frame"
       :src="frameSrc"
       title="md2slides deck"
     />
-    <div class="slides-present-bar">
+    <div class="deck-bar">
       <span class="page-indicator">
-        {{ total > 0 ? `${index} / ${total}` : status }}
+        {{ indicator }}
       </span>
-      <button
-        class="bar-button"
-        :disabled="exporting || total === 0"
-        title="导出为图片型 PPTX（逐像素保真，文字不可编辑）"
-        @click="onExport('image')"
-      >
-        {{ exporting ? '导出中…' : '导出PPTX' }}
-      </button>
-      <button
-        class="bar-button"
-        :disabled="exporting || total === 0"
-        title="导出为可编辑 PPTX（母版原生，可改字 / 换配色；需 Python + python-pptx）"
-        @click="onExport('editable')"
-      >
-        {{ exporting ? '导出中…' : '导出可编辑PPTX' }}
-      </button>
+      <template v-if="leaf === 'present'">
+        <button
+          class="bar-button"
+          :disabled="exporting || total === 0"
+          title="导出为图片型 PPTX（逐像素保真，文字不可编辑）"
+          @click="onExport('image')"
+        >
+          {{ exporting ? '导出中…' : '导出PPTX' }}
+        </button>
+        <button
+          class="bar-button"
+          :disabled="exporting || total === 0"
+          title="导出为可编辑 PPTX（母版原生，可改字 / 换配色；需 Python + python-pptx）"
+          @click="onExport('editable')"
+        >
+          {{ exporting ? '导出中…' : '导出可编辑PPTX' }}
+        </button>
+      </template>
       <button
         class="exit-button"
-        :title="isPanel ? '关闭预览' : '退出放映（Esc）'"
+        :title="isPanel ? '关闭此视图' : '返回编辑（Esc）'"
         @click="exit"
       >
-        {{ isPanel ? '✕' : '✕ 退出' }}
+        ✕
       </button>
     </div>
   </div>
@@ -55,21 +57,19 @@
 
 <script setup lang="ts">
 /**
- * slidesPresent — present 投影面：把当前文档交给 md2slides 放映。
+ * deckPane — 示支两叶（present 放映 / slide 幻灯片列表）共用的 md2slides 投影面
+ * （视图模型 v2 §2/§4）。同一套机制（本地服务 + iframe + postMessage 桥 + 300ms
+ * 防抖原地重建 + 重建保页 + 面板态键盘归属），两叶只差 runOpts.view：
+ * - present → view:"present"（一次一页的播放器）；
+ * - slide   → view:"list"（全部物理页堆叠 + 溢出警告，deck 侧打 ⚠ 徽章）。
+ * 同一 leaf 可在全屏（mode=view）与分屏 pane（mode=panel）间切换：iframe 原地
+ * 复用，只重发 build。
  *
- * 形态（md2slides 仓 docs/design/integration-marktext.md §5，2026-10-30 裁决）：
- * 本组件**零 md2slides 代码依赖**——main 进程起本地服务（vendored 资产包），iframe
- * 指向 `服务/deck.html`（服务出来的文档不受编辑器 CSP 约束），一切交互走
+ * 本组件**零 md2slides 代码依赖**——main 进程起本地服务（vendored 资产包），
+ * iframe 指向 `服务/deck.html`（服务出来的文档不受编辑器 CSP 约束），一切交互走
  * postMessage：boot 握手 → build{md, mdDir} → ready/change/error；graphviz /
  * plantuml 图表经 rpc 托本进程离屏出图（muya 同款 viz WASM / plantuml server）。
- *
- * 两个变体（形态模型 §2，同一投影面机制）：
- * - `view`（默认）＝示 全屏放映：编辑器（muya）已被 v-if 卸载，md 变化来自
- *   文件切换/外部重载；Esc（窗口级或 deck 聚焦）退回编辑。
- * - `panel` ＝分屏右侧的成片投影（[page,present] 等）：编辑器**常驻**，
- *   md 变化就是打字——300ms 防抖原地重建。面板态不抢焦点、不挂窗口级
- *   Esc（编辑器必须保住键盘）；deck 聚焦时 Esc 经 md2s:esc 只关面板。
- *   重建携带 runOpts.startIndex，改字不跳回第 1 页（保页裁决）。
+ * 大位图导出经服务 /x 旁路落盘（不过 postMessage/IPC——数百 MB 会挂死 Electron）。
  */
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -79,9 +79,11 @@ import { usePreferencesStore } from '@/store/preferences'
 import { renderGraphvizToDataUrl, renderPlantumlToDataUrl } from '@/util/md2slidesDiagram'
 
 const props = defineProps<{
+  /** 示支的叶：present 放映 / slide 幻灯片列表。 */
+  leaf: 'present' | 'slide'
+  /** view＝该叶全屏；panel＝分屏 pane（形态模型 §2）。 */
+  mode: 'view' | 'panel'
   markdown: string
-  /** view＝示 全屏放映；panel＝分屏右侧成片投影（形态模型 §2）。 */
-  variant?: 'view' | 'panel'
 }>()
 
 const editorStore = useEditorStore()
@@ -95,9 +97,18 @@ const error = ref('')
 const status = ref('正在启动放映服务…')
 const index = ref(0)
 const total = ref(0)
+const warnings = ref(0)
 const exporting = ref(false)
 
-const isPanel = computed(() => props.variant === 'panel')
+const isPanel = computed(() => props.mode === 'panel')
+
+const indicator = computed(() => {
+  if (total.value === 0) return status.value
+  if (props.leaf === 'slide') {
+    return warnings.value > 0 ? `${total.value} 页 · ${warnings.value} 页溢出 ⚠` : `${total.value} 页`
+  }
+  return `${index.value} / ${total.value}`
+})
 
 /**
  * ready 透出的画布/主题/meta——导出取数要原样带回页面。
@@ -124,8 +135,8 @@ const postToDeck = (msg: Record<string, unknown>): void => {
 }
 
 const sendBuild = (preservePage = false): void => {
-  // 重建保页（面板态的生命线）：带上最近页号，改字不跳回第 1 页。
-  // startIndex 是 1 基；用旧 total 钳制（新总页数构建后才知，deck 侧还会再钳）。
+  // 重建保页（面板态的生命线）：带上最近页号，改字不跳回第 1 页（list 视图
+  // 页面侧自保滚动位置，startIndex 被忽略）。
   const startIndex =
     preservePage && index.value > 1 && total.value > 0
       ? Math.min(index.value, total.value)
@@ -134,7 +145,10 @@ const sendBuild = (preservePage = false): void => {
     type: 'md2s:build',
     md: props.markdown,
     mdDir: mdDir.value,
-    ...(startIndex !== undefined ? { runOpts: { startIndex } } : {})
+    runOpts: {
+      view: props.leaf === 'slide' ? 'list' : 'present',
+      ...(startIndex !== undefined ? { startIndex } : {})
+    }
   })
 }
 
@@ -154,9 +168,9 @@ const onRpc = async (data: { id: number; diagramType: string; source: string }):
 
 const exit = (): void => {
   if (isPanel.value) {
-    editorViewStore.setPreview(null)
+    editorViewStore.removeLeaf(props.leaf)
   } else {
-    editorViewStore.setMainView('document', 'page')
+    editorViewStore.focusEditor()
   }
 }
 
@@ -181,6 +195,7 @@ const onMessage = (ev: MessageEvent): void => {
       status.value = ''
       index.value = Number(data.index) || 1
       total.value = Number(data.total) || 0
+      warnings.value = Number(data.warnings) || 0
       deckInfo.value = {
         slideWidth: Number(data.slideWidth) || 1920,
         slideHeight: Number(data.slideHeight) || 1080,
@@ -188,7 +203,7 @@ const onMessage = (ev: MessageEvent): void => {
         meta: (data.meta as Record<string, unknown> | null) ?? null
       }
       // 交点给 deck：←/→/触屏手势在 iframe 里生效（点击幻灯片同样可聚焦）。
-      // 面板态不抢焦点——编辑器必须保住键盘（形态模型 §2 键盘归属）。
+      // 面板态不抢焦点——编辑器必须保住键盘（视图模型 §3）。
       if (!isPanel.value) deckFrame.value?.contentWindow?.focus()
       break
     case 'md2s:change':
@@ -218,13 +233,11 @@ const onKeydown = (ev: KeyboardEvent): void => {
   if (ev.key === 'Escape') exit()
 }
 // 面板态不挂窗口级 Esc：编辑器打字场景下 Esc 属于编辑器（关弹层/取消），
-// 关面板走工具条按钮或 deck 聚焦时的 md2s:esc。
+// 关 pane 走工具条按钮或 deck 聚焦时的 md2s:esc。
 const listensWindowKeys = !isPanel.value
 
-// —— 导出（M2）：取数在 deck 页面（postMessage），出片在 main（IPC）。——
+// —— 导出（present 叶全屏态）：取数在 deck 页面（postMessage），出片在 main（IPC）。——
 // 单飞：同一时刻只允许一个导出在跑，取数应答用单一 waiter。
-// 大位图由页面直传 deck 服务旁路落盘（/x），桥上与 IPC 只走目录路径——
-// 数百 MB 过 postMessage/IPC 会把 Electron 挂死（2026-10-31 真机 79 页教训）。
 
 let exportSeq = 0
 let exportWaiter: ((data: Record<string, unknown>) => void) | null = null
@@ -297,7 +310,7 @@ const stopServer = (): void => {
 }
 
 // 防抖原地重建：md 变了重发 build，deck 页面原地重跑 compose，不重载 iframe。
-// 面板态的 md 变化就是打字——保页（startIndex）在这里生效。
+// 面板态的 md 变化就是打字——保页在这里生效。
 const REBUILD_DEBOUNCE_MS = 300
 let rebuildTimer: number | undefined
 watch(
@@ -330,14 +343,14 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.slides-present {
-  position: absolute;
-  inset: 0;
+.deck-pane {
+  position: relative;
+  height: 100%;
   background: #1a1a1a;
   overflow: hidden;
 }
 
-.slides-present-frame {
+.deck-frame {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -345,7 +358,7 @@ onBeforeUnmount(() => {
   border: 0;
 }
 
-.slides-present-bar {
+.deck-bar {
   position: absolute;
   right: 16px;
   bottom: 16px;
@@ -389,7 +402,11 @@ onBeforeUnmount(() => {
 .exit-button {
   border: 0;
   border-radius: 14px;
-  padding: 4px 12px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(255, 255, 255, 0.12);
   color: #eee;
   font-size: 13px;
@@ -400,7 +417,7 @@ onBeforeUnmount(() => {
   background: rgba(255, 255, 255, 0.22);
 }
 
-.slides-present-error {
+.deck-error {
   position: absolute;
   inset: 0;
   display: flex;

@@ -93,7 +93,6 @@ import { getMuyaLocale } from '@/util/muyaLocale'
 import { buildMuyaViewOptions, resolveCodeFont, resolveEditorFont } from '@/util/muyaViewOptions'
 import { exportStyledHTML, type HeaderFooterPart } from '@/util/exportHtml'
 import { applyCursor, isIndexCursor, serializeCursor } from '@/util/cursor'
-import { applySlideLensTags } from '@/util/slidePages'
 import EditorSearch from '../search/index.vue'
 import MediaViewer from '../mediaViewer/index.vue'
 import bus from '@/bus'
@@ -402,54 +401,18 @@ watch(
 // keeps a single engine (and a single undo stack) serving both lenses, instead
 // of booting a second instance per view. Done in JS rather than CSS because the
 // rules live in the engine's stylesheet — re-declaring them here would drift.
-//
-// The slide form is likewise one class (`mu-slide-layout`) plus per-block
-// `data-slide-*` tags — see `util/slidePages.ts` (zero DOM restructuring:
-// only attributes, so the block tree / undo stack / caret are untouched).
 const applyLens = (): void => {
   const container = editor.value?.domNode as HTMLElement | undefined
   if (!container) return
   container.classList.toggle('mu-columns-layout', props.lens === 'column')
-  container.classList.toggle('mu-slide-layout', props.lens === 'slide')
-  if (props.lens === 'slide') retagSlidePages(true)
 }
 
-// Slide-lens card tagging. Retagged from the two places content can change
-// without assumptions about prop plumbing: `json-change` (typing, reloads —
-// `replaceContent` fires it too) and the `setContent` branch of
-// `file-changed` (tab switch fires NO json-change, see there). rAF-coalesced;
-// idempotent, so drift after a snabbdom rebuild heals on the next call.
-let slideTagFrame = 0
-const retagSlidePages = (immediate = false): void => {
-  const run = (): void => {
-    slideTagFrame = 0
-    const ed = editor.value
-    const container = ed?.domNode as HTMLElement | undefined
-    if (ed && container && props.lens === 'slide') {
-      applySlideLensTags(container, ed.getMarkdown())
-    }
-  }
-  if (immediate) {
-    if (slideTagFrame) {
-      cancelAnimationFrame(slideTagFrame)
-      slideTagFrame = 0
-    }
-    run()
-    return
-  }
-  if (!slideTagFrame) slideTagFrame = requestAnimationFrame(run)
-}
-
-onBeforeUnmount(() => {
-  if (slideTagFrame) cancelAnimationFrame(slideTagFrame)
-})
-
-// page, column and slide render the same blocks in a different layout, so the
+// page, column and table render the same blocks in different layouts, so the
 // same `scrollTop` lands on a different region of the document — re-apply the
 // tab's anchor once the class flip has been laid out (TODO1 #4). The table
 // lens hides blocks instead, which invalidates a block index captured in
 // another lens, so it is deliberately left alone.
-const FORM_LENSES = ['page', 'column', 'slide'] as const
+const FORM_LENSES = ['page', 'column'] as const
 const isFormLens = (lens: string | null | undefined): lens is (typeof FORM_LENSES)[number] =>
   lens != null && (FORM_LENSES as readonly string[]).includes(lens)
 const restoreLensAnchor = (): void => {
@@ -1653,11 +1616,8 @@ const handleFileChange = (payload: unknown) => {
       // for save tracking, not the engine history.
       editor.value.setContent(newMarkdown)
       // Tab switch swaps content without firing `json-change`, so re-seed the
-      // TOC (otherwise returning to an open tab keeps the other tab's TOC) and
-      // re-tag slide cards (same reason — no json-change to piggyback on).
+      // TOC (otherwise returning to an open tab keeps the other tab's TOC).
       editorStore.UPDATE_TOC(editor.value.getTOC())
-      // rAF 而非立即：setContent 的块树渲染若未落地，立即打会打到旧 DOM。
-      if (props.lens === 'slide') retagSlidePages()
       if (newCursor) {
         applyCursor(editor.value, newCursor)
       } else if (isIndexCursor(muyaIndexCursor)) {
@@ -1973,9 +1933,6 @@ onMounted(() => {
     if (!currentFile.value || !editor.value) return
     const { id } = currentFile.value
     if (!id) return
-    // slide 透镜：卡归属随引擎变更重打（rAF 合并；幂等）。放在 id 早退之后，
-    // 与下面的内容管线同步推进。
-    if (props.lens === 'slide') retagSlidePages()
     const markdown = editor.value.getMarkdown()
     // Stash the real engine history for in-session tab-switch restoration. The
     // synthetic save-tracking id is derived from the live document content (a
@@ -2263,74 +2220,6 @@ onBeforeUnmount(() => {
    children of the engine's `.mu-container`. */
 [data-lens='table'] .mu-container > *:not(.mu-table) {
   display: none;
-}
-
-/* Lens: slide 形态——语义卡（形态模型 §3）。卡不是容器元素：同卡块共享
-   背景/左右边框，首块上圆角+上边框、尾块下圆角+下边框（分段边框拼卡，
-   零 DOM 重组）。卡片随内容生长，不锁 16:9——物理装不装得下归 present
-   投影面回答。分页符（`---`）画成明显的分割标记；front-matter 是封面源，
-   灰显 meta 条不成卡。 */
-[data-lens='slide'] .mu-container > [data-slide-page] {
-  background: var(--editorBgColor);
-  border-left: 1px solid var(--editorColor10);
-  border-right: 1px solid var(--editorColor10);
-  /* 块间距收进卡片内部：外露 margin 会在卡背景间漏出页面底色、断开卡的连续感 */
-  margin-top: 0;
-  margin-bottom: 0;
-  padding-top: 2px;
-  padding-bottom: 2px;
-}
-
-[data-lens='slide'] .mu-container > [data-slide-page][data-slide-first] {
-  border-top: 1px solid var(--editorColor10);
-  border-top-left-radius: 6px;
-  border-top-right-radius: 6px;
-  /* 卡间空隙：卡与卡（或分页符）之间 */
-  margin-top: 26px;
-  padding-top: 10px;
-}
-
-[data-lens='slide'] .mu-container > [data-slide-page][data-slide-last] {
-  border-bottom: 1px solid var(--editorColor10);
-  border-bottom-left-radius: 6px;
-  border-bottom-right-radius: 6px;
-  padding-bottom: 12px;
-}
-
-/* 分页符：卡与卡之间的显式边界（源码里的 `---`，作者意图，冻结区） */
-[data-lens='slide'] .mu-container > [data-slide-break] {
-  position: relative;
-  margin: 18px 0 8px;
-  height: 0;
-  overflow: visible;
-}
-
-[data-lens='slide'] .mu-container > [data-slide-break]::after {
-  content: '✂ 分页';
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  top: -9px;
-  padding: 1px 10px;
-  border-radius: 9px;
-  background: var(--editorBgColor);
-  border: 1px dashed var(--editorColor30);
-  color: var(--editorColor40);
-  font-size: 11px;
-  line-height: 1.4;
-  user-select: none;
-}
-
-/* front-matter：封面源，meta 条不成卡（成片的封面页是引擎生成物） */
-[data-lens='slide'] .mu-container > [data-slide-meta] {
-  margin: 10px 0 4px;
-  opacity: 0.55;
-  font-size: 0.92em;
-}
-
-/* 首卡不悬空：文档顶部的第一张卡不需要上空隙 */
-[data-lens='slide'] .mu-container > [data-slide-page][data-slide-first]:first-child {
-  margin-top: 6px;
 }
 
 .typewriter .editor-component {
