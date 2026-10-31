@@ -65,6 +65,20 @@ export interface IpcInvokeChannels {
     args: [opts: { action: 'start' | 'stop'; allowRoots?: string[] }]
     ret: { running: boolean; origin: string | null }
   }
+  // M2 一键导出的出片半边（取数在 renderer 经 deck 页面完成）。
+  'mt::md2slides::export': {
+    args: [
+      opts: {
+        kind: 'image' | 'editable'
+        out: string
+        images?: string[]
+        ir?: unknown
+        media?: Array<{ name: string; dataUrl: string }>
+        issues?: string[]
+      }
+    ]
+    ret: { ok: true; pages?: number; warnings?: string[] } | { ok: false; error: string }
+  }
   'mt::clipboard::write-image': { args: [png: Uint8Array]; ret: boolean }
   'mt::cmd::exists': { args: [name: string]; ret: boolean }
   'mt::diagram::fetch-plantuml': {

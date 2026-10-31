@@ -211,6 +211,17 @@ declare global {
       server(opts: { action: 'start' | 'stop'; allowRoots?: string[] }): Promise<
         { running: boolean; origin: string | null }
       >
+      exportPptx(opts: {
+        kind: 'image' | 'editable'
+        out: string
+        images?: string[]
+        ir?: unknown
+        media?: Array<{ name: string; dataUrl: string }>
+        issues?: string[]
+      }): Promise<
+        | { ok: true; pages?: number; warnings?: string[] }
+        | { ok: false; error: string }
+      >
     }
     process: ProcessShim
     rgPath: string

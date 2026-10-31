@@ -23,6 +23,19 @@ describe('md2slides vendored server module', () => {
   )
 })
 
+describe('md2slides vendored export backend module', () => {
+  const pptxPath = path.resolve(__dirname, '../../../resources/md2slides/pptx.js')
+
+  it.skipIf(!exists(pptxPath))(
+    'pptx.js exports { createExporter } as a function (M2 export handler 解构前提)',
+    () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const mod = require(pptxPath) as Record<string, unknown>
+      expect(typeof mod.createExporter).toBe('function')
+    }
+  )
+})
+
 function exists(p: string): boolean {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports

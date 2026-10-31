@@ -35,6 +35,51 @@ interface StartServerFn {
   }): Promise<Md2sServerHandle>
 }
 
+interface Md2sExportErrorShape {
+  message: string
+  code?: string
+}
+
+interface ExportFromDataFn {
+  (opts: {
+    kind: 'image' | 'editable'
+    out: string
+    images?: string[]
+    ir?: unknown
+    media?: Array<{ name: string; dataUrl: string }>
+    issues?: string[]
+    onProgress?: (stage: string, done: number, total?: number) => void
+  }): Promise<{ pages?: number; warnings?: string[] }>
+}
+
+/** M2 导出后端（vendored pptx.js = md2slides host/pptx）：进程内单例，构造时验资产。 */
+type CreateExporterFn = (o: { libDir: string }) => { exportFromData: ExportFromDataFn }
+let exporter: { exportFromData: ExportFromDataFn } | null = null
+
+const loadExporter = (): { exportFromData: ExportFromDataFn } => {
+  if (exporter) return exporter
+  const entry = path.join(md2slidesDir, 'pptx.js')
+  let create: CreateExporterFn
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require(entry) as {
+      createExporter?: CreateExporterFn
+      default?: { createExporter?: CreateExporterFn }
+    }
+    create = (mod.createExporter ?? mod.default?.createExporter) as CreateExporterFn
+  } catch {
+    throw new Error(
+      `md2slides 导出后端不在：${entry}\n` +
+        '先在 md2slides 仓跑 npm run pack:marktext，再跑 node scripts/sync-md2slides.mjs'
+    )
+  }
+  if (typeof create !== 'function') {
+    throw new Error(`md2slides 导出后端形状不对（没有 createExporter）：${entry}\n请重跑 sync-md2slides.mjs`)
+  }
+  exporter = create({ libDir: path.join(md2slidesDir, 'lib') })
+  return exporter
+}
+
 let server: Md2sServerHandle | null = null
 let currentRootsKey = ''
 
@@ -100,6 +145,35 @@ export const registerMd2slidesHandlers = (): void => {
       })
       currentRootsKey = key
       return { running: true, origin: server.url }
+    }
+  )
+
+  // M2 一键导出：取数（renderer 经 deck 页面 postMessage 完成）之后在这里出片。
+  // pptxgenjs / Python sidecar 只在 main 进程能跑——renderer 沙箱里没有 Node。
+  ipcMain.handle(
+    'mt::md2slides::export',
+    async(
+      _e,
+      opts: {
+        kind: 'image' | 'editable'
+        out: string
+        images?: string[]
+        ir?: unknown
+        media?: Array<{ name: string; dataUrl: string }>
+        issues?: string[]
+      }
+    ): Promise<{ ok: true; pages?: number; warnings?: string[] } | { ok: false; error: string }> => {
+      if (!opts || (opts.kind !== 'image' && opts.kind !== 'editable') || !opts.out) {
+        return { ok: false, error: 'Invalid md2slides export request' }
+      }
+      try {
+        const result = await loadExporter().exportFromData(opts)
+        return { ok: true, ...result }
+      } catch (error) {
+        const shape = error as Md2sExportErrorShape
+        const code = shape?.code ? `（${shape.code}）` : ''
+        return { ok: false, error: `${shape?.message ?? String(error)}${code}` }
+      }
     }
   )
 }

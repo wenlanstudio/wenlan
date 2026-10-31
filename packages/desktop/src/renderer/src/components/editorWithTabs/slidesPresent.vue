@@ -27,6 +27,22 @@
         {{ total > 0 ? `${index} / ${total}` : status }}
       </span>
       <button
+        class="bar-button"
+        :disabled="exporting || total === 0"
+        title="导出为图片型 PPTX（逐像素保真，文字不可编辑）"
+        @click="onExport('image')"
+      >
+        {{ exporting ? '导出中…' : '导出PPTX' }}
+      </button>
+      <button
+        class="bar-button"
+        :disabled="exporting || total === 0"
+        title="导出为可编辑 PPTX（母版原生，可改字 / 换配色；需 Python + python-pptx）"
+        @click="onExport('editable')"
+      >
+        {{ exporting ? '导出中…' : '导出可编辑PPTX' }}
+      </button>
+      <button
         class="exit-button"
         title="退出放映（Esc）"
         @click="exit"
@@ -72,6 +88,15 @@ const error = ref('')
 const status = ref('正在启动放映服务…')
 const index = ref(0)
 const total = ref(0)
+const exporting = ref(false)
+
+/** ready 透出的画布/主题/meta——导出取数要原样带回页面。 */
+const deckInfo = ref<{
+  slideWidth: number
+  slideHeight: number
+  theme: string | null
+  meta: Record<string, unknown> | null
+} | null>(null)
 
 const pathname = computed(
   () => (editorStore.currentFile as { pathname?: string } | null)?.pathname ?? ''
@@ -127,6 +152,12 @@ const onMessage = (ev: MessageEvent): void => {
       status.value = ''
       index.value = Number(data.index) || 1
       total.value = Number(data.total) || 0
+      deckInfo.value = {
+        slideWidth: Number(data.slideWidth) || 1920,
+        slideHeight: Number(data.slideHeight) || 1080,
+        theme: (data.theme as string | null) ?? null,
+        meta: (data.meta as Record<string, unknown> | null) ?? null
+      }
       // 交点给 deck：←/→/触屏手势在 iframe 里生效（点击幻灯片同样可聚焦）。
       deckFrame.value?.contentWindow?.focus()
       break
@@ -143,6 +174,10 @@ const onMessage = (ev: MessageEvent): void => {
     case 'md2s:rpc':
       void onRpc(data as unknown as { id: number; diagramType: string; source: string })
       break
+    case 'md2s:export-result':
+      exportWaiter?.(data)
+      exportWaiter = null
+      break
     default:
       break
   }
@@ -151,6 +186,61 @@ const onMessage = (ev: MessageEvent): void => {
 const onKeydown = (ev: KeyboardEvent): void => {
   // 焦点在 deck 里时 Esc 由页面侧转发（md2s:esc）；这里接焦点在外（刚进视图）的情况。
   if (ev.key === 'Escape') exit()
+}
+
+// —— 导出（M2）：取数在 deck 页面（postMessage），出片在 main（IPC）。——
+// 单飞：同一时刻只允许一个导出在跑，取数应答用单一 waiter。
+
+let exportSeq = 0
+let exportWaiter: ((data: Record<string, unknown>) => void) | null = null
+
+const waitExportResult = (timeoutMs = 120000): Promise<Record<string, unknown>> =>
+  new Promise(resolve => {
+    const timer = window.setTimeout(() => {
+      exportWaiter = null
+      resolve({ ok: false, error: `导出取数超时（${Math.round(timeoutMs / 1000)}s）` })
+    }, timeoutMs)
+    exportWaiter = data => {
+      window.clearTimeout(timer)
+      resolve(data)
+    }
+  })
+
+const onExport = async (kind: 'image' | 'editable'): Promise<void> => {
+  if (!origin.value || !deckInfo.value || exporting.value) return
+  if (!pathname.value) {
+    error.value = '文档尚未保存——先保存（Ctrl+S）再导出。'
+    return
+  }
+  exporting.value = true
+  try {
+    const id = ++exportSeq
+    postToDeck({ type: 'md2s:export', id, kind, ...deckInfo.value })
+    const data = await waitExportResult()
+    if (!data.ok) {
+      const issues = Array.isArray(data.issues) ? (data.issues as string[]).join('\n  ') : ''
+      throw new Error(
+        issues ? `导出前内容校验未通过，已中止：\n  ${issues}` : String(data.error ?? '导出取数失败')
+      )
+    }
+
+    const base = window.path.basename(pathname.value).replace(/\.[^.]+$/, '')
+    const out = window.path.join(mdDir.value, `${base}${kind === 'editable' ? '.editable' : ''}.pptx`)
+    const result = await window.md2slides.exportPptx({
+      kind,
+      out,
+      images: data.images as string[] | undefined,
+      ir: data.ir,
+      media: data.media as Array<{ name: string; dataUrl: string }> | undefined,
+      issues: data.issues as string[] | undefined
+    })
+    if (!result.ok) throw new Error(result.error)
+    status.value = `已导出：${out}${result.warnings?.length ? `（${result.warnings.length} 条待查项）` : ''}`
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    exporting.value = false
+  }
 }
 
 const startServer = async (): Promise<void> => {
@@ -238,6 +328,25 @@ onBeforeUnmount(() => {
   text-align: center;
   font-variant-numeric: tabular-nums;
   opacity: 0.9;
+}
+
+.bar-button {
+  border: 0;
+  border-radius: 14px;
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #eee;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.bar-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.bar-button:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .exit-button {

@@ -291,7 +291,16 @@ const processShim = {
 const md2slidesAPI = {
   // slides/present 视图用：main 托管的本地 deck 服务（起停 + 图片白名单）。
   server: (opts: { action: 'start' | 'stop'; allowRoots?: string[] }) =>
-    invoke('mt::md2slides::server', opts)
+    invoke('mt::md2slides::server', opts),
+  // M2 一键导出的出片半边（pptxgenjs / Python sidecar 只在 main 能跑）。
+  exportPptx: (opts: {
+    kind: 'image' | 'editable'
+    out: string
+    images?: string[]
+    ir?: unknown
+    media?: Array<{ name: string; dataUrl: string }>
+    issues?: string[]
+  }) => invoke('mt::md2slides::export', opts)
 }
 
 try {
