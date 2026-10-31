@@ -15,18 +15,23 @@
  */
 
 import { serializeSvg, type SerializedSvg } from './diagramExport'
-import type * as VizModule from '@viz-js/viz'
+import type { instance as vizInstance } from '@viz-js/viz'
 
 const PNG_SCALE = 2
 const MAX_PIXELS = 4e7
 const BACKGROUND = '#ffffff'
 
 /** viz 实例是 WASM 编译器，加载一次全进程复用（muya 的 render.ts 同款用法）。 */
-let vizPromise: Promise<ReturnType<VizModule['instance']>> | null = null
+type Viz = NonNullable<Awaited<ReturnType<typeof vizInstance>>>
+let vizPromise: Promise<Viz> | null = null
 
-const getViz = () => {
+const getViz = (): Promise<Viz> => {
   if (!vizPromise) {
-    vizPromise = import('@viz-js/viz').then(({ instance }) => instance())
+    vizPromise = import('@viz-js/viz').then(async({ instance }) => {
+      const viz = await instance()
+      if (!viz) throw new Error('viz WASM 初始化失败')
+      return viz
+    })
   }
   return vizPromise
 }
@@ -57,6 +62,7 @@ const rasterizeToDataUrl = (svg: SerializedSvg): Promise<string> =>
 /** dot 源码 → PNG data URL（离屏；viz 的 SVG 自带表现属性，不需内联样式补偿）。 */
 export const renderGraphvizToDataUrl = async(source: string): Promise<string> => {
   const viz = await getViz()
+  if (!viz) throw new Error('dot 图渲染失败：viz WASM 实例未就绪')
   const element = viz.renderSVGElement(source)
   const svg = serializeSvg(element, { inlineStyles: false, background: BACKGROUND })
   return rasterizeToDataUrl(svg)

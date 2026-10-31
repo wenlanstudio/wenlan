@@ -70,14 +70,24 @@ export const registerMd2slidesHandlers = (): void => {
       // 计算路径的 require：打包器无法静态分析，原样留在 CJS 产物里；缺包时给出
       // 人话（同步脚本没跑，而不是一句 "Cannot find module"）。
       const serverPath = path.join(md2slidesDir, 'server.js')
-      let startServer: StartServerFn
+      let startServer: StartServerFn | undefined
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        startServer = require(serverPath) as StartServerFn
+        const mod = require(serverPath) as {
+          startServer?: StartServerFn
+          default?: { startServer?: StartServerFn }
+        }
+        startServer = mod.startServer ?? mod.default?.startServer
       } catch {
         throw new Error(
           `md2slides 资产包不在：${serverPath}\n` +
             '先在 md2slides 仓跑 npm run pack:marktext，再跑 node scripts/sync-md2slides.mjs'
+        )
+      }
+      if (typeof startServer !== 'function') {
+        throw new Error(
+          `md2slides 资产包里的 server.js 没导出 startServer：${serverPath}\n` +
+            '资产包可能损坏或版本不匹配——重跑 node scripts/sync-md2slides.mjs'
         )
       }
 
