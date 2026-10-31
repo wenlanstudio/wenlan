@@ -102,13 +102,13 @@ page ──── column ──── slide ──── present
 
 ## 5. 落地阶段
 
-| 阶段 | 内容                                                                       | 解锁                             |
-| ---- | -------------------------------------------------------------------------- | -------------------------------- |
-| P1   | 正名（columns→column 等）+ store 形态模型（离散序 + editForm/previewForm） | 地基                             |
-| P2   | 分屏壳 + present 投影面（面板化、重建保页、键盘策略）                      | **[page,present]**（最便宜落地） |
-| P3   | muya 投影面（只读第二实例挂 lens）                                         | [page,column]                    |
-| P4   | slide 透镜（语义卡：data-page + 分段边框）                                 | [page,slide] [column,slide]      |
-| P5   | 物理徽章（ready 增补 src 段）+ 画廊态                                      | [slide,present] 终极形态         |
+| 阶段 | 内容                                                                       | 解锁                                                                                                      |
+| ---- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| P1   | 正名（columns→column 等）+ store 形态模型（离散序 + editForm/previewForm） | 地基（✅ 2026-10-31）                                                                                     |
+| P2   | 分屏壳 + present 投影面（面板化、重建保页、键盘策略）                      | **[page,present]**（✅ 2026-10-31）                                                                       |
+| P4   | slide 透镜（语义卡：`util/slidePages.ts` + 分段边框，与 sectionize 同族）  | `<slide>` 编辑形态 + **[slide,present]**（✅ 2026-10-31；提前于 P3——终极形态只依赖现成的 present 投影面） |
+| P3   | muya 投影面（只读第二实例挂 lens）                                         | [page,column] [page,slide] [column,slide]                                                                 |
+| P5   | 物理徽章（ready 增补 src 段）+ 画廊态                                      | 徽章 + 「大卡+溢出小卡」成片画廊                                                                          |
 
 present 投影面遗留三事（P2 内解决）：重建保页（sendBuild 带
 `runOpts.startIndex`，宿主手里有 change 的最新 index，需钳制到新总页数）；

@@ -37,51 +37,6 @@
           v-else-if="mainView === 'present'"
           :markdown="markdown"
         />
-        <!-- 文/slide = 分片编辑形态（形态模型 P4）：语义卡透镜，未实现占位。
-             裁决：物理分页归放映，编辑形态只做语义卡。 -->
-        <div
-          v-else-if="mainView === 'document' && subView === 'slide'"
-          class="view-placeholder"
-        >
-          <div class="placeholder-inner">
-            <div class="placeholder-icon">
-              <svg
-                viewBox="0 0 24 24"
-                width="48"
-                height="48"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.2"
-              >
-                <rect
-                  x="2"
-                  y="3"
-                  width="20"
-                  height="14"
-                  rx="2"
-                />
-                <line
-                  x1="8"
-                  y1="21"
-                  x2="16"
-                  y2="21"
-                />
-                <line
-                  x1="12"
-                  y1="17"
-                  x2="12"
-                  y2="21"
-                />
-              </svg>
-            </div>
-            <div class="placeholder-title">
-              {{ t('view.slideView') }}
-            </div>
-            <div class="placeholder-hint">
-              {{ t('view.comingSoon') }}
-            </div>
-          </div>
-        </div>
         <!-- Figure 视图 -->
         <div
           v-else-if="mainView === 'figure'"
@@ -180,6 +135,7 @@ const { mainView, subView, activePreview } = storeToRefs(useEditorViewStore())
 const wysiwygLens = computed<string | null>(() => {
   if (mainView.value === 'document' && subView.value === 'page') return 'page'
   if (mainView.value === 'document' && subView.value === 'column') return 'column'
+  if (mainView.value === 'document' && subView.value === 'slide') return 'slide'
   if (mainView.value === 'table' && subView.value === 'all') return 'table'
   return null
 })

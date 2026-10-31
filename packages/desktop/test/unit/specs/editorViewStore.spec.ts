@@ -63,17 +63,17 @@ describe('editorView slider duty', () => {
   })
 
   it('keeps placeholder sub-views slider-less until they are implemented', () => {
-    // document/slide becomes slide-zoom and figure/gallery becomes page-width
-    // the day their `implemented` flag flips — this pins the gating itself.
+    // document/slide shipped its semantic-card lens (P4a) — the slider duty
+    // activates with it; figure/gallery stays gated until it flips.
     expect(MAIN_VIEW_META.document.subViews.find((s) => s.key === 'slide')).toMatchObject({
       slider: 'slide-zoom',
-      implemented: false
+      implemented: true
     })
+    expect(resolveSliderDuty('document', 'slide')).toBe('slide-zoom')
     expect(MAIN_VIEW_META.figure.subViews.find((s) => s.key === 'gallery')).toMatchObject({
       slider: 'page-width',
       implemented: false
     })
-    expect(resolveSliderDuty('document', 'slide')).toBe('none')
     expect(resolveSliderDuty('figure', 'gallery')).toBe('none')
   })
 

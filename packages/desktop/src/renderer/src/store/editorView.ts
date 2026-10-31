@@ -52,14 +52,15 @@ export interface SubViewMeta {
 // rendered from, never a view of its own. `label` stays English on purpose: it
 // is only the tooltip, and these words are widely understood.
 export const MAIN_VIEW_META: Record<MainView, { label: string; icon: string; subViews: SubViewMeta[] }> = {
-  // 文 = 文档的可编辑形态（透镜）：页 / 栏 / 片。slide 为形态模型的 P4。
+  // 文 = 文档的可编辑形态（透镜）：页 / 栏 / 片。slide = 语义卡透镜（P4a，
+  // util/slidePages.ts，与 md2slides sectionize 同族规则）。
   document: {
     label: 'Document',
     icon: '文',
     subViews: [
       { key: 'page', label: 'Page', slider: 'page-width', implemented: true },
       { key: 'column', label: 'Column', slider: 'page-width', implemented: true },
-      { key: 'slide', label: 'Slide', slider: 'slide-zoom', implemented: false }
+      { key: 'slide', label: 'Slide', slider: 'slide-zoom', implemented: true }
     ]
   },
   // 示 = md2slides 成片（slidesPresent.vue：本地服务 + deck-full 页面，M1 落地）。
