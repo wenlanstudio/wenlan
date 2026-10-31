@@ -60,11 +60,15 @@
 
 ## 6. 落地清单
 
-1. store 选择模型：`selected` ≤ 2 叶 + 顶级互斥 + 持久化 + 旧值迁移；
-2. 拆 P4：document/slide 除名，语义卡透镜（mu-slide-layout / data-slide-* /
-   CSS / slidePages.ts 及其单测）删除；
-3. slide 叶：deck 侧列表渲染 + 溢出警告（md2slides 侧改后 **pack+sync**），
-   pane 化复用投影面机制；
-4. 切换器四叶平铺 + 选择交互 + 可拖分割条 + 滑块联动失效；
-5. 既有保留：P2 分屏壳、present 投影面（面板化/保页/键盘归属）、正名与
-   迁移链。
+1. ✅ store 选择模型：`leafSelection` ≤ 2 叶 + 顶级互斥 + 持久化 + 旧值迁移
+   （v1 pair / previewForm / word 系改名全收口）；
+2. ✅ 拆 P4：语义卡透镜（mu-slide-layout / data-slide-* / CSS /
+   slidePages.ts 及其单测）全删；
+3. ✅ slide 叶：deck `view:"list"`（物理分页照跑、无播放器）+ 纵向堆叠 +
+   视口适配 zoom + 溢出警告（（续）连片分组，`⚠ N页` 徽章 + 虚线描边，
+   ready.warnings 计数）；md2slides 1c046a8，已 pack+sync；
+4. ✅ 切换器四叶平铺（文栏│列放）+ 选择交互 + 可拖分割条（比例持久化）+
+   滑块联动失效；
+5. ✅ 既有保留：分屏壳、present 投影面（面板化/保页/键盘归属）、迁移链。
+   实现：fork 24c577d6（store 重写 + deckPane/leafProjection 分件 +
+   index.vue 六对接线）。
