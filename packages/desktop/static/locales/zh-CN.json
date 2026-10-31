@@ -779,6 +779,7 @@
     "copyrightContributors": "版权贡献者"
   },
   "view": {
+    "slideView": "分片视图（Slide）",
     "slidesView": "幻灯片视图",
     "tableView": "表格视图",
     "figureView": "插图视图",

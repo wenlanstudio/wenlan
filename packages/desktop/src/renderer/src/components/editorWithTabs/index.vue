@@ -6,122 +6,139 @@
       '--editor-zoom': zoom
     }"
   >
-    <!-- 分栏诊断：进入 columns 透镜时提示 5s 后消失，详情留在 console -->
+    <!-- 分栏诊断：进入 column 透镜时提示 5s 后消失，详情留在 console -->
     <columns-diagnostics
-      v-if="wysiwygLens === 'columns'"
+      v-if="wysiwygLens === 'column'"
       :markdown="markdown"
     />
-    <div class="container">
-      <!-- 透镜宿主：WYSIWYG 引擎在 document/page、document/columns 与
-           table/all 之间常驻，切换视图只翻转 `data-lens` 而不重绘
-           （TODO1 #21、#26）。 -->
-      <div
-        v-if="wysiwygLens !== null"
-        class="lens-host"
-        :data-lens="wysiwygLens"
-      >
-        <editor
+    <div
+      class="container"
+      :class="{ split: showSplit }"
+    >
+      <div class="edit-pane">
+        <!-- 透镜宿主：WYSIWYG 引擎在 document/page、document/column 与
+             table/all 之间常驻，切换视图只翻转 `data-lens` 而不重绘
+             （TODO1 #21、#26）。 -->
+        <div
+          v-if="wysiwygLens !== null"
+          class="lens-host"
+          :data-lens="wysiwygLens"
+        >
+          <editor
+            :markdown="markdown"
+            :cursor="cursor"
+            :text-direction="textDirection"
+            :platform="platform"
+            :lens="wysiwygLens"
+          />
+        </div>
+        <!-- 示 = md2slides 成片放映（全屏独占形态，本地服务 + iframe） -->
+        <slides-present
+          v-else-if="mainView === 'present'"
           :markdown="markdown"
-          :cursor="cursor"
+        />
+        <!-- 文/slide = 分片编辑形态（形态模型 P4）：语义卡透镜，未实现占位。
+             裁决：物理分页归放映，编辑形态只做语义卡。 -->
+        <div
+          v-else-if="mainView === 'document' && subView === 'slide'"
+          class="view-placeholder"
+        >
+          <div class="placeholder-inner">
+            <div class="placeholder-icon">
+              <svg
+                viewBox="0 0 24 24"
+                width="48"
+                height="48"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.2"
+              >
+                <rect
+                  x="2"
+                  y="3"
+                  width="20"
+                  height="14"
+                  rx="2"
+                />
+                <line
+                  x1="8"
+                  y1="21"
+                  x2="16"
+                  y2="21"
+                />
+                <line
+                  x1="12"
+                  y1="17"
+                  x2="12"
+                  y2="21"
+                />
+              </svg>
+            </div>
+            <div class="placeholder-title">
+              {{ t('view.slideView') }}
+            </div>
+            <div class="placeholder-hint">
+              {{ t('view.comingSoon') }}
+            </div>
+          </div>
+        </div>
+        <!-- Figure 视图 -->
+        <div
+          v-else-if="mainView === 'figure'"
+          class="view-placeholder"
+        >
+          <div class="placeholder-inner">
+            <div class="placeholder-icon">
+              <svg
+                viewBox="0 0 24 24"
+                width="48"
+                height="48"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.2"
+              >
+                <rect
+                  x="3"
+                  y="3"
+                  width="18"
+                  height="18"
+                  rx="2"
+                />
+                <circle
+                  cx="8.5"
+                  cy="8.5"
+                  r="1.5"
+                />
+                <path d="M21 15l-5-5L5 21" />
+              </svg>
+            </div>
+            <div class="placeholder-title">
+              {{ t('view.figureView') }}
+            </div>
+            <div class="placeholder-hint">
+              {{ t('view.comingSoon') }}
+            </div>
+          </div>
+        </div>
+        <!-- Code 源码视图 -->
+        <source-code
+          v-else-if="mainView === 'code' && subView === 'source'"
+          :markdown="markdown"
+          :muya-index-cursor="muyaIndexCursor"
           :text-direction="textDirection"
-          :platform="platform"
-          :lens="wysiwygLens"
         />
       </div>
-      <!-- Slides 视图：present = md2slides 放映（本地服务 + iframe）；slide = Tier 0
-           逻辑页编辑视图（未开发；裁决：物理分页归放映，编辑视图只做逻辑页） -->
-      <slides-present
-        v-else-if="mainView === 'slides' && subView === 'present'"
-        :markdown="markdown"
-      />
+      <!-- 投影面（形态模型 §2）：左侧编辑形态、右侧只读投影，合法对 = 离散度
+           严格递增。P2 只有 present 成片投影；column/slide 投影为 P3/P4。 -->
       <div
-        v-else-if="mainView === 'slides'"
-        class="view-placeholder"
+        v-if="showSplit && activePreview === 'present'"
+        class="preview-pane"
       >
-        <div class="placeholder-inner">
-          <div class="placeholder-icon">
-            <svg
-              viewBox="0 0 24 24"
-              width="48"
-              height="48"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.2"
-            >
-              <rect
-                x="2"
-                y="3"
-                width="20"
-                height="14"
-                rx="2"
-              />
-              <line
-                x1="8"
-                y1="21"
-                x2="16"
-                y2="21"
-              />
-              <line
-                x1="12"
-                y1="17"
-                x2="12"
-                y2="21"
-              />
-            </svg>
-          </div>
-          <div class="placeholder-title">
-            {{ t('view.slidesView') }}
-          </div>
-          <div class="placeholder-hint">
-            {{ t('view.comingSoon') }}
-          </div>
-        </div>
+        <slides-present
+          variant="panel"
+          :markdown="markdown"
+        />
       </div>
-      <!-- Figure 视图 -->
-      <div
-        v-else-if="mainView === 'figure'"
-        class="view-placeholder"
-      >
-        <div class="placeholder-inner">
-          <div class="placeholder-icon">
-            <svg
-              viewBox="0 0 24 24"
-              width="48"
-              height="48"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.2"
-            >
-              <rect
-                x="3"
-                y="3"
-                width="18"
-                height="18"
-                rx="2"
-              />
-              <circle
-                cx="8.5"
-                cy="8.5"
-                r="1.5"
-              />
-              <path d="M21 15l-5-5L5 21" />
-            </svg>
-          </div>
-          <div class="placeholder-title">
-            {{ t('view.figureView') }}
-          </div>
-          <div class="placeholder-hint">
-            {{ t('view.comingSoon') }}
-          </div>
-        </div>
-      </div>
-      <!-- Code 源码视图 -->
-      <source-code
-        v-else-if="mainView === 'code' && subView === 'source'"
-        :markdown="markdown"
-        :muya-index-cursor="muyaIndexCursor"
-        :text-direction="textDirection"
-      />
     </div>
     <tab-notifications />
   </div>
@@ -153,18 +170,24 @@ defineProps<{
 
 const { effectiveSideBarWidth } = storeToRefs(useLayoutStore())
 const { zoom } = storeToRefs(usePreferencesStore())
-const { mainView, subView } = storeToRefs(useEditorViewStore())
+const { mainView, subView, activePreview } = storeToRefs(useEditorViewStore())
 
 // Which lens the live WYSIWYG engine renders under, or `null` when this
 // (main, sub) pair is not an engine surface at all. All lens views share one
 // `v-if`, so switching among them only flips the attribute instead of
 // remounting the engine and dropping its undo stack (TODO1 #21).
+// document/slide 是分片编辑形态（P4）——透镜未实现，落占位分支，不算引擎面。
 const wysiwygLens = computed<string | null>(() => {
   if (mainView.value === 'document' && subView.value === 'page') return 'page'
-  if (mainView.value === 'document' && subView.value === 'columns') return 'columns'
+  if (mainView.value === 'document' && subView.value === 'column') return 'column'
   if (mainView.value === 'table' && subView.value === 'all') return 'table'
   return null
 })
+
+// 分屏只在编辑面是活的引擎透镜时呈现（占位视图旁不挂投影面）。
+const showSplit = computed(
+  () => activePreview.value !== null && wysiwygLens.value !== null
+)
 </script>
 
 <style scoped>
@@ -180,7 +203,31 @@ const wysiwygLens = computed<string | null>(() => {
   & > .container {
     flex: 1;
     overflow: hidden;
+
+    /* 分屏壳（形态模型 §2）：左编辑右投影。非 split 时保持原 block 流，
+       透镜分支的布局假设（.editor-wrapper height:100% 等）零改动。 */
+    &.split {
+      display: flex;
+    }
   }
+}
+
+.edit-pane {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.preview-pane {
+  flex: 0 0 45%;
+  min-width: 300px;
+  max-width: 70%;
+  position: relative;
+  overflow: hidden;
+  border-left: 1px solid var(--editorColor10);
+  background: #1a1a1a;
 }
 
 /* Pure CSS hook: `data-lens` is what the lens rules in editor.vue key off.

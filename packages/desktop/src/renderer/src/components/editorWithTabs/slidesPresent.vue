@@ -44,10 +44,10 @@
       </button>
       <button
         class="exit-button"
-        title="退出放映（Esc）"
+        :title="isPanel ? '关闭预览' : '退出放映（Esc）'"
         @click="exit"
       >
-        ✕ 退出
+        {{ isPanel ? '✕' : '✕ 退出' }}
       </button>
     </div>
   </div>
@@ -55,7 +55,7 @@
 
 <script setup lang="ts">
 /**
- * slidesPresent — slides/present 视图：把当前文档交给 md2slides 放映。
+ * slidesPresent — present 投影面：把当前文档交给 md2slides 放映。
  *
  * 形态（md2slides 仓 docs/design/integration-marktext.md §5，2026-10-30 裁决）：
  * 本组件**零 md2slides 代码依赖**——main 进程起本地服务（vendored 资产包），iframe
@@ -63,8 +63,13 @@
  * postMessage：boot 握手 → build{md, mdDir} → ready/change/error；graphviz /
  * plantuml 图表经 rpc 托本进程离屏出图（muya 同款 viz WASM / plantuml server）。
  *
- * 注意：进入本视图时编辑器（muya）已被 v-if 卸载——放映期间没有活编辑 DOM，
- * md 变化来自文件切换/外部重载，经 300ms 防抖原地重建（不重载 iframe，无闪烁）。
+ * 两个变体（形态模型 §2，同一投影面机制）：
+ * - `view`（默认）＝示 全屏放映：编辑器（muya）已被 v-if 卸载，md 变化来自
+ *   文件切换/外部重载；Esc（窗口级或 deck 聚焦）退回编辑。
+ * - `panel` ＝分屏右侧的成片投影（[page,present] 等）：编辑器**常驻**，
+ *   md 变化就是打字——300ms 防抖原地重建。面板态不抢焦点、不挂窗口级
+ *   Esc（编辑器必须保住键盘）；deck 聚焦时 Esc 经 md2s:esc 只关面板。
+ *   重建携带 runOpts.startIndex，改字不跳回第 1 页（保页裁决）。
  */
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -75,6 +80,8 @@ import { renderGraphvizToDataUrl, renderPlantumlToDataUrl } from '@/util/md2slid
 
 const props = defineProps<{
   markdown: string
+  /** view＝示 全屏放映；panel＝分屏右侧成片投影（形态模型 §2）。 */
+  variant?: 'view' | 'panel'
 }>()
 
 const editorStore = useEditorStore()
@@ -89,6 +96,8 @@ const status = ref('正在启动放映服务…')
 const index = ref(0)
 const total = ref(0)
 const exporting = ref(false)
+
+const isPanel = computed(() => props.variant === 'panel')
 
 /**
  * ready 透出的画布/主题/meta——导出取数要原样带回页面。
@@ -114,8 +123,19 @@ const postToDeck = (msg: Record<string, unknown>): void => {
   deckFrame.value?.contentWindow?.postMessage(msg, origin.value ?? '*')
 }
 
-const sendBuild = (): void => {
-  postToDeck({ type: 'md2s:build', md: props.markdown, mdDir: mdDir.value })
+const sendBuild = (preservePage = false): void => {
+  // 重建保页（面板态的生命线）：带上最近页号，改字不跳回第 1 页。
+  // startIndex 是 1 基；用旧 total 钳制（新总页数构建后才知，deck 侧还会再钳）。
+  const startIndex =
+    preservePage && index.value > 1 && total.value > 0
+      ? Math.min(index.value, total.value)
+      : undefined
+  postToDeck({
+    type: 'md2s:build',
+    md: props.markdown,
+    mdDir: mdDir.value,
+    ...(startIndex !== undefined ? { runOpts: { startIndex } } : {})
+  })
 }
 
 /** 图表托渲染：deck 页面画不了的两类（graphviz / plantuml），本进程离屏出位图。 */
@@ -133,7 +153,11 @@ const onRpc = async (data: { id: number; diagramType: string; source: string }):
 }
 
 const exit = (): void => {
-  editorViewStore.setMainView('document', 'page')
+  if (isPanel.value) {
+    editorViewStore.setPreview(null)
+  } else {
+    editorViewStore.setMainView('document', 'page')
+  }
 }
 
 const retry = (): void => {
@@ -164,7 +188,8 @@ const onMessage = (ev: MessageEvent): void => {
         meta: (data.meta as Record<string, unknown> | null) ?? null
       }
       // 交点给 deck：←/→/触屏手势在 iframe 里生效（点击幻灯片同样可聚焦）。
-      deckFrame.value?.contentWindow?.focus()
+      // 面板态不抢焦点——编辑器必须保住键盘（形态模型 §2 键盘归属）。
+      if (!isPanel.value) deckFrame.value?.contentWindow?.focus()
       break
     case 'md2s:change':
       index.value = Number(data.index) || index.value
@@ -192,6 +217,9 @@ const onKeydown = (ev: KeyboardEvent): void => {
   // 焦点在 deck 里时 Esc 由页面侧转发（md2s:esc）；这里接焦点在外（刚进视图）的情况。
   if (ev.key === 'Escape') exit()
 }
+// 面板态不挂窗口级 Esc：编辑器打字场景下 Esc 属于编辑器（关弹层/取消），
+// 关面板走工具条按钮或 deck 聚焦时的 md2s:esc。
+const listensWindowKeys = !isPanel.value
 
 // —— 导出（M2）：取数在 deck 页面（postMessage），出片在 main（IPC）。——
 // 单飞：同一时刻只允许一个导出在跑，取数应答用单一 waiter。
@@ -269,6 +297,7 @@ const stopServer = (): void => {
 }
 
 // 防抖原地重建：md 变了重发 build，deck 页面原地重跑 compose，不重载 iframe。
+// 面板态的 md 变化就是打字——保页（startIndex）在这里生效。
 const REBUILD_DEBOUNCE_MS = 300
 let rebuildTimer: number | undefined
 watch(
@@ -276,7 +305,7 @@ watch(
   () => {
     window.clearTimeout(rebuildTimer)
     rebuildTimer = window.setTimeout(() => {
-      if (origin.value && !error.value) sendBuild()
+      if (origin.value && !error.value) sendBuild(true)
     }, REBUILD_DEBOUNCE_MS)
   }
 )
@@ -288,13 +317,13 @@ watch(pathname, () => {
 
 onMounted(() => {
   window.addEventListener('message', onMessage)
-  window.addEventListener('keydown', onKeydown)
+  if (listensWindowKeys) window.addEventListener('keydown', onKeydown)
   void startServer()
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('message', onMessage)
-  window.removeEventListener('keydown', onKeydown)
+  if (listensWindowKeys) window.removeEventListener('keydown', onKeydown)
   window.clearTimeout(rebuildTimer)
   stopServer()
 })

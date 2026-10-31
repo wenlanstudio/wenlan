@@ -38,6 +38,18 @@
       </button>
     </div>
 
+    <!-- Preview toggle（形态模型 §2）：编辑形态存在时，右侧同屏开/关成片投影
+         （[page,present] 等合法对；非 document 形态时投影自动挂起） -->
+    <button
+      v-if="editForm"
+      class="sub-view-btn preview-toggle"
+      :class="{ active: activePreview !== null }"
+      :title="activePreview ? '关闭右侧成片投影' : '右侧同屏打开成片放映（边编辑边看）'"
+      @click="togglePreview"
+    >
+      预览
+    </button>
+
     <!-- Main view buttons -->
     <div class="main-views">
       <button
@@ -63,14 +75,15 @@ import { t } from '@/i18n'
 
 const editorViewStore = useEditorViewStore()
 const preferencesStore = usePreferencesStore()
-const { mainView, subView, availableSubViews, hasColumns, sliderDuty } = storeToRefs(editorViewStore)
-const { setMainView, setSubView } = editorViewStore
+const { mainView, subView, availableSubViews, hasColumns, sliderDuty, editForm, activePreview } =
+  storeToRefs(editorViewStore)
+const { setMainView, setSubView, togglePreview } = editorViewStore
 const { editorLineWidth } = storeToRefs(preferencesStore)
 
-// §4.4 #5 — Columns only shows for a document that actually has a `begin`
+// §4.4 #5 — Column only shows for a document that actually has a `begin`
 // marker (and therefore only when a file is open).
 const visibleSubViews = computed(() =>
-  availableSubViews.value.filter((sv) => sv.key !== 'columns' || hasColumns.value)
+  availableSubViews.value.filter((sv) => sv.key !== 'column' || hasColumns.value)
 )
 
 const handleMainViewClick = (mv: MainView) => {
@@ -187,6 +200,13 @@ const handleSliderChange = () => {
 .sub-view-btn.active {
   color: var(--editorColor);
   background: var(--editorColor10);
+}
+
+/* 预览开关：独立成钮（不在 .sub-views 组里），视觉上与子视图组同族 */
+.preview-toggle {
+  border-left: 1px solid var(--editorColor10);
+  margin-left: 2px;
+  padding-left: 8px;
 }
 
 /* Page width slider */

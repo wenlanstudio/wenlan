@@ -404,10 +404,10 @@ watch(
 const applyLens = (): void => {
   const container = editor.value?.domNode as HTMLElement | undefined
   if (!container) return
-  container.classList.toggle('mu-columns-layout', props.lens === 'columns')
+  container.classList.toggle('mu-columns-layout', props.lens === 'column')
 }
 
-// page and columns render the same blocks in a different layout, so the same
+// page and column render the same blocks in a different layout, so the same
 // `scrollTop` lands on a different region of the document — re-apply the tab's
 // anchor once the class flip has been laid out (TODO1 #4). The table lens hides
 // blocks instead, which invalidates a block index captured in another lens, so
@@ -424,7 +424,7 @@ watch(
   () => props.lens,
   (lens, prev) => {
     applyLens()
-    if ([lens, prev].includes('columns') && [lens, prev].includes('page')) {
+    if ([lens, prev].includes('column') && [lens, prev].includes('page')) {
       restoreLensAnchor()
     }
   }

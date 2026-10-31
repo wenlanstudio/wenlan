@@ -779,6 +779,7 @@
     "copyrightContributors": "Made with <3 by Github Contributors"
   },
   "view": {
+    "slideView": "Slide View",
     "slidesView": "Slides View",
     "tableView": "Tables View",
     "figureView": "Figure View",
