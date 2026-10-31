@@ -76,7 +76,7 @@ const LEAF_META: Record<Leaf, { label: string; title: string }> = {
   page: { label: '文', title: '全文（连续编辑）' },
   column: { label: '栏', title: '分栏（空间离散，需 begin 标记）' },
   slide: { label: '列', title: '幻灯片列表（全部真实页 · 溢出警告）' },
-  present: { label: '放', title: '放映（一次一页）' }
+  present: { label: '示', title: '放映（一次一页）' }
 }
 
 const TOP_VIEW_META: Record<string, { icon: string; title: string }> = {
