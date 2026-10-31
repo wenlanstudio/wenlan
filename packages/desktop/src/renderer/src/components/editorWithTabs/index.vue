@@ -16,7 +16,12 @@
       :class="{ split: isSplit }"
       :style="isSplit ? { '--split-ratio': `${rightRatio}` } : undefined"
     >
-      <div class="pane pane-left">
+      <!-- 左 pane 只在有内容时渲染：单选列/放时它若仍占位（height:100%），
+           会把全屏 deck-pane 顶出容器折叠区（2026-11-01 真机：白屏无内容）。 -->
+      <div
+        v-if="hasLeftPane"
+        class="pane pane-left"
+      >
         <!-- 透镜宿主：WYSIWYG 引擎在 page/column/table 透镜间常驻，切换只翻转
              `data-lens` 而不重绘（TODO1 #21、#26）。分屏时活引擎占左 pane
              （(page,column) 的左=page 编辑、右=column 投影）。 -->
@@ -150,6 +155,10 @@ const editorViewStore = useEditorViewStore()
 const { topView, isSplit, rightLeaf, activeLeaf, editorLens, rightRatio } = storeToRefs(editorViewStore)
 // Actions 不经 storeToRefs（它只包 state/getter）。
 const { setRightRatio } = editorViewStore
+
+// 左 pane 是否有内容（透镜 / 源码 / 图占位）。单选示支叶时为 false——
+// pane-left 不渲染，deck-pane 独占容器。
+const hasLeftPane = computed(() => editorLens.value !== null || topView.value !== null)
 
 // 分屏左 pane 的引擎透镜由 store.editorLens 给出：orderedLeaves 首个
 // page/column 叶（LEAVES 序保证左细右粗、文左示右）。
