@@ -66,7 +66,7 @@
  * 注意：进入本视图时编辑器（muya）已被 v-if 卸载——放映期间没有活编辑 DOM，
  * md 变化来自文件切换/外部重载，经 300ms 防抖原地重建（不重载 iframe，无闪烁）。
  */
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useEditorStore } from '@/store/editor'
 import { useEditorViewStore } from '@/store/editorView'
@@ -90,8 +90,13 @@ const index = ref(0)
 const total = ref(0)
 const exporting = ref(false)
 
-/** ready 透出的画布/主题/meta——导出取数要原样带回页面。 */
-const deckInfo = ref<{
+/**
+ * ready 透出的画布/主题/meta——导出取数要原样带回页面。
+ * 必须用 shallowRef：深响应式 ref 在读取时给 meta 套 Proxy，而 postMessage 的
+ * 结构化克隆不吃 Proxy（真机翻过车："could not be cloned"）；build 消息全是
+ * 字符串所以从未暴露。
+ */
+const deckInfo = shallowRef<{
   slideWidth: number
   slideHeight: number
   theme: string | null
@@ -190,15 +195,17 @@ const onKeydown = (ev: KeyboardEvent): void => {
 
 // —— 导出（M2）：取数在 deck 页面（postMessage），出片在 main（IPC）。——
 // 单飞：同一时刻只允许一个导出在跑，取数应答用单一 waiter。
+// 大位图由页面直传 deck 服务旁路落盘（/x），桥上与 IPC 只走目录路径——
+// 数百 MB 过 postMessage/IPC 会把 Electron 挂死（2026-10-31 真机 79 页教训）。
 
 let exportSeq = 0
 let exportWaiter: ((data: Record<string, unknown>) => void) | null = null
 
-const waitExportResult = (timeoutMs = 120000): Promise<Record<string, unknown>> =>
+const waitExportResult = (timeoutMs = 600000): Promise<Record<string, unknown>> =>
   new Promise(resolve => {
     const timer = window.setTimeout(() => {
       exportWaiter = null
-      resolve({ ok: false, error: `导出取数超时（${Math.round(timeoutMs / 1000)}s）` })
+      resolve({ ok: false, error: `导出取数超时（${Math.round(timeoutMs / 60000)} 分钟）——页数多时逐页落盘较慢，请重试` })
     }, timeoutMs)
     exportWaiter = data => {
       window.clearTimeout(timer)
@@ -229,9 +236,10 @@ const onExport = async (kind: 'image' | 'editable'): Promise<void> => {
     const result = await window.md2slides.exportPptx({
       kind,
       out,
-      images: data.images as string[] | undefined,
+      imagesDir: data.imagesDir as string | undefined,
+      pages: data.pages as number | undefined,
       ir: data.ir,
-      media: data.media as Array<{ name: string; dataUrl: string }> | undefined,
+      mediaDir: data.mediaDir as string | undefined,
       issues: data.issues as string[] | undefined
     })
     if (!result.ok) throw new Error(result.error)

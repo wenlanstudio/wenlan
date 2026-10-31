@@ -214,9 +214,10 @@ declare global {
       exportPptx(opts: {
         kind: 'image' | 'editable'
         out: string
-        images?: string[]
+        imagesDir?: string
+        pages?: number
         ir?: unknown
-        media?: Array<{ name: string; dataUrl: string }>
+        mediaDir?: string
         issues?: string[]
       }): Promise<
         | { ok: true; pages?: number; warnings?: string[] }

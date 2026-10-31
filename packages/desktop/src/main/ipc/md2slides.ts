@@ -45,8 +45,10 @@ interface ExportFromDataFn {
     kind: 'image' | 'editable'
     out: string
     images?: string[]
+    imagesDir?: string
     ir?: unknown
     media?: Array<{ name: string; dataUrl: string }>
+    mediaDir?: string
     issues?: string[]
     onProgress?: (stage: string, done: number, total?: number) => void
   }): Promise<{ pages?: number; warnings?: string[] }>
@@ -157,9 +159,10 @@ export const registerMd2slidesHandlers = (): void => {
       opts: {
         kind: 'image' | 'editable'
         out: string
-        images?: string[]
+        imagesDir?: string
+        pages?: number
         ir?: unknown
-        media?: Array<{ name: string; dataUrl: string }>
+        mediaDir?: string
         issues?: string[]
       }
     ): Promise<{ ok: true; pages?: number; warnings?: string[] } | { ok: false; error: string }> => {

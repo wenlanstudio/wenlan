@@ -72,11 +72,13 @@ const handleClick = (status: boolean) => {
 
 <style scoped>
 .editor-notifications {
-  position: relative;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 10;
   display: flex;
   flex-direction: row;
   max-height: 100px;
-  margin-top: 4px;
   background: var(--notificationPrimaryBg);
   color: var(--notificationPrimaryColor);
   padding: 8px 10px;

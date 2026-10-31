@@ -65,15 +65,17 @@ export interface IpcInvokeChannels {
     args: [opts: { action: 'start' | 'stop'; allowRoots?: string[] }]
     ret: { running: boolean; origin: string | null }
   }
-  // M2 一键导出的出片半边（取数在 renderer 经 deck 页面完成）。
+  // M2 一键导出的出片半边（取数在 renderer 经 deck 页面完成）。大位图走服务旁路
+  // 落盘（/x），IPC 只传目录路径——数百 MB 过 invoke 会把进程挂死（真机教训）。
   'mt::md2slides::export': {
     args: [
       opts: {
         kind: 'image' | 'editable'
         out: string
-        images?: string[]
+        imagesDir?: string
+        pages?: number
         ir?: unknown
-        media?: Array<{ name: string; dataUrl: string }>
+        mediaDir?: string
         issues?: string[]
       }
     ]
