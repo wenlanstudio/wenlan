@@ -22,11 +22,20 @@
         v-if="hasLeftPane"
         class="pane pane-left"
       >
+        <!-- 分屏左叶也可能落展示支：(列,放) 的左叶是 slide 列表——deck-pane
+             照 panel 形态挂（2026-11-01 真机：只见放不见列）。key 按叶分实例。 -->
+        <deck-pane
+          v-if="isSplit && (leftLeaf === 'slide' || leftLeaf === 'present')"
+          :key="`left-${leftLeaf}`"
+          :leaf="leftLeaf"
+          mode="panel"
+          :markdown="markdown"
+        />
         <!-- 透镜宿主：WYSIWYG 引擎在 page/column/table 透镜间常驻，切换只翻转
              `data-lens` 而不重绘（TODO1 #21、#26）。分屏时活引擎占左 pane
              （(page,column) 的左=page 编辑、右=column 投影）。 -->
         <div
-          v-if="editorLens"
+          v-else-if="editorLens"
           class="lens-host"
           :data-lens="editorLens"
         >
@@ -152,13 +161,16 @@ defineProps<{
 const { effectiveSideBarWidth } = storeToRefs(useLayoutStore())
 const { zoom } = storeToRefs(usePreferencesStore())
 const editorViewStore = useEditorViewStore()
-const { topView, isSplit, rightLeaf, activeLeaf, editorLens, rightRatio } = storeToRefs(editorViewStore)
+const { topView, isSplit, leftLeaf, rightLeaf, activeLeaf, editorLens, rightRatio } =
+  storeToRefs(editorViewStore)
 // Actions 不经 storeToRefs（它只包 state/getter）。
 const { setRightRatio } = editorViewStore
 
-// 左 pane 是否有内容（透镜 / 源码 / 图占位）。单选示支叶时为 false——
-// pane-left 不渲染，deck-pane 独占容器。
-const hasLeftPane = computed(() => editorLens.value !== null || topView.value !== null)
+// 左 pane 是否有内容（分屏左叶 / 透镜 / 源码 / 图占位）。单选示支叶时为
+// false——pane-left 不渲染，deck-pane 独占容器。
+const hasLeftPane = computed(
+  () => isSplit.value || editorLens.value !== null || topView.value !== null
+)
 
 // 分屏左 pane 的引擎透镜由 store.editorLens 给出：orderedLeaves 首个
 // page/column 叶（LEAVES 序保证左细右粗、文左示右）。

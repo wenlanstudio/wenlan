@@ -309,6 +309,10 @@ const stopServer = (): void => {
   void window.md2slides.server({ action: 'stop' }).catch(() => undefined)
 }
 
+// (列,放) 同屏 = 两个 deckPane 实例共享同一服务：任一卸载就 stop 会杀掉
+// 对方的取图/重建。模块级引用计数——最后一个实例卸载才真正关服务。
+let deckPaneAlive = 0
+
 // 防抖原地重建：md 变了重发 build，deck 页面原地重跑 compose，不重载 iframe。
 // 面板态的 md 变化就是打字——保页在这里生效。
 const REBUILD_DEBOUNCE_MS = 300
@@ -329,6 +333,7 @@ watch(pathname, () => {
 })
 
 onMounted(() => {
+  deckPaneAlive += 1
   window.addEventListener('message', onMessage)
   if (listensWindowKeys) window.addEventListener('keydown', onKeydown)
   void startServer()
@@ -338,7 +343,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('message', onMessage)
   if (listensWindowKeys) window.removeEventListener('keydown', onKeydown)
   window.clearTimeout(rebuildTimer)
-  stopServer()
+  deckPaneAlive -= 1
+  if (deckPaneAlive <= 0) stopServer()
 })
 </script>
 
