@@ -73,11 +73,14 @@ describe('editorView selection model', () => {
     expect(store.rightLeaf).toBe('slide')
   })
 
-  it('a third click replaces the earliest selection (FIFO)', () => {
+  it('a third click is ignored while two are selected (deselect first)', () => {
     const store = useEditorViewStore()
     store.toggleLeaf('present')
+    store.toggleLeaf('slide') // 选满两叶，第三叶点不动——配置选择式
+    expect(store.leafSelection).toEqual(['page', 'present'])
+
+    store.toggleLeaf('page') // 摘一片后才能换
     store.toggleLeaf('slide')
-    // [page, present] + slide → 丢 page → [present, slide] → 序 [slide, present]
     expect(store.leafSelection).toEqual(['present', 'slide'])
     expect(store.leftLeaf).toBe('slide')
     expect(store.rightLeaf).toBe('present')
@@ -103,9 +106,13 @@ describe('editorView selection model', () => {
     expect(store.sliderDuty).toBe('page-width')
     expect(store.leafSelection).toEqual(['page', 'present']) // 挂起不丢
 
-    store.toggleLeaf('column') // 点叶 → 回叶世界，FIFO 换出 page
+    store.toggleLeaf('column') // 点叶 → 回叶世界（已满两叶，column 点不动）
     expect(store.topView).toBeNull()
-    expect(store.leafSelection).toEqual(['present', 'column'])
+    expect(store.leafSelection).toEqual(['page', 'present'])
+
+    store.toggleLeaf('present') // 先摘一片，column 才进得来
+    store.toggleLeaf('column')
+    expect(store.leafSelection).toEqual(['page', 'column'])
   })
 
   it('toggling a top view twice returns to the leaves', () => {

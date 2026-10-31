@@ -11,8 +11,10 @@ import { useEditorStore } from './editor'
  * = { slide 幻灯片列表, present 放映 }。分界 = 引擎边界 = 可编辑性边界。
  *
  * 选择模型：四叶平铺常驻，点击选中至多两叶——一叶全屏、两叶分屏（左右按
- * LEAVES 顺序，文左示右、细左粗右自动成立）；已两叶再点第三叶替换最早选中
- * （FIFO）；不可选到零。表/图/本是顶级正交视图，与四叶互斥（挂起不丢）。
+ * LEAVES 顺序，文左示右、细左粗右自动成立）。配置选择式（淘宝选规格）：
+ * 点一下选中、再点一下取消，搭配由用户自定；已选满两叶时第三叶点不动
+ * （先摘一片才能换）；最后一片不可摘（不可选到零）。
+ * 表/图/本是顶级正交视图，与四叶互斥（挂起不丢）。
  */
 
 export type Leaf = 'page' | 'column' | 'slide' | 'present'
@@ -37,7 +39,7 @@ const isLeaf = (v: unknown): v is Leaf => (LEAVES as readonly string[]).includes
 const isTopView = (v: unknown): v is TopView => (TOP_VIEWS as readonly string[]).includes(v as TopView)
 
 interface EditorViewState {
-  /** 选择顺序（FIFO 换选依据），1..2 项。 */
+  /** 选中叶，1..2 项（顺序无关，展示按 LEAVES 序）。 */
   leaves: Leaf[]
   topView: TopView | null
   /** 分屏右 pane 宽度占比（0.2–0.8）。 */
@@ -197,22 +199,20 @@ export const useEditorViewStore = defineStore('editorView', () => {
     preferencesStore.DISPATCH_EDITOR_VIEW_STATE({ sourceCode: shouldBeSource })
   }
 
-  /** 点叶：切换选中。已两叶再点第三叶 → 替换最早选中（FIFO）；不可选到零。 */
+  /** 点叶：配置选择式——点一下选中，再点一下取消；选满两叶后第三叶点不动
+   *  （先摘一片才能换）；最后一片不可摘。 */
   const toggleLeaf = (leaf: Leaf): void => {
     topView.value = null // 顶级视图与四叶互斥：点叶即回叶
     const sel = leafSelection.value
-    const next = sel.includes(leaf)
-      ? sel.length > 1
-        ? sel.filter((l) => l !== leaf)
-        : sel // 最后一片点不掉
-      : sel.length < 2
-        ? [...sel, leaf]
-        : [sel[1]!, leaf]
-    if (next !== sel) {
-      leafSelection.value = next
-      persist()
-      syncToPreferences()
+    if (sel.includes(leaf)) {
+      if (sel.length === 1) return // 最后一片点不掉
+      leafSelection.value = sel.filter((l) => l !== leaf)
+    } else {
+      if (sel.length >= 2) return // 已选满：先摘一片才能换（用户自己搭配）
+      leafSelection.value = [...sel, leaf]
     }
+    persist()
+    syncToPreferences()
   }
 
   /** 只移除一片（面板态 Esc 用）；最后一片不可移。 */
