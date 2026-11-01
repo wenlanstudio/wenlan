@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication } from 'playwright'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -99,61 +99,74 @@ const countPdfPages = (data: Buffer): number => {
 }
 
 test.describe('paper leaf hard acceptance: screen pages == printToPDF pages', () => {
-  let app: ElectronApplication
-  let page: Page
+  // 一文档一实例：启动 → 进纸面叶全屏 → 读屏测页数（两读稳定）→ 走真实
+  // 导出管线数 PDF 页。Windows 冷启动慢，hook/test 超时给足。
+  const runAcceptance = async(doc: string): Promise<{ screenCount: number; pdfCount: number }> => {
+    const launched = await launchWithMarkdown(doc)
+    const { app, page } = launched
+    try {
+      await waitForMenuReady(app)
 
-  test.beforeAll(async() => {
-    const launched = await launchWithMarkdown(DOC)
-    app = launched.app
-    page = launched.page
-    await waitForMenuReady(app)
-  }, 150_000) // Windows 冷启动（electron.cmd → 应用就绪）远超默认 30s
+      // —— 进纸面叶全屏：(文, 纸) 成对后摘掉 文。 ——
+      const paperBtn = page.locator('.view-switcher .leaf-btn', { hasText: '纸' })
+      const flowBtn = page.locator('.view-switcher .leaf-btn', { hasText: '文' })
+      await paperBtn.waitFor({ state: 'visible', timeout: 15000 })
+      await paperBtn.click()
+      await flowBtn.click()
 
-  test.afterAll(async() => {
-    if (app) {
+      // —— 屏测页数：等 overlay 出数，并确认两读稳定（防抖合帧后不再变动）。 ——
+      const overlay = page.locator('.mu-paper-overlay[data-page-count]')
+      await overlay.waitFor({ state: 'visible', timeout: 15000 })
+      const readCount = async(): Promise<number> =>
+        Number(await overlay.getAttribute('data-page-count'))
+      const first = await readCount()
+      await page.waitForTimeout(700)
+      const screenCount = await readCount()
+      expect(screenCount, 'overlay page count should settle').toBe(first)
+
+      // —— 打印页数：真实导出管线（对话框默认 A4 + 20/15mm 边距）。 ——
+      const outPath = path.join(
+        fs.mkdtempSync(path.join(os.tmpdir(), 'mt-paper-acceptance-')),
+        'acceptance.pdf'
+      )
+      await stubSaveDialog(app, outPath)
+      await sendIpcToRenderer(app, 'mt::show-export-dialog', 'pdf')
+      const confirm = page.locator('.print-settings-dialog .button-primary')
+      await confirm.waitFor({ state: 'visible', timeout: 10000 })
+      await confirm.click()
+      const pdf = await pollForPdfFile(outPath)
+      const pdfCount = countPdfPages(pdf)
+
+      expect(screenCount, 'paper leaf screen page count').toBeGreaterThan(0)
+      expect(pdfCount, 'printToPDF page count').toBeGreaterThan(0)
+      return { screenCount, pdfCount }
+    } finally {
       await restoreSaveDialog(app)
       await app.close()
     }
-  })
+  }
 
   test('screen page count equals the exported PDF page count', async() => {
-    test.setTimeout(90_000)
-
-    // —— 进纸面叶全屏：(文, 纸) 成对后摘掉 文。 ——
-    const paperBtn = page.locator('.view-switcher .leaf-btn', { hasText: '纸' })
-    const flowBtn = page.locator('.view-switcher .leaf-btn', { hasText: '文' })
-    await paperBtn.waitFor({ state: 'visible', timeout: 15000 })
-    await paperBtn.click()
-    await flowBtn.click()
-
-    // —— 屏测页数：等 overlay 出数，并确认两读稳定（防抖合帧后不再变动）。 ——
-    const overlay = page.locator('.mu-paper-overlay[data-page-count]')
-    await overlay.waitFor({ state: 'visible', timeout: 15000 })
-    const readCount = async(): Promise<number> =>
-      Number(await overlay.getAttribute('data-page-count'))
-    const first = await readCount()
-    await page.waitForTimeout(700)
-    const screenCount = await readCount()
-    expect(screenCount, 'overlay page count should settle').toBe(first)
-
-    // —— 打印页数：真实导出管线（对话框默认 A4 + 20/15mm 边距）。 ——
-    const outPath = path.join(
-      fs.mkdtempSync(path.join(os.tmpdir(), 'mt-paper-acceptance-')),
-      'acceptance.pdf'
-    )
-    await stubSaveDialog(app, outPath)
-    await sendIpcToRenderer(app, 'mt::show-export-dialog', 'pdf')
-    const confirm = page.locator('.print-settings-dialog .button-primary')
-    await confirm.waitFor({ state: 'visible', timeout: 10000 })
-    await confirm.click()
-    const pdf = await pollForPdfFile(outPath)
-    const pdfCount = countPdfPages(pdf)
-
-    expect(screenCount, 'paper leaf screen page count').toBeGreaterThan(0)
-    expect(pdfCount, 'printToPDF page count').toBeGreaterThan(0)
-    // 硬验收本体：屏显页数 = 打印页数（§5：一倒则度量来源裁决重审）。
-    expect(screenCount).toBe(pdfCount)
+    test.setTimeout(150_000)
+    const { screenCount, pdfCount } = await runAcceptance(DOC)
     // 文档设计钉死 2 页：填充远离页界，页数只对"机制同源"敏感。
     expect(screenCount).toBe(2)
+    expect(screenCount).toBe(pdfCount)
+  })
+
+  test('a pagebreak marker forces the same page on screen and in print', async() => {
+    test.setTimeout(150_000)
+    // 10 段 + 分页符 + 10 段 + 分页符 + 30 段：强制缝把文档切成 4 页
+    // （尾组 30 段自然分 28+2，均远离页界）。
+    const pagebreakDoc = [
+      ...Array.from({ length: 10 }, (_, i) => PARA(i + 1)),
+      '<!-- pagebreak -->',
+      ...Array.from({ length: 10 }, (_, i) => PARA(i + 11)),
+      '<!-- pagebreak -->',
+      ...Array.from({ length: 30 }, (_, i) => PARA(i + 21))
+    ].join('\n\n')
+    const { screenCount, pdfCount } = await runAcceptance(pagebreakDoc)
+    expect(screenCount).toBe(4)
+    expect(screenCount).toBe(pdfCount)
   })
 })

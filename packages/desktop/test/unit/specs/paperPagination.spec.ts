@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { paginateBlocks, type PaperBlockBox } from '@/util/paperPagination'
+import { paginateBlocks, parsePaperGeometry, type PaperBlockBox } from '@/util/paperPagination'
 
 // `@/util/pdf` 在加载时读 `window.path`（preload 桥），vitest 环境需先补桩。
 vi.hoisted(() => {
@@ -123,9 +123,88 @@ describe('print chain keeps blocks together (view-model §5 hard acceptance)', (
     expect(css).toContain('.markdown-body>*{break-inside:avoid;}')
   })
 
+  it('printable branch styles the pagebreak marker as a forced page break', async() => {
+    const { getCssForOptions } = await import('@/util/pdf')
+    const css = await getCssForOptions({ type: 'pdf', pageMarginTop: 20, pageMarginRight: 15, pageMarginBottom: 20, pageMarginLeft: 15 })
+    expect(css).toContain('.markdown-body .mt-pagebreak{height:0;margin:0;padding:0;border:0;break-after:page;}')
+  })
+
   it('styledHtml branch does not paginate', async() => {
     const { getCssForOptions } = await import('@/util/pdf')
     const css = await getCssForOptions({ type: 'styledHtml' })
     expect(css).not.toContain('break-inside')
+    expect(css).not.toContain('mt-pagebreak')
+  })
+})
+
+// —— `<!-- pagebreak -->` 强制分页（M3a）与 frontmatter 纸型（M3b）。 ——
+describe('forced pagebreak seams (view-model §5 / M3)', () => {
+  const pb = (tag = 'figure'): PaperBlockBox => ({ tag, top: 0, bottom: 0, isPagebreak: true })
+
+  it('a pagebreak marker forces a seam even when everything fits', () => {
+    // 标记块 100..120，后块 130..500：容量全放得下，缝仍然落标记之后。
+    const marker = pb()
+    marker.top = 100
+    marker.bottom = 120
+    const r = paginateBlocks([block('p', 0, 90), marker, block('p', 130, 500)], 1000)
+    expect(r.seams).toEqual([{ y: 125, crossed: false }])
+    expect(r.pageCount).toBe(2)
+  })
+
+  it('a pagebreak at document start or with no content on the page is inert', () => {
+    // 文档起始的分页符：fragmentainer 为空，forced break 无操作（镜像
+    // Chromium）——后块仍在第 1 页。
+    const marker = pb()
+    marker.top = 0
+    marker.bottom = 20
+    const r = paginateBlocks([marker, block('p', 30, 300)], 1000)
+    expect(r.seams).toEqual([])
+    expect(r.pageCount).toBe(1)
+
+    // 连续分页符同理：标记之间无正文，不产空白页。
+    const m2 = pb()
+    m2.top = 30
+    m2.bottom = 50
+    const r2 = paginateBlocks([marker, m2, block('p', 60, 300)], 1000)
+    expect(r2.seams).toEqual([])
+    expect(r2.pageCount).toBe(1)
+  })
+
+  it('a pagebreak resets page capacity (next page accounting restarts)', () => {
+    // 页 1 内容到 900；标记强制缝后，后块在页 2 从 0 计——10..360 放得下。
+    const marker = pb()
+    marker.top = 910
+    marker.bottom = 930
+    const r = paginateBlocks([block('p', 0, 900), marker, block('p', 940, 1290)], 1000)
+    expect(r.seams).toEqual([{ y: 935, crossed: false }])
+    expect(r.pageCount).toBe(2)
+  })
+})
+
+describe('paper geometry from frontmatter (view-model §5 / M3)', () => {
+  it('defaults to A4 without/unknown paper declaration', () => {
+    expect(parsePaperGeometry('')).toEqual({ pageWidthMm: 210, pageHeightMm: 297 })
+    expect(parsePaperGeometry('---\ntitle: x\n---\nbody')).toEqual({ pageWidthMm: 210, pageHeightMm: 297 })
+    expect(parsePaperGeometry('---\npaper: a3\n---\nbody')).toEqual({ pageWidthMm: 210, pageHeightMm: 297 })
+  })
+
+  it('parses paper: letter (case-insensitive) and keeps a4 explicit', () => {
+    expect(parsePaperGeometry('---\npaper: letter\n---\nbody')).toEqual({ pageWidthMm: 215.9, pageHeightMm: 279.4 })
+    expect(parsePaperGeometry('---\npaper: "Letter"\n---\nbody')).toEqual({ pageWidthMm: 215.9, pageHeightMm: 279.4 })
+    expect(parsePaperGeometry('---\npaper: A4\n---\nbody')).toEqual({ pageWidthMm: 210, pageHeightMm: 297 })
+  })
+
+  it('insertPagebreakMarkers swaps standalone comment lines only', async() => {
+    const { insertPagebreakMarkers } = await import('@/util/exportHtml')
+    expect(insertPagebreakMarkers('A\n\n<!-- pagebreak -->\n\nB'))
+      .toBe('A\n\n<div class="mt-pagebreak"></div>\n\nB')
+    // 缩进与大小写宽容；行内注释保持惰性。
+    expect(insertPagebreakMarkers('A\n\n   <!-- PageBreak -->\n\nB'))
+      .toBe('A\n\n<div class="mt-pagebreak"></div>\n\nB')
+    expect(insertPagebreakMarkers('text with <!-- pagebreak --> inside'))
+      .toBe('text with <!-- pagebreak --> inside')
+    // 多处标记全部替换（/g——漏掉会变成"只有第一个分页符生效"）。
+    expect(insertPagebreakMarkers('A\n\n<!-- pagebreak -->\n\nB\n\n<!-- pagebreak -->\n\nC').match(/mt-pagebreak/g))
+      .toHaveLength(2)
   })
 })

@@ -125,6 +125,21 @@ const createTableBody = (article: string): string =>
 // Match a standalone `[TOC]` line (mirrors legacy marked TOC block token).
 const TOC_REG = /^ {0,3}\[TOC\] *$/im
 
+// `<!-- pagebreak -->` 纸面叶强制分页标记（视图模型 §5）独占一行的形态。行内
+// 出现（段落中段）不替换——分页符是块级语义，行内注释保持惰性。行尾只容忍
+// 水平空白（\s 会越过换行吞掉空行分隔）。
+const PAGEBREAK_LINE_REG = /^ {0,3}<!--\s*pagebreak\s*-->[ \t]*$/gim
+
+/**
+ * Turn standalone `<!-- pagebreak -->` comment lines into breakable marker
+ * divs before engine rendering: comments are invisible to CSS, so the print
+ * chain could not otherwise honour the forced break (pdf.ts styles
+ * `.mt-pagebreak` with `break-after: page`). Plain `div` + class survives the
+ * export sanitize config.
+ */
+export const insertPagebreakMarkers = (markdown: string): string =>
+  markdown.replace(PAGEBREAK_LINE_REG, '<div class="mt-pagebreak"></div>')
+
 // Match the `href="…"` of an <a> tag in the (already sanitized, double-quoted)
 // engine output, so relative local links can be rewritten to absolute `file://`
 // URLs. A string rewrite avoids re-serializing the whole article DOM (which
@@ -167,7 +182,8 @@ export const exportStyledHTML = async(
 
   // Render the engine's full HTML document. We re-extract its <article> body so
   // we can inject the TOC / header-footer, then re-emit the document shell.
-  const fullDoc = await new MarkdownToHtml(markdown, muya).generate({
+  // Pagebreak comments are swapped for breakable marker divs first (§5).
+  const fullDoc = await new MarkdownToHtml(insertPagebreakMarkers(markdown), muya).generate({
     title,
     extraCSS: extraCss,
     dir

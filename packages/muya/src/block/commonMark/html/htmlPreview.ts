@@ -5,6 +5,7 @@ import { sanitize } from '../../../utils';
 import { parseMarker } from '../../../utils/columns/syntax';
 import { getImageSrc } from '../../../utils/image';
 import logger from '../../../utils/logger';
+import { isPagebreakMarker } from '../../../utils/markers/pagebreak';
 import Parent from '../../base/parent';
 
 const debug = logger('htmlPreview:');
@@ -100,6 +101,16 @@ class HTMLPreview extends Parent {
                 const ratioAttr = marker.ratioText ? ` data-ratio="${marker.ratioText}"` : '';
                 this.domNode!.innerHTML
                     = `<span class="mu-mdcols-marker mu-mdcols-inline mu-mdcols-${marker.kind}" data-kind="${marker.kind}"${ratioAttr}></span>`;
+                return;
+            }
+
+            // `<!-- pagebreak -->` — paper-leaf forced page break, a sibling of
+            // the column marker family. Same badge affordance (click to edit
+            // the comment); desktop's paper pagination reads this badge as a
+            // forced seam and the print chain turns it into a page break.
+            if (isPagebreakMarker(html)) {
+                this.domNode!.innerHTML
+                    = '<span class="mu-mdcols-marker mu-mdcols-inline mu-mdcols-pagebreak" data-kind="pagebreak"></span>';
                 return;
             }
 

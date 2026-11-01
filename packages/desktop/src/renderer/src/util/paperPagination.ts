@@ -28,12 +28,36 @@ export const PAGE_CONTENT_HEIGHT_MM = 257
 /** CSS 物理单位换算：1mm = 96/25.4 px。 */
 export const MM_TO_PX = 96 / 25.4
 
+/** 纸面几何（纸型；边距固定 20/15mm，§5：纸型/边距归 frontmatter）。 */
+export interface PaperGeometry {
+  pageWidthMm: number
+  pageHeightMm: number
+}
+
+export const PAPER_SIZES_MM: Record<'a4' | 'letter', PaperGeometry> = {
+  a4: { pageWidthMm: 210, pageHeightMm: 297 },
+  letter: { pageWidthMm: 215.9, pageHeightMm: 279.4 }
+}
+
+/**
+ * frontmatter `paper: A4 | letter` → 纸面几何。无声明或缺纸型 = A4（打印链
+ * 默认，导出对话框同默认，屏打天然一致）；未知纸型也落 A4。
+ */
+export const parsePaperGeometry = (markdown: string): PaperGeometry => {
+  const fm = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(markdown ?? '')
+  const paper = fm ? /^paper:\s*['"]?([A-Za-z0-9_-]+)['"]?\s*$/m.exec(fm[1]) : null
+  const key = paper?.[1]?.toLowerCase()
+  return key === 'letter' ? PAPER_SIZES_MM.letter : PAPER_SIZES_MM.a4
+}
+
 export interface PaperBlockBox {
   /** 块的 tagName（小写）。 */
   tag: string
   /** 相对容器内容盒顶的 y（视觉 px，含 zoom）。 */
   top: number
   bottom: number
+  /** `<!-- pagebreak -->` 标记块（屏测读 muya 的分页符徽标）。 */
+  isPagebreak?: boolean
 }
 
 export interface PaperSeam {
@@ -65,6 +89,11 @@ export const paginateBlocks = (
   let local = 0
   let prevBottom: number | null = null
   let firstOnPage = true
+  // `<!-- pagebreak -->` 标记后待发的强制缝；本页是否已有正文块（强制缝
+  // 镜像 Chromium 语义：fragmentainer 为空时 forced break 无操作——连续
+  // 分页符/文档起始的分页符不产空白页）。
+  let pendingForcedBreak = false
+  let contentOnPage = false
 
   const pushSeam = (y: number, crossed: boolean): void => {
     seams.push({ y, crossed })
@@ -78,6 +107,17 @@ export const paginateBlocks = (
     const oversized = height > pageContentHeight
     // 块顶的页内位置（首块 = 0，间隙截断）。
     let startLocal = firstOnPage ? 0 : local + gap
+
+    // 强制缝：上一块是分页符标记且本页有正文 → 缝必然落在本块之前。
+    if (pendingForcedBreak) {
+      pendingForcedBreak = false
+      if (contentOnPage) {
+        if (prevBottom !== null) pushSeam((prevBottom + b.top) / 2, false)
+        firstOnPage = true
+        startLocal = 0
+        contentOnPage = false
+      }
+    }
 
     // 剩余空间连块顶都容不下（间隙跨过页界）→ 先按推下页处理。local 无需
     // 清零——其后每个分支都会在读取前重新赋值。
@@ -103,6 +143,7 @@ export const paginateBlocks = (
         local = height
         firstOnPage = false
         prevBottom = b.bottom
+        contentOnPage = true
         continue
       }
     }
@@ -131,6 +172,11 @@ export const paginateBlocks = (
     }
 
     prevBottom = b.bottom
+    if (b.isPagebreak) {
+      pendingForcedBreak = true
+    } else {
+      contentOnPage = true
+    }
   }
 
   const lastBottom = blocks.at(-1)?.bottom ?? 0
@@ -157,14 +203,18 @@ interface PaperBlocksMeasurement {
 }
 
 /** 步进 .mu-container 的顶层块，产出以内容盒顶为 0 的块盒序列。 */
-export const measurePaperBlocks = (container: HTMLElement): PaperBlocksMeasurement => {
+export const measurePaperBlocks = (
+  container: HTMLElement,
+  geometry: PaperGeometry = PAPER_SIZES_MM.a4
+): PaperBlocksMeasurement => {
   const rect = container.getBoundingClientRect()
   const cs = getComputedStyle(container)
   // CSS zoom 挂在 .mu-container 上（editor.vue）：计算值是未缩放 px，视觉
   // 距离 = ×zoom；rect 已是视觉坐标，统一到视觉空间。
   const zoom = Number.parseFloat(cs.zoom || '1') || 1
   const contentTopOffset = Number.parseFloat(cs.paddingTop || '0') * zoom
-  const pageContentHeight = PAGE_CONTENT_HEIGHT_MM * MM_TO_PX * zoom
+  // 边距固定 20mm 上下（§5），内容高 = 纸高 − 40mm。
+  const pageContentHeight = (geometry.pageHeightMm - 40) * MM_TO_PX * zoom
 
   const blocks: PaperBlockBox[] = []
   for (const child of Array.from(container.children)) {
@@ -172,7 +222,12 @@ export const measurePaperBlocks = (container: HTMLElement): PaperBlocksMeasureme
     if (child.matches(EXCLUDED_SELECTOR)) continue
     const r = child.getBoundingClientRect()
     if (r.height === 0 && child.tagName !== 'HR') continue
-    blocks.push({ tag: child.tagName.toLowerCase(), top: r.top - rect.top - contentTopOffset, bottom: r.bottom - rect.top - contentTopOffset })
+    blocks.push({
+      tag: child.tagName.toLowerCase(),
+      top: r.top - rect.top - contentTopOffset,
+      bottom: r.bottom - rect.top - contentTopOffset,
+      isPagebreak: child.querySelector('.mu-mdcols-pagebreak') !== null
+    })
   }
 
   return { blocks, contentTopOffset, pageContentHeight }
@@ -188,10 +243,12 @@ export const usePaperPagination = (options: {
   isActive: () => boolean
   /** muya 根元素（滚动区，overlay 挂其内随之滚动）。 */
   getRoot: () => HTMLElement | null
+  /** 文档纸面几何（frontmatter `paper:`；缺省 A4）。 */
+  getGeometry?: () => PaperGeometry
   /** 额外重测触发源（如 zoom preference）。 */
   watchSources?: WatchSource[]
 }): void => {
-  const { isActive, getRoot, watchSources = [] } = options
+  const { isActive, getRoot, getGeometry, watchSources = [] } = options
 
   let overlay: HTMLDivElement | null = null
   let scheduleTimer = 0
@@ -266,7 +323,14 @@ export const usePaperPagination = (options: {
     overlay.style.width = `${containerRect.width}px`
     overlay.style.height = `${containerRect.height}px`
 
-    const m = measurePaperBlocks(container)
+    // frontmatter 纸型 → 容器上的内联 CSS 变量（压过 paperLens.css 的 :root
+    // 默认值；纸卡宽高与测量同源，编辑所见 = 打印所得）。frontmatter 变化
+    // 会触发 MutationObserver 重测，几何随之更新。
+    const geometry = getGeometry?.() ?? PAPER_SIZES_MM.a4
+    container.style.setProperty('--paper-page-width', `${geometry.pageWidthMm}mm`)
+    container.style.setProperty('--paper-page-height', `${geometry.pageHeightMm}mm`)
+
+    const m = measurePaperBlocks(container, geometry)
     render(paginateBlocks(m.blocks, m.pageContentHeight), m, container)
   }
 

@@ -97,9 +97,13 @@
   至字号下限"之坑在设计层堵死）；v2 段落跨页切行（widow/orphan ≥ 2）、
   表格行切 + （续）页表头（算法包移植）；
 - **分页符 = HTML 注释标记族**：`<!-- pagebreak -->`，与 column 的
-  `<!-- begin/split/end -->` 同族——三叶通用（注释不渲染可见物）、不占
-  `---`、纯文本可移植；纸型/边距归 frontmatter（`paper: A4`），文档级与
-  块级职责分开；
+  `<!-- begin/split/end -->` 同族——不占 `---`、纯文本可移植；注释不渲染
+  **内容物**（区别于 `---` 的水平线），但按族惯例渲染编辑态徽标（⤓ 分页
+  符，与 mdcols 徽标同款 affordance，栏视图随族隐藏）；屏测读徽标作强制缝
+  （本页无正文时镜像 Chromium 语义忽略——连续/文首分页符不产空白页），打印
+  链由 exportHtml 把注释行换成零高标记 div 走 `break-after: page`；纸型/
+  边距归 frontmatter（`paper: A4|letter`，M3 屏侧生效，打印侧默认 A4、
+  导出对话框仍是打印纸型的用户入口）；
 - **交互入位**：刻度「文 栏 纸│览 示」，按钮序 flow < column < paper <
   slide < present（文左示右自动成立）；paper 常显（任何文档都有页面视图，
   不学 column 的"有标记才显示"）；**paper 只与文支配对**——纸×览/示在 v1

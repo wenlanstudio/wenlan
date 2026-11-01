@@ -253,6 +253,12 @@
     content: '⇥ 分栏结束';
 }
 
+/* `<!-- pagebreak -->`（纸面叶强制分页，视图模型 §5）：与分栏徽标同族，
+   字形点出"跳到下页"。分栏视图随 .mu-mdcols-marker 通用隐藏规则一并消失。 */
+.mu-mdcols-inline.mu-mdcols-pagebreak::before {
+    content: '⤓ 分页符';
+}
+
 .mu-mdcols-inline:hover {
     color: var(--editor-color-50);
 }

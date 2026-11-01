@@ -106,7 +106,7 @@ import { moveImageToFolder, uploadImage } from '@/util/fileSystem'
 import { guessClipboardFilePath } from '@/util/clipboard'
 import { dataURLToFile } from '@/util/dataURLToFile'
 import { getCssForOptions, getHtmlToc, type PdfCssOptions, type HtmlTocOptions } from '@/util/pdf'
-import { usePaperPagination } from '@/util/paperPagination'
+import { usePaperPagination, parsePaperGeometry } from '@/util/paperPagination'
 import {
   getTocHeadingScrollTop,
   resolveTocHeadingElement,
@@ -267,6 +267,7 @@ const rowInput = ref<InputNumberInstance | null>(null)
 usePaperPagination({
   isActive: () => props.lens === 'paper',
   getRoot: () => editor.value?.domNode ?? null,
+  getGeometry: () => parsePaperGeometry(currentFile.value?.markdown ?? ''),
   watchSources: [() => preferencesStore.zoom]
 })
 

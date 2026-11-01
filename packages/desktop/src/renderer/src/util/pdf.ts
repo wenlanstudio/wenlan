@@ -55,6 +55,9 @@ export const getCssForOptions = async(options: PdfCssOptions): Promise<string> =
     // 顶层块 keep-together，打印侧同款——块级 break-inside:avoid，装不下整块
     // 即推下页；块高于一页时 Chromium 自然降级为切分（= 屏测的穿缝）。
     output += '.markdown-body>*{break-inside:avoid;}'
+    // `<!-- pagebreak -->` 强制分页符（exportHtml 已把注释行换成标记 div）：
+    // 零高度 + break-after:page，与屏测的强制缝同义。
+    output += '.markdown-body .mt-pagebreak{height:0;margin:0;padding:0;border:0;break-after:page;}'
   }
 
   // Auto numbering headings via CSS
