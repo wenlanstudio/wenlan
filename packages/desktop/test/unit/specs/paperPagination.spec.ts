@@ -2,8 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   paginateBlocks,
   paginateBlocksV2,
-  computePagePushes,
-  PAPER_PAGE_GAP_MM,
   parsePaperGeometry,
   parseDeclaredPaperSize,
   type PaperBlockBox,
@@ -157,34 +155,8 @@ describe('paginateBlocks pageStarts (push targets)', () => {
   })
 })
 
-describe('computePagePushes (card-grid cascade)', () => {
-  it('single page needs no push', () => {
-    expect(computePagePushes([0], [0], 1000)).toEqual([0])
-  })
-
-  it('pushes each page start onto the grid pitch with cascade', () => {
-    // 页 1 首块自然位 500 → 推 500 到 1000；页 2 首块自然位 1100 已含
-    // 前页推挤 → 再推 400 到 2000。
-    expect(computePagePushes([0, 1, 2], [0, 500, 1100], 1000)).toEqual([0, 500, 400])
-  })
-
-  it('page 0 pulls its first block to the origin (negative allowed)', () => {
-    // 首块自然顶 24（如 h1 的 margin-top）→ Δ0 = −24，镜像打印侧块顶截断。
-    expect(computePagePushes([0], [24], 1000)).toEqual([-24])
-  })
-
-  it('clamps to zero after a crossed page (never pulls back, no overlap)', () => {
-    // 页 2 首块自然位 2600 已落后于网格 2000（穿缝欠账）→ 不拉回。
-    expect(computePagePushes([0, -1, 2], [0, 100, 2600], 1000)).toEqual([0, 0, 0])
-  })
-
-  it('grid pitch carries the inter-page gap (page height + gap, zoom applied by caller)', () => {
-    // A4：pageStep = (297 + 8)mm；内容高 257mm——格距含 40mm 边距 + 8mm 隙，
-    // 恒大于页内容高，不动点稳定（推挤不改块高，缝判定不动）。
-    const pageStepMm = 297 + PAPER_PAGE_GAP_MM
-    expect(pageStepMm).toBeGreaterThan(257)
-  })
-})
+// —— 卡网格推挤级联（computePagePushes）已随纸叶改真分片投影退役
+//    （A″ 裁决 / M4.3b），其单测一并移除；实现见 git 历史（M3.5 切片 B）。 ——
 
 // —— v2 行级拟合（M4.3a：段落切行 widow/orphan、表格行切+续表表头）——
 describe('paginateBlocksV2 (line-level fragmentation)', () => {

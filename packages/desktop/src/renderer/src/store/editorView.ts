@@ -7,18 +7,19 @@ import { useEditorStore } from './editor'
 /**
  * 视图模型（docs/design/view-model.md）：二组六叶选择。
  *
- * 编辑组（写作姿态，muya 进程内）= { flow 全文, column 分栏, page 逻辑页,
- * paper 纸面(A4) }；展示组（成页姿态）= { slide 页览, present 放映 }（md2slides
- * iframe）。组判据 = 姿态而非可编辑性；引擎边界（muya 四叶 │ iframe 两叶）
- * 不与刻度分隔线重合。page = 逻辑纸（连续流 + 缝叠加，M2/M3 升格为一等叶），
- * paper = 物理纸（推挤流 + 卡层）；两叶共享同一测量基座，版式基同钉纸面宽度。
+ * 编辑组（写作姿态，muya 进程内）= { flow 全文, column 分栏, page 逻辑页 }；
+ * 展示组（成页姿态）= { paper 物理纸, slide 页览, present 放映 }。组判据 =
+ * 姿态而非可编辑性；引擎边界（muya 活叶 │ 投影/iframe）不与刻度分隔线重合。
+ * page = 逻辑纸（连续流 + 行级缝叠加）；paper = 物理纸（只读真分片预览，
+ * A″ 裁决 / M4.3b——切行/续表真渲染，卡内编辑已随推挤退役）；page/paper
+ * 共享同一拟合引擎（paginateBlocksV2）与打印语义，只差呈现。
  *
  * 选择模型：六叶平铺常驻（栏格随文档有无 begin 标记显隐），点击选中至多两叶
  * ——一叶全屏、两叶分屏（左右按 LEAVES 顺序，编辑左展示右、细左粗右自动
  * 成立）。配置选择式（淘宝选规格）：点一下选中、再点一下取消，搭配由用户
  * 自定；已选满两叶时第三叶点不动（先摘一片才能换）；最后一片不可摘（不可
- * 选到零）。编辑面不变量：同一时刻至多一个活编辑面——左 pane/全屏 = 活引擎，
- * 右 pane 一律只读投影。
+ * 选到零）。编辑面不变量：同一时刻至多一个活编辑面——左 pane/全屏（纸叶
+ * 除外，纸叶为只读投影）= 活引擎；右 pane 一律只读投影。
  * 表/图/本是顶级正交视图，与六叶互斥（挂起不丢）。
  */
 
@@ -178,7 +179,9 @@ export const useEditorViewStore = defineStore('editorView', () => {
   )
 
   /** 编辑器透镜：table 是顶级透镜；flow/column/page/paper 作全屏或分屏左
-   *  pane 时活。page/paper 共享纸面版式基（版式基钉死纸面宽度，§5）。 */
+   *  pane 时活。paper 在全屏态是「隐藏服务后端」——纸叶的可见面是真分片
+   *  投影（paperProjection，A″），活引擎退居幕后供养 bus 服务（导出/TOC），
+   *  由 index.vue 以 paper-fullscreen 收起其占位。 */
   const editorLens = computed<'flow' | 'column' | 'page' | 'paper' | 'table' | null>(() => {
     if (topView.value === 'table') return 'table'
     if (topView.value !== null) return null
@@ -200,19 +203,18 @@ export const useEditorViewStore = defineStore('editorView', () => {
     const leaf = activeLeaf.value
     if (leaf === 'present') return 'none'
     if (leaf === 'slide') return 'slide-zoom' // 页缩放，待接线
-    // 页/纸共享测量基座：版式基钉死纸面宽度，缩放是刚需（§5 交互入位）。
+    // 页/纸共享拟合引擎：版式基钉死纸面宽度，缩放是刚需（§5 交互入位）。
     if (leaf === 'page') return 'page-zoom' // 页缩放，待接线（与 paper-zoom 同族）
-    if (leaf === 'paper') return 'paper-zoom' // 页缩放，待接线（§5）
+    if (leaf === 'paper') return 'paper-zoom' // 投影页缩放，待接线（§5）
     return 'flow-width'
   })
 
-  /** 光标指示（行:列）只在有活编辑面时才有意义。 */
+  /** 光标指示（行:列）只在有活编辑面时才有意义（纸叶是只读投影，不算）。 */
   const isEditorVisible = computed<boolean>(
     () =>
       editorLens.value === 'flow' ||
       editorLens.value === 'column' ||
       editorLens.value === 'page' ||
-      editorLens.value === 'paper' ||
       isSourceMode.value
   )
 

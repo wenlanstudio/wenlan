@@ -27,6 +27,7 @@
 :root {
     --paper-page-width: 210mm;
     --paper-page-height: 297mm;
+    --paper-page-gap: 8mm; /* 页间灰隙（值承自 util/paperPagination PAPER_PAGE_GAP_MM） */
     --paper-margin-top: 20mm;
     --paper-margin-bottom: 20mm;
     --paper-margin-x: 15mm;
@@ -42,7 +43,8 @@
 
 [data-lens='page'] .mu-editor,
 [data-lens='paper'] .mu-editor,
-.paper-projection .mu-editor {
+.paper-projection .mu-editor,
+.paper-projection .mu-paper-page {
     --mu-font-size: var(--paper-font-size) !important;
     --mu-line-height: var(--paper-line-height) !important;
     /* gh-css pre 为 85%（相对正文 16px），非偏好里的 codeFontSize */
@@ -286,9 +288,43 @@
 }
 
 /* 推挤类挂上时容器自身透明——白卡由卡层画（选择器须压过上方共享规则
-   的 !important 白底，否则卡层被盖住）。 */
+   的 !important 白底，否则卡层被盖住）。
+   （M4.3b A″：推挤已退役，mu-paper-pushed/mu-paper-cards/mu-paper-card
+   随之失去挂载点，规则留作回退路径存档。） */
 [data-lens='paper'] .mu-container.mu-paper-pushed,
 .paper-projection .mu-container.mu-paper-pushed {
     background: transparent !important;
     box-shadow: none !important;
 }
+
+/* —— 纸叶真分片投影（M4.3b，A″）：页卡常流堆叠 —— */
+
+/* 页卡兼领 mu-container（执行器加类）：块搬进卡后仍在「容器」作用域内，
+   上方全部块度量规则零改动命中。本规则只收口三处与活容器（连续纸）的
+   差异——置于共享规则之后，同特异性 !important 由源序取胜：
+   margin 换成页间灰隙、底 padding 从 100vh 打字余量换回纸面下边距。 */
+.paper-projection .mu-paper-page {
+    position: relative;
+    margin: 0 0 var(--paper-page-gap) !important;
+    padding: var(--paper-margin-top) var(--paper-margin-x) var(--paper-margin-bottom) !important;
+    /* 字体三元组须直设：font-family/line-height 在 muya 里挂在 .mu-editor
+       上、块靠继承取值——块搬进卡后脱离 .mu-editor 血统，变量覆盖救不了
+       直设属性（e2e 卡高断言抓到过：Open Sans/1.6 回潮，卡高出一截）。 */
+    font-family: 'Noto Music', 'Noto Sans Math', -apple-system, 'Segoe UI', Helvetica, Arial,
+        sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+    font-size: var(--paper-font-size);
+    line-height: var(--paper-line-height);
+}
+
+.paper-projection .mu-paper-page .mu-paper-page-num {
+    top: 4px;
+}
+
+/* 段落切分的裁剪窗：BFC——原块 margin 不外塌，由执行器以窗 margin-bottom
+   补回自然间隙；高度由执行器按行界写入。 */
+.paper-projection .mu-paper-clip {
+    overflow: hidden;
+}
+
+/* 续表外壳：执行器给克隆 figure 加 mu-paper-table-cont 类（e2e 验「续表
+   表头内容与首页一致」用）；样式继承 .mu-table 规则，无额外声明。 */

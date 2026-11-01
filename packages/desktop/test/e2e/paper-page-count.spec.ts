@@ -118,11 +118,16 @@ test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages
       await leafBtn.click()
       await flowBtn.click()
 
-      // —— 屏测页数：等 overlay 出数，并确认两读稳定（防抖合帧后不再变动）。 ——
-      const overlay = page.locator('.mu-paper-overlay[data-page-count]')
-      await overlay.waitFor({ state: 'visible', timeout: 15000 })
+      // —— 屏测页数：等 overlay/deck 出数，并确认两读稳定（防抖合帧后不再
+      //    变动）。纸叶 = 只读真分片投影（A″），计数在 .mu-paper-deck 上；
+      //    页叶 = 活引擎缝叠加，计数在 .mu-paper-overlay 上。 ——
+      const counter =
+        leafLabel === '纸'
+          ? page.locator('.mu-paper-deck[data-page-count]')
+          : page.locator('.mu-paper-overlay[data-page-count]')
+      await counter.waitFor({ state: 'visible', timeout: 15000 })
       const readCount = async(): Promise<number> =>
-        Number(await overlay.getAttribute('data-page-count'))
+        Number(await counter.getAttribute('data-page-count'))
       const first = await readCount()
       await page.waitForTimeout(700)
       const screenCount = await readCount()
@@ -251,7 +256,7 @@ test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages
     expect(screenCount).toBe(pdfCount)
   })
 
-  test('paper posture pushes page starts onto the card grid (卡片对齐)', async() => {
+  test('paper projection renders page cards that match the fit and the print (真分片卡片)', async() => {
     test.setTimeout(150_000)
     const launched = await launchWithMarkdown(DOC)
     const { app, page } = launched
@@ -263,39 +268,33 @@ test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages
       await leafBtn.click()
       await flowBtn.click()
 
-      const overlay = page.locator('.mu-paper-overlay[data-page-count]')
-      await overlay.waitFor({ state: 'visible', timeout: 15000 })
-      // 等推挤两轮测量（自然量测 → 施加 → 重量测）+ 合帧后稳定。
+      const deck = page.locator('.mu-paper-deck[data-page-count]')
+      await deck.waitFor({ state: 'visible', timeout: 15000 })
+      // 等分片重建（setContent → 双 rAF → 量测 → 换装）+ 防抖稳定。
       await page.waitForTimeout(700)
+      const pageCount = Number(await deck.getAttribute('data-page-count'))
+      expect(pageCount).toBe(2)
 
-      // 页数不变：推挤不改块高，缝判定不动（硬验收的前提）。
-      expect(Number(await overlay.getAttribute('data-page-count'))).toBe(2)
-
-      // 卡片对齐：卡 k 顶缘 = 容器顶 + k·(页高+隙)·zoom；页 k 首块顶 =
-      // 卡内容顶（卡顶 + 20mm 上边距），容 2px 舍入差。
+      // 页卡几何：min-height = 纸高（297mm·zoom），常流堆叠 + 8mm 灰隙；
+      // 每卡首个内容子块顶 = 卡内容顶（卡 padding 20mm，徽章除外）——
+      // 分片是结构性搬移，对齐由构造保证。
       const geo = await page.evaluate(() => {
         const MM = 96 / 25.4
-        const container = document.querySelector('.mu-container') as HTMLElement
-        const cs = getComputedStyle(container)
-        const zoom = Number.parseFloat(cs.zoom || '1') || 1
-        const contentOrigin =
-          container.getBoundingClientRect().top + Number.parseFloat(cs.paddingTop) * zoom
-        const pageStep = (297 + 8) * MM * zoom
-        const cardTops = [...document.querySelectorAll('.mu-paper-card')].map(
-          (c) => c.getBoundingClientRect().top
-        )
-        const blockTops = [...(container.children as HTMLCollectionOf<HTMLElement>)].map((b) =>
-          b.getBoundingClientRect().top
-        )
-        return { cardTops, blockTops, contentOrigin, pageStep }
+        const cards = [...document.querySelectorAll('.mu-paper-page')] as HTMLElement[]
+        const tops = cards.map(c => c.getBoundingClientRect().top)
+        const heights = cards.map(c => c.getBoundingClientRect().height)
+        const firstChildTop = cards.map(c => {
+          const kid = [...c.children].find(el => !el.classList.contains('mu-paper-page-num'))
+          return kid ? kid.getBoundingClientRect().top : -1
+        })
+        return { tops, heights, firstChildTop, pageHeightPx: 297 * MM }
       })
-      expect(geo.cardTops).toHaveLength(2)
-      expect(Math.abs(geo.cardTops[1]! - geo.cardTops[0]! - geo.pageStep)).toBeLessThan(2)
-      // 页 0 首块在内容原点（Δ0 拉齐截断 margin）；页 1 首块在卡 1 内容顶。
-      const nearest = (target: number): number =>
-        Math.min(...geo.blockTops.map((t) => Math.abs(t - target)))
-      expect(nearest(geo.contentOrigin)).toBeLessThan(2)
-      expect(nearest(geo.contentOrigin + geo.pageStep)).toBeLessThan(2)
+      expect(geo.tops).toHaveLength(pageCount)
+      expect(Math.abs(geo.tops[1]! - geo.tops[0]! - (geo.heights[0]! + 8 * (96 / 25.4)))).toBeLessThan(2)
+      expect(Math.abs(geo.heights[0]! - geo.pageHeightPx)).toBeLessThan(2)
+      // 卡内容顶 = 卡顶 + 20mm 上边距；首子块结构性地贴在那里。
+      const contentTop0 = geo.tops[0]! + 20 * (96 / 25.4)
+      expect(Math.abs(geo.firstChildTop[0]! - contentTop0)).toBeLessThan(2)
     } finally {
       await app.close()
     }

@@ -79,7 +79,7 @@ const LEAF_META: Record<Leaf, { label: string; title: string }> = {
   flow: { label: '文', title: '全文（连续流编辑）' },
   column: { label: '栏', title: '分栏（空间离散，需 begin 标记）' },
   page: { label: '页', title: '逻辑页——连续流 + 分页缝提示（Word 草稿视图）' },
-  paper: { label: '纸', title: '纸面——真纸卡排版（Word 页面视图，卡内可编辑）' },
+  paper: { label: '纸', title: '纸面——真分页预览（切行/续表真渲染，只读）' },
   slide: { label: '览', title: '页览——全部真实页排开看（溢出的逻辑页带「N页」徽章）' },
   present: { label: '示', title: '放映（一次一页）' }
 }

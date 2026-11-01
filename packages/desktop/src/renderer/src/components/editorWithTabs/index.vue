@@ -13,7 +13,7 @@
     />
     <div
       class="container"
-      :class="{ split: isSplit }"
+      :class="{ split: isSplit, 'paper-fullscreen': isPaperFullscreen }"
       :style="isSplit ? { '--split-ratio': `${rightRatio}` } : undefined"
     >
       <!-- 左 pane 只在有内容时渲染：单选列/放时它若仍占位（height:100%），
@@ -31,9 +31,10 @@
           mode="panel"
           :markdown="markdown"
         />
-        <!-- 透镜宿主：WYSIWYG 引擎在 flow/column/page/paper/table 透镜间常驻，
+        <!-- 透镜宿主：WYSIWYG 引擎在 flow/column/page/table 透镜间常驻，
              切换只翻转 `data-lens` 而不重绘（TODO1 #21、#26）。分屏时活引擎占
-             左 pane（唯一编辑面，编辑面不变量 §2）。 -->
+             左 pane（唯一编辑面，编辑面不变量 §2）。纸叶是只读投影（A″），
+             不进活引擎。 -->
         <div
           v-else-if="editorLens"
           class="lens-host"
@@ -101,11 +102,12 @@
         title="拖动调整两侧比例"
         @pointerdown="startDrag"
       />
-      <!-- 右 pane：示支叶（slide 列表 / present 放映）或文支投影（column 分栏 /
-           page 逻辑页 / paper 纸面——右 pane 一律只读投影，编辑面不变量 §2）。
-           key 按 leaf 分实例——同一 iframe 实例的 view 恒定（deck 侧 player/列表
-           布局二选一），slide 与 present 各持一份；投影实例的 columnsLayout
-           建构期定死，column↔page↔paper 切换同样按 key 重建。 -->
+      <!-- 右 pane：示支叶（slide 列表 / present 放映）、纸叶真分片投影
+           （paperProjection，A″ 只读）或文支投影（column 分栏 / page 逻辑页
+           ——右 pane 一律只读投影，编辑面不变量 §2）。key 按 leaf 分实例——
+           同一 iframe 实例的 view 恒定（deck 侧 player/列表布局二选一），
+           slide 与 present 各持一份；投影实例的 columnsLayout 建构期定死，
+           column↔page 切换按 key 重建。 -->
       <div
         v-if="isSplit"
         class="pane pane-right"
@@ -117,8 +119,13 @@
           mode="panel"
           :markdown="markdown"
         />
+        <paper-projection
+          v-else-if="rightLeaf === 'paper'"
+          :key="`paper-${rightLeaf}`"
+          :markdown="markdown"
+        />
         <leaf-projection
-          v-else-if="rightLeaf === 'column' || rightLeaf === 'page' || rightLeaf === 'paper'"
+          v-else-if="rightLeaf === 'column' || rightLeaf === 'page'"
           :key="`proj-${rightLeaf}`"
           :lens="rightLeaf"
           :markdown="markdown"
@@ -130,6 +137,12 @@
         :key="activeLeaf"
         :leaf="activeLeaf"
         mode="view"
+        :markdown="markdown"
+      />
+      <!-- 全屏纸叶（A″）：只读真分片预览占满编辑区；活引擎留在收起的
+           pane-left 里供养 bus 服务（isPaperFullscreen）。 -->
+      <paper-projection
+        v-if="isPaperFullscreen"
         :markdown="markdown"
       />
     </div>
@@ -149,6 +162,7 @@ import ColumnsDiagnostics from './columnsDiagnostics.vue'
 import SourceCode from './sourceCode.vue'
 import DeckPane from './deckPane.vue'
 import LeafProjection from './leafProjection.vue'
+import PaperProjection from './paperProjection.vue'
 import TabNotifications from './notifications.vue'
 
 defineProps<{
@@ -174,6 +188,13 @@ const { setRightRatio } = editorViewStore
 // false——pane-left 不渲染，deck-pane 独占容器。
 const hasLeftPane = computed(
   () => isSplit.value || editorLens.value !== null || topView.value !== null
+)
+
+// 全屏纸叶（A″）：可见面 = 真分片投影；活引擎留在 pane-left 里作隐藏服务
+// 后端（bus 导出/TOC 依赖 editor.vue 挂载），pane-left 由 .paper-fullscreen
+// 收起（display:none——导出走序列化不需要布局）。
+const isPaperFullscreen = computed(
+  () => !isSplit.value && topView.value === null && activeLeaf.value === 'paper'
 )
 
 // 分屏左 pane 的引擎透镜由 store.editorLens 给出：orderedLeaves 首个
@@ -222,6 +243,14 @@ const startDrag = (ev: PointerEvent): void => {
        流，透镜分支的布局假设（.editor-wrapper height:100% 等）零改动。 */
     &.split {
       display: flex;
+    }
+
+    /* 全屏纸叶（A″）：pane-left 是隐藏服务后端（bus 导出/TOC 依赖活引擎
+       组件挂载），收起不占位——导出走序列化，不需要布局。 */
+    &.paper-fullscreen {
+      & > .pane-left {
+        display: none;
+      }
     }
   }
 }

@@ -262,14 +262,13 @@ const mediaViewer = ref<InstanceType<typeof MediaViewer> | null>(null)
 const viewerOpen = ref(false)
 const rowInput = ref<InputNumberInstance | null>(null)
 
-// 页/纸叶：分页测量与分页投影（util/paperPagination）。lens 进出 page/paper
-// 时挂/卸 overlay：页姿态纯缝叠加不推挤；纸姿态推挤 + 卡层（切片 B）。
-// zoom 改变视觉坐标，作为额外重测源。
+// 页叶：分页测量与行级缝叠加（util/paperPagination，M4.3b）。纸叶已改
+// 只读真分片投影（paperProjection.vue），活引擎不再承担纸姿态；zoom 改变
+// 视觉坐标，作为额外重测源。
 usePaperPagination({
-  isActive: () => props.lens === 'paper' || props.lens === 'page',
+  isActive: () => props.lens === 'page',
   getRoot: () => editor.value?.domNode ?? null,
   getGeometry: () => parsePaperGeometry(currentFile.value?.markdown ?? ''),
-  shouldPush: () => props.lens === 'paper',
   watchSources: [() => preferencesStore.zoom]
 })
 
@@ -423,7 +422,8 @@ const applyLens = (): void => {
 // same `scrollTop` lands on a different region of the document — re-apply the
 // tab's anchor once the class flip has been laid out (TODO1 #4). The table
 // lens hides blocks instead, which invalidates a block index captured in
-// another lens, so it is deliberately left alone.
+// another lens, so it is deliberately left alone. Paper is the read-only
+// projection's hidden service backend in fullscreen (A″) — no visible surface.
 const FORM_LENSES = ['flow', 'column', 'page', 'paper'] as const
 const isFormLens = (lens: string | null | undefined): lens is (typeof FORM_LENSES)[number] =>
   lens != null && (FORM_LENSES as readonly string[]).includes(lens)
