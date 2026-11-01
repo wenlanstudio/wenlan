@@ -101,9 +101,10 @@
         title="拖动调整两侧比例"
         @pointerdown="startDrag"
       />
-      <!-- 右 pane：示支叶（slide 列表 / present 放映）或 column 投影。
-           key 按 leaf 分实例——同一 iframe 实例的 view 恒定（deck 侧
-           player/列表布局二选一），slide 与 present 各持一份。 -->
+      <!-- 右 pane：示支叶（slide 列表 / present 放映）或文支投影（column 分栏 /
+           paper 纸面）。key 按 leaf 分实例——同一 iframe 实例的 view 恒定（deck
+           侧 player/列表布局二选一），slide 与 present 各持一份；投影实例的
+           columnsLayout 建构期定死，column↔paper 切换同样按 key 重建。 -->
       <div
         v-if="isSplit"
         class="pane pane-right"
@@ -116,7 +117,9 @@
           :markdown="markdown"
         />
         <leaf-projection
-          v-else-if="rightLeaf === 'column'"
+          v-else-if="rightLeaf === 'column' || rightLeaf === 'paper'"
+          :key="`proj-${rightLeaf}`"
+          :lens="rightLeaf"
           :markdown="markdown"
         />
       </div>
@@ -173,7 +176,8 @@ const hasLeftPane = computed(
 )
 
 // 分屏左 pane 的引擎透镜由 store.editorLens 给出：orderedLeaves 首个
-// flow/column 叶（LEAVES 序保证左细右粗、文左示右）。
+// flow/column/paper 叶（LEAVES 序保证左细右粗、文左示右；paper M0 暂照
+// flow 渲染）。
 
 // —— 分割条拖拽（视图模型 §3）——
 const startDrag = (ev: PointerEvent): void => {

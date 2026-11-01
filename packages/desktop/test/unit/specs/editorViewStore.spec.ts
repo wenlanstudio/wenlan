@@ -41,8 +41,8 @@ describe('editorView selection model', () => {
     setActivePinia(createPinia())
   })
 
-  it('declares the two-branch four-leaf structure', () => {
-    expect(LEAVES).toEqual(['flow', 'column', 'slide', 'present'])
+  it('declares the two-branch five-leaf structure (paper in the edit branch)', () => {
+    expect(LEAVES).toEqual(['flow', 'column', 'paper', 'slide', 'present'])
     expect(TOP_VIEWS).toEqual(['table', 'figure', 'code'])
   })
 
@@ -71,6 +71,34 @@ describe('editorView selection model', () => {
     store.toggleLeaf('slide')
     expect(store.leftLeaf).toBe('flow')
     expect(store.rightLeaf).toBe('slide')
+  })
+
+  it('paper (M0 skeleton): splits with flow, fullscreen keeps editor lens and zoom duty', () => {
+    const store = useEditorViewStore()
+    store.toggleLeaf('paper')
+    expect(store.leafSelection).toEqual(['flow', 'paper'])
+    expect(store.leftLeaf).toBe('flow')
+    expect(store.rightLeaf).toBe('paper') // 右 pane = 纸面投影（M0 暂 flat 流）
+    expect(store.editorLens).toBe('flow') // 活引擎在左 pane
+
+    store.toggleLeaf('flow') // 摘掉 flow → 全屏 paper（骨架：引擎照 flow 渲染）
+    expect(store.activeLeaf).toBe('paper')
+    expect(store.editorLens).toBe('paper')
+    expect(store.isEditorVisible).toBe(true) // 光标指示仍活
+    expect(store.sliderDuty).toBe('paper-zoom') // 页缩放，待接线（§5）
+
+    store.toggleLeaf('slide') // 纸×览不可配对 → 单选替换（§5 交互）
+    expect(store.leafSelection).toEqual(['slide'])
+    expect(store.activeLeaf).toBe('slide')
+  })
+
+  it('paper pairs only within the edit branch: (flow, paper) split survives', () => {
+    const store = useEditorViewStore()
+    store.toggleLeaf('paper')
+    expect(store.leafSelection).toEqual(['flow', 'paper'])
+    expect(store.leftLeaf).toBe('flow')
+    expect(store.rightLeaf).toBe('paper')
+    expect(store.editorLens).toBe('flow')
   })
 
   it('a third click is ignored while two are selected (deselect first)', () => {
@@ -199,6 +227,24 @@ describe('editorView persistence & migration', () => {
     store = reloaded()
     expect(store.leafSelection).toEqual(['flow', 'slide'])
     expect(store.rightRatio).toBe(0.6)
+  })
+
+  it('round-trips the paper leaf (new enum value, no migration)', () => {
+    let store = reloaded()
+    store.toggleLeaf('paper')
+    store.toggleLeaf('flow') // → 全屏 paper
+
+    store = reloaded()
+    expect(store.leafSelection).toEqual(['paper'])
+    expect(store.editorLens).toBe('paper')
+  })
+
+  it('sanitizes a persisted paper×show pair down to one leaf', () => {
+    localStorage.setItem(
+      'marktext-editor-view',
+      JSON.stringify({ leaves: ['paper', 'slide'], rightRatio: 0.45 })
+    )
+    expect(reloaded().leafSelection).toEqual(['paper']) // 留 LEAVES 序靠前者
   })
 
   it('migrates the v1 pair shape (document/page → flow, slides, previewForm)', () => {

@@ -20,6 +20,7 @@ import Main from './Main.vue'
 
 import './assets/styles/index.css'
 import './assets/styles/printService.css'
+import './assets/styles/paperLens.css' // 纸面叶 A4 版式基（视图模型 §5）
 
 // -----------------------------------------------
 

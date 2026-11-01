@@ -1,5 +1,8 @@
 <template>
-  <div class="leaf-projection">
+  <div
+    class="leaf-projection"
+    :class="{ 'paper-projection': lens === 'paper' }"
+  >
     <div
       ref="host"
       class="leaf-projection-host"
@@ -9,10 +12,11 @@
 
 <script setup lang="ts">
 /**
- * leafProjection — (page, column) 分屏右 pane 的分栏投影（视图模型 §1/§2）。
+ * leafProjection — 分屏右 pane 的文支叶只读投影（视图模型 §1/§2）：column
+ * 分栏 / paper 纸面（A4 版式基见 assets/styles/paperLens.css，§5）。
  *
- * 同一份 markdown 的**只读第二 muya 实例**，挂 column 透镜（columnsLayout:
- * 'columns'）——编辑发生在左 pane 的活引擎上，这里只展示"分栏长什么样"。
+ * 同一份 markdown 的**只读第二 muya 实例**（columnsLayout 随 lens 建构期
+ * 定死）——编辑发生在左 pane 的活引擎上，这里只展示"这一叶长什么样"。
  *
  * 与 editor.vue 的差异是刻意的最小化：
  * - `readOnly: true`（三层锁死：contenteditable / 事件分发 / 状态提交）；
@@ -32,6 +36,8 @@ import { buildMuyaViewOptions } from '@/util/muyaViewOptions'
 import { getMuyaLocale } from '@/util/muyaLocale'
 
 const props = defineProps<{
+  /** 投影哪种文支叶：column=分栏透镜；paper=纸面（A4 版式，paperLens.css）。 */
+  lens: 'column' | 'paper'
   markdown: string
 }>()
 
@@ -64,7 +70,7 @@ onMounted(() => {
     locale: getMuyaLocale(language.value),
     readOnly: true,
     focusMode: false,
-    columnsLayout: 'columns'
+    columnsLayout: props.lens === 'column' ? 'columns' : 'flat'
   }
   const instance = new Muya(host.value, options)
   instance.init()

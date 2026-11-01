@@ -1,6 +1,6 @@
 <template>
   <div class="view-switcher">
-    <!-- 从右往左：主视图（四叶 + 表图本）最右固定，页宽滑块最左。
+    <!-- 从右往左：主视图（五叶 + 表图本）最右固定，页宽滑块最左。
          滑块职责由 store.sliderDuty 给出——分屏时一律收起（宽度控制被
          分割条吸收，视图模型 §3）。 -->
     <div
@@ -20,9 +20,10 @@
       <span class="width-label">{{ sliderValue }}</span>
     </div>
 
-    <!-- 四叶（视图模型 §2）：文 { page 全文, column 分栏 } │ 示 { slide 页览,
-         present 放映 }。配置选择式：点选/点消至多两叶（1=全屏 2=分屏，
-         选满点不动、不可选空）。column 只对真有分栏标记的文档显示（§4.4 #5）。 -->
+    <!-- 五叶（视图模型 §2/§5）：文 { flow 全文, column 分栏, paper 纸面 } │ 示
+         { slide 页览, present 放映 }。paper 是 M0 骨架，暂以流渲染。配置选择式：
+         点选/点消至多两叶（1=全屏 2=分屏，选满点不动、不可选空）。column 只对
+         真有分栏标记的文档显示（§4.4 #5）。 -->
     <div class="leaves">
       <button
         v-for="leaf in visibleLeaves"
@@ -75,6 +76,7 @@ const { editorLineWidth } = storeToRefs(preferencesStore)
 const LEAF_META: Record<Leaf, { label: string; title: string }> = {
   flow: { label: '文', title: '全文（连续流编辑）' },
   column: { label: '栏', title: '分栏（空间离散，需 begin 标记）' },
+  paper: { label: '纸', title: '纸面——A4 版面编辑（度量对齐打印；分页线建设中）' },
   slide: { label: '览', title: '页览——全部真实页排开看（溢出页带 ⚠）' },
   present: { label: '示', title: '放映（一次一页）' }
 }
