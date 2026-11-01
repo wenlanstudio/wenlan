@@ -169,4 +169,16 @@ test.describe('paper leaf hard acceptance: screen pages == printToPDF pages', ()
     expect(screenCount).toBe(4)
     expect(screenCount).toBe(pdfCount)
   })
+
+  test('frontmatter paper: letter drives screen and print alike', async() => {
+    test.setTimeout(150_000)
+    // 55 段 + paper: letter：letter 内容高 ~905px → 26 段/页 = 3 页；若打印
+    // 侧没跟上 letter（误用 A4 默认 972px → 28 段/页 = 2 页），等式即破。
+    const letterDoc =
+      '---\npaper: letter\n---\n\n' +
+      Array.from({ length: 55 }, (_, i) => PARA(i + 1)).join('\n\n')
+    const { screenCount, pdfCount } = await runAcceptance(letterDoc)
+    expect(screenCount).toBe(3)
+    expect(screenCount).toBe(pdfCount)
+  })
 })

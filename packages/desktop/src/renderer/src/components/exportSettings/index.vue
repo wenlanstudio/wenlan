@@ -287,6 +287,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch, type Ref } from 'vue'
 import bus from '../../bus'
+import { useEditorStore } from '@/store/editor'
+import { parseDeclaredPaperSize } from '@/util/paperPagination'
 import { loadExportSettings, saveExportSettings } from './persistence'
 import Bool from '@/prefComponents/common/bool/index.vue'
 import CurSelect from '@/prefComponents/common/select/index.vue'
@@ -410,12 +412,26 @@ const showDialog = (type: unknown) => {
     activeName.value = 'page'
   }
 
+  applyDocumentPaperSize()
   showExportSettingsDialog.value = true
   bus.emit('editor-blur')
 
   if (!themesLoaded.value) {
     themesLoaded.value = true
     loadThemesFromDisk()
+  }
+}
+
+// frontmatter `paper:` 打通打印侧（view-model §5）：文档声明了纸型 → 对话框
+// 纸型随之默认（屏显纸面 = 打印纸，硬验收对非 A4 文档也成立）；未声明则保留
+// 用户上次选择。声明的纸型成为新的持久默认（导出一封 letter 文档后，后续
+// 导出默认 Letter——与 Word 的文档先行语义一致）。
+const PAPER_TO_PAGE_SIZE = { a4: 'A4', letter: 'Letter' } as const
+const applyDocumentPaperSize = () => {
+  const currentFile = useEditorStore().currentFile as { markdown?: string } | null
+  const declared = parseDeclaredPaperSize(currentFile?.markdown ?? '')
+  if (declared) {
+    pageSize.value = PAPER_TO_PAGE_SIZE[declared]
   }
 }
 

@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { paginateBlocks, parsePaperGeometry, type PaperBlockBox } from '@/util/paperPagination'
+import {
+  paginateBlocks,
+  parsePaperGeometry,
+  parseDeclaredPaperSize,
+  type PaperBlockBox
+} from '@/util/paperPagination'
 
 // `@/util/pdf` 在加载时读 `window.path`（preload 桥），vitest 环境需先补桩。
 vi.hoisted(() => {
@@ -117,24 +122,25 @@ describe('print chain keeps blocks together (view-model §5 hard acceptance)', (
     vi.resetModules()
   })
 
+  // 重 import 链（@/util/pdf → @muyajs/core 构建产物），vitest 下数秒级。
   it('getCssForOptions printable branch emits block-level break-inside:avoid', async() => {
     const { getCssForOptions } = await import('@/util/pdf')
     const css = await getCssForOptions({ type: 'pdf', pageMarginTop: 20, pageMarginRight: 15, pageMarginBottom: 20, pageMarginLeft: 15 })
     expect(css).toContain('.markdown-body>*{break-inside:avoid;}')
-  })
+  }, 30_000)
 
   it('printable branch styles the pagebreak marker as a forced page break', async() => {
     const { getCssForOptions } = await import('@/util/pdf')
     const css = await getCssForOptions({ type: 'pdf', pageMarginTop: 20, pageMarginRight: 15, pageMarginBottom: 20, pageMarginLeft: 15 })
     expect(css).toContain('.markdown-body .mt-pagebreak{height:0;margin:0;padding:0;border:0;break-after:page;}')
-  })
+  }, 30_000)
 
   it('styledHtml branch does not paginate', async() => {
     const { getCssForOptions } = await import('@/util/pdf')
     const css = await getCssForOptions({ type: 'styledHtml' })
     expect(css).not.toContain('break-inside')
     expect(css).not.toContain('mt-pagebreak')
-  })
+  }, 30_000)
 })
 
 // —— `<!-- pagebreak -->` 强制分页（M3a）与 frontmatter 纸型（M3b）。 ——
@@ -182,6 +188,15 @@ describe('forced pagebreak seams (view-model §5 / M3)', () => {
 })
 
 describe('paper geometry from frontmatter (view-model §5 / M3)', () => {
+  it('reports the declared paper size, null when silent or unknown', () => {
+    expect(parseDeclaredPaperSize('')).toBeNull()
+    expect(parseDeclaredPaperSize('---\ntitle: x\n---\nbody')).toBeNull()
+    expect(parseDeclaredPaperSize('---\npaper: a3\n---\nbody')).toBeNull()
+    expect(parseDeclaredPaperSize('---\npaper: letter\n---\nbody')).toBe('letter')
+    expect(parseDeclaredPaperSize('---\npaper: "Letter"\n---\nbody')).toBe('letter')
+    expect(parseDeclaredPaperSize('---\npaper: A4\n---\nbody')).toBe('a4')
+  })
+
   it('defaults to A4 without/unknown paper declaration', () => {
     expect(parsePaperGeometry('')).toEqual({ pageWidthMm: 210, pageHeightMm: 297 })
     expect(parsePaperGeometry('---\ntitle: x\n---\nbody')).toEqual({ pageWidthMm: 210, pageHeightMm: 297 })
@@ -206,5 +221,5 @@ describe('paper geometry from frontmatter (view-model §5 / M3)', () => {
     // 多处标记全部替换（/g——漏掉会变成"只有第一个分页符生效"）。
     expect(insertPagebreakMarkers('A\n\n<!-- pagebreak -->\n\nB\n\n<!-- pagebreak -->\n\nC').match(/mt-pagebreak/g))
       .toHaveLength(2)
-  })
+  }, 30_000)
 })

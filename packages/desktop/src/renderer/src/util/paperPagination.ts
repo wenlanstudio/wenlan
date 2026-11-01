@@ -40,14 +40,23 @@ export const PAPER_SIZES_MM: Record<'a4' | 'letter', PaperGeometry> = {
 }
 
 /**
+ * frontmatter `paper: A4 | letter` → 声明的纸型名；未声明或未知纸型 = null
+ * （调用方各回退默认：屏侧 A4，导出对话框保留用户上次选择）。
+ */
+export const parseDeclaredPaperSize = (markdown: string): 'a4' | 'letter' | null => {
+  const fm = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(markdown ?? '')
+  const paper = fm ? /^paper:\s*['"]?([A-Za-z0-9_-]+)['"]?\s*$/m.exec(fm[1]) : null
+  const key = paper?.[1]?.toLowerCase()
+  return key === 'letter' ? 'letter' : key === 'a4' ? 'a4' : null
+}
+
+/**
  * frontmatter `paper: A4 | letter` → 纸面几何。无声明或缺纸型 = A4（打印链
  * 默认，导出对话框同默认，屏打天然一致）；未知纸型也落 A4。
  */
 export const parsePaperGeometry = (markdown: string): PaperGeometry => {
-  const fm = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(markdown ?? '')
-  const paper = fm ? /^paper:\s*['"]?([A-Za-z0-9_-]+)['"]?\s*$/m.exec(fm[1]) : null
-  const key = paper?.[1]?.toLowerCase()
-  return key === 'letter' ? PAPER_SIZES_MM.letter : PAPER_SIZES_MM.a4
+  const declared = parseDeclaredPaperSize(markdown)
+  return declared === 'letter' ? PAPER_SIZES_MM.letter : PAPER_SIZES_MM.a4
 }
 
 export interface PaperBlockBox {
