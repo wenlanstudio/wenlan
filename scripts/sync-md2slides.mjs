@@ -14,7 +14,7 @@
  * 挂到本地服务的 `/` 下。deck 页面（deck.html + dist/deck-full.js）、主题、KaTeX
  * 字体、图表运行时全从这里出。
  */
-import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -32,3 +32,25 @@ rmSync(dest, { recursive: true, force: true })
 mkdirSync(dest, { recursive: true })
 cpSync(src, dest, { recursive: true })
 console.log(`md2slides 资产包已同步 → ${dest}`)
+
+// M4.2：分页决策内核（md2slides 产包 lib/layout-core.js，纯函数零 DOM）
+// vendor 进 renderer 源树——单源在 md2slides，本仓只读；纸叶 v2 块内切分
+// 与 deck 共用同一份策略合同（view-model §5 / M4）。改动内核 → 在 md2slides
+// 跑 npm run pack:marktext → 重跑本脚本，vendor 文件随包再生。
+const vendorSrc = resolve(src, 'lib', 'layout-core.js')
+if (!existsSync(vendorSrc)) {
+  console.error('资产包缺 lib/layout-core.js——md2slides 侧 pack:marktext 太旧，请重新产包')
+  process.exit(1)
+}
+const vendorDestDir = resolve(
+  here, '..', 'packages', 'desktop', 'src', 'renderer', 'src', 'vendor', 'md2slides'
+)
+mkdirSync(vendorDestDir, { recursive: true })
+const banner =
+  '// VENDORED — source: md2slides core/paginate/layout-core.js（勿手改；\n' +
+  '// 在 md2slides 跑 `npm run pack:marktext` 后重跑 scripts/sync-md2slides.mjs 再生）\n'
+writeFileSync(
+  resolve(vendorDestDir, 'layout-core.js'),
+  banner + readFileSync(vendorSrc, 'utf-8')
+)
+console.log(`layout-core 已 vendor → ${vendorDestDir}`)
