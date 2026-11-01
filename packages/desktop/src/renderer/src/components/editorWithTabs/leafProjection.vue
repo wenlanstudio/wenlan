@@ -50,11 +50,13 @@ const { language } = storeToRefs(preferencesStore)
 const host = ref<HTMLDivElement | null>(null)
 const muya = shallowRef<Muya | null>(null)
 
-// 页/纸投影（lens 为 page/paper）同挂分页投影（活透镜同一套测量，§5）。
+// 页/纸投影（lens 为 page/paper）同挂分页投影（活透镜同一套测量，§5）：
+// 页姿态缝叠加、纸姿态推挤 + 卡层，与活引擎同参。
 usePaperPagination({
   isActive: () => props.lens === 'paper' || props.lens === 'page',
   getRoot: () => muya.value?.domNode ?? null,
-  getGeometry: () => parsePaperGeometry(props.markdown)
+  getGeometry: () => parsePaperGeometry(props.markdown),
+  shouldPush: () => props.lens === 'paper'
 })
 
 const PROJECTION_DEBOUNCE_MS = 250

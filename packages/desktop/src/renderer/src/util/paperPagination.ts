@@ -25,6 +25,9 @@ import { onScopeDispose, watch, type WatchSource } from 'vue'
 /** A4 内容高：297 − 20(上边距) − 20(下边距) = 257mm（打印链默认，§5）。 */
 export const PAGE_CONTENT_HEIGHT_MM = 257
 
+/** 纸姿态卡网格的页间灰隙（mm；§5 推挤流，卡与卡之间的视觉间隙）。 */
+export const PAPER_PAGE_GAP_MM = 8
+
 /** CSS 物理单位换算：1mm = 96/25.4 px。 */
 export const MM_TO_PX = 96 / 25.4
 
@@ -67,6 +70,8 @@ export interface PaperBlockBox {
   bottom: number
   /** `<!-- pagebreak -->` 标记块（屏测读 muya 的分页符徽标）。 */
   isPagebreak?: boolean
+  /** 对应 DOM 块（measurePaperBlocks 填充；纯函数单测无需构造）。 */
+  el?: HTMLElement
 }
 
 export interface PaperSeam {
@@ -79,6 +84,9 @@ export interface PaperSeam {
 export interface PaperLayout {
   seams: PaperSeam[]
   pageCount: number
+  /** 每页首块的块序（纸姿态推挤的对齐目标块；穿缝页从块中间开始、无块界
+   *  可推 = -1）。与缝一一对应：length = pageCount = seams.length + 1。 */
+  pageStarts: number[]
   /** 末页页码徽章的 y（末块底 + 余量）。 */
   lastBadgeY: number
 }
@@ -94,6 +102,10 @@ export const paginateBlocks = (
   pageContentHeight: number
 ): PaperLayout => {
   const seams: PaperSeam[] = []
+  // 页首块簿记：pageStarts[k] = 第 k 页首块的块序（纸姿态推挤的对齐目标）。
+  // 每道缝开一个新页：keep-together/强制/标题回避/间隙跨界的缝开在当前块，
+  // 穿缝（超整页块内部）的缝无块界可推 = -1。
+  const pageStarts: number[] = [0]
   // 页内已用容量（打印等效：页首块的缝上间隙截断）。
   let local = 0
   let prevBottom: number | null = null
@@ -104,8 +116,9 @@ export const paginateBlocks = (
   let pendingForcedBreak = false
   let contentOnPage = false
 
-  const pushSeam = (y: number, crossed: boolean): void => {
+  const pushSeam = (y: number, crossed: boolean, firstBlock: number): void => {
     seams.push({ y, crossed })
+    pageStarts.push(firstBlock)
   }
 
   for (let i = 0; i < blocks.length; i++) {
@@ -121,7 +134,7 @@ export const paginateBlocks = (
     if (pendingForcedBreak) {
       pendingForcedBreak = false
       if (contentOnPage) {
-        if (prevBottom !== null) pushSeam((prevBottom + b.top) / 2, false)
+        if (prevBottom !== null) pushSeam((prevBottom + b.top) / 2, false, i)
         firstOnPage = true
         startLocal = 0
         contentOnPage = false
@@ -131,7 +144,7 @@ export const paginateBlocks = (
     // 剩余空间连块顶都容不下（间隙跨过页界）→ 先按推下页处理。local 无需
     // 清零——其后每个分支都会在读取前重新赋值。
     if (!firstOnPage && startLocal >= pageContentHeight) {
-      if (prevBottom !== null) pushSeam((prevBottom + b.top) / 2, false)
+      if (prevBottom !== null) pushSeam((prevBottom + b.top) / 2, false, i)
       firstOnPage = true
       startLocal = 0
     }
@@ -148,7 +161,7 @@ export const paginateBlocks = (
       const nextHeight = next.bottom - next.top
       const nextEnd = startLocal + height + (next.top - b.bottom) + nextHeight
       if (nextEnd > pageContentHeight && nextHeight <= pageContentHeight) {
-        if (prevBottom !== null) pushSeam((prevBottom + b.top) / 2, false)
+        if (prevBottom !== null) pushSeam((prevBottom + b.top) / 2, false, i)
         local = height
         firstOnPage = false
         prevBottom = b.bottom
@@ -159,20 +172,21 @@ export const paginateBlocks = (
 
     if (oversized) {
       // 穿缝：块占据页内 [startLocal, startLocal + height)，窗口边界 kH 落在
-      // 区间内即穿缝，缝的文档 y = 块顶 + (kH − startLocal)。
+      // 区间内即穿缝，缝的文档 y = 块顶 + (kH − startLocal)。穿缝开出的页
+      // 从块中间开始，无块界可推（-1）。
       for (
         let boundary = pageContentHeight;
         boundary < startLocal + height;
         boundary += pageContentHeight
       ) {
-        pushSeam(b.top + (boundary - startLocal), true)
+        pushSeam(b.top + (boundary - startLocal), true, -1)
       }
       const endLocal = startLocal + height
       local = endLocal % pageContentHeight
       firstOnPage = local === 0
     } else if (startLocal + height > pageContentHeight) {
       // keep-together：整块推下页，缝落块间。
-      if (prevBottom !== null) pushSeam((prevBottom + b.top) / 2, false)
+      if (prevBottom !== null) pushSeam((prevBottom + b.top) / 2, false, i)
       local = height
       firstOnPage = false
     } else {
@@ -192,9 +206,44 @@ export const paginateBlocks = (
 
   return {
     seams,
+    pageStarts,
     pageCount: seams.length + 1,
     lastBadgeY: lastBottom + 28
   }
+}
+
+/**
+ * 卡网格推挤级联（纯函数，纸姿态专用；视图模型 §5 推挤流 / M3.5 切片 B）。
+ *
+ * 目标：第 k 页首块落在卡 k 的内容顶——内容坐标恰好 = k·pageStep（卡 k 顶缘
+ * 在容器 border-box 顶下方 k·pageStep 处，而容器 padding-top = 卡顶边距，
+ * 两者相抵）。Δ_k = k·pageStep − (t_k + Σ_{j<k} Δ_j)，单遍自上而下级联：
+ *   - 页 0 允许负——把首块拉到内容原点，镜像打印侧 fragmentainer 起始的
+ *     块顶 margin 截断；
+ *   - k ≥ 1 取 max(0)——穿缝之后内容落后于网格，不拉回（防与上卡重叠）；
+ *     网格每页推进 pageStep（含页间隙）而内容每页 ≤ 页内容高，欠账逐页
+ *     收敛，后续页起点自动追上网格（Chromium 穿缝语义的镜像收口）。
+ *
+ * `pageStep` 与 `blockTops` 同一坐标系（内容盒顶为 0 的视觉 px，含 zoom）。
+ */
+export const computePagePushes = (
+  pageStarts: number[],
+  blockTops: number[],
+  pageStep: number
+): number[] => {
+  const pushes: number[] = []
+  let cum = 0
+  for (let k = 0; k < pageStarts.length; k++) {
+    const s = pageStarts[k]
+    if (s < 0 || s >= blockTops.length) {
+      pushes.push(0) // 穿缝页：无块界可推
+      continue
+    }
+    const delta = k * pageStep - (blockTops[s]! + cum)
+    pushes.push(k === 0 ? delta : Math.max(0, delta))
+    cum += pushes[k]!
+  }
+  return pushes
 }
 
 // —— DOM 步进与叠加接线 ——
@@ -235,7 +284,8 @@ export const measurePaperBlocks = (
       tag: child.tagName.toLowerCase(),
       top: r.top - rect.top - contentTopOffset,
       bottom: r.bottom - rect.top - contentTopOffset,
-      isPagebreak: child.querySelector('.mu-mdcols-pagebreak') !== null
+      isPagebreak: child.querySelector('.mu-mdcols-pagebreak') !== null,
+      el: child
     })
   }
 
@@ -243,27 +293,55 @@ export const measurePaperBlocks = (
 }
 
 /**
- * 纸面分页叠加的生命周期胶水：lens 为 paper 时在 muya 根（滚动区）内挂
- * overlay，编辑/缩放后重测，缝与页码以绝对定位投影。编辑器与只读投影
+ * 页/纸分页叠加的生命周期胶水：lens 为 page/paper 时在 muya 根（滚动区）内
+ * 挂 overlay，编辑/缩放后重测，缝与页码以绝对定位投影。编辑器与只读投影
  * （leafProjection）共用。
+ *
+ * 双姿态（视图模型 §5，M3.5 切片 B）：
+ * - 页（shouldPush 缺省/false）= 连续流 + 缝叠加——现状渲染，不推挤；
+ * - 纸（shouldPush true）= 推挤流 + 卡层——每轮测量先**还原全部推挤**再量
+ *   自然几何（防脏 margin 参与拟合），套卡网格级联把各页首块推到卡内容顶，
+ *   然后重量测渲染：卡层画每页白卡（z:-1，沉在正文之下），前景层只画穿缝
+ *   虚线（卡缝由卡缘本身表达）与逐卡页码。
  */
 export const usePaperPagination = (options: {
-  /** 是否处于纸面叶（响应式 getter）。 */
+  /** 是否处于页/纸叶（响应式 getter）。 */
   isActive: () => boolean
   /** muya 根元素（滚动区，overlay 挂其内随之滚动）。 */
   getRoot: () => HTMLElement | null
   /** 文档纸面几何（frontmatter `paper:`；缺省 A4）。 */
   getGeometry?: () => PaperGeometry
+  /** 纸姿态推挤（响应式 getter；缺省 = 页姿态纯缝叠加）。 */
+  shouldPush?: () => boolean
   /** 额外重测触发源（如 zoom preference）。 */
   watchSources?: WatchSource[]
 }): void => {
-  const { isActive, getRoot, getGeometry, watchSources = [] } = options
+  const { isActive, getRoot, getGeometry, shouldPush, watchSources = [] } = options
 
   let overlay: HTMLDivElement | null = null
+  let cardsLayer: HTMLDivElement | null = null
   let scheduleTimer = 0
   let rafId = 0
   let mutationObserver: MutationObserver | null = null
   let resizeObserver: ResizeObserver | null = null
+  /** 已施加推挤的块（margin-top 内联），还原即摘。 */
+  const pushedEls: HTMLElement[] = []
+
+  /** 摘掉全部推挤 margin，回到自然几何（生命周期第一步，detach 时同样执行）。 */
+  const restorePushes = (): void => {
+    for (const el of pushedEls) el.style.removeProperty('margin-top')
+    pushedEls.length = 0
+  }
+
+  /** overlay/卡层锚在容器的 border-box 上（视觉 px；root 未被 zoom，直接可用）。 */
+  const anchorLayer = (layer: HTMLDivElement, root: HTMLElement, container: HTMLElement): void => {
+    const rootRect = root.getBoundingClientRect()
+    const containerRect = container.getBoundingClientRect()
+    layer.style.top = `${containerRect.top - rootRect.top + root.scrollTop}px`
+    layer.style.left = `${containerRect.left - rootRect.left + root.scrollLeft}px`
+    layer.style.width = `${containerRect.width}px`
+    layer.style.height = `${containerRect.height}px`
+  }
 
   const detach = (): void => {
     window.clearTimeout(scheduleTimer)
@@ -272,8 +350,15 @@ export const usePaperPagination = (options: {
     mutationObserver = null
     resizeObserver?.disconnect()
     resizeObserver = null
+    restorePushes()
     overlay?.remove()
     overlay = null
+    cardsLayer?.remove()
+    cardsLayer = null
+    // 容器纸底交还：推挤类卸下（页/流姿态恢复容器自带白底）。
+    getRoot()
+      ?.querySelector<HTMLElement>(':scope > .mu-container')
+      ?.classList.remove('mu-paper-pushed')
   }
 
   const render = (layout: PaperLayout, measure: PaperBlocksMeasurement, container: HTMLElement): void => {
@@ -318,19 +403,67 @@ export const usePaperPagination = (options: {
     )
   }
 
+  /** 纸姿态渲染：卡层画每页白卡（格距 = 页高 + 隙），前景层只画穿缝虚线
+   *  （卡缝由卡缘本身表达，不再画流内中点缝）与逐卡页码。 */
+  const renderPaper = (
+    layout: PaperLayout,
+    m: PaperBlocksMeasurement,
+    geometry: PaperGeometry,
+    pageStep: number,
+    container: HTMLElement
+  ): void => {
+    if (!overlay || !cardsLayer) return
+    const zoom = Number.parseFloat(getComputedStyle(container).zoom || '1') || 1
+    const cardHeight = geometry.pageHeightMm * MM_TO_PX * zoom
+
+    // —— 卡层：每页一张白卡；卡 k 顶缘 = k·pageStep（容器 border-box 顶起）。 ——
+    cardsLayer.replaceChildren()
+    for (let k = 0; k < layout.pageCount; k++) {
+      const card = document.createElement('div')
+      card.className = 'mu-paper-card'
+      card.style.top = `${k * pageStep}px`
+      card.style.height = `${cardHeight}px`
+      card.dataset.page = String(k + 1)
+      cardsLayer.appendChild(card)
+    }
+
+    // —— 前景层：穿缝虚线 + 逐卡页码（卡顶边距带内，正文起于卡顶 + 上边距）。 ——
+    overlay.replaceChildren()
+    overlay.dataset.pageCount = String(layout.pageCount)
+    for (const seam of layout.seams) {
+      if (!seam.crossed) continue
+      const line = document.createElement('div')
+      line.className = 'mu-paper-seam crossed'
+      line.style.top = `${m.contentTopOffset + seam.y}px`
+      line.dataset.crossed = 'true'
+      overlay.appendChild(line)
+    }
+    for (let k = 0; k < layout.pageCount; k++) {
+      const badge = document.createElement('div')
+      badge.className = 'mu-paper-page-num'
+      badge.style.top = `${k * pageStep + 4}px`
+      badge.textContent = String(k + 1)
+      overlay.appendChild(badge)
+    }
+
+    // e2e 钩子：末块底（供外部核对测量；坐标 = 容器 border-box 顶起）。
+    overlay.dataset.lastBlockBottom = String(
+      m.contentTopOffset + (m.blocks.at(-1)?.bottom ?? 0)
+    )
+  }
+
   const measure = (): void => {
     if (!overlay || !isActive()) return
     const root = getRoot()
     const container = root?.querySelector<HTMLElement>(':scope > .mu-container')
     if (!root || !container) return
 
-    const rootRect = root.getBoundingClientRect()
-    const containerRect = container.getBoundingClientRect()
-    // overlay 锚在容器的 border-box 上（视觉 px；root 未被 zoom，直接可用）。
-    overlay.style.top = `${containerRect.top - rootRect.top + root.scrollTop}px`
-    overlay.style.left = `${containerRect.left - rootRect.left + root.scrollLeft}px`
-    overlay.style.width = `${containerRect.width}px`
-    overlay.style.height = `${containerRect.height}px`
+    // 推挤生命周期第一步：还原全部推挤，让测量只见自然几何（防上一轮脏
+    // margin 参与拟合——块高不变故缝判定不动，但位置必须从自然态重算）。
+    restorePushes()
+
+    anchorLayer(overlay, root, container)
+    if (cardsLayer) anchorLayer(cardsLayer, root, container)
 
     // frontmatter 纸型 → 容器上的内联 CSS 变量（压过 paperLens.css 的 :root
     // 默认值；纸卡宽高与测量同源，编辑所见 = 打印所得）。frontmatter 变化
@@ -339,8 +472,51 @@ export const usePaperPagination = (options: {
     container.style.setProperty('--paper-page-width', `${geometry.pageWidthMm}mm`)
     container.style.setProperty('--paper-page-height', `${geometry.pageHeightMm}mm`)
 
-    const m = measurePaperBlocks(container, geometry)
-    render(paginateBlocks(m.blocks, m.pageContentHeight), m, container)
+    const pushing = shouldPush?.() ?? false
+    // 纸姿态把容器白底/阴影移交卡层（mu-paper-pushed 容器透明，白卡由卡层画）。
+    container.classList.toggle('mu-paper-pushed', pushing)
+
+    const m1 = measurePaperBlocks(container, geometry)
+    const layout1 = paginateBlocks(m1.blocks, m1.pageContentHeight)
+
+    if (!pushing) {
+      // 页姿态：连续流 + 缝叠加（不推挤，现状渲染）。
+      render(layout1, m1, container)
+      return
+    }
+
+    // —— 纸姿态：卡网格推挤级联 ——
+    // CSS zoom 挂在容器上：计算值未缩放、视觉距离 = ×zoom。pageStep 与块
+    // top 同在视觉空间；margin-top 是未缩放 CSS px，施加时除回 zoom。
+    const zoom = Number.parseFloat(getComputedStyle(container).zoom || '1') || 1
+    const pageStep = (geometry.pageHeightMm + PAPER_PAGE_GAP_MM) * MM_TO_PX * zoom
+    const pushes = computePagePushes(
+      layout1.pageStarts,
+      m1.blocks.map((b) => b.top),
+      pageStep
+    )
+    layout1.pageStarts.forEach((s, k) => {
+      const delta = pushes[k]
+      if (s < 0 || !delta || Math.abs(delta) < 0.5) return
+      const box = m1.blocks[s]
+      const el = box?.el
+      if (!el || !box) return
+      // 页 0：上方是容器 padding（无塌陷伙伴），Δ 可负——拉齐首块到内容
+      // 原点，镜像打印侧 fragmentainer 起始的块顶截断。
+      // k ≥ 1：新 margin = 原塌陷间隙 + Δ（绝对量）——塌陷可能由上块
+      // margin-bottom 主导，「自然值 + Δ」压不过塌陷会欠推；取间隙 + Δ
+      // 保证塌陷后视觉间隙恰好多 Δ（推挤恒 ≥ 原间隙，max 收口自动成立）。
+      const gap = k === 0 ? 0 : box.top - (m1.blocks[s - 1]?.bottom ?? box.top)
+      el.style.marginTop = `${((gap + delta) / zoom).toFixed(2)}px`
+      pushedEls.push(el)
+    })
+
+    // 推挤改变容器高度：重锚两层，重量测渲染（推挤后的几何）。
+    anchorLayer(overlay, root, container)
+    if (cardsLayer) anchorLayer(cardsLayer, root, container)
+    const m2 = measurePaperBlocks(container, geometry)
+    const layout2 = paginateBlocks(m2.blocks, m2.pageContentHeight)
+    renderPaper(layout2, m2, geometry, pageStep, container)
   }
 
   const schedule = (): void => {
@@ -355,6 +531,10 @@ export const usePaperPagination = (options: {
   const attach = (): void => {
     const root = getRoot()
     if (!root || overlay) return
+    // 卡层（z:-1 沉底）与前景层（z:10 缝/页码）同为根的直接子元素。
+    cardsLayer = document.createElement('div')
+    cardsLayer.className = 'mu-paper-cards'
+    root.appendChild(cardsLayer)
     overlay = document.createElement('div')
     overlay.className = 'mu-paper-overlay'
     root.appendChild(overlay)

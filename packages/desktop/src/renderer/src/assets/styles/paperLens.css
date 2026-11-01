@@ -226,6 +226,8 @@
 [data-lens='paper'] .mu-editor,
 .paper-projection .mu-editor {
     position: relative;
+    /* 圈住堆叠上下文：纸姿态卡层 z:-1 沉到正文之下，但不跌出引擎背景。 */
+    isolation: isolate;
 }
 
 .mu-paper-overlay {
@@ -262,3 +264,31 @@
 
 /* 已知留白（M2 视页数验收裁决）：内联 code 字号 gh 为 1em、muya 为 .85em，
    因 muya 代码块结构里 code 选择器交错，先不碰，等 e2e 页数 diff 定夺。 */
+
+/* —— 纸姿态（M3.5 切片 B）：推挤流 + 卡层 —— */
+
+/* 卡层：z:-1 沉到正文之下（.mu-editor isolation:isolate 圈住堆叠上下文，
+   卡画在引擎背景之上、内容之下）；每页一张白卡，白底/阴影自容器移交。 */
+.mu-paper-cards {
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+}
+
+.mu-paper-card {
+    position: absolute;
+    left: 0;
+    right: 0;
+    background: #fff;
+    box-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.16),
+        0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+/* 推挤类挂上时容器自身透明——白卡由卡层画（选择器须压过上方共享规则
+   的 !important 白底，否则卡层被盖住）。 */
+[data-lens='paper'] .mu-container.mu-paper-pushed,
+.paper-projection .mu-container.mu-paper-pushed {
+    background: transparent !important;
+    box-shadow: none !important;
+}

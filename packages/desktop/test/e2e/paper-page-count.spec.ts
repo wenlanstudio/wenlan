@@ -194,4 +194,54 @@ test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages
     expect(screenCount).toBe(3)
     expect(screenCount).toBe(pdfCount)
   })
+
+  test('paper posture pushes page starts onto the card grid (卡片对齐)', async() => {
+    test.setTimeout(150_000)
+    const launched = await launchWithMarkdown(DOC)
+    const { app, page } = launched
+    try {
+      await waitForMenuReady(app)
+      const leafBtn = page.locator('.view-switcher .leaf-btn', { hasText: '纸' })
+      const flowBtn = page.locator('.view-switcher .leaf-btn', { hasText: '文' })
+      await leafBtn.waitFor({ state: 'visible', timeout: 15000 })
+      await leafBtn.click()
+      await flowBtn.click()
+
+      const overlay = page.locator('.mu-paper-overlay[data-page-count]')
+      await overlay.waitFor({ state: 'visible', timeout: 15000 })
+      // 等推挤两轮测量（自然量测 → 施加 → 重量测）+ 合帧后稳定。
+      await page.waitForTimeout(700)
+
+      // 页数不变：推挤不改块高，缝判定不动（硬验收的前提）。
+      expect(Number(await overlay.getAttribute('data-page-count'))).toBe(2)
+
+      // 卡片对齐：卡 k 顶缘 = 容器顶 + k·(页高+隙)·zoom；页 k 首块顶 =
+      // 卡内容顶（卡顶 + 20mm 上边距），容 2px 舍入差。
+      const geo = await page.evaluate(() => {
+        const MM = 96 / 25.4
+        const container = document.querySelector('.mu-container') as HTMLElement
+        const cs = getComputedStyle(container)
+        const zoom = Number.parseFloat(cs.zoom || '1') || 1
+        const contentOrigin =
+          container.getBoundingClientRect().top + Number.parseFloat(cs.paddingTop) * zoom
+        const pageStep = (297 + 8) * MM * zoom
+        const cardTops = [...document.querySelectorAll('.mu-paper-card')].map(
+          (c) => c.getBoundingClientRect().top
+        )
+        const blockTops = [...(container.children as HTMLCollectionOf<HTMLElement>)].map((b) =>
+          b.getBoundingClientRect().top
+        )
+        return { cardTops, blockTops, contentOrigin, pageStep }
+      })
+      expect(geo.cardTops).toHaveLength(2)
+      expect(Math.abs(geo.cardTops[1]! - geo.cardTops[0]! - geo.pageStep)).toBeLessThan(2)
+      // 页 0 首块在内容原点（Δ0 拉齐截断 margin）；页 1 首块在卡 1 内容顶。
+      const nearest = (target: number): number =>
+        Math.min(...geo.blockTops.map((t) => Math.abs(t - target)))
+      expect(nearest(geo.contentOrigin)).toBeLessThan(2)
+      expect(nearest(geo.contentOrigin + geo.pageStep)).toBeLessThan(2)
+    } finally {
+      await app.close()
+    }
+  })
 })

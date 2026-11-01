@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   paginateBlocks,
+  computePagePushes,
+  PAPER_PAGE_GAP_MM,
   parsePaperGeometry,
   parseDeclaredPaperSize,
   type PaperBlockBox
@@ -112,6 +114,73 @@ describe('paginateBlocks (keep-together greedy)', () => {
     )
     expect(r.seams).toEqual([{ y: 85, crossed: false }])
     expect(r.pageCount).toBe(2)
+  })
+})
+
+// —— 卡网格推挤级联（纸姿态，M3.5 切片 B）。 ——
+describe('paginateBlocks pageStarts (push targets)', () => {
+  it('every seam opens a page whose first block is recorded', () => {
+    // H=1000；块2 越页被推（缝 505）→ 页 1 首块 = 块 1。
+    const r = paginateBlocks([block('p', 0, 500), block('p', 510, 1200)], 1000)
+    expect(r.pageStarts).toEqual([0, 1])
+    expect(r.pageStarts).toHaveLength(r.pageCount)
+  })
+
+  it('crossed pages start mid-block (-1, no block boundary to push)', () => {
+    // H=100；超整页块 80..330 穿出缝 100/200/300 → 页 1..3 均记 -1。
+    const r = paginateBlocks([block('p', 0, 60), block('pre', 80, 330)], 100)
+    expect(r.pageStarts).toEqual([0, -1, -1, -1])
+    expect(r.pageStarts).toHaveLength(r.pageCount)
+  })
+
+  it('forced break and heading-avoid record their opening block', () => {
+    const marker = { tag: 'figure', top: 100, bottom: 120, isPagebreak: true } as PaperBlockBox
+    const r1 = paginateBlocks([block('p', 0, 90), marker, block('p', 130, 500)], 1000)
+    expect(r1.pageStarts).toEqual([0, 2])
+
+    // 标题回避：缝开在 h2（块 1）。
+    const r2 = paginateBlocks(
+      [block('p', 0, 500), block('h2', 510, 900), block('p', 920, 1420)],
+      1000
+    )
+    expect(r2.pageStarts).toEqual([0, 1])
+  })
+
+  it('exact-fill oversized end keeps the pinned model (next block joins the crossed page)', () => {
+    // H=100；超整页块恰好填满窗口（端点整除）：现行模型不给缝（spec 钉死），
+    // 后块留在穿缝开的页里 → 该页首块记 -1。
+    const r = paginateBlocks([block('table', 0, 200), block('p', 210, 230)], 100)
+    expect(r.seams).toEqual([{ y: 100, crossed: true }])
+    expect(r.pageStarts).toEqual([0, -1])
+  })
+})
+
+describe('computePagePushes (card-grid cascade)', () => {
+  it('single page needs no push', () => {
+    expect(computePagePushes([0], [0], 1000)).toEqual([0])
+  })
+
+  it('pushes each page start onto the grid pitch with cascade', () => {
+    // 页 1 首块自然位 500 → 推 500 到 1000；页 2 首块自然位 1100 已含
+    // 前页推挤 → 再推 400 到 2000。
+    expect(computePagePushes([0, 1, 2], [0, 500, 1100], 1000)).toEqual([0, 500, 400])
+  })
+
+  it('page 0 pulls its first block to the origin (negative allowed)', () => {
+    // 首块自然顶 24（如 h1 的 margin-top）→ Δ0 = −24，镜像打印侧块顶截断。
+    expect(computePagePushes([0], [24], 1000)).toEqual([-24])
+  })
+
+  it('clamps to zero after a crossed page (never pulls back, no overlap)', () => {
+    // 页 2 首块自然位 2600 已落后于网格 2000（穿缝欠账）→ 不拉回。
+    expect(computePagePushes([0, -1, 2], [0, 100, 2600], 1000)).toEqual([0, 0, 0])
+  })
+
+  it('grid pitch carries the inter-page gap (page height + gap, zoom applied by caller)', () => {
+    // A4：pageStep = (297 + 8)mm；内容高 257mm——格距含 40mm 边距 + 8mm 隙，
+    // 恒大于页内容高，不动点稳定（推挤不改块高，缝判定不动）。
+    const pageStepMm = 297 + PAPER_PAGE_GAP_MM
+    expect(pageStepMm).toBeGreaterThan(257)
   })
 })
 

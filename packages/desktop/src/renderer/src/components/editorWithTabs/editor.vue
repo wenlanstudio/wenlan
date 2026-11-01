@@ -262,13 +262,14 @@ const mediaViewer = ref<InstanceType<typeof MediaViewer> | null>(null)
 const viewerOpen = ref(false)
 const rowInput = ref<InputNumberInstance | null>(null)
 
-// 页/纸叶：分页测量与缝/页码投影（util/paperPagination）。lens 进出 page/paper
-// 时挂/卸 overlay（两叶共享同一测量基座，页姿态暂同纸姿态渲染，M3.5 切片 B
-// 起纸姿态加推挤+卡层）；zoom 改变视觉坐标，作为额外重测源。
+// 页/纸叶：分页测量与分页投影（util/paperPagination）。lens 进出 page/paper
+// 时挂/卸 overlay：页姿态纯缝叠加不推挤；纸姿态推挤 + 卡层（切片 B）。
+// zoom 改变视觉坐标，作为额外重测源。
 usePaperPagination({
   isActive: () => props.lens === 'paper' || props.lens === 'page',
   getRoot: () => editor.value?.domNode ?? null,
   getGeometry: () => parsePaperGeometry(currentFile.value?.markdown ?? ''),
+  shouldPush: () => props.lens === 'paper',
   watchSources: [() => preferencesStore.zoom]
 })
 
