@@ -105,25 +105,23 @@ printToPDF 页数）对两叶同时成立**（推挤不改块高，页数相同�
     语义与分页解耦的方向）；策略封闭集须全参数化（至少：widow-fill 0.35
     / core-break-fill 0.25 / 媒体原位缩放 / TOC slack 12px / 家具克隆），
     deck 侧以快照回归锁行为；
-- **双姿态共享一套测量**（三次裁决的核心）：
+- **双姿态共享一套测量**（三次裁决的核心；纸叶表征经 **M4.3 裁决（2026-11-02，
+  用户拍板 A）修订**）：
   - **页 = 连续流 + 缝叠加（逻辑纸）**：块流不动，缝/页码是测量投影，
     版式基同纸叶钉死纸面宽度（Word 草稿视图的分页符 = 真分页的轻量投影，
     宽度游离则投影失真）。M2/M3 的实现原样升格为一等叶——轻量、零布局
-    干扰，超长文档的写作档；
-  - **纸 = 真纸卡 + 推挤流（物理纸）**：块流仍是单一连续流（不把 block
-    分散进多纸容器），但**页首块动态 margin-top 推挤**内容进固定纸卡网格
-    ——卡片 = 物理页（宽 × 高 mm + 页间灰隙），卡层画在 overlay 背景层
-    （正文之下），缝线/页码画在前景层（正文之上，按卡网格线定位：未推挤
-    缝 y + 该页累计推挤；页叶才按流内中点）；容器自身纸底移交卡层。推挤量
-    单遍自上而下级联可算（每页推挤 = 前页累计推挤 + 前页剩余空间 + 页间
-    间隙），块高不变故缝**判定**不动（序列不变、y 随推挤移动）、不动点稳
-    定、打印链零影响；推挤经 margin-top 实现，与上页末块 margin 塌陷后取
-    max——推挤恒大于块间间隙，收口自动成立；超整页块正文横穿页间灰隙
-    （v1 已知视觉，穿缝虚线即信号；打印侧 Chromium 切片跨页、屏侧不切——
-    页数一致、形态不同，硬验收只管页数）；
-  - 推挤镜像 Chromium 语义：fragmentainer 为空时 forced break 无操作，
-    穿缝（超整页块）之后的页首无块界可推——按 max(0) 收口，内容自对齐，
-    后续页起点追上网格；
+    干扰，超长文档的写作档。v2 起缝可落行/行界（行级拟合，见下）；
+  - **纸 = 真分片页卡（物理纸；M4.3 裁决，推翻"单一连续流 + 推挤"）**：
+    纸叶按拟合结果把 block 真分散进页卡容器（**走 muya columns 的既成
+    模式**——栏叶已验证"容器重组 + 活编辑"可行，页容器 = 分页驱动的
+    同款重组）。切分真渲染：段落切行续行进续页、表格行切 + 续页克隆
+    表头（续表）、卡片即页（无推挤、无灰隙穿越）。M3.5 的推挤级联
+    （computePagePushes + margin-top 应用）在切换时**完成使命退役**——
+    推挤存在的唯一理由是"连续流必须推到网格"，真分片下卡即容器、内容
+    天然贴卡顶；测量基座 / 卡层 overlay / 缝线页码 / 分页符族 / 纸型
+    全部沿用。已知代价（裁决时点破并接受）：muya 活引擎下拆 DOM 的编辑
+    归属是 M4.3b 的主工程（跨页块克隆尾部的编辑语义、undo 边界、光标
+    跨页），硬验收链路随切换重建；
 - **裁决沿革**：一次裁决（§5 初版）预留 paper 叶并定度量来源；二次裁决
   （纸卡观感）曾将刻度改为「文 栏│纸 览 示」；用户随后点破**逻辑纸/物理纸
   之辨**——M2/M3 已建成的缝叠加本就是"逻辑纸"，纸卡是"物理纸"，二者皆
@@ -131,10 +129,12 @@ printToPDF 页数）对两叶同时成立**（推挤不改块高，页数相同�
   而非退役；
 - **切页策略分级**：v1 块级 keep-together（缝只落块边界，跨缝难题不存在）；
   超整页块降级 = 穿缝（缝线虚线让过），**不缩字号**（Typora"段落过高且缩
-  至字号下限"之坑在设计层堵死）；v2 段落跨页切行（widow/orphan ≥ 2）、
-  表格行切 + （续）页表头（算法包移植）——屏侧算法包与 Chromium 原生
-  切分须逐条等价（widow/orphan、表格行切、表头重复），硬验收持续把关，
-  任一不对齐回退块级；
+  至字号下限"之坑在设计层堵死）；v2（M4.3）：**拟合引擎升行级**——段落
+  跨页切行（widow/orphan ≥ 2，内核 `cutLinesFitting` 镜像 Chromium）、
+  表格行切 + 续页克隆表头（内核 `countFittingPrefix`，headH 每页占一份）、
+  代码块暂维持 keep-together（M4.3 范围外）——**屏侧拟合与 Chromium 原生
+  切分逐条等价**（打印链同步去掉段落/表格的块级 break-inside:avoid，避免
+  屏打两套切分语义），硬验收持续把关，任一不对齐回退块级；
 - **分页符 = HTML 注释标记族**：`<!-- pagebreak -->`，与 column 的
   `<!-- begin/split/end -->` 同族——不占 `---`、纯文本可移植；注释不渲染
   **内容物**（区别于 `---` 的水平线），但按族惯例渲染编辑态徽标（⤓ 分页
@@ -154,24 +154,26 @@ printToPDF 页数）对两叶同时成立**（推挤不改块高，页数相同�
   不走 deck-pane——md2slides 只服务幻灯片形态（IR_v3 R6 回写口 0 本就不
   管常规编辑器版式），不把 A4 版式塞给它；
 - **落地切片**：M0–M3 已完成（`paper` 单叶时代的骨架/版式基/测量/分页符/
-  纸型——升格为**页纸共享的测量基座**）；**M3.5 已完成（2026-11-01）：页叶
-  承接（`Leaf` 加 `'page'`、刻度「文 栏 页│纸 览 示」、缝叠加归页）+ 纸叶
-  推挤流与卡层**（`computePagePushes` 级联 + 双层 overlay；e2e 5/5：纸 2=2
-  推挤生效 / 页 2=2 / 分页符 4=4 / letter 3=3 / 卡片对齐）→ 下一步 M4 块内
-  切分（算法包双端共用 + 快照回归）。
-  **硬验收 = 屏显页数 = printToPDF 页数**（页/纸两叶各自成立——两叶皆
-  钉死纸面版式基，推挤不改块高故页数相同）；此验收一倒，度量来源裁决
-  重审。
+  纸型——升格为**页纸共享的测量基座**）；M3.5 已完成（2026-11-01）：页叶
+  承接 + 纸叶推挤流与卡层（e2e 5/5）；**M4.1/M4.2 已完成（2026-11-01/02）**：
+  md2slides `layout-core` 纯决策内核（策略封闭集 STRATEGY + 切点算术 +
+  `cutLinesFitting` 段落切行）双端共用，fork 已 vendor + 冒烟。**M4.3（进行中，
+  裁决 A）**：a) 本裁决入档 + **拟合引擎 v2 纯层**（行级，消费 vendored 内核，
+  未接线）；b) muya 分页布局模式（columns 同款容器重组、纸叶真分片、推挤
+  退役）+ 拟合接线（页叶缝升行级）+ 打印链去块级 avoid **同拍翻转**（屏打
+  两套切分语义不许分先后）+ 硬验收 e2e 重建（补切行/续表判别用例）。
+  **硬验收 = 屏显页数 = printToPDF 页数**（页/纸两叶各自成立——翻转后两端
+  同用行级切分语义，页数相同）；此验收一倒，度量来源裁决重审。
 
 ## 6. 实现地图
 
-| 物                                | 位置                                                                                                                                                |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 选择状态 / 派生面 / 迁移          | `store/editorView.ts`（leafSelection ≤2 + topView 互斥 + rightRatio；旧 page 键自动更名 flow，新 page = 逻辑页叶）                                  |
-| 六叶切换器 + 滑块联动             | `components/viewSwitcher/`                                                                                                                          |
-| 分屏壳 / 分割条 / pane 接线       | `components/editorWithTabs/index.vue`                                                                                                               |
-| 展示组两叶的投影面（放映 / 页览） | `components/editorWithTabs/deckPane.vue`（leaf × view/panel 两维变体；服务引用计数）                                                                |
-| 文支叶的只读投影（栏/页/纸）      | `components/editorWithTabs/leafProjection.vue`（muya 只读第二实例，lens 决定姿态；焦点编辑预留见 §2）                                               |
-| deck 侧页览布局与溢出徽章         | md2slides 仓 `host/marktext/deck-full-entry.js`（`runOpts.view:"list"`）+ `host/browser/deck-core.js`                                               |
-| 资产分发                          | 改 md2slides 后 `npm run pack:marktext` + fork `scripts/sync-md2slides.mjs`，重启 dev 生效                                                          |
-| 页/纸叶（共享测量基座）           | 测量/缝/推挤/overlay `util/paperPagination.ts` + `assets/styles/paperLens.css`；分页符族 `@muyajs/core` `utils/markers/pagebreak.ts`；设计裁决见 §5 |
+| 物                                | 位置                                                                                                                                                                                                                                                          |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 选择状态 / 派生面 / 迁移          | `store/editorView.ts`（leafSelection ≤2 + topView 互斥 + rightRatio；旧 page 键自动更名 flow，新 page = 逻辑页叶）                                                                                                                                            |
+| 六叶切换器 + 滑块联动             | `components/viewSwitcher/`                                                                                                                                                                                                                                    |
+| 分屏壳 / 分割条 / pane 接线       | `components/editorWithTabs/index.vue`                                                                                                                                                                                                                         |
+| 展示组两叶的投影面（放映 / 页览） | `components/editorWithTabs/deckPane.vue`（leaf × view/panel 两维变体；服务引用计数）                                                                                                                                                                          |
+| 文支叶的只读投影（栏/页/纸）      | `components/editorWithTabs/leafProjection.vue`（muya 只读第二实例，lens 决定姿态；焦点编辑预留见 §2）                                                                                                                                                         |
+| deck 侧页览布局与溢出徽章         | md2slides 仓 `host/marktext/deck-full-entry.js`（`runOpts.view:"list"`）+ `host/browser/deck-core.js`                                                                                                                                                         |
+| 资产分发                          | 改 md2slides 后 `npm run pack:marktext` + fork `scripts/sync-md2slides.mjs`，重启 dev 生效                                                                                                                                                                    |
+| 页/纸叶（共享测量基座）           | 测量/缝/拟合/overlay `util/paperPagination.ts` + `assets/styles/paperLens.css`（推挤级联至 M4.3b 翻转时退役）；分页符族 `@muyajs/core` `utils/markers/pagebreak.ts`；决策内核 vendor `vendor/md2slides/layout-core.js`（单源 md2slides，M4.2）；设计裁决见 §5 |

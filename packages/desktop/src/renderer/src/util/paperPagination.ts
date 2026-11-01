@@ -1,4 +1,9 @@
 import { onScopeDispose, watch, type WatchSource } from 'vue'
+import {
+  cutLinesFitting,
+  countFittingPrefix,
+  type LineCut,
+} from '@/vendor/md2slides/layout-core'
 
 /**
  * 纸面叶（paper）分页测量 —— 视图模型 §5 / M2。
@@ -207,6 +212,245 @@ export const paginateBlocks = (
   return {
     seams,
     pageStarts,
+    pageCount: seams.length + 1,
+    lastBadgeY: lastBottom + 28
+  }
+}
+
+// —— v2：行级拟合引擎（M4.3a 纯层，view-model §5 切页策略分级 / 裁决 A）——
+// 运行时仍在 v1（翻转时同拍切换：页叶缝升行级 + 打印链去块级 avoid，
+// 屏打两套切分语义不许分先后）。
+
+/** v2 块子结构：块内可切分信息（measureV2 填充；纯层单测给合成值）。 */
+export interface PaperBlockBoxV2 extends PaperBlockBox {
+  /** 段落行盒高序列（P；行盒间无 margin）。给了就走内核 cutLinesFitting。 */
+  lines?: number[]
+  /** 表格：表头高（续表每页重复占一份）+ 各行高。 */
+  table?: { headH: number; rowHeights: number[] }
+}
+
+export interface PaperSeamV2 {
+  y: number
+  crossed: boolean
+  /** 缝落在块内部时的切点（纸叶真分片的渲染依据；页叶只用 y）。 */
+  split?: { block: number; kind: 'lines' | 'table-rows'; keep: number }
+}
+
+export interface PaperLayoutV2 {
+  seams: PaperSeamV2[]
+  pageCount: number
+  lastBadgeY: number
+}
+
+const sum = (xs: number[]): number => xs.reduce((a, c) => a + c, 0)
+
+/**
+ * 行级贪心分页（v2 纯函数；块序按文档序，top/bottom 以内容盒顶为 0）。
+ *
+ * 骨架 = v1（keep-together / 强制缝 / 标题回避 / 间隙跨界 / 穿缝），块内
+ * 可切分者升级行级：
+ *   - P（`lines` 给了）→ 内核 `cutLinesFitting`：fits / before（整段推下页）
+ *     / at+keep（keep 行留本页，缝落行界 y = 块顶 + keep 行累计高；余行
+ *     作为无缝续体开新页，local = 块高 − 已留高）；
+ *   - TABLE（`table` 给了）→ 内核 `countFittingPrefix`：表头每页重复占一份
+ *     （续表），行切可跨多页（每道续缝 split.keep 记累计行数）；单行高过
+ *     「页高 − 表头」的表不切，整块走 v1 穿缝；
+ *   - 其余块（标题/代码/引用…无子结构）照 v1：keep-together、超页穿缝。
+ */
+export const paginateBlocksV2 = (
+  blocks: PaperBlockBoxV2[],
+  pageContentHeight: number
+): PaperLayoutV2 => {
+  const seams: PaperSeamV2[] = []
+  let local = 0
+  let prevBottom: number | null = null
+  let firstOnPage = true
+  let pendingForcedBreak = false
+  let contentOnPage = false
+
+  const pushSeam = (y: number, crossed: boolean, split?: PaperSeamV2['split']): void => {
+    seams.push({ y, crossed, split })
+  }
+
+  for (let i = 0; i < blocks.length; i++) {
+    const b = blocks[i]
+    const height = b.bottom - b.top
+    const gap = prevBottom === null ? 0 : b.top - prevBottom
+    let startLocal = firstOnPage ? 0 : local + gap
+
+    // 强制缝（v1 同款：fragmentainer 为空时 forced break 无操作）。
+    if (pendingForcedBreak) {
+      pendingForcedBreak = false
+      if (contentOnPage) {
+        if (prevBottom !== null) pushSeam((prevBottom + b.top) / 2, false)
+        firstOnPage = true
+        startLocal = 0
+        contentOnPage = false
+      }
+    }
+
+    // 剩余空间连块顶都容不下（间隙跨过页界）→ 先按推下页处理。
+    if (!firstOnPage && startLocal >= pageContentHeight) {
+      if (prevBottom !== null) pushSeam((prevBottom + b.top) / 2, false)
+      firstOnPage = true
+      startLocal = 0
+    }
+
+    const oversized = height > pageContentHeight
+
+    // —— 标题 break-after:avoid 前瞻（v1 同款；标题无子结构，不参与切行）——
+    if (
+      !firstOnPage &&
+      !oversized &&
+      startLocal + height <= pageContentHeight &&
+      HEADING_RE.test(b.tag) &&
+      i + 1 < blocks.length
+    ) {
+      const next = blocks[i + 1]
+      const nextHeight = next.bottom - next.top
+      const nextEnd = startLocal + height + (next.top - b.bottom) + nextHeight
+      if (nextEnd > pageContentHeight && nextHeight <= pageContentHeight) {
+        if (prevBottom !== null) pushSeam((prevBottom + b.top) / 2, false)
+        local = height
+        firstOnPage = false
+        prevBottom = b.bottom
+        contentOnPage = true
+        continue
+      }
+    }
+
+    const room = pageContentHeight - startLocal
+
+    // —— 段落切行（内核 cutLinesFitting：widow/orphan ≥ 2 镜像 Chromium）——
+    if (b.lines && b.lines.length > 0 && room > 0) {
+      const cut: LineCut = cutLinesFitting(b.lines, room, pageContentHeight)
+      if (cut.kind === 'fits') {
+        local = startLocal + sum(b.lines)
+        firstOnPage = false
+      } else if (cut.kind === 'before') {
+        // 整段推下页（缝落块间，v1 keep-together 同款）。
+        if (prevBottom !== null) pushSeam((prevBottom + b.top) / 2, false)
+        local = height
+        firstOnPage = false
+      } else {
+        // at / split-anyway：keep 行留本页，余行进续页（无缝续体，行间无 margin）。
+        const kept = sum(b.lines.slice(0, cut.keep))
+        pushSeam(b.top + kept, false, { block: i, kind: 'lines', keep: cut.keep })
+        local = height - kept
+        firstOnPage = false
+      }
+      prevBottom = b.bottom
+      if (b.isPagebreak) pendingForcedBreak = true
+      else contentOnPage = true
+      continue
+    }
+
+    // —— 表格行切（内核 countFittingPrefix；续表表头每页占一份）——
+    if (b.table && b.table.rowHeights.length > 0 && room > 0) {
+      const { headH, rowHeights } = b.table
+      const rowsSum = sum(rowHeights)
+      const total = headH + rowsSum
+      const oversizedTable = total > pageContentHeight
+      // 单行高过「页高 − 表头」的表不切行（切了也只产废页），整块穿缝。
+      const rowTolerant = Math.max(...rowHeights) <= pageContentHeight - headH
+
+      if (!rowTolerant) {
+        // v1 穿缝语义：窗口边界从块内穿过。
+        for (
+          let boundary = pageContentHeight;
+          boundary < startLocal + height;
+          boundary += pageContentHeight
+        ) {
+          pushSeam(b.top + (boundary - startLocal), true)
+        }
+        const endLocal = startLocal + height
+        local = endLocal % pageContentHeight
+        firstOnPage = local === 0
+      } else {
+        const availBody = room - headH
+        let keep = availBody > 0 ? countFittingPrefix(rowHeights, availBody) : 0
+        if (keep >= rowHeights.length) {
+          // 全表放下本页（keep === 行数 ⟹ total ≤ room ≤ 页高，非超页表）。
+          local = startLocal + total
+          firstOnPage = false
+        } else if (!oversizedTable && keep === 0) {
+          // 本页连表头 + 一行都容不下（表又非超页）→ 整表推下页。
+          if (prevBottom !== null) pushSeam((prevBottom + b.top) / 2, false)
+          local = total
+          firstOnPage = false
+        } else {
+          if (keep === 0) {
+            // 超页表且本页 room 不足 → 先整表推下页，从新页起切。
+            if (prevBottom !== null) pushSeam((prevBottom + b.top) / 2, false)
+            keep = countFittingPrefix(rowHeights, pageContentHeight - headH)
+          }
+          // 首段（本页或新页顶）：表头 + keep 行。
+          let cursor = keep
+          if (cursor > 0) {
+            pushSeam(b.top + headH + sum(rowHeights.slice(0, cursor)), false, {
+              block: i,
+              kind: 'table-rows',
+              keep: cursor
+            })
+          }
+          // 余行逐页续（每页 headH 占一份）；rowTolerant 保证每页至少一行。
+          let lastPageFirstRow = 0
+          while (cursor < rowHeights.length) {
+            lastPageFirstRow = cursor
+            const k2 = countFittingPrefix(
+              rowHeights.slice(cursor),
+              pageContentHeight - headH
+            )
+            cursor += k2
+            if (cursor < rowHeights.length) {
+              pushSeam(b.top + headH + sum(rowHeights.slice(0, cursor)), false, {
+                block: i,
+                kind: 'table-rows',
+                keep: cursor
+              })
+            }
+          }
+          // 连续流账目：跟在表格后的块从末段页的余量起（续表 = 表头 + 末页行）。
+          local = headH + sum(rowHeights.slice(lastPageFirstRow))
+          firstOnPage = false
+        }
+      }
+      prevBottom = b.bottom
+      if (b.isPagebreak) pendingForcedBreak = true
+      else contentOnPage = true
+      continue
+    }
+
+    // —— 无子结构块：v1 语义（keep-together / 超页穿缝）——
+    if (oversized) {
+      for (
+        let boundary = pageContentHeight;
+        boundary < startLocal + height;
+        boundary += pageContentHeight
+      ) {
+        pushSeam(b.top + (boundary - startLocal), true)
+      }
+      const endLocal = startLocal + height
+      local = endLocal % pageContentHeight
+      firstOnPage = local === 0
+    } else if (startLocal + height > pageContentHeight) {
+      if (prevBottom !== null) pushSeam((prevBottom + b.top) / 2, false)
+      local = height
+      firstOnPage = false
+    } else {
+      local = startLocal + height
+      firstOnPage = false
+    }
+
+    prevBottom = b.bottom
+    if (b.isPagebreak) pendingForcedBreak = true
+    else contentOnPage = true
+  }
+
+  const lastBottom = blocks.at(-1)?.bottom ?? 0
+
+  return {
+    seams,
     pageCount: seams.length + 1,
     lastBadgeY: lastBottom + 28
   }

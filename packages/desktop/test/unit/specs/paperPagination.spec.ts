@@ -1,11 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   paginateBlocks,
+  paginateBlocksV2,
   computePagePushes,
   PAPER_PAGE_GAP_MM,
   parsePaperGeometry,
   parseDeclaredPaperSize,
-  type PaperBlockBox
+  type PaperBlockBox,
+  type PaperBlockBoxV2
 } from '@/util/paperPagination'
 
 // `@/util/pdf` 在加载时读 `window.path`（preload 桥），vitest 环境需先补桩。
@@ -181,6 +183,116 @@ describe('computePagePushes (card-grid cascade)', () => {
     // 恒大于页内容高，不动点稳定（推挤不改块高，缝判定不动）。
     const pageStepMm = 297 + PAPER_PAGE_GAP_MM
     expect(pageStepMm).toBeGreaterThan(257)
+  })
+})
+
+// —— v2 行级拟合（M4.3a：段落切行 widow/orphan、表格行切+续表表头）——
+describe('paginateBlocksV2 (line-level fragmentation)', () => {
+  const v2 = (tag: string, top: number, bottom: number, extra: Partial<PaperBlockBoxV2> = {}): PaperBlockBoxV2 => ({
+    tag, top, bottom, ...extra
+  })
+
+  it('无子结构块照 v1 keep-together', () => {
+    const r = paginateBlocksV2([v2('p', 0, 500), v2('p', 510, 1200)], 1000)
+    expect(r.seams).toEqual([{ y: 505, crossed: false, split: undefined }])
+    expect(r.pageCount).toBe(2)
+  })
+
+  it('段落放得下不切；容量切受 widows 收口（缝落行界，split.keep 记行数）', () => {
+    // H=200；段 9 行×20（top 70..250），room = 130 → maxFit 6、maxKeep 7 → keep 6。
+    const r = paginateBlocksV2(
+      [v2('p', 0, 60), v2('p', 70, 250, { lines: Array.from({ length: 9 }, () => 20) })],
+      200
+    )
+    expect(r.seams).toEqual([
+      { y: 190, crossed: false, split: { block: 1, kind: 'lines', keep: 6 } }
+    ])
+    expect(r.pageCount).toBe(2)
+    // 后续块从续行的余量起（tail 高 3 行 = 60，+10 间隙）。
+    const r2 = paginateBlocksV2(
+      [
+        v2('p', 0, 60),
+        v2('p', 70, 250, { lines: Array.from({ length: 9 }, () => 20) }),
+        v2('p', 260, 300)
+      ],
+      200
+    )
+    expect(r2.seams).toEqual([
+      { y: 190, crossed: false, split: { block: 1, kind: 'lines', keep: 6 } }
+    ])
+    expect(r2.pageCount).toBe(2)
+  })
+
+  it('3 行段内切必违约 → 整段推下页（缝落块间）', () => {
+    const r = paginateBlocksV2(
+      [v2('p', 0, 150), v2('p', 160, 220, { lines: [20, 20, 20] })],
+      200
+    )
+    expect(r.seams).toEqual([{ y: 155, crossed: false, split: undefined }])
+    expect(r.pageCount).toBe(2)
+  })
+
+  it('超整页段在页顶容量切（widows 可满足 → at，非穿缝）', () => {
+    // H=200；15 行×20 = 300：首页留 10 行（容量 200 = 恰 10 行），余 5 行进次页。
+    const r = paginateBlocksV2(
+      [v2('p', 0, 300, { lines: Array.from({ length: 15 }, () => 20) }), v2('p', 310, 350)],
+      200
+    )
+    expect(r.seams).toEqual([
+      { y: 200, crossed: false, split: { block: 0, kind: 'lines', keep: 10 } }
+    ])
+    expect(r.pageCount).toBe(2)
+  })
+
+  it('表格行切 + 续表表头每页占一份（缝落行界）', () => {
+    // H=200；表头 20 + 5 行×30 = 170。room = 130 → availBody 110 → keep 3；
+    // 余 2 行在次页（headH + 60 = 80 账目）。
+    const r = paginateBlocksV2(
+      [
+        v2('p', 0, 60),
+        v2('table', 70, 240, { table: { headH: 20, rowHeights: [30, 30, 30, 30, 30] } }),
+        v2('p', 250, 290)
+      ],
+      200
+    )
+    expect(r.seams).toEqual([
+      { y: 180, crossed: false, split: { block: 1, kind: 'table-rows', keep: 3 } }
+    ])
+    expect(r.pageCount).toBe(2)
+  })
+
+  it('超页表跨多页（每道续缝记累计行数）', () => {
+    // H=200；表头 20 + 5 行×60 = 320 > 200（超页），行容忍（60 ≤ 180）。
+    // 首页 3 行（180 = availBody 恰满）→ 次页 2 行。缝 y = 20+180 = 200。
+    const r = paginateBlocksV2(
+      [v2('table', 0, 320, { table: { headH: 20, rowHeights: [60, 60, 60, 60, 60] } })],
+      200
+    )
+    expect(r.seams).toEqual([
+      { y: 200, crossed: false, split: { block: 0, kind: 'table-rows', keep: 3 } }
+    ])
+    expect(r.pageCount).toBe(2)
+  })
+
+  it('本页容不下表头+一行（表非超页）→ 整表推下页', () => {
+    const r = paginateBlocksV2(
+      [
+        v2('p', 0, 160),
+        v2('table', 170, 340, { table: { headH: 20, rowHeights: [50, 50, 50] } })
+      ],
+      200
+    )
+    expect(r.seams).toEqual([{ y: 165, crossed: false, split: undefined }])
+    expect(r.pageCount).toBe(2)
+  })
+
+  it('单行高过页内容高 − 表头 → 整表降级穿缝（v1 语义）', () => {
+    const r = paginateBlocksV2(
+      [v2('table', 0, 290, { table: { headH: 10, rowHeights: [250, 30] } })],
+      200
+    )
+    expect(r.seams).toEqual([{ y: 200, crossed: true, split: undefined }])
+    expect(r.pageCount).toBe(2)
   })
 })
 
