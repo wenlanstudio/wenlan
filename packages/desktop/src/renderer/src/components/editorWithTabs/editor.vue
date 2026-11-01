@@ -106,6 +106,7 @@ import { moveImageToFolder, uploadImage } from '@/util/fileSystem'
 import { guessClipboardFilePath } from '@/util/clipboard'
 import { dataURLToFile } from '@/util/dataURLToFile'
 import { getCssForOptions, getHtmlToc, type PdfCssOptions, type HtmlTocOptions } from '@/util/pdf'
+import { usePaperPagination } from '@/util/paperPagination'
 import {
   getTocHeadingScrollTop,
   resolveTocHeadingElement,
@@ -260,6 +261,14 @@ const editorRef = ref<HTMLDivElement | null>(null)
 const mediaViewer = ref<InstanceType<typeof MediaViewer> | null>(null)
 const viewerOpen = ref(false)
 const rowInput = ref<InputNumberInstance | null>(null)
+
+// 纸面叶（paper）：分页测量与缝/页码投影（util/paperPagination）。lens 进出
+// paper 时挂/卸 overlay；zoom 改变视觉坐标，作为额外重测源。
+usePaperPagination({
+  isActive: () => props.lens === 'paper',
+  getRoot: () => editor.value?.domNode ?? null,
+  watchSources: [() => preferencesStore.zoom]
+})
 
 // Non-reactive variables
 let printer: Printer | null = null

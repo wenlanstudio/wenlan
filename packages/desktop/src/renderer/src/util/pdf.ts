@@ -51,6 +51,10 @@ export const getCssForOptions = async(options: PdfCssOptions): Promise<string> =
     // Keep a heading with the content that follows it, so a page never breaks
     // immediately after a heading, and never split a multi-line heading (#3039).
     output += 'h1,h2,h3,h4,h5,h6{break-after:avoid;break-inside:avoid;}'
+    // 纸面叶硬验收的同源策略（view-model §5）：屏测（util/paperPagination）对
+    // 顶层块 keep-together，打印侧同款——块级 break-inside:avoid，装不下整块
+    // 即推下页；块高于一页时 Chromium 自然降级为切分（= 屏测的穿缝）。
+    output += '.markdown-body>*{break-inside:avoid;}'
   }
 
   // Auto numbering headings via CSS

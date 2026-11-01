@@ -189,5 +189,47 @@
     margin: 1em 2.5rem;
 }
 
+/* —— 分页投影（M2）：缝 + 页码徽章，测量结果的绝对定位叠加 —— */
+
+/* overlay 挂在滚动区（.mu-editor）内随之滚动；锚定 .mu-container 的
+   border-box（尺寸/位置由 usePaperPagination 以视觉 px 写入）。z-index 高于
+   正文让穿缝虚线可见，pointer-events:none 保持编辑交互纯净。 */
+[data-lens='paper'] .mu-editor,
+.paper-projection .mu-editor {
+    position: relative;
+}
+
+.mu-paper-overlay {
+    position: absolute;
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* 缝线：1px 虚线横贯纸面；穿缝（超整页块内）同款虚线，降不透明度示弱。 */
+.mu-paper-seam {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 0;
+    border-top: 1px dashed var(--paper-border-color);
+}
+
+.mu-paper-seam.crossed {
+    opacity: 0.55;
+}
+
+/* 页码徽章：页尾右缘，白底小字压在缝线上方。 */
+.mu-paper-page-num {
+    position: absolute;
+    right: 6px;
+    z-index: 1;
+    padding: 0 4px;
+    font-size: 10px;
+    line-height: 14px;
+    color: #9198a1;
+    background: #fff;
+    font-variant-numeric: tabular-nums;
+}
+
 /* 已知留白（M2 视页数验收裁决）：内联 code 字号 gh 为 1em、muya 为 .85em，
    因 muya 代码块结构里 code 选择器交错，先不碰，等 e2e 页数 diff 定夺。 */

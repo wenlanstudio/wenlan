@@ -34,6 +34,7 @@ import { Muya, type IMuyaOptions } from '@muyajs/core'
 import { usePreferencesStore } from '@/store/preferences'
 import { buildMuyaViewOptions } from '@/util/muyaViewOptions'
 import { getMuyaLocale } from '@/util/muyaLocale'
+import { usePaperPagination } from '@/util/paperPagination'
 
 const props = defineProps<{
   /** 投影哪种文支叶：column=分栏透镜；paper=纸面（A4 版式，paperLens.css）。 */
@@ -46,6 +47,12 @@ const { language } = storeToRefs(preferencesStore)
 
 const host = ref<HTMLDivElement | null>(null)
 const muya = shallowRef<Muya | null>(null)
+
+// 纸面投影（lens='paper'）同挂分页投影（活透镜同一套测量，§5）。
+usePaperPagination({
+  isActive: () => props.lens === 'paper',
+  getRoot: () => muya.value?.domNode ?? null
+})
 
 const PROJECTION_DEBOUNCE_MS = 250
 let applyTimer = 0
