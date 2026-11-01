@@ -57,11 +57,11 @@
 
 <script setup lang="ts">
 /**
- * deckPane — 示支两叶（present 放映 / slide 幻灯片列表）共用的 md2slides 投影面
- * （视图模型 v2 §2/§4）。同一套机制（本地服务 + iframe + postMessage 桥 + 300ms
+ * deckPane — 示支两叶（present 放映 / slide 页览）共用的 md2slides 投影面
+ * （视图模型 §2/§4）。同一套机制（本地服务 + iframe + postMessage 桥 + 300ms
  * 防抖原地重建 + 重建保页 + 面板态键盘归属），两叶只差 runOpts.view：
  * - present → view:"present"（一次一页的播放器）；
- * - slide   → view:"list"（全部物理页堆叠 + 溢出警告，deck 侧打 ⚠ 徽章）。
+ * - slide   → view:"list"（全部物理页堆叠 + 溢出徽章，deck 侧打「N页」标）。
  * 同一 leaf 可在全屏（mode=view）与分屏 pane（mode=panel）间切换：iframe 原地
  * 复用，只重发 build。
  *
@@ -79,9 +79,9 @@ import { usePreferencesStore } from '@/store/preferences'
 import { renderGraphvizToDataUrl, renderPlantumlToDataUrl } from '@/util/md2slidesDiagram'
 
 const props = defineProps<{
-  /** 示支的叶：present 放映 / slide 幻灯片列表。 */
+  /** 示支的叶：present 放映 / slide 页览。 */
   leaf: 'present' | 'slide'
-  /** view＝该叶全屏；panel＝分屏 pane（形态模型 §2）。 */
+  /** view＝该叶全屏；panel＝分屏 pane（视图模型 §3）。 */
   mode: 'view' | 'panel'
   markdown: string
 }>()

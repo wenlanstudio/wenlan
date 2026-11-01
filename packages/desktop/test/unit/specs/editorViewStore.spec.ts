@@ -214,14 +214,14 @@ describe('editorView persistence & migration', () => {
     )
     expect(reloaded().leafSelection).toEqual(['present'])
 
-    // P2 的分屏意图（previewForm=present）→ v2 的成对选择
+    // 中间形态的分屏意图（previewForm=present）→ 成对选择
     localStorage.setItem(
       'marktext-editor-view',
       JSON.stringify({ mainView: 'document', subView: 'page', previewForm: 'present' })
     )
     expect(reloaded().leafSelection).toEqual(['page', 'present'])
 
-    // P4 的 document/slide（语义卡，已废）→ 落回 page
+    // 已废的 document/slide 编辑视图 → 落回 page
     localStorage.setItem(
       'marktext-editor-view',
       JSON.stringify({ mainView: 'document', subView: 'slide' })

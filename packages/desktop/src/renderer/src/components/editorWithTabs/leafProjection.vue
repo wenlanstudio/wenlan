@@ -9,7 +9,7 @@
 
 <script setup lang="ts">
 /**
- * leafProjection — (page, column) 分屏右 pane 的分栏投影（视图模型 v2 §1/§2）。
+ * leafProjection — (page, column) 分屏右 pane 的分栏投影（视图模型 §1/§2）。
  *
  * 同一份 markdown 的**只读第二 muya 实例**，挂 column 透镜（columnsLayout:
  * 'columns'）——编辑发生在左 pane 的活引擎上，这里只展示"分栏长什么样"。

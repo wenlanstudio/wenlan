@@ -5,10 +5,10 @@ import { usePreferencesStore } from './preferences'
 import { useEditorStore } from './editor'
 
 /**
- * 视图模型 v2（docs/design/view-model.md）：文示二支 × 四叶选择。
+ * 视图模型（docs/design/view-model.md）：文示二支 × 四叶选择。
  *
  * 文（编辑态，muya）= { page 全文, column 分栏 }；示（展示态，md2slides iframe）
- * = { slide 幻灯片列表, present 放映 }。分界 = 引擎边界 = 可编辑性边界。
+ * = { slide 页览, present 放映 }。分界 = 引擎边界 = 可编辑性边界。
  *
  * 选择模型：四叶平铺常驻，点击选中至多两叶——一叶全屏、两叶分屏（左右按
  * LEAVES 顺序，文左示右、细左粗右自动成立）。配置选择式（淘宝选规格）：
@@ -49,9 +49,9 @@ interface EditorViewState {
 const STORAGE_KEY = 'marktext-editor-view'
 
 /**
- * 旧持久化形状（v1：mainView/subView[/previewForm]）→ v2 选择模型。
+ * 旧持久化形状（mainView/subView 二级结构，含中间形态 previewForm）→ 四叶选择。
  * 迁移映射：document/page→[page]、document/column→[column]、document/slide（P4
- * 语义卡，已废）→[page]、present/slides→[present]、table/figure/code→topView；
+ * 已废的 slide 编辑视图）→[page]、present/slides→[present]、table/figure/code→topView；
  * previewForm==='present' → 追加 present 成对。更早的 word/ppt/excel/dev
  * 改名一并收口。
  */
