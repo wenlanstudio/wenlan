@@ -105,7 +105,7 @@ const isPanel = computed(() => props.mode === 'panel')
 const indicator = computed(() => {
   if (total.value === 0) return status.value
   if (props.leaf === 'slide') {
-    return warnings.value > 0 ? `${total.value} 页 · ${warnings.value} 页溢出 ⚠` : `${total.value} 页`
+    return warnings.value > 0 ? `${total.value} 页 · ${warnings.value} 页溢出` : `${total.value} 页`
   }
   return `${index.value} / ${total.value}`
 })
