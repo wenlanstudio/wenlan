@@ -48,7 +48,11 @@ printToPDF 页数）对两叶同时成立**（推挤不改块高，页数相同�
 
 - 六叶**位次常驻平铺**在切换器上（刻度「文 栏 页│纸 览 示」，分隔线提示二组），栏格随文档有无 `begin` 标记显隐；
 - **编辑面不变量：同一时刻至多一个活编辑面**——左 pane/全屏 = muya 活引擎（唯一可编辑面）；右 pane 一律只读投影（leafProjection 只读第二实例）。
-  **预留（M3.5 后评估）：纸叶分屏焦点编辑**——点纸卡接管编辑面、左退投影（muya 只读锁为运行时检查，活引擎/投影双组件齐备）；已知代价：undo 历史按实例分裂、投影同步 250ms 滞后；
+  **例外（A″ 裁决 / M4.3b）：全屏纸叶的可见面 = 只读真分片投影**
+  （paperProjection），活引擎以 display:none 留任「隐藏服务后端」——bus
+  导出/TOC 依赖 editor.vue 挂载，收起不占位（导出走序列化，不需要布局）；
+  **原「纸叶分屏焦点编辑」预留随之作废**（真分片 + 卡内编辑不可兼得，
+  见 §5 M4.3b 调研结论）；
 - **配置选择式**：点一下选中、再点一下取消，搭配由用户自定，**至多两叶**：
   - 1 叶 → 该视图全屏；
   - 2 叶 → 分屏，左右按按钮序（flow < column < page < paper < slide <
@@ -57,7 +61,8 @@ printToPDF 页数）对两叶同时成立**（推挤不改块高，页数相同�
     一致解释，而 md2slides 只服务幻灯片形态——览对 A4 文档 v1 不做、纸对
     幻灯片文档给不出幻灯片语义；全屏单叶不受此限），与它们相点即单选替
     换，持久化中的非法对净化为单片；(页, 纸) = 左活页编辑、右纸面投影
-    （leafProjection 复用），v1 即开放；
+    （leafProjection 复用），v1 即开放；(页, 纸) 分屏的右纸面 = 真分片投影
+    （paperProjection，A″）；
   - 已两叶时第三叶点不动（先摘一片才能换）；最后一片不可摘（不可选到零）；
 - 表/图/本与六叶互斥：选中顶级视图时叶选择挂起不丢，切回即恢复；
 - column 叶只对真有 `begin` 标记的文档显示；全屏 column 在标记消失时回退 flow
@@ -172,25 +177,28 @@ printToPDF 页数）对两叶同时成立**（推挤不改块高，页数相同�
   管常规编辑器版式），不把 A4 版式塞给它；
 - **落地切片**：M0–M3 已完成（`paper` 单叶时代的骨架/版式基/测量/分页符/
   纸型——升格为**页纸共享的测量基座**）；M3.5 已完成（2026-11-01）：页叶
-  承接 + 纸叶推挤流与卡层（e2e 5/5）；**M4.1/M4.2 已完成（2026-11-01/02）**：
-  md2slides `layout-core` 纯决策内核（策略封闭集 STRATEGY + 切点算术 +
-  `cutLinesFitting` 段落切行）双端共用，fork 已 vendor + 冒烟。**M4.3（进行中，
-  裁决 A）**：a) 本裁决入档 + **拟合引擎 v2 纯层**（行级，消费 vendored 内核，
-  未接线）；b) muya 分页布局模式（columns 同款容器重组、纸叶真分片、推挤
-  退役）+ 拟合接线（页叶缝升行级）+ 打印链去块级 avoid **同拍翻转**（屏打
-  两套切分语义不许分先后）+ 硬验收 e2e 重建（补切行/续表判别用例）。
-  **硬验收 = 屏显页数 = printToPDF 页数**（页/纸两叶各自成立——翻转后两端
-  同用行级切分语义，页数相同）；此验收一倒，度量来源裁决重审。
+  承接 + 纸叶推挤流与卡层（e2e 5/5，推挤随 A″ 退役，实现见 git 历史）；
+  M4.1/M4.2 已完成（2026-11-01/02）：md2slides `layout-core` 纯决策内核
+  （策略封闭集 STRATEGY + 切点算术 + `cutLinesFitting` 段落切行）双端共用，
+  fork 已 vendor + 冒烟；**M4.3 已完成（2026-11-02，A″ 裁决落地）**：a)
+  调研结论入档（真分片与卡内编辑不可兼得）+ 拟合引擎 v2 纯层；b) **页叶缝
+  升行级 + 打印链去块级 avoid 同拍翻转** + **纸叶真分片投影**
+  （`paperProjection.vue`：裁剪窗对/表格行手术/整块搬移；活引擎 display:none
+  留任隐藏服务后端）+ 推挤退役 + 硬验收 e2e 重建（切行判别器 + 真分片卡片
+  几何；6/6）。**硬验收 = 屏显页数 = printToPDF 页数**（页/纸两叶各自成立
+  ——翻转后两端同用行级切分语义，页数相同）；此验收一倒，度量来源裁决
+  重审。
 
 ## 6. 实现地图
 
-| 物                                | 位置                                                                                                                                                                                                                                                          |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 选择状态 / 派生面 / 迁移          | `store/editorView.ts`（leafSelection ≤2 + topView 互斥 + rightRatio；旧 page 键自动更名 flow，新 page = 逻辑页叶）                                                                                                                                            |
-| 六叶切换器 + 滑块联动             | `components/viewSwitcher/`                                                                                                                                                                                                                                    |
-| 分屏壳 / 分割条 / pane 接线       | `components/editorWithTabs/index.vue`                                                                                                                                                                                                                         |
-| 展示组两叶的投影面（放映 / 页览） | `components/editorWithTabs/deckPane.vue`（leaf × view/panel 两维变体；服务引用计数）                                                                                                                                                                          |
-| 文支叶的只读投影（栏/页/纸）      | `components/editorWithTabs/leafProjection.vue`（muya 只读第二实例，lens 决定姿态；焦点编辑预留见 §2）                                                                                                                                                         |
-| deck 侧页览布局与溢出徽章         | md2slides 仓 `host/marktext/deck-full-entry.js`（`runOpts.view:"list"`）+ `host/browser/deck-core.js`                                                                                                                                                         |
-| 资产分发                          | 改 md2slides 后 `npm run pack:marktext` + fork `scripts/sync-md2slides.mjs`，重启 dev 生效                                                                                                                                                                    |
-| 页/纸叶（共享测量基座）           | 测量/缝/拟合/overlay `util/paperPagination.ts` + `assets/styles/paperLens.css`（推挤级联至 M4.3b 翻转时退役）；分页符族 `@muyajs/core` `utils/markers/pagebreak.ts`；决策内核 vendor `vendor/md2slides/layout-core.js`（单源 md2slides，M4.2）；设计裁决见 §5 |
+| 物                                | 位置                                                                                                                                                                                                                                                               |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 选择状态 / 派生面 / 迁移          | `store/editorView.ts`（leafSelection ≤2 + topView 互斥 + rightRatio；旧 page 键自动更名 flow，新 page = 逻辑页叶）                                                                                                                                                 |
+| 六叶切换器 + 滑块联动             | `components/viewSwitcher/`                                                                                                                                                                                                                                         |
+| 分屏壳 / 分割条 / pane 接线       | `components/editorWithTabs/index.vue`                                                                                                                                                                                                                              |
+| 展示组两叶的投影面（放映 / 页览） | `components/editorWithTabs/deckPane.vue`（leaf × view/panel 两维变体；服务引用计数）                                                                                                                                                                               |
+| 文支叶的只读投影（栏/页）         | `components/editorWithTabs/leafProjection.vue`（muya 只读第二实例，lens 决定姿态）                                                                                                                                                                                 |
+| 纸叶真分片投影（A″）              | `components/editorWithTabs/paperProjection.vue`（只读实例 + 分片执行器：裁剪窗对/表格行手术/整块搬移；全屏态活引擎 display:none 留任隐藏服务后端，见 §2）                                                                                                          |
+| deck 侧页览布局与溢出徽章         | md2slides 仓 `host/marktext/deck-full-entry.js`（`runOpts.view:"list"`）+ `host/browser/deck-core.js`                                                                                                                                                              |
+| 资产分发                          | 改 md2slides 后 `npm run pack:marktext` + fork `scripts/sync-md2slides.mjs`，重启 dev 生效                                                                                                                                                                         |
+| 页/纸叶（共享测量基座）           | 测量/缝/拟合/overlay `util/paperPagination.ts`（paginateBlocksV2 行级，推挤已退役）+ `assets/styles/paperLens.css`；分页符族 `@muyajs/core` `utils/markers/pagebreak.ts`；决策内核 vendor `vendor/md2slides/layout-core.js`（单源 md2slides，M4.2）；设计裁决见 §5 |
