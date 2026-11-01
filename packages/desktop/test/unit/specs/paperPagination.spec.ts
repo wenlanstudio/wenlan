@@ -296,18 +296,21 @@ describe('paginateBlocksV2 (line-level fragmentation)', () => {
   })
 })
 
-// —— 打印侧同策略契约（硬验收的另一半）：printable 分支输出块级
-//    break-inside:avoid，与屏测（paginateBlocks）同款 keep-together。 ——
+// —— 打印侧同策略契约（硬验收的另一半）。v2 翻转（M4.3b）：块级 avoid 撤除，
+//    段落/表格交 Chromium 原生碎片化（屏测 paginateBlocksV2 同语义）；标题
+//    avoid 保留（屏测标题回避前瞻同款）。 ——
 describe('print chain keeps blocks together (view-model §5 hard acceptance)', () => {
   beforeEach(() => {
     vi.resetModules()
   })
 
   // 重 import 链（@/util/pdf → @muyajs/core 构建产物），vitest 下数秒级。
-  it('getCssForOptions printable branch emits block-level break-inside:avoid', async() => {
+  it('printable branch drops the block-level avoid (v2 line-level flip)', async() => {
     const { getCssForOptions } = await import('@/util/pdf')
     const css = await getCssForOptions({ type: 'pdf', pageMarginTop: 20, pageMarginRight: 15, pageMarginBottom: 20, pageMarginLeft: 15 })
-    expect(css).toContain('.markdown-body>*{break-inside:avoid;}')
+    expect(css).not.toContain('.markdown-body>*{break-inside:avoid;}')
+    // 标题仍与后随内容同页（屏测标题回避前瞻同款）。
+    expect(css).toContain('h1,h2,h3,h4,h5,h6{break-after:avoid;break-inside:avoid;}')
   }, 30_000)
 
   it('printable branch styles the pagebreak marker as a forced page break', async() => {

@@ -333,10 +333,30 @@ export const paginateBlocksV2 = (
         local = height
         firstOnPage = false
       } else {
-        // at / split-anyway：keep 行留本页，余行进续页（无缝续体，行间无 margin）。
-        const kept = sum(b.lines.slice(0, cut.keep))
-        pushSeam(b.top + kept, false, { block: i, kind: 'lines', keep: cut.keep })
-        local = height - kept
+        // at / split-anyway：keep 行留本页；余行作为无缝续体开新页（行间无
+        // margin），尾段高过一整页时逐页续切（与表格分支同款循环）。
+        let cursor = cut.keep
+        pushSeam(b.top + sum(b.lines.slice(0, cursor)), false, {
+          block: i,
+          kind: 'lines',
+          keep: cursor
+        })
+        while (cursor < b.lines.length) {
+          const rest = b.lines.slice(cursor)
+          if (sum(rest) <= pageContentHeight) break
+          const cut2 = cutLinesFitting(rest, pageContentHeight, pageContentHeight)
+          const k2 =
+            cut2.kind === 'at' || cut2.kind === 'split-anyway' ? cut2.keep : rest.length
+          cursor += k2
+          if (cursor < b.lines.length) {
+            pushSeam(b.top + sum(b.lines.slice(0, cursor)), false, {
+              block: i,
+              kind: 'lines',
+              keep: cursor
+            })
+          }
+        }
+        local = sum(b.lines.slice(cursor))
         firstOnPage = false
       }
       prevBottom = b.bottom
@@ -536,6 +556,106 @@ export const measurePaperBlocks = (
   return { blocks, contentTopOffset, pageContentHeight }
 }
 
+export interface PaperBlocksMeasurementV2 {
+  blocks: PaperBlockBoxV2[]
+  /** 内容盒顶相对容器 border-box 顶的视觉偏移（padding-top × zoom）。 */
+  contentTopOffset: number
+  /** 页内容高（视觉 px）。 */
+  pageContentHeight: number
+}
+
+/**
+ * 段落行盒高序列（文本节点 Range client rects 按 top 归并同行；行盒间无
+ * margin）。行内元素会产生同行的多个矩形，按行带合并取最高；高度全为
+ * 视觉 px（含 zoom）。
+ *
+ * 只走文本节点（TreeWalker）：对整个块 selectNodeContents 会混入内容容器
+ * span 的**整体包围盒**（一行 1440px 的假行），吞掉全部真行带。
+ */
+const measureLineHeights = (el: HTMLElement): number[] => {
+  const doc = el.ownerDocument
+  const walker = doc.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+  const rects: DOMRect[] = []
+  let node = walker.nextNode()
+  while (node) {
+    const text = node as Text
+    if (text.nodeValue && text.nodeValue.trim()) {
+      const r = doc.createRange()
+      r.selectNodeContents(text)
+      for (const rect of r.getClientRects()) {
+        if (rect.height > 0) rects.push(rect)
+      }
+    }
+    node = walker.nextNode()
+  }
+  if (!rects.length) return []
+  const sorted = [...rects].sort((a, b) => a.top - b.top || a.left - b.left)
+  const bands: number[] = []
+  let bandTop = sorted[0]!.top
+  let bandBottom = sorted[0]!.bottom
+  for (const r of sorted) {
+    if (r.top <= bandBottom - 1) {
+      // 与当前行带重叠（同一行盒；容 1px 亚像素）→ 扩底取最高。
+      bandBottom = Math.max(bandBottom, r.bottom)
+      bands[bands.length - 1] = bandBottom - bandTop
+    } else {
+      bandTop = r.top
+      bandBottom = r.bottom
+      bands.push(bandBottom - bandTop)
+    }
+  }
+  return bands
+}
+
+/**
+ * v2 测量（M4.3b 提交 1）：v1 步进 + 块内子结构——
+ * - P：Range 行盒序列（≥ 2 行才带 lines——单行段落没有可切点，保持 keep-together）；
+ * - 表格（figure.mu-table > table）：GFM 首行 = 表头（headH，续表每页重复），
+ *   余行为行切单位。
+ */
+export const measurePaperBlocksV2 = (
+  container: HTMLElement,
+  geometry: PaperGeometry = PAPER_SIZES_MM.a4
+): PaperBlocksMeasurementV2 => {
+  const rect = container.getBoundingClientRect()
+  const cs = getComputedStyle(container)
+  const zoom = Number.parseFloat(cs.zoom || '1') || 1
+  const contentTopOffset = Number.parseFloat(cs.paddingTop || '0') * zoom
+  const pageContentHeight = (geometry.pageHeightMm - 40) * MM_TO_PX * zoom
+
+  const blocks: PaperBlockBoxV2[] = []
+  for (const child of Array.from(container.children)) {
+    if (!(child instanceof HTMLElement)) continue
+    if (child.matches(EXCLUDED_SELECTOR)) continue
+    const r = child.getBoundingClientRect()
+    if (r.height === 0 && child.tagName !== 'HR') continue
+    const box: PaperBlockBoxV2 = {
+      tag: child.tagName.toLowerCase(),
+      top: r.top - rect.top - contentTopOffset,
+      bottom: r.bottom - rect.top - contentTopOffset,
+      isPagebreak: child.querySelector('.mu-mdcols-pagebreak') !== null,
+      el: child
+    }
+    if (child.tagName === 'P') {
+      const lines = measureLineHeights(child)
+      if (lines.length > 1) box.lines = lines
+    } else if (child.tagName === 'FIGURE' && child.classList.contains('mu-table')) {
+      const table = child.querySelector(':scope > table')
+      const rows = table
+        ? Array.from(table.querySelectorAll(':scope > tr, :scope > thead > tr, :scope > tbody > tr'))
+        : []
+      if (rows.length > 1) {
+        const headH = rows[0]!.getBoundingClientRect().height
+        const rowHeights = rows.slice(1).map(tr => tr.getBoundingClientRect().height)
+        box.table = { headH, rowHeights }
+      }
+    }
+    blocks.push(box)
+  }
+
+  return { blocks, contentTopOffset, pageContentHeight }
+}
+
 /**
  * 页/纸分页叠加的生命周期胶水：lens 为 page/paper 时在 muya 根（滚动区）内
  * 挂 overlay，编辑/缩放后重测，缝与页码以绝对定位投影。编辑器与只读投影
@@ -605,7 +725,9 @@ export const usePaperPagination = (options: {
       ?.classList.remove('mu-paper-pushed')
   }
 
-  const render = (layout: PaperLayout, measure: PaperBlocksMeasurement, container: HTMLElement): void => {
+  /** 渲染缝/页码叠加（v1 与 v2 布局同形：seams/pageCount/lastBadgeY；
+   *  v2 行级缝带 split——e2e 判别器读 data-split）。 */
+  const render = (layout: PaperLayoutV2, measure: PaperBlocksMeasurement | PaperBlocksMeasurementV2, container: HTMLElement): void => {
     if (!overlay) return
     const host = overlay
     host.dataset.pageCount = String(layout.pageCount)
@@ -626,6 +748,7 @@ export const usePaperPagination = (options: {
       line.className = seam.crossed ? 'mu-paper-seam crossed' : 'mu-paper-seam'
       line.style.top = `${top}px`
       line.dataset.crossed = seam.crossed ? 'true' : 'false'
+      if (seam.split) line.dataset.split = seam.split.kind
       host.appendChild(line)
 
       const badge = badgeTop(top - 18)
@@ -720,16 +843,19 @@ export const usePaperPagination = (options: {
     // 纸姿态把容器白底/阴影移交卡层（mu-paper-pushed 容器透明，白卡由卡层画）。
     container.classList.toggle('mu-paper-pushed', pushing)
 
-    const m1 = measurePaperBlocks(container, geometry)
-    const layout1 = paginateBlocks(m1.blocks, m1.pageContentHeight)
-
     if (!pushing) {
-      // 页姿态：连续流 + 缝叠加（不推挤，现状渲染）。
-      render(layout1, m1, container)
+      // 页姿态（M4.3b 提交 1：拟合 v2 行级接线，view-model §5 切页策略分级）：
+      // 连续流 + 缝叠加——缝可落行界/行界（split 缝带 data-split），与打印链
+      // （块级 avoid 已撤，Chromium 原生切分）逐条等价，硬验收把关。
+      const m2 = measurePaperBlocksV2(container, geometry)
+      const layout2 = paginateBlocksV2(m2.blocks, m2.pageContentHeight)
+      render(layout2, m2, container)
       return
     }
 
-    // —— 纸姿态：卡网格推挤级联 ——
+    // —— 纸姿态：卡网格推挤级联（M3.5 遗留，M4.3b 提交 2 随纸叶改投影退役）——
+    const m1 = measurePaperBlocks(container, geometry)
+    const layout1 = paginateBlocks(m1.blocks, m1.pageContentHeight)
     // CSS zoom 挂在容器上：计算值未缩放、视觉距离 = ×zoom。pageStep 与块
     // top 同在视觉空间；margin-top 是未缩放 CSS px，施加时除回 zoom。
     const zoom = Number.parseFloat(getComputedStyle(container).zoom || '1') || 1

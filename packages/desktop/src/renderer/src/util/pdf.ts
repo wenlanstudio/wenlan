@@ -51,10 +51,11 @@ export const getCssForOptions = async(options: PdfCssOptions): Promise<string> =
     // Keep a heading with the content that follows it, so a page never breaks
     // immediately after a heading, and never split a multi-line heading (#3039).
     output += 'h1,h2,h3,h4,h5,h6{break-after:avoid;break-inside:avoid;}'
-    // 纸面叶硬验收的同源策略（view-model §5）：屏测（util/paperPagination）对
-    // 顶层块 keep-together，打印侧同款——块级 break-inside:avoid，装不下整块
-    // 即推下页；块高于一页时 Chromium 自然降级为切分（= 屏测的穿缝）。
-    output += '.markdown-body>*{break-inside:avoid;}'
+    // v2 行级切分翻转（view-model §5 切页策略分级 / M4.3b，A″ 裁决）：块级
+    // break-inside:avoid 撤除——段落按行切（widow/orphan 由 Chromium 原生
+    // 碎片化执行）、表格按行切，屏测（util/paperPagination paginateBlocksV2）
+    // 与 Chromium 原生切分逐条等价，硬验收「屏显页数 = printToPDF 页数」
+    // 负责把关。标题保留 avoid（屏测的标题回避前瞻同款）。
     // `<!-- pagebreak -->` 强制分页符（exportHtml 已把注释行换成标记 div）：
     // 零高度 + break-after:page，与屏测的强制缝同义。
     output += '.markdown-body .mt-pagebreak{height:0;margin:0;padding:0;border:0;break-after:page;}'

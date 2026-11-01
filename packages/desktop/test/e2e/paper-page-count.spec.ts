@@ -167,6 +167,62 @@ test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages
     expect(screenCount).toBe(pdfCount)
   })
 
+  test('an oversized paragraph fragments at line boundaries on screen and in print alike (v2 行级切分判别)', async() => {
+    test.setTimeout(150_000)
+    // 高过两整页的段落：块级 keep-together 时代它只能穿缝（v1 语义），
+    // v2 行级拟合必须产出**行界切分缝**（data-split="lines"，判别器——
+    // v1 穿缝没有 data-split）；屏测页数与 printToPDF 页数（块级 avoid 已
+    // 撤，Chromium 原生按行切分）逐条等价。
+    const bigPara = Array.from(
+      { length: 60 },
+      (_, i) =>
+        `Line ${String(i + 1).padStart(2, '0')} of the oversized paragraph for the line-level fragmentation acceptance.`
+    ).join('\n')
+    const splitDoc = [
+      ...Array.from({ length: 28 }, (_, i) => PARA(i + 1)),
+      bigPara,
+      ...Array.from({ length: 5 }, (_, i) => PARA(i + 29))
+    ].join('\n\n')
+
+    const launched = await launchWithMarkdown(splitDoc)
+    const { app, page } = launched
+    try {
+      await waitForMenuReady(app)
+      const leafBtn = page.locator('.view-switcher .leaf-btn', { hasText: '页' })
+      const flowBtn = page.locator('.view-switcher .leaf-btn', { hasText: '文' })
+      await leafBtn.waitFor({ state: 'visible', timeout: 15000 })
+      await leafBtn.click()
+      await flowBtn.click()
+
+      const overlay = page.locator('.mu-paper-overlay[data-page-count]')
+      await overlay.waitFor({ state: 'visible', timeout: 15000 })
+      await page.waitForTimeout(700)
+      const screenCount = Number(await overlay.getAttribute('data-page-count'))
+
+      // 判别器：行界切分缝真实存在（v1 时代只会是穿缝虚线，无 data-split）。
+      const splitSeams = await page.locator('.mu-paper-seam[data-split="lines"]').count()
+      expect(splitSeams, 'line-boundary split seams should exist').toBeGreaterThanOrEqual(1)
+
+      const outPath = path.join(
+        fs.mkdtempSync(path.join(os.tmpdir(), 'mt-paper-split-')),
+        'acceptance.pdf'
+      )
+      await stubSaveDialog(app, outPath)
+      await sendIpcToRenderer(app, 'mt::show-export-dialog', 'pdf')
+      const confirm = page.locator('.print-settings-dialog .button-primary')
+      await confirm.waitFor({ state: 'visible', timeout: 10000 })
+      await confirm.click()
+      const pdf = await pollForPdfFile(outPath)
+      const pdfCount = countPdfPages(pdf)
+
+      expect(screenCount, 'v2 fit page count').toBeGreaterThan(2)
+      expect(screenCount, 'screen pages == printToPDF pages (line-level both sides)').toBe(pdfCount)
+    } finally {
+      await restoreSaveDialog(app)
+      await app.close()
+    }
+  })
+
   test('a pagebreak marker forces the same page on screen and in print', async() => {
     test.setTimeout(150_000)
     // 10 段 + 分页符 + 10 段 + 分页符 + 30 段：强制缝把文档切成 4 页
