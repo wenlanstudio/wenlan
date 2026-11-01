@@ -412,7 +412,7 @@ const applyLens = (): void => {
 // tab's anchor once the class flip has been laid out (TODO1 #4). The table
 // lens hides blocks instead, which invalidates a block index captured in
 // another lens, so it is deliberately left alone.
-const FORM_LENSES = ['page', 'column'] as const
+const FORM_LENSES = ['flow', 'column'] as const
 const isFormLens = (lens: string | null | undefined): lens is (typeof FORM_LENSES)[number] =>
   lens != null && (FORM_LENSES as readonly string[]).includes(lens)
 const restoreLensAnchor = (): void => {

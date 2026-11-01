@@ -17,16 +17,16 @@ import { useEditorStore } from './editor'
  * 表/图/本是顶级正交视图，与四叶互斥（挂起不丢）。
  */
 
-export type Leaf = 'page' | 'column' | 'slide' | 'present'
+export type Leaf = 'flow' | 'column' | 'slide' | 'present'
 
 /** 按钮顺序 = 分屏左右顺序（细→粗、文→示）。 */
-export const LEAVES = ['page', 'column', 'slide', 'present'] as const
+export const LEAVES = ['flow', 'column', 'slide', 'present'] as const
 
 export type TopView = 'table' | 'figure' | 'code'
 
 export const TOP_VIEWS = ['table', 'figure', 'code'] as const
 
-export type SliderDuty = 'page-width' | 'slide-zoom' | 'none'
+export type SliderDuty = 'flow-width' | 'slide-zoom' | 'none'
 
 const DEFAULT_RATIO = 0.45 // 右 pane 初始占比
 
@@ -74,12 +74,12 @@ const migrateLegacy = (parsed: Record<string, unknown>): EditorViewState | null 
   let topView: TopView | null = null
 
   if (main === 'document') {
-    leaves.push(subRaw === 'column' ? 'column' : 'page')
+    leaves.push(subRaw === 'column' ? 'column' : 'flow')
   } else if (main === 'present') {
     leaves.push('present')
   } else if (isTopView(main)) {
     topView = main
-    leaves.push('page')
+    leaves.push('flow')
   } else {
     return null
   }
@@ -97,7 +97,8 @@ const loadPersisted = (): EditorViewState | null => {
     const obj = parsed as Record<string, unknown>
 
     if (Array.isArray(obj.leaves)) {
-      const leaves = obj.leaves.filter(isLeaf)
+      // 早期四叶形状的 page 键 → flow（给将来 Word 式 A4「纸面」叶让位）
+      const leaves = obj.leaves.map((l) => (l === 'page' ? 'flow' : l)).filter(isLeaf)
       if (leaves.length >= 1) {
         return {
           leaves: leaves.slice(-2),
@@ -121,7 +122,7 @@ export const useEditorViewStore = defineStore('editorView', () => {
 
   const persisted = loadPersisted()
 
-  const leafSelection = ref<Leaf[]>(persisted?.leaves ?? ['page'])
+  const leafSelection = ref<Leaf[]>(persisted?.leaves ?? ['flow'])
   const topView = ref<TopView | null>(persisted?.topView ?? null)
   const rightRatio = ref<number>(persisted?.rightRatio ?? DEFAULT_RATIO)
 
@@ -154,10 +155,10 @@ export const useEditorViewStore = defineStore('editorView', () => {
   )
 
   /** 编辑器透镜：table 是顶级透镜；page/column 作全屏或分屏左 pane 时活。 */
-  const editorLens = computed<'page' | 'column' | 'table' | null>(() => {
+  const editorLens = computed<'flow' | 'column' | 'table' | null>(() => {
     if (topView.value === 'table') return 'table'
     if (topView.value !== null) return null
-    return orderedLeaves.value.find((l) => l === 'page' || l === 'column') ?? null
+    return orderedLeaves.value.find((l) => l === 'flow' || l === 'column') ?? null
   })
 
   const isSourceMode = computed<boolean>(() => topView.value === 'code')
@@ -166,17 +167,17 @@ export const useEditorViewStore = defineStore('editorView', () => {
   const sliderDuty = computed<SliderDuty>(() => {
     if (isSplit.value) return 'none'
     if (topView.value === 'table' || topView.value === 'figure' || topView.value === 'code') {
-      return 'page-width'
+      return 'flow-width'
     }
     const leaf = activeLeaf.value
     if (leaf === 'present') return 'none'
     if (leaf === 'slide') return 'slide-zoom' // 页缩放，待接线
-    return 'page-width'
+    return 'flow-width'
   })
 
   /** 光标指示（行:列）只在有活编辑面时才有意义。 */
   const isEditorVisible = computed<boolean>(
-    () => editorLens.value === 'page' || editorLens.value === 'column' || isSourceMode.value
+    () => editorLens.value === 'flow' || editorLens.value === 'column' || isSourceMode.value
   )
 
   const persist = (): void => {
@@ -233,7 +234,7 @@ export const useEditorViewStore = defineStore('editorView', () => {
   /** 回编辑面（放映/列表全屏态 Esc 用）：文侧 page 全屏。 */
   const focusEditor = (): void => {
     topView.value = null
-    leafSelection.value = ['page']
+    leafSelection.value = ['flow']
     persist()
     syncToPreferences()
   }
@@ -261,7 +262,7 @@ export const useEditorViewStore = defineStore('editorView', () => {
         leafSelection.value[0] === 'column' &&
         !hasColumns.value
       ) {
-        leafSelection.value = ['page']
+        leafSelection.value = ['flow']
         persist()
       }
     },

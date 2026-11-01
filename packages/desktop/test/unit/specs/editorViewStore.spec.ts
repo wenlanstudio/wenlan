@@ -42,34 +42,34 @@ describe('editorView selection model', () => {
   })
 
   it('declares the two-branch four-leaf structure', () => {
-    expect(LEAVES).toEqual(['page', 'column', 'slide', 'present'])
+    expect(LEAVES).toEqual(['flow', 'column', 'slide', 'present'])
     expect(TOP_VIEWS).toEqual(['table', 'figure', 'code'])
   })
 
   it('defaults to page fullscreen with the width slider', () => {
     const store = useEditorViewStore()
-    expect(store.leafSelection).toEqual(['page'])
-    expect(store.activeLeaf).toBe('page')
+    expect(store.leafSelection).toEqual(['flow'])
+    expect(store.activeLeaf).toBe('flow')
     expect(store.isSplit).toBe(false)
-    expect(store.sliderDuty).toBe('page-width')
-    expect(store.editorLens).toBe('page')
+    expect(store.sliderDuty).toBe('flow-width')
+    expect(store.editorLens).toBe('flow')
   })
 
   it('selecting a second leaf splits, ordered fine→coarse with the slider suppressed', () => {
     const store = useEditorViewStore()
     store.toggleLeaf('present')
-    expect(store.leafSelection).toEqual(['page', 'present'])
+    expect(store.leafSelection).toEqual(['flow', 'present'])
     expect(store.isSplit).toBe(true)
-    expect(store.leftLeaf).toBe('page')
+    expect(store.leftLeaf).toBe('flow')
     expect(store.rightLeaf).toBe('present')
-    expect(store.editorLens).toBe('page') // 活引擎在左 pane
+    expect(store.editorLens).toBe('flow') // 活引擎在左 pane
     expect(store.sliderDuty).toBe('none') // 宽度控制被分割条吸收
   })
 
   it('cross-branch pairs work: (page, slide) needs no column markers', () => {
     const store = useEditorViewStore()
     store.toggleLeaf('slide')
-    expect(store.leftLeaf).toBe('page')
+    expect(store.leftLeaf).toBe('flow')
     expect(store.rightLeaf).toBe('slide')
   })
 
@@ -77,9 +77,9 @@ describe('editorView selection model', () => {
     const store = useEditorViewStore()
     store.toggleLeaf('present')
     store.toggleLeaf('slide') // 选满两叶，第三叶点不动——配置选择式
-    expect(store.leafSelection).toEqual(['page', 'present'])
+    expect(store.leafSelection).toEqual(['flow', 'present'])
 
-    store.toggleLeaf('page') // 摘一片后才能换
+    store.toggleLeaf('flow') // 摘一片后才能换
     store.toggleLeaf('slide')
     expect(store.leafSelection).toEqual(['present', 'slide'])
     expect(store.leftLeaf).toBe('slide')
@@ -90,11 +90,11 @@ describe('editorView selection model', () => {
     const store = useEditorViewStore()
     store.toggleLeaf('present')
     store.toggleLeaf('present') // 摘掉 present → 回 page 全屏
-    expect(store.leafSelection).toEqual(['page'])
-    expect(store.activeLeaf).toBe('page')
+    expect(store.leafSelection).toEqual(['flow'])
+    expect(store.activeLeaf).toBe('flow')
 
-    store.toggleLeaf('page') // 最后一片点不掉
-    expect(store.leafSelection).toEqual(['page'])
+    store.toggleLeaf('flow') // 最后一片点不掉
+    expect(store.leafSelection).toEqual(['flow'])
   })
 
   it('clicking a leaf dismisses the active top view (mutual exclusion, state kept)', () => {
@@ -103,16 +103,16 @@ describe('editorView selection model', () => {
     store.toggleTopView('table')
     expect(store.topView).toBe('table')
     expect(store.editorLens).toBe('table')
-    expect(store.sliderDuty).toBe('page-width')
-    expect(store.leafSelection).toEqual(['page', 'present']) // 挂起不丢
+    expect(store.sliderDuty).toBe('flow-width')
+    expect(store.leafSelection).toEqual(['flow', 'present']) // 挂起不丢
 
     store.toggleLeaf('column') // 点叶 → 回叶世界（已满两叶，column 点不动）
     expect(store.topView).toBeNull()
-    expect(store.leafSelection).toEqual(['page', 'present'])
+    expect(store.leafSelection).toEqual(['flow', 'present'])
 
     store.toggleLeaf('present') // 先摘一片，column 才进得来
     store.toggleLeaf('column')
-    expect(store.leafSelection).toEqual(['page', 'column'])
+    expect(store.leafSelection).toEqual(['flow', 'column'])
   })
 
   it('toggling a top view twice returns to the leaves', () => {
@@ -120,18 +120,18 @@ describe('editorView selection model', () => {
     store.toggleTopView('code')
     expect(store.isSourceMode).toBe(true)
     expect(store.editorLens).toBeNull()
-    expect(store.sliderDuty).toBe('page-width')
+    expect(store.sliderDuty).toBe('flow-width')
 
     store.toggleTopView('code')
     expect(store.topView).toBeNull()
-    expect(store.activeLeaf).toBe('page')
+    expect(store.activeLeaf).toBe('flow')
   })
 
   it('focusEditor resets to page fullscreen (deck view Esc path)', () => {
     const store = useEditorViewStore()
     store.toggleLeaf('slide')
     store.focusEditor()
-    expect(store.leafSelection).toEqual(['page'])
+    expect(store.leafSelection).toEqual(['flow'])
     expect(store.topView).toBeNull()
   })
 
@@ -139,9 +139,9 @@ describe('editorView selection model', () => {
     const store = useEditorViewStore()
     store.toggleLeaf('present')
     store.removeLeaf('present')
-    expect(store.leafSelection).toEqual(['page'])
-    store.removeLeaf('page') // 保护
-    expect(store.leafSelection).toEqual(['page'])
+    expect(store.leafSelection).toEqual(['flow'])
+    store.removeLeaf('flow') // 保护
+    expect(store.leafSelection).toEqual(['flow'])
   })
 
   it('clamps and persists the split ratio', () => {
@@ -152,16 +152,16 @@ describe('editorView selection model', () => {
     expect(store.rightRatio).toBe(0.2)
     store.setRightRatio(0.6)
     const raw = JSON.parse(localStorage.getItem('marktext-editor-view') ?? '{}')
-    expect(raw).toMatchObject({ leaves: ['page'], rightRatio: 0.6 })
+    expect(raw).toMatchObject({ leaves: ['flow'], rightRatio: 0.6 })
   })
 
   it('fullscreen column falls back to page when the document has no markers', async() => {
     const store = useEditorViewStore()
     store.toggleLeaf('column') // → [page, column] 分屏（无标记也合法）
-    store.toggleLeaf('page') // 摘掉 page → 全屏 column
+    store.toggleLeaf('flow') // 摘掉 flow → 全屏 column
     // 无 begin 标记 → 健康回退（§4.4 #5）。watch 异步 flush，等一拍。
     await nextTick()
-    expect(store.leafSelection).toEqual(['page'])
+    expect(store.leafSelection).toEqual(['flow'])
   })
 
   it('fullscreen column stays when the document has markers', () => {
@@ -170,7 +170,7 @@ describe('editorView selection model', () => {
     } as never
     const store = useEditorViewStore()
     store.toggleLeaf('column')
-    store.toggleLeaf('page')
+    store.toggleLeaf('flow')
     expect(store.leafSelection).toEqual(['column'])
     expect(store.editorLens).toBe('column')
   })
@@ -197,16 +197,23 @@ describe('editorView persistence & migration', () => {
     store.setRightRatio(0.6)
 
     store = reloaded()
-    expect(store.leafSelection).toEqual(['page', 'slide'])
+    expect(store.leafSelection).toEqual(['flow', 'slide'])
     expect(store.rightRatio).toBe(0.6)
   })
 
-  it('migrates the v1 pair shape (document/page, slides, previewForm)', () => {
+  it('migrates the v1 pair shape (document/page → flow, slides, previewForm)', () => {
     localStorage.setItem(
       'marktext-editor-view',
       JSON.stringify({ mainView: 'document', subView: 'page' })
     )
-    expect(reloaded().leafSelection).toEqual(['page'])
+    expect(reloaded().leafSelection).toEqual(['flow'])
+
+    // 四叶形状里的 page 键 → flow（给将来 A4「纸面」叶让位）
+    localStorage.setItem(
+      'marktext-editor-view',
+      JSON.stringify({ leaves: ['page', 'slide'], rightRatio: 0.45 })
+    )
+    expect(reloaded().leafSelection).toEqual(['flow', 'slide'])
 
     localStorage.setItem(
       'marktext-editor-view',
@@ -219,14 +226,14 @@ describe('editorView persistence & migration', () => {
       'marktext-editor-view',
       JSON.stringify({ mainView: 'document', subView: 'page', previewForm: 'present' })
     )
-    expect(reloaded().leafSelection).toEqual(['page', 'present'])
+    expect(reloaded().leafSelection).toEqual(['flow', 'present'])
 
     // 已废的 document/slide 编辑视图 → 落回 page
     localStorage.setItem(
       'marktext-editor-view',
       JSON.stringify({ mainView: 'document', subView: 'slide' })
     )
-    expect(reloaded().leafSelection).toEqual(['page'])
+    expect(reloaded().leafSelection).toEqual(['flow'])
   })
 
   it('migrates the renamed main views (word/ppt/excel/dev) and reading/columns', () => {
@@ -236,7 +243,7 @@ describe('editorView persistence & migration', () => {
     )
     let store = reloaded()
     expect(store.topView).toBe('table')
-    expect(store.leafSelection).toEqual(['page'])
+    expect(store.leafSelection).toEqual(['flow'])
 
     localStorage.setItem(
       'marktext-editor-view',
@@ -255,12 +262,12 @@ describe('editorView persistence & migration', () => {
 
   it('falls back to defaults on garbage', () => {
     localStorage.setItem('marktext-editor-view', 'not-json{')
-    expect(reloaded().leafSelection).toEqual(['page'])
+    expect(reloaded().leafSelection).toEqual(['flow'])
 
     localStorage.setItem(
       'marktext-editor-view',
       JSON.stringify({ leaves: ['nope', 42] })
     )
-    expect(reloaded().leafSelection).toEqual(['page'])
+    expect(reloaded().leafSelection).toEqual(['flow'])
   })
 })

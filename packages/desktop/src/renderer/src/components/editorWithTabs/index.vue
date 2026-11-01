@@ -31,9 +31,9 @@
           mode="panel"
           :markdown="markdown"
         />
-        <!-- 透镜宿主：WYSIWYG 引擎在 page/column/table 透镜间常驻，切换只翻转
+        <!-- 透镜宿主：WYSIWYG 引擎在 flow/column/table 透镜间常驻，切换只翻转
              `data-lens` 而不重绘（TODO1 #21、#26）。分屏时活引擎占左 pane
-             （(page,column) 的左=page 编辑、右=column 投影）。 -->
+             （(flow,column) 的左=flow 编辑、右=column 投影）。 -->
         <div
           v-else-if="editorLens"
           class="lens-host"
@@ -173,7 +173,7 @@ const hasLeftPane = computed(
 )
 
 // 分屏左 pane 的引擎透镜由 store.editorLens 给出：orderedLeaves 首个
-// page/column 叶（LEAVES 序保证左细右粗、文左示右）。
+// flow/column 叶（LEAVES 序保证左细右粗、文左示右）。
 
 // —— 分割条拖拽（视图模型 §3）——
 const startDrag = (ev: PointerEvent): void => {

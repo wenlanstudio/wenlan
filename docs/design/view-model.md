@@ -1,7 +1,8 @@
 # 视图模型：文示二支 × 四叶选择
 
 > 本文是视图系统的唯一设计依据；代码与本文不一致时，先改本文。
-> 术语：四叶 = page / column / slide / present；slide 的 UI 刻度名「览」。
+> 术语：四叶 = flow / column / slide / present；UI 刻度 =「文 栏│览 示」。
+> flow 的键名刻意避开 page——给将来 Word 式 A4 分页的「纸面（paper）」叶让位。
 
 ## 1. 结构：两支四叶
 
@@ -9,8 +10,8 @@
  文（编辑态）                示（展示态）
  muya 进程内                 md2slides iframe
  ┌──────┬───────┐          ┌────────┬─────────┐
-  page  column            slide    present
-  全文   分栏               页览      放映
+  flow  column            slide    present
+  全文流 分栏               页览      放映
  └──────┴───────┘          └────────┴─────────┘
  空间轴：连续 → 离散         时间轴：全页可见 → 一次一页
  可编辑                      只读（真分页 · 真主题）
@@ -26,11 +27,11 @@
 - 四叶**常驻平铺**在切换器上（刻度「文 栏 │ 览 示」，支间一道分隔线提示两根轴）；
 - **配置选择式**：点一下选中、再点一下取消，搭配由用户自定，**至多两叶**：
   - 1 叶 → 该视图全屏；
-  - 2 叶 → 分屏，左右按按钮序（page < column < slide < present）——
+  - 2 叶 → 分屏，左右按按钮序（flow < column < slide < present）——
     文左示右、细左粗右由顺序自动成立；
   - 已两叶时第三叶点不动（先摘一片才能换）；最后一片不可摘（不可选到零）；
 - 表/图/本与四叶互斥：选中顶级视图时叶选择挂起不丢，切回即恢复；
-- column 叶只对真有 `begin` 标记的文档显示；全屏 column 在标记消失时回退 page
+- column 叶只对真有 `begin` 标记的文档显示；全屏 column 在标记消失时回退 flow
   （分屏中的 column 投影不回退——投影为空无害）；
 - 选择与分割比例持久化；旧持久化形状（mainView/subView 二级结构）自动迁移。
 
@@ -38,7 +39,7 @@
 
 - 中间**分割条可拖**，比例记住（0.2–0.8）；**分屏时页宽滑块失效收起**
   （宽度控制被分割条吸收）；
-- 单视图滑块回归：page/表/图 = 页宽；present 无；页览 = 页缩放（声明未接线）；
+- 单视图滑块回归：flow/表/图 = 内容列宽（页宽滑块）；present 无；页览 = 页缩放（声明未接线）；
 - (览, 示) 两叶皆只读 = 预演/导航模式（PPT 缩略图 + 大页的姿态）；
 - 键盘归属：分屏时编辑器保焦点；deck 只吃鼠标/触屏；deck 聚焦时 Esc 关自己。
 
@@ -57,10 +58,10 @@
 
 | 物                              | 位置                                                                                                  |
 | ------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| 选择状态 / 派生面 / 迁移        | `store/editorView.ts`（leafSelection ≤2 + topView 互斥 + rightRatio）                                 |
+| 选择状态 / 派生面 / 迁移        | `store/editorView.ts`（leafSelection ≤2 + topView 互斥 + rightRatio；旧 page 键自动更名 flow）        |
 | 四叶切换器 + 滑块联动           | `components/viewSwitcher/`                                                                            |
 | 分屏壳 / 分割条 / pane 接线     | `components/editorWithTabs/index.vue`                                                                 |
 | 示支两叶的投影面（放映 / 页览） | `components/editorWithTabs/deckPane.vue`（leaf × view/panel 两维变体；服务引用计数）                  |
-| (page, column) 的分栏投影       | `components/editorWithTabs/leafProjection.vue`（muya 只读第二实例）                                   |
+| (flow, column) 的分栏投影       | `components/editorWithTabs/leafProjection.vue`（muya 只读第二实例）                                   |
 | deck 侧页览布局与溢出徽章       | md2slides 仓 `host/marktext/deck-full-entry.js`（`runOpts.view:"list"`）+ `host/browser/deck-core.js` |
 | 资产分发                        | 改 md2slides 后 `npm run pack:marktext` + fork `scripts/sync-md2slides.mjs`，重启 dev 生效            |

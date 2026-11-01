@@ -4,7 +4,7 @@
          滑块职责由 store.sliderDuty 给出——分屏时一律收起（宽度控制被
          分割条吸收，视图模型 §3）。 -->
     <div
-      v-if="sliderDuty === 'page-width'"
+      v-if="sliderDuty === 'flow-width'"
       class="width-slider-group"
       :title="t('view.pageWidth')"
     >
@@ -73,7 +73,7 @@ const { editorLineWidth } = storeToRefs(preferencesStore)
 // 叶的短名与提示。label 是单字 CJK 刻度（与主视图图标同族，刻意不翻译）；
 // title 中文提示——与 deck 工具条同策略（该用户群中文工作语言）。
 const LEAF_META: Record<Leaf, { label: string; title: string }> = {
-  page: { label: '文', title: '全文（连续编辑）' },
+  flow: { label: '文', title: '全文（连续流编辑）' },
   column: { label: '栏', title: '分栏（空间离散，需 begin 标记）' },
   slide: { label: '览', title: '页览——全部真实页排开看（溢出页带 ⚠）' },
   present: { label: '示', title: '放映（一次一页）' }
