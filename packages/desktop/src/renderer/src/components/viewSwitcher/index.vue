@@ -1,6 +1,6 @@
 <template>
   <div class="view-switcher">
-    <!-- 从右往左：主视图（五叶 + 表图本）最右固定，页宽滑块最左。
+    <!-- 从右往左：主视图（六叶 + 表图本）最右固定，页宽滑块最左。
          滑块职责由 store.sliderDuty 给出——分屏时一律收起（宽度控制被
          分割条吸收，视图模型 §3）。 -->
     <div
@@ -20,16 +20,16 @@
       <span class="width-label">{{ sliderValue }}</span>
     </div>
 
-    <!-- 五叶（视图模型 §2/§5）：文 { flow 全文, column 分栏, paper 纸面 } │ 示
-         { slide 页览, present 放映 }。paper 是 M0 骨架，暂以流渲染。配置选择式：
-         点选/点消至多两叶（1=全屏 2=分屏，选满点不动、不可选空）。column 只对
-         真有分栏标记的文档显示（§4.4 #5）。 -->
+    <!-- 二组六叶（视图模型 §1/§2）：编辑组 { 文 全文, 栏 分栏, 页 逻辑页 } │
+         展示组 { 纸 物理纸, 览 页览, 示 放映 }。配置选择式：点选/点消至多两叶
+         （1=全屏 2=分屏，选满点不动、不可选空）。column 只对真有分栏标记的
+         文档显示（§4.4 #5）。 -->
     <div class="leaves">
       <button
         v-for="leaf in visibleLeaves"
         :key="leaf"
         class="leaf-btn"
-        :class="{ active: leafSelection.includes(leaf), groupStart: leaf === 'slide' }"
+        :class="{ active: leafSelection.includes(leaf), groupStart: leaf === 'paper' }"
         :title="LEAF_META[leaf].title"
         @click="toggleLeaf(leaf)"
       >
@@ -73,11 +73,14 @@ const { editorLineWidth } = storeToRefs(preferencesStore)
 
 // 叶的短名与提示。label 是单字 CJK 刻度（与主视图图标同族，刻意不翻译）；
 // title 中文提示——与 deck 工具条同策略（该用户群中文工作语言）。
+// 刻度「文 栏 页│纸 览 示」：页 = 逻辑纸（缝叠加投影）、纸 = 物理纸（纸卡
+// 推挤流），共享同一测量基座（视图模型 §5）。
 const LEAF_META: Record<Leaf, { label: string; title: string }> = {
   flow: { label: '文', title: '全文（连续流编辑）' },
   column: { label: '栏', title: '分栏（空间离散，需 begin 标记）' },
-  paper: { label: '纸', title: '纸面——A4 版面编辑（度量对齐打印；分页线建设中）' },
-  slide: { label: '览', title: '页览——全部真实页排开看（溢出页带 ⚠）' },
+  page: { label: '页', title: '逻辑页——连续流 + 分页缝提示（Word 草稿视图）' },
+  paper: { label: '纸', title: '纸面——真纸卡排版（Word 页面视图，卡内可编辑）' },
+  slide: { label: '览', title: '页览——全部真实页排开看（溢出的逻辑页带「N页」徽章）' },
   present: { label: '示', title: '放映（一次一页）' }
 }
 
@@ -131,7 +134,7 @@ const handleSliderChange = () => {
   gap: 1px;
 }
 
-/* 文支与示支之间一道分隔，提示两支两根粒度轴（视图模型 §1） */
+/* 编辑组与展示组之间一道分隔，提示二组两根正交轴（视图模型 §1） */
 .leaf-btn.groupStart {
   border-left: 1px solid var(--editorColor10);
   padding-left: 7px;

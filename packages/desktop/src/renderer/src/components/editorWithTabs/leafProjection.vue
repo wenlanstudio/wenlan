@@ -1,7 +1,7 @@
 <template>
   <div
     class="leaf-projection"
-    :class="{ 'paper-projection': lens === 'paper' }"
+    :class="{ 'paper-projection': lens === 'paper' || lens === 'page' }"
   >
     <div
       ref="host"
@@ -12,8 +12,9 @@
 
 <script setup lang="ts">
 /**
- * leafProjection — 分屏右 pane 的文支叶只读投影（视图模型 §1/§2）：column
- * 分栏 / paper 纸面（A4 版式基见 assets/styles/paperLens.css，§5）。
+ * leafProjection — 分屏右 pane 的文支叶只读投影（视图模型 §1/§2 编辑面不变
+ * 量：右 pane 一律只读）：column 分栏 / page 逻辑页 / paper 纸面（页纸共享
+ * A4 版式基，见 assets/styles/paperLens.css，§5）。
  *
  * 同一份 markdown 的**只读第二 muya 实例**（columnsLayout 随 lens 建构期
  * 定死）——编辑发生在左 pane 的活引擎上，这里只展示"这一叶长什么样"。
@@ -37,8 +38,9 @@ import { getMuyaLocale } from '@/util/muyaLocale'
 import { usePaperPagination, parsePaperGeometry } from '@/util/paperPagination'
 
 const props = defineProps<{
-  /** 投影哪种文支叶：column=分栏透镜；paper=纸面（A4 版式，paperLens.css）。 */
-  lens: 'column' | 'paper'
+  /** 投影哪种文支叶：column=分栏透镜；page=逻辑页；paper=纸面。page/paper
+   *  共享纸面版式基（paperLens.css），投影挂同一 .paper-projection 类。 */
+  lens: 'column' | 'page' | 'paper'
   markdown: string
 }>()
 
@@ -48,9 +50,9 @@ const { language } = storeToRefs(preferencesStore)
 const host = ref<HTMLDivElement | null>(null)
 const muya = shallowRef<Muya | null>(null)
 
-// 纸面投影（lens='paper'）同挂分页投影（活透镜同一套测量，§5）。
+// 页/纸投影（lens 为 page/paper）同挂分页投影（活透镜同一套测量，§5）。
 usePaperPagination({
-  isActive: () => props.lens === 'paper',
+  isActive: () => props.lens === 'paper' || props.lens === 'page',
   getRoot: () => muya.value?.domNode ?? null,
   getGeometry: () => parsePaperGeometry(props.markdown)
 })

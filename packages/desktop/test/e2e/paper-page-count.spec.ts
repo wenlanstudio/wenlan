@@ -6,7 +6,8 @@ import * as path from 'node:path'
 import { inflateRawSync, inflateSync } from 'node:zlib'
 import { launchWithMarkdown, waitForMenuReady, sendIpcToRenderer } from './helpers'
 
-// 纸面叶硬验收（view-model §5 / M2）：屏显分页数 = printToPDF 页数。
+// 页/纸叶硬验收（view-model §5 / M2 + §5 评审补裁）：屏显分页数 = printToPDF
+// 页数，对页/纸两叶同时成立（两叶同钉纸面版式基，推挤不改块高）。
 //
 // 同源链条：屏测（util/paperPagination keep-together 贪心，A4 内容高 257mm、
 // 视觉 px）↔ 打印（@page 20/15mm + .markdown-body>*{break-inside:avoid}，
@@ -98,20 +99,23 @@ const countPdfPages = (data: Buffer): number => {
   return count
 }
 
-test.describe('paper leaf hard acceptance: screen pages == printToPDF pages', () => {
-  // 一文档一实例：启动 → 进纸面叶全屏 → 读屏测页数（两读稳定）→ 走真实
+test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages', () => {
+  // 一文档一实例：启动 → 进页/纸叶全屏 → 读屏测页数（两读稳定）→ 走真实
   // 导出管线数 PDF 页。Windows 冷启动慢，hook/test 超时给足。
-  const runAcceptance = async(doc: string): Promise<{ screenCount: number; pdfCount: number }> => {
+  const runAcceptance = async(
+    doc: string,
+    leafLabel = '纸'
+  ): Promise<{ screenCount: number; pdfCount: number }> => {
     const launched = await launchWithMarkdown(doc)
     const { app, page } = launched
     try {
       await waitForMenuReady(app)
 
-      // —— 进纸面叶全屏：(文, 纸) 成对后摘掉 文。 ——
-      const paperBtn = page.locator('.view-switcher .leaf-btn', { hasText: '纸' })
+      // —— 进页/纸叶全屏：(文, 叶) 成对后摘掉 文。 ——
+      const leafBtn = page.locator('.view-switcher .leaf-btn', { hasText: leafLabel })
       const flowBtn = page.locator('.view-switcher .leaf-btn', { hasText: '文' })
-      await paperBtn.waitFor({ state: 'visible', timeout: 15000 })
-      await paperBtn.click()
+      await leafBtn.waitFor({ state: 'visible', timeout: 15000 })
+      await leafBtn.click()
       await flowBtn.click()
 
       // —— 屏测页数：等 overlay 出数，并确认两读稳定（防抖合帧后不再变动）。 ——
@@ -137,7 +141,7 @@ test.describe('paper leaf hard acceptance: screen pages == printToPDF pages', ()
       const pdf = await pollForPdfFile(outPath)
       const pdfCount = countPdfPages(pdf)
 
-      expect(screenCount, 'paper leaf screen page count').toBeGreaterThan(0)
+      expect(screenCount, `${leafLabel} leaf screen page count`).toBeGreaterThan(0)
       expect(pdfCount, 'printToPDF page count').toBeGreaterThan(0)
       return { screenCount, pdfCount }
     } finally {
@@ -150,6 +154,15 @@ test.describe('paper leaf hard acceptance: screen pages == printToPDF pages', ()
     test.setTimeout(150_000)
     const { screenCount, pdfCount } = await runAcceptance(DOC)
     // 文档设计钉死 2 页：填充远离页界，页数只对"机制同源"敏感。
+    expect(screenCount).toBe(2)
+    expect(screenCount).toBe(pdfCount)
+  })
+
+  test('the page leaf (logical paper) matches print too (评审补裁：页钉纸面版式基)', async() => {
+    test.setTimeout(150_000)
+    // 同一文档走页叶：版式基同纸叶钉死纸面宽度 → 缝叠加的页数与纸叶、
+    // 打印三方一致（页宽若游离，等式即破）。
+    const { screenCount, pdfCount } = await runAcceptance(DOC, '页')
     expect(screenCount).toBe(2)
     expect(screenCount).toBe(pdfCount)
   })

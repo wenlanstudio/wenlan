@@ -44,6 +44,12 @@ describe('paper lens basis mirrors the print chain (view-model §5 / M1)', () =>
     expect(paperLens).toContain('min-height: var(--paper-page-height) !important')
   })
 
+  it('pins the page leaf (logical paper) to the same layout basis (§5 评审补裁)', () => {
+    // 页叶同钉纸面版式基——页数相等（硬验收对页/纸同时成立）的物理前提。
+    expect(paperLens).toContain("[data-lens='page'] .mu-container")
+    expect(paperLens).toContain("[data-lens='page'] .mu-editor")
+  })
+
   it('mirrors github-markdown-css block metrics (the pagination drivers)', () => {
     expect(paperLens).toContain('margin: 0 0 10px') // p
     expect(paperLens).toContain('margin: 1.5rem 0 1rem') // h1–h6

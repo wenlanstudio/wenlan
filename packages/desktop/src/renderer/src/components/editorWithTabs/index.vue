@@ -31,9 +31,9 @@
           mode="panel"
           :markdown="markdown"
         />
-        <!-- 透镜宿主：WYSIWYG 引擎在 flow/column/table 透镜间常驻，切换只翻转
-             `data-lens` 而不重绘（TODO1 #21、#26）。分屏时活引擎占左 pane
-             （(flow,column) 的左=flow 编辑、右=column 投影）。 -->
+        <!-- 透镜宿主：WYSIWYG 引擎在 flow/column/page/paper/table 透镜间常驻，
+             切换只翻转 `data-lens` 而不重绘（TODO1 #21、#26）。分屏时活引擎占
+             左 pane（唯一编辑面，编辑面不变量 §2）。 -->
         <div
           v-else-if="editorLens"
           class="lens-host"
@@ -102,9 +102,10 @@
         @pointerdown="startDrag"
       />
       <!-- 右 pane：示支叶（slide 列表 / present 放映）或文支投影（column 分栏 /
-           paper 纸面）。key 按 leaf 分实例——同一 iframe 实例的 view 恒定（deck
-           侧 player/列表布局二选一），slide 与 present 各持一份；投影实例的
-           columnsLayout 建构期定死，column↔paper 切换同样按 key 重建。 -->
+           page 逻辑页 / paper 纸面——右 pane 一律只读投影，编辑面不变量 §2）。
+           key 按 leaf 分实例——同一 iframe 实例的 view 恒定（deck 侧 player/列表
+           布局二选一），slide 与 present 各持一份；投影实例的 columnsLayout
+           建构期定死，column↔page↔paper 切换同样按 key 重建。 -->
       <div
         v-if="isSplit"
         class="pane pane-right"
@@ -117,7 +118,7 @@
           :markdown="markdown"
         />
         <leaf-projection
-          v-else-if="rightLeaf === 'column' || rightLeaf === 'paper'"
+          v-else-if="rightLeaf === 'column' || rightLeaf === 'page' || rightLeaf === 'paper'"
           :key="`proj-${rightLeaf}`"
           :lens="rightLeaf"
           :markdown="markdown"

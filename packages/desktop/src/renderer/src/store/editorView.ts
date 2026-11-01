@@ -5,28 +5,34 @@ import { usePreferencesStore } from './preferences'
 import { useEditorStore } from './editor'
 
 /**
- * 视图模型（docs/design/view-model.md）：文示二支 × 五叶选择。
+ * 视图模型（docs/design/view-model.md）：二组六叶选择。
  *
- * 文（编辑态，muya）= { flow 全文, column 分栏, paper 纸面(A4) }；示（展示态，
- * md2slides iframe）= { slide 页览, present 放映 }。分界 = 引擎边界 = 可编辑性
- * 边界。paper 是 M0 骨架（§5）：可选/可分屏/可持久化，暂以 flow 形态渲染。
+ * 编辑组（写作姿态，muya 进程内）= { flow 全文, column 分栏, page 逻辑页,
+ * paper 纸面(A4) }；展示组（成页姿态）= { slide 页览, present 放映 }（md2slides
+ * iframe）。组判据 = 姿态而非可编辑性；引擎边界（muya 四叶 │ iframe 两叶）
+ * 不与刻度分隔线重合。page = 逻辑纸（连续流 + 缝叠加，M2/M3 升格为一等叶），
+ * paper = 物理纸（推挤流 + 卡层）；两叶共享同一测量基座，版式基同钉纸面宽度。
  *
- * 选择模型：五叶平铺常驻，点击选中至多两叶——一叶全屏、两叶分屏（左右按
- * LEAVES 顺序，文左示右、细左粗右自动成立）。配置选择式（淘宝选规格）：
- * 点一下选中、再点一下取消，搭配由用户自定；已选满两叶时第三叶点不动
- * （先摘一片才能换）；最后一片不可摘（不可选到零）。
- * 表/图/本是顶级正交视图，与四叶互斥（挂起不丢）。
+ * 选择模型：六叶平铺常驻（栏格随文档有无 begin 标记显隐），点击选中至多两叶
+ * ——一叶全屏、两叶分屏（左右按 LEAVES 顺序，编辑左展示右、细左粗右自动
+ * 成立）。配置选择式（淘宝选规格）：点一下选中、再点一下取消，搭配由用户
+ * 自定；已选满两叶时第三叶点不动（先摘一片才能换）；最后一片不可摘（不可
+ * 选到零）。编辑面不变量：同一时刻至多一个活编辑面——左 pane/全屏 = 活引擎，
+ * 右 pane 一律只读投影。
+ * 表/图/本是顶级正交视图，与六叶互斥（挂起不丢）。
  */
 
-export type Leaf = 'flow' | 'column' | 'paper' | 'slide' | 'present'
+export type Leaf = 'flow' | 'column' | 'page' | 'paper' | 'slide' | 'present'
 
-/** 按钮顺序 = 分屏左右顺序（细→粗、文→示）。paper 落文支第三位（§5）。 */
-export const LEAVES = ['flow', 'column', 'paper', 'slide', 'present'] as const
+/** 按钮顺序 = 分屏左右顺序（细→粗、编辑左展示右）。page 逻辑页落第三位、
+ *  paper 物理纸落第四位（§1/§5：页纸共享测量基座，只差渲染姿态）。 */
+export const LEAVES = ['flow', 'column', 'page', 'paper', 'slide', 'present'] as const
 
 const SHOW_LEAVES: readonly Leaf[] = ['slide', 'present']
 
-/** paper 只与文支配对（§5 交互）：纸×览/示在 v1 语义不成立（览对 A4 文档
- *  v1 不做、纸对幻灯片文档无意义），与示支叶相点即单选替换。 */
+/** paper 只与前三叶配对（§2）：纸×览/示在 v1 语义不成立——分屏要求两侧对
+ *  同一文档做一致解释，而 md2slides 只服务幻灯片形态（览对 A4 文档 v1 不做、
+ *  纸对幻灯片文档给不出幻灯片语义；全屏单叶不受此限），与它们相点即单选替换。 */
 const isPairable = (a: Leaf, b: Leaf): boolean =>
   !(a === 'paper' && SHOW_LEAVES.includes(b)) && !(b === 'paper' && SHOW_LEAVES.includes(a))
 
@@ -43,7 +49,7 @@ export type TopView = 'table' | 'figure' | 'code'
 
 export const TOP_VIEWS = ['table', 'figure', 'code'] as const
 
-export type SliderDuty = 'flow-width' | 'slide-zoom' | 'paper-zoom' | 'none'
+export type SliderDuty = 'flow-width' | 'page-zoom' | 'slide-zoom' | 'paper-zoom' | 'none'
 
 const DEFAULT_RATIO = 0.45 // 右 pane 初始占比
 
@@ -171,13 +177,15 @@ export const useEditorViewStore = defineStore('editorView', () => {
     topView.value === null && leafSelection.value.length === 1 ? leafSelection.value[0]! : null
   )
 
-  /** 编辑器透镜：table 是顶级透镜；flow/column/paper 作全屏或分屏左 pane 时活。
-   *  paper M0 骨架：引擎照 flow 渲染，data-lens='paper' 留给 M1 版式基挂钩。 */
-  const editorLens = computed<'flow' | 'column' | 'paper' | 'table' | null>(() => {
+  /** 编辑器透镜：table 是顶级透镜；flow/column/page/paper 作全屏或分屏左
+   *  pane 时活。page/paper 共享纸面版式基（版式基钉死纸面宽度，§5）。 */
+  const editorLens = computed<'flow' | 'column' | 'page' | 'paper' | 'table' | null>(() => {
     if (topView.value === 'table') return 'table'
     if (topView.value !== null) return null
     return (
-      orderedLeaves.value.find((l) => l === 'flow' || l === 'column' || l === 'paper') ?? null
+      orderedLeaves.value.find(
+        (l) => l === 'flow' || l === 'column' || l === 'page' || l === 'paper'
+      ) ?? null
     )
   })
 
@@ -192,6 +200,8 @@ export const useEditorViewStore = defineStore('editorView', () => {
     const leaf = activeLeaf.value
     if (leaf === 'present') return 'none'
     if (leaf === 'slide') return 'slide-zoom' // 页缩放，待接线
+    // 页/纸共享测量基座：版式基钉死纸面宽度，缩放是刚需（§5 交互入位）。
+    if (leaf === 'page') return 'page-zoom' // 页缩放，待接线（与 paper-zoom 同族）
     if (leaf === 'paper') return 'paper-zoom' // 页缩放，待接线（§5）
     return 'flow-width'
   })
@@ -201,6 +211,7 @@ export const useEditorViewStore = defineStore('editorView', () => {
     () =>
       editorLens.value === 'flow' ||
       editorLens.value === 'column' ||
+      editorLens.value === 'page' ||
       editorLens.value === 'paper' ||
       isSourceMode.value
   )
@@ -259,7 +270,7 @@ export const useEditorViewStore = defineStore('editorView', () => {
     syncToPreferences()
   }
 
-  /** 回编辑面（放映/列表全屏态 Esc 用）：文侧 page 全屏。 */
+  /** 回编辑面（放映/列表全屏态 Esc 用）：文侧 flow 全屏。 */
   const focusEditor = (): void => {
     topView.value = null
     leafSelection.value = ['flow']
