@@ -20,9 +20,9 @@
       <span class="width-label">{{ sliderValue }}</span>
     </div>
 
-    <!-- 四叶（视图模型 §2）：文 { page 全文, column 分栏 } │ 示 { slide 列表,
-         present 放映 }。点击切换选中，至多两叶（1=全屏 2=分屏，FIFO 换选，
-         不可选空）。column 只对真有分栏标记的文档显示（§4.4 #5）。 -->
+    <!-- 四叶（视图模型 §2）：文 { page 全文, column 分栏 } │ 示 { slide 页览,
+         present 放映 }。配置选择式：点选/点消至多两叶（1=全屏 2=分屏，
+         选满点不动、不可选空）。column 只对真有分栏标记的文档显示（§4.4 #5）。 -->
     <div class="leaves">
       <button
         v-for="leaf in visibleLeaves"
@@ -75,7 +75,7 @@ const { editorLineWidth } = storeToRefs(preferencesStore)
 const LEAF_META: Record<Leaf, { label: string; title: string }> = {
   page: { label: '文', title: '全文（连续编辑）' },
   column: { label: '栏', title: '分栏（空间离散，需 begin 标记）' },
-  slide: { label: '列', title: '幻灯片列表（全部真实页 · 溢出警告）' },
+  slide: { label: '览', title: '页览——全部真实页排开看（溢出页带 ⚠）' },
   present: { label: '示', title: '放映（一次一页）' }
 }
 
