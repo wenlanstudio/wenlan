@@ -145,7 +145,7 @@ export const useEditorViewStore = defineStore('editorView', () => {
 
   // §4.4 #5 — the Column view only makes sense for a document that actually
   // has a `begin` marker. Drives the leaf button filter and the automatic
-  // fullscreen fallback back to `page`.
+  // fullscreen fallback back to `flow`.
   const currentMarkdown = computed<string>(
     () => (editorStore.currentFile as { markdown?: string } | null)?.markdown ?? ''
   )
@@ -279,7 +279,7 @@ export const useEditorViewStore = defineStore('editorView', () => {
     toggleTopView('code')
   }
 
-  // §4.4 #5 — fullscreen column falls back to page when the document has no
+  // §4.4 #5 — fullscreen column falls back to flow when the document has no
   // column markers (split keeps it: a projection of nothing is harmless).
   watch(
     [hasColumns, leafSelection, topView],
