@@ -49,8 +49,15 @@ mkdirSync(vendorDestDir, { recursive: true })
 const banner =
   '// VENDORED — source: md2slides core/paginate/layout-core.js（勿手改；\n' +
   '// 在 md2slides 跑 `npm run pack:marktext` 后重跑 scripts/sync-md2slides.mjs 再生）\n'
-writeFileSync(
-  resolve(vendorDestDir, 'layout-core.js'),
-  banner + readFileSync(vendorSrc, 'utf-8')
-)
-console.log(`layout-core 已 vendor → ${vendorDestDir}`)
+// CJS → ESM：单源仓保持 CJS（deck 打包链吃它），vendored 副本必须转 ESM——
+// dev 下 vite 对源码文件不做 CJS 互操（生产构建有 rollup 互操），具名导入
+// 一个 module.exports 形态的源文件会让整个渲染器模块图在加载期炸掉（纯白）。
+const body = readFileSync(vendorSrc, 'utf-8')
+const esmBody = body.replace(/module\.exports\s*=\s*\{/, 'export {')
+if (esmBody === body || /module\.exports/.test(esmBody)) {
+  console.error('layout-core 的导出形态变了（非 module.exports = { … } 或转换后仍有残留）——')
+  console.error('请相应更新本脚本的 CJS→ESM 转换与 renderer 侧消费方式')
+  process.exit(1)
+}
+writeFileSync(resolve(vendorDestDir, 'layout-core.js'), banner + esmBody)
+console.log(`layout-core 已 vendor（CJS→ESM）→ ${vendorDestDir}`)

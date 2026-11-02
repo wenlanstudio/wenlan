@@ -263,7 +263,7 @@ const cutLinesFitting = (lineHeights, room, pageRoom, opts = {}) => {
   return { kind: "split-anyway", keep: Math.max(0, maxFit) }
 }
 
-module.exports = {
+export {
   STRATEGY,
   isHeadingTag,
   canBeIntroTag,
