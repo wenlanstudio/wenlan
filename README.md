@@ -68,7 +68,7 @@ More detail lives in [AGENTS.md](AGENTS.md).
 Wenlan Studio is a fork of [MarkText](https://github.com/marktext/marktext), which is
 MIT-licensed. The original copyright notice is retained in [LICENSE](LICENSE).
 The slide/present rendering engine is built on
-[md2slides](https://github.com/quqingyuan/md2slides).
+[md2slides](https://github.com/wenlanstudio/md2slides).
 
 ## License
 
