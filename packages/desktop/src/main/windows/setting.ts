@@ -1,11 +1,11 @@
 import path from 'path'
-import { BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import type { BrowserWindowConstructorOptions } from 'electron'
 import { electronLocalshortcut } from '@hfelix/electron-localshortcut'
 import BaseWindow, { WindowLifecycle, WindowType, type EnvLike, type PreferenceLike } from './base'
 import type Accessor from '../app/accessor'
 import { centerWindowOptions } from './utils'
-import { TITLE_BAR_HEIGHT, preferencesWinOptions, isLinux, isOsx } from '../config'
+import { TITLE_BAR_HEIGHT, preferencesWinOptions, isLinux, isOsx, isWindows } from '../config'
 import log from 'electron-log'
 
 class SettingWindow extends BaseWindow {
@@ -33,7 +33,7 @@ class SettingWindow extends BaseWindow {
         y?: number
       }
     )
-    if (isLinux) {
+    if (isLinux || (isWindows && !app.isPackaged)) {
       winOptions.icon = path.join(
         (global as unknown as { __static: string }).__static,
         'logo-96px.png'

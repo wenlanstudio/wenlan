@@ -1,5 +1,5 @@
 import path from 'path'
-import { BrowserWindow, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import type { BrowserWindowConstructorOptions } from 'electron'
 import log from 'electron-log'
 import windowStateKeeper from 'electron-window-state'
@@ -7,7 +7,7 @@ import { isChildOfDirectory, isSamePathSync } from 'common/filesystem/paths'
 import BaseWindow, { WindowLifecycle, WindowType } from './base'
 import type Accessor from '../app/accessor'
 import { ensureWindowPosition, zoomIn, zoomOut } from './utils'
-import { TITLE_BAR_HEIGHT, editorWinOptions, isLinux, isOsx } from '../config'
+import { TITLE_BAR_HEIGHT, editorWinOptions, isLinux, isOsx, isWindows } from '../config'
 import { showEditorContextMenu } from '../contextMenu/editor'
 import { loadMarkdownFile, loadCliMarkdownFile } from '../filesystem/markdown'
 import { switchLanguage } from '../spellchecker'
@@ -105,7 +105,9 @@ class EditorWindow extends BaseWindow {
       editorWinOptions,
       options
     )
-    if (isLinux) {
+    // Linux 没有内嵌 exe 图标的机制，必须显式设置；Windows 仅在 dev 下设置
+    // （打包态任务栏取 exe 内嵌的多尺寸 ico，若再设 png 反而降质）
+    if (isLinux || (isWindows && !app.isPackaged)) {
       winOptions.icon = path.join(process.cwd(), 'static', 'logo-96px.png')
     }
 
