@@ -666,7 +666,7 @@ const commands: CommandDescriptor[] = [
   },
 
   // --------------------------------------------------------------------------
-  // MarkText
+  // Wenlan Studio
 
   {
     id: 'file.preferences',

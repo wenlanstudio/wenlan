@@ -1,6 +1,8 @@
+import path from 'path'
 import { app } from 'electron'
 import EnvPaths from 'common/envPaths'
 import { ensureDirSync } from 'common/filesystem'
+import { migrateLegacyUserData } from './userDataMigration'
 
 class AppPaths extends EnvPaths {
   /**
@@ -12,6 +14,13 @@ class AppPaths extends EnvPaths {
     if (!userDataPath) {
       // Use default user data path.
       userDataPath = app.getPath('userData')
+
+      // One-time migration from the MarkText-named user data directory.
+      const appDataPath = app.getPath('appData')
+      migrateLegacyUserData(userDataPath, [
+        path.join(appDataPath, 'MarkText'),
+        path.join(appDataPath, 'marktext')
+      ])
     }
 
     // Initialize environment paths

@@ -1,34 +1,15 @@
 {
-  "name": "marktext",
-  "version": "0.22.0-dev",
-  "description": "MarkText",
+  "name": "wenlan-studio",
+  "version": "1.0.0",
+  "description": "Wenlan Studio — a Markdown editor with document, column, slide and present views",
   "main": "./out/main/index.js",
   "author": {
-    "name": "Jocs",
-    "email": "ransixi@gmail.com",
-    "url": "https://github.com/Jocs"
+    "name": "Wenlan Studio Contributors"
   },
-  "maintainer": [
-    {
-      "name": "Jocs",
-      "email": "ransixi@gmail.com",
-      "url": "https://github.com/Jocs"
-    },
-    {
-      "name": "Felix Häusler",
-      "email": "hfelix@protonmail.ch",
-      "url": "https://github.com/fxha"
-    },
-    {
-      "name": "Tkaixiang",
-      "email": "tkaixiang@gmail.com",
-      "url": "https://github.com/Tkaixiang"
-    }
-  ],
-  "homepage": "https://github.com/marktext/marktext",
+  "homepage": "https://github.com/quqingyuan/wenlan-studio",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/marktext/marktext.git"
+    "url": "git+https://github.com/quqingyuan/wenlan-studio.git"
   },
   "scripts": {
     "minify-locales": "tsx ../../scripts/minify-locales.ts",

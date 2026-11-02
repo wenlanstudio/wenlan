@@ -95,21 +95,21 @@
       "reportBug": "报告错误",
       "viewSource": "查看源码",
       "followUs": "关注我们",
-      "support": "支持 MarkText",
+      "support": "支持文览",
       "license": "许可证",
       "about": "关于",
       "checkUpdates": "检查更新"
     },
     "marktext": {
-      "title": "MarkText",
-      "about": "关于 MarkText",
+      "title": "文览",
+      "about": "关于文览",
       "checkUpdates": "检查更新…",
       "preferences": "偏好设置",
       "services": "服务",
-      "hide": "隐藏 MarkText",
+      "hide": "隐藏文览",
       "hideOthers": "隐藏其他",
       "showAll": "显示全部",
-      "quit": "退出 MarkText"
+      "quit": "退出文览"
     },
     "view": {
       "view": "视图",
@@ -349,7 +349,7 @@
   },
   "import": {
     "title": "导入或打开",
-    "description": "拖放到这里将您的内容导入 MarkText"
+    "description": "拖放到这里将您的内容导入文览"
   },
   "preferences": {
     "title": "偏好设置",
@@ -378,10 +378,10 @@
         "hideScrollbar": "是否隐藏滚动条",
         "wordWrapInToc": "是否在目录中启用自动换行",
         "fileSortBy": "按创建时间、修改时间和标题对打开文件夹中的文件进行排序",
-        "startUpAction": "MarkText 启动后的操作，打开最后编辑的内容、打开指定文件夹或空白页",
+        "startUpAction": "文览启动后的操作，打开最后编辑的内容、打开指定文件夹或空白页",
         "restoreLayoutState": "启动时恢复上次编辑器状态",
         "defaultDirectoryToOpen": "当 startUp=folder 时启动时应打开的默认目录",
-        "language": "MarkText 使用的语言",
+        "language": "文览使用的语言",
         "editorFontFamily": "编辑器字体系列",
         "fontSize": "字体大小（像素）",
         "lineHeight": "行高",
@@ -406,7 +406,7 @@
         "preferLooseListItem": "首选列表类型",
         "bulletListMarker": "项目符号列表中使用的标记",
         "orderListDelimiter": "有序列表中使用的分隔符",
-        "preferHeadingStyle": "MarkText 中的首选标题样式",
+        "preferHeadingStyle": "文览中的首选标题样式",
         "tabSize": "用 x 个空格替换制表符",
         "listIndentation": "选择列表的缩进",
         "frontmatterType": "前言类型",
@@ -423,7 +423,7 @@
         "softNewlineAsSpace": "将软换行符视为空格",
         "sequenceTheme": "序列图主题",
         "plantumlServer": "PlantUML 服务器 URL",
-        "theme": "选择 MarkText 中使用的主题",
+        "theme": "选择文览中使用的主题",
         "followSystemTheme": "跟随系统主题",
         "lightModeTheme": "系统处于浅色模式时使用的主题",
         "darkModeTheme": "系统处于深色模式时使用的主题",
@@ -644,7 +644,7 @@
         "pleaseInstall": "请安装",
         "scriptPath": "脚本路径"
       },
-      "defaultBehavior": "粘贴或拖拽图片到 MarkText 后的默认行为"
+      "defaultBehavior": "粘贴或拖拽图片到文览后的默认行为"
     },
     "markdown": {
       "title": "Markdown",
@@ -790,7 +790,7 @@
   },
   "commands": {
     "mt": {
-      "hide": "隐藏 MarkText",
+      "hide": "隐藏文览",
       "hideOthers": "隐藏其他"
     },
     "file": {
@@ -969,7 +969,7 @@
     "fileExists": "文件已存在：{filename}",
     "files": "文件",
     "importWarning": "导入警告",
-    "installPandoc": "未找到 Pandoc。请先安装，或将环境变量 MARKTEXT_PANDOC 设为 pandoc 可执行文件的路径后重启 MarkText。",
+    "installPandoc": "未找到 Pandoc。请先安装，或将环境变量 MARKTEXT_PANDOC 设为 pandoc 可执行文件的路径后重启文览。",
     "exportWarning": "导出提示",
     "exportWarningMore": "…另有 {count} 条",
     "keepOpen": "保持打开",
@@ -986,7 +986,7 @@
     "configSchemaViolation": "配置架构违规",
     "copyError": "复制错误",
     "initializationFailed": "初始化失败 {hint}",
-    "otherInstanceDetected": "检测到 MarkText 的另一个实例正在运行",
+    "otherInstanceDetected": "检测到文览的另一个实例正在运行",
     "report": "报告",
     "startupError": "启动错误",
     "terminatedDueToError": "由于错误而终止",

@@ -55,7 +55,7 @@ initializeLogger(appEnvironment)
 // Handles native level crashes
 crashReporter.start({
   companyName: '',
-  productName: 'MarkText',
+  productName: 'Wenlan Studio',
   uploadToServer: false, // collect locally
   compress: true
 })
@@ -87,7 +87,7 @@ if (!process.mas && !import.meta.env.DEV) {
 registerSandboxIpcHandlers()
 
 // Windows-specific AppUserModelID
-electronApp.setAppUserModelId('com.electron.marktext')
+electronApp.setAppUserModelId('io.github.quqingyuan.wenlan')
 
 // Dev shortcuts and reload suppression
 app.on('browser-window-created', (_, window) => {

@@ -41,22 +41,7 @@ export default function(): MenuItemConstructorOptions {
     {
       label: t('menu.help.changelog'),
       click() {
-        shell.openExternal('https://github.com/marktext/marktext/releases')
-      }
-    },
-    {
-      type: 'separator'
-    },
-    {
-      label: t('menu.help.followUs'),
-      click() {
-        shell.openExternal('https://twitter.com/marktextapp')
-      }
-    },
-    {
-      label: t('menu.help.support'),
-      click() {
-        shell.openExternal('https://github.com/sponsors/marktext')
+        shell.openExternal('https://github.com/quqingyuan/wenlan-studio/releases')
       }
     },
     {
@@ -65,19 +50,19 @@ export default function(): MenuItemConstructorOptions {
     {
       label: t('menu.help.askQuestion'),
       click() {
-        shell.openExternal('https://github.com/marktext/marktext/discussions')
+        shell.openExternal('https://github.com/quqingyuan/wenlan-studio/issues')
       }
     },
     {
       label: t('menu.help.reportBug'),
       click() {
-        shell.openExternal('https://github.com/marktext/marktext/issues')
+        shell.openExternal('https://github.com/quqingyuan/wenlan-studio/issues/new/choose')
       }
     },
     {
       label: t('menu.help.viewSource'),
       click() {
-        shell.openExternal('https://github.com/marktext/marktext')
+        shell.openExternal('https://github.com/quqingyuan/wenlan-studio')
       }
     },
     {
@@ -86,7 +71,7 @@ export default function(): MenuItemConstructorOptions {
     {
       label: t('menu.help.license'),
       click() {
-        shell.openExternal('https://github.com/marktext/marktext/blob/develop/LICENSE')
+        shell.openExternal('https://github.com/quqingyuan/wenlan-studio/blob/develop/LICENSE')
       }
     }
   ]

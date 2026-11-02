@@ -1,0 +1,17 @@
+[Desktop Entry]
+Name=Wenlan Studio
+Comment=A Markdown editor with document, column, slide and present views
+Exec=wenlan %F
+Terminal=false
+Type=Application
+Icon=wenlan
+Categories=Office;TextEditor;Utility;
+MimeType=text/markdown;
+Keywords=wenlan;markdown;
+StartupWMClass=wenlan
+Actions=NewWindow;
+
+[Desktop Action NewWindow]
+Name=New Window
+Exec=wenlan --new-window %F
+Icon=wenlan

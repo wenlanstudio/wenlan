@@ -1,5 +1,5 @@
-appId: com.github.marktext.marktext
-productName: MarkText
+appId: io.github.quqingyuan.wenlan
+productName: Wenlan Studio
 directories:
   buildResources: build
   output: ../../dist
@@ -36,18 +36,27 @@ files:
   - '!eslint.config.js'
   - '!jsconfig.json'
   - '!docs/*'
+  # Runtime assets are copied via extraResources below; keep them out of the asar.
+  - '!resources/**'
 extraResources:
   - from: build/icons
     to: icons # ends up at resources/icons/
     filter:
       - '*.ico'
+  # main/ipc/md2slides.ts resolves vendored assets as
+  # process.resourcesPath/resources/md2slides, so they must land one level
+  # deeper than the default extraResources root.
+  - from: resources
+    to: resources
+    filter:
+      - '**/*'
   - from: static
     to: static
     filter:
       - '**/*'
       - '!locales/**/!(*.min).json'
 npmRebuild: false
-electronLanguages: # Keep Chromium/AppKit locales for the UI languages MarkText supports
+electronLanguages: # Keep Chromium/AppKit locales for the UI languages Wenlan Studio supports
   # Values must cover both spellings: "xx-YY" .pak files on Windows/Linux and
   # "xx_YY" .lproj bundles on macOS. Keeping them lets OS-provided strings
   # (e.g. the macOS Window management items) localize on non-English systems;
@@ -73,8 +82,8 @@ electronLanguages: # Keep Chromium/AppKit locales for the UI languages MarkText 
 
 electronFuses:
   # Node's CLI parser inside Electron rejects `--debug` (DEP0062, exit 9) before
-  # MarkText can read it (#5409). With this fuse off the packaged app ignores
-  # Node's inspector flags, so `--debug` reaches MarkText.
+  # Wenlan Studio can read it (#5409). With this fuse off the packaged app ignores
+  # Node's inspector flags, so `--debug` reaches Wenlan Studio.
   enableNodeCliInspectArguments: false
   # Flipping a fuse rewrites the Electron Framework binary, invalidating the
   # ad-hoc signature its linker wrote. Unsigned macOS arm64 builds are then
@@ -121,16 +130,16 @@ fileAssociations:
     role: Editor
     icon: icons/md.ico
 win:
-  executableName: marktext
-  artifactName: 'marktext-win-${arch}-${version}.${ext}'
+  executableName: wenlan
+  artifactName: 'wenlan-win-${arch}-${version}.${ext}'
   target:
     - target: 'nsis'
     - target: 'zip'
   icon: static/icon.ico
 nsis:
-  artifactName: 'marktext-win-${arch}-${version}-setup.${ext}'
-  shortcutName: ${productName}
-  uninstallDisplayName: ${productName}
+  artifactName: 'wenlan-win-${arch}-${version}-setup.${ext}'
+  shortcutName: 文览
+  uninstallDisplayName: 文览
   createDesktopShortcut: true
   createStartMenuShortcut: true
   oneClick: false
@@ -138,7 +147,7 @@ nsis:
   perMachine: false
   include: windows/installer.nsh
 mac:
-  artifactName: 'marktext-mac-${arch}-${version}.${ext}'
+  artifactName: 'wenlan-mac-${arch}-${version}.${ext}'
   entitlementsInherit: build/mac/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
@@ -150,7 +159,7 @@ mac:
     - dmg
     - zip
 dmg:
-  artifactName: 'marktext-mac-${arch}-${version}.${ext}'
+  artifactName: 'wenlan-mac-${arch}-${version}.${ext}'
   contents:
     - x: 410
       y: 240
@@ -160,18 +169,18 @@ dmg:
       y: 240
       type: 'file'
 linux:
-  artifactName: 'marktext-linux-${version}.${ext}'
-  executableName: 'marktext'
-  description: 'A simple and elegant open-source markdown editor that focused on speed and usability.'
-  maintainer: 'MarkText Contributors'
+  artifactName: 'wenlan-linux-${version}.${ext}'
+  executableName: 'wenlan'
+  description: 'A Markdown editor with document, column, slide, present and A4 paper views.'
+  maintainer: 'Wenlan Studio Contributors'
   category: 'Office;TextEditor;Utility'
   mimeTypes:
     - 'text/markdown'
   icon: 'static/icon.png'
   desktop:
     entry:
-      StartupWMClass: 'marktext'
-      Keywords: 'marktext;'
+      StartupWMClass: 'wenlan'
+      Keywords: 'wenlan;markdown;'
   target:
     - AppImage
     - snap

@@ -149,7 +149,7 @@ The root has no `src/`, `test/`, `static/`, or `build/` of its own anymore — t
 ## Development Workflow
 
 All commands run from the repo root. The root `package.json` proxies every
-desktop-specific script to `packages/desktop` via `pnpm --filter marktext`,
+desktop-specific script to `packages/desktop` via `pnpm --filter wenlan-studio`,
 so the names and behavior are unchanged from the pre-monorepo layout.
 
 ```bash

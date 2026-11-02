@@ -95,21 +95,21 @@
       "reportBug": "回報錯誤",
       "viewSource": "檢視原始碼",
       "followUs": "關注我們",
-      "support": "支持 MarkText",
+      "support": "支持文覽",
       "license": "授權條款",
       "about": "關於",
       "checkUpdates": "檢查更新"
     },
     "marktext": {
       "title": "關於",
-      "about": "關於 MarkText",
+      "about": "關於文覽",
       "checkUpdates": "檢查更新…",
       "preferences": "偏好設定",
       "services": "服務",
-      "hide": "隱藏 MarkText",
+      "hide": "隱藏文覽",
       "hideOthers": "隱藏其他",
       "showAll": "顯示全部",
-      "quit": "退出 MarkText"
+      "quit": "退出文覽"
     },
     "view": {
       "view": "檢視",
@@ -349,7 +349,7 @@
   },
   "import": {
     "title": "匯入或開啟",
-    "description": "拖放到這裡將您的內容匯入 MarkText"
+    "description": "拖放到這裡將您的內容匯入文覽"
   },
   "preferences": {
     "title": "偏好設定",
@@ -378,10 +378,10 @@
         "hideScrollbar": "是否隱藏捲軸",
         "wordWrapInToc": "是否在目錄中啟用自動換行",
         "fileSortBy": "按建立時間、修改時間和標題對開啟資料夾中的檔案進行排序",
-        "startUpAction": "MarkText 啟動後的操作，開啟最後編輯的內容、開啟指定資料夾或空白頁面",
+        "startUpAction": "文覽啟動後的操作，開啟最後編輯的內容、開啟指定資料夾或空白頁面",
         "restoreLayoutState": "啟動時還原上次編輯器狀態",
         "defaultDirectoryToOpen": "當 startUp=folder 時啟動時應開啟的預設目錄",
-        "language": "MarkText 使用的語言",
+        "language": "文覽使用的語言",
         "editorFontFamily": "編輯器字型系列",
         "fontSize": "字型大小（像素）",
         "lineHeight": "行高",
@@ -406,7 +406,7 @@
         "preferLooseListItem": "首選清單類型",
         "bulletListMarker": "項目符號清單中使用的標記",
         "orderListDelimiter": "有序清單中使用的分隔符",
-        "preferHeadingStyle": "MarkText 中的首選標題樣式",
+        "preferHeadingStyle": "文覽中的首選標題樣式",
         "tabSize": "用 x 個空格替換製表符",
         "listIndentation": "選擇清單的縮排",
         "frontmatterType": "前言類型",
@@ -423,7 +423,7 @@
         "softNewlineAsSpace": "將軟換行視為空格",
         "sequenceTheme": "序列圖主題",
         "plantumlServer": "PlantUML 伺服器 URL",
-        "theme": "選擇 MarkText 中使用的主題",
+        "theme": "選擇文覽中使用的主題",
         "followSystemTheme": "跟隨系統主題",
         "lightModeTheme": "系統處於淺色模式時使用的主題",
         "darkModeTheme": "系統處於深色模式時使用的主題",
@@ -644,7 +644,7 @@
         "neverDetected": "從未偵測",
         "neverSuccessful": "從未成功"
       },
-      "defaultBehavior": "貼上或拖曳圖片到 MarkText 後的預設行為"
+      "defaultBehavior": "貼上或拖曳圖片到文覽後的預設行為"
     },
     "markdown": {
       "title": "PicGo 設定",
@@ -780,7 +780,7 @@
   },
   "commands": {
     "mt": {
-      "hide": "隱藏 MarkText",
+      "hide": "隱藏文覽",
       "hideOthers": "隱藏其他"
     },
     "file": {
@@ -945,7 +945,7 @@
     "fileExists": "檔案已存在：{filename}",
     "files": "檔案",
     "importWarning": "匯入警告",
-    "installPandoc": "找不到 Pandoc。請先安裝，或將環境變數 MARKTEXT_PANDOC 設為 pandoc 執行檔的路徑後重新啟動 MarkText.",
+    "installPandoc": "找不到 Pandoc。請先安裝，或將環境變數 MARKTEXT_PANDOC 設為 pandoc 執行檔的路徑後重新啟動文覽.",
     "exportWarning": "匯出提示",
     "exportWarningMore": "…另有 {count} 條",
     "keepOpen": "保持開啟",
@@ -962,7 +962,7 @@
     "configSchemaViolation": "設定結構違規",
     "copyError": "複製錯誤",
     "initializationFailed": "初始化失敗 {hint}",
-    "otherInstanceDetected": "偵測到另一個 MarkText 實例正在執行",
+    "otherInstanceDetected": "偵測到另一個文覽實例正在執行",
     "report": "回報",
     "startupError": "啟動錯誤",
     "terminatedDueToError": "因錯誤而終止",

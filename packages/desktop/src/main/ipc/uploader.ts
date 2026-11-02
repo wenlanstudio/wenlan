@@ -101,7 +101,7 @@ const writeBinaryToTmp = async(
   suffix: string = ''
 ): Promise<string> => {
   const buf = data instanceof Uint8Array ? Buffer.from(data) : Buffer.from(data || [])
-  const dir = await fs.mkdtemp(path.join(tmpdir(), 'marktext-upload-'))
+  const dir = await fs.mkdtemp(path.join(tmpdir(), 'wenlan-upload-'))
   const tmpPath = path.join(dir, `${Date.now()}${suffix}`)
   await fs.writeFile(tmpPath, buf)
   return tmpPath

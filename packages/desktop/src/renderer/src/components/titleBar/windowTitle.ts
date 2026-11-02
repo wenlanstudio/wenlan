@@ -1,4 +1,4 @@
-const APP_NAME = 'MarkText'
+const APP_NAME = '文览'
 
 // Linux/Windows window managers, taskbars and task switchers identify the
 // application from the trailing "- AppName" of the title. macOS already shows

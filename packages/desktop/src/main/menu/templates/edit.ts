@@ -29,9 +29,9 @@ export default function(keybindings: Keybindings): MenuItemConstructorOptions {
       // NOTE: Cut/Copy/Paste must stay native roles (no custom `click`). On
       //       macOS Electron then forwards the action to the native first
       //       responder (i.e. `Menu.sendActionToFirstResponder('paste:')`)
-      //       instead of pasting into a MarkText webContents. This is what
+      //       instead of pasting into a Wenlan Studio webContents. This is what
       //       allows Cmd+V to reach editable controls in native Open/Save
-      //       panels (e.g. the "Go to Folder" sheet) while a MarkText window is
+      //       panels (e.g. the "Go to Folder" sheet) while a Wenlan Studio window is
       //       focused it still pastes into the editor (#5582).
       {
         label: t('menu.edit.cut'),
