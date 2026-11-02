@@ -4,7 +4,6 @@ import os from 'os'
 import { isDirectory } from 'common/filesystem'
 import parseArgs, { type ParsedArgs } from './parser'
 import { getPath } from '../utils'
-import { migrateLegacyUserData } from '../app/userDataMigration'
 
 const write = (s: string): boolean => process.stdout.write(s)
 const writeLine = (s: string): boolean => write(s + '\n')
@@ -14,7 +13,6 @@ const cli = (): ParsedArgs => {
   if (import.meta.env.DEV) {
     // Don't pass electron development arguments to Wenlan Studio and change user data path.
     const devUserDataPath = path.join(getPath('appData'), 'wenlan-studio-dev')
-    migrateLegacyUserData(devUserDataPath, [path.join(getPath('appData'), 'marktext-dev')])
     argv = ['--user-data-dir', devUserDataPath]
   }
 
