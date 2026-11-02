@@ -62,17 +62,24 @@
 
       <!-- Right-corner dock: 从右往左不断细化（字数统计 → 读写锁 → 主视图 WPED → 子视图），
            右侧三组固定不动，随模式增减的只有左侧的子视图/光标位置 -->
-      <div class="right-corner-dock">
+      <div
+        v-if="!isWindowFullScreen && !presentExclusive"
+        class="right-corner-dock"
+      >
         <div
-          v-if="showCursorPosition"
+          v-if="showCursorPosition && !presentActive"
           class="cursor-position"
           :title="t('view.cursorPosition')"
         >
           {{ cursorPositionText }}
         </div>
         <ViewSwitcher />
-        <div class="dock-divider" />
+        <div
+          v-if="!presentActive"
+          class="dock-divider"
+        />
         <button
+          v-if="!presentActive"
           class="read-only-btn"
           :class="{ locked: readOnly }"
           :title="readOnly ? t('view.readOnlyLocked') : t('view.readOnlyUnlocked')"
@@ -109,6 +116,7 @@
           </svg>
         </button>
         <WordCount
+          v-if="!presentActive"
           :word-count="wordCount"
           :selection-word-count="selectionWordCount"
         />
@@ -164,7 +172,11 @@ const { windowActive, platform, init } = storeToRefs(mainStore)
 const { theme, customCss, textDirection, zoom, editorLineWidth } = storeToRefs(preferencesStore)
 const { projectTree } = storeToRefs(projectStore)
 const { currentFile, selectionWordCount, readOnly } = storeToRefs(editorStore)
-const { isEditorVisible } = storeToRefs(editorViewStore)
+const { isEditorVisible, isWindowFullScreen, leafSelection, presentExclusive } = storeToRefs(
+  editorViewStore
+)
+// 初始化窗口全屏态（进入/离开全屏由主进程 IPC 同步）
+editorViewStore.initWindowFullScreen()
 
 const filename = computed(() => currentFile.value?.filename)
 const isSaved = computed(() => currentFile.value?.isSaved)
@@ -191,6 +203,11 @@ const showCursorPosition = computed(() => {
   if (!hasCurrentFile.value) return false
   return editorViewStore.isEditorVisible
 })
+
+// 窗口全屏（视图 → 全屏/F11）：放映无浮层，整个 dock 隐藏。
+// "示"激活（单开或配对）时 dock 只保留 ViewSwitcher（唯一换叶出口）——
+// 编辑姿态控件（光标位置/读写锁/字数）隐藏，但绝不能藏掉换叶入口。
+const presentActive = computed(() => leafSelection.value.includes('present'))
 const cursorPositionText = computed(() => {
   const pos = cursorPosition.value
   return pos ? `${pos.line}:${pos.ch}` : ''

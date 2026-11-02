@@ -1,5 +1,8 @@
 <template>
-  <div class="deck-pane">
+  <div
+    class="deck-pane"
+    :class="{ exclusive: isExclusive }"
+  >
     <div
       v-if="error"
       class="deck-error"
@@ -28,6 +31,14 @@
       </span>
       <template v-if="leaf === 'present'">
         <button
+          v-if="canToggleExclusive && !isExclusive"
+          class="bar-button"
+          title="独占放映——放映占满整窗，另一视图收起（Esc 退回）"
+          @click="toggleExclusive"
+        >
+          独占
+        </button>
+        <button
           class="bar-button"
           :disabled="exporting || total === 0"
           title="导出为图片型 PPTX（逐像素保真，文字不可编辑）"
@@ -46,7 +57,7 @@
       </template>
       <button
         class="exit-button"
-        :title="isPanel ? '关闭此视图' : '返回编辑（Esc）'"
+        :title="isExclusive ? '退出独占（Esc）' : isPanel ? '关闭此视图' : '返回编辑（Esc）'"
         @click="exit"
       >
         ✕
@@ -90,6 +101,14 @@ const editorStore = useEditorStore()
 const editorViewStore = useEditorViewStore()
 const preferencesStore = usePreferencesStore()
 const { plantumlServer } = storeToRefs(preferencesStore)
+const { isSplit, presentExclusive } = storeToRefs(editorViewStore)
+
+// 独占开关只属于分屏中的 present pane（LEAVES 序保证 present 恒为右叶）。
+const canToggleExclusive = computed(() => isPanel.value && isSplit.value && props.leaf === 'present')
+const isExclusive = computed(() => presentExclusive.value && props.leaf === 'present')
+const toggleExclusive = (): void => {
+  editorViewStore.setPresentExclusive(!presentExclusive.value)
+}
 
 const deckFrame = ref<HTMLIFrameElement | null>(null)
 const origin = ref<string | null>(null)
@@ -167,6 +186,11 @@ const onRpc = async (data: { id: number; diagramType: string; source: string }):
 }
 
 const exit = (): void => {
+  // 独占态下 Esc/✕ 第一优先退独占（回到分屏），不摘叶。
+  if (isExclusive.value) {
+    editorViewStore.setPresentExclusive(false)
+    return
+  }
   if (isPanel.value) {
     editorViewStore.removeLeaf(props.leaf)
   } else {
@@ -377,6 +401,18 @@ onBeforeUnmount(() => {
   color: #eee;
   font-size: 13px;
   user-select: none;
+  transition: opacity 0.2s ease;
+}
+
+/* 独占态：deck-bar 默认隐藏，鼠标移到右下角浮现（✕ = 退出独占）。 */
+.deck-pane.exclusive .deck-bar {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.deck-pane.exclusive:hover .deck-bar {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .page-indicator {

@@ -194,6 +194,39 @@ export const useEditorViewStore = defineStore('editorView', () => {
 
   const isSourceMode = computed<boolean>(() => topView.value === 'code')
 
+  // ── 示面板独占态（分屏时放映占满整窗；不持久化，会话内状态） ──
+  // 与 paper-fullscreen 同构：pane-left 收起不卸载（避免 muya 重建），示 pane
+  // 占满。leafSelection 不动——退出独占即回到原两视图。
+  const presentExclusive = ref(false)
+  const setPresentExclusive = (v: boolean): void => {
+    presentExclusive.value = v
+  }
+  // 叶选择离开示支或退出分屏时，独占态失去意义，自动复位。
+  watch([leafSelection, isSplit], () => {
+    if (!leafSelection.value.includes('present') || !isSplit.value) {
+      presentExclusive.value = false
+    }
+  })
+
+  // ── 窗口全屏态（与 titleBar 同源的 IPC；右下角 dock 等浮层消费） ──
+  const isWindowFullScreen = ref(false)
+  let fullScreenListenerBound = false
+  const initWindowFullScreen = async(): Promise<void> => {
+    try {
+      isWindowFullScreen.value = !!(await window.electron.windowControl.isFullScreen())
+    } catch {
+      // 窗口态查询是 best-effort，失败保持现值
+    }
+    if (fullScreenListenerBound) return
+    fullScreenListenerBound = true
+    window.electron.ipcRenderer.on('mt::window-enter-full-screen', () => {
+      isWindowFullScreen.value = true
+    })
+    window.electron.ipcRenderer.on('mt::window-leave-full-screen', () => {
+      isWindowFullScreen.value = false
+    })
+  }
+
   /** 滑块职责：分屏时一律收起（宽度控制被分割条吸收），单视图按叶/顶级视图定。 */
   const sliderDuty = computed<SliderDuty>(() => {
     if (isSplit.value) return 'none'
@@ -340,6 +373,10 @@ export const useEditorViewStore = defineStore('editorView', () => {
     isSourceMode,
     sliderDuty,
     isEditorVisible,
+    isWindowFullScreen,
+    initWindowFullScreen,
+    presentExclusive,
+    setPresentExclusive,
     toggleLeaf,
     removeLeaf,
     toggleTopView,

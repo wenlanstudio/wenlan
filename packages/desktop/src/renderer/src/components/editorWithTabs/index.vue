@@ -13,8 +13,12 @@
     />
     <div
       class="container"
-      :class="{ split: isSplit, 'paper-fullscreen': isPaperFullscreen }"
-      :style="isSplit ? { '--split-ratio': `${rightRatio}` } : undefined"
+      :class="{
+        split: isSplit,
+        'paper-fullscreen': isPaperFullscreen,
+        'present-fullscreen': isPresentFullscreen
+      }"
+      :style="isSplit && !isPresentFullscreen ? { '--split-ratio': `${rightRatio}` } : undefined"
     >
       <!-- 左 pane 只在有内容时渲染：单选列/放时它若仍占位（height:100%），
            会把全屏 deck-pane 顶出容器折叠区（2026-11-01 真机：白屏无内容）。 -->
@@ -97,7 +101,7 @@
       <!-- 分割条：分屏时的比例手柄（视图模型 §3）。宽度控制被它吸收——
            页宽滑块此时收起（store.sliderDuty）。 -->
       <div
-        v-if="isSplit"
+        v-if="isSplit && !isPresentFullscreen"
         class="divider"
         title="拖动调整两侧比例"
         @pointerdown="startDrag"
@@ -197,6 +201,13 @@ const isPaperFullscreen = computed(
   () => !isSplit.value && topView.value === null && activeLeaf.value === 'paper'
 )
 
+// 示面板独占：分屏 + 用户点"独占"——放映占满整窗（pane-left 收起不卸载，
+// 与 paper-fullscreen 同构；LEAVES 序保证 present 恒为右叶）。
+const { presentExclusive } = storeToRefs(editorViewStore)
+const isPresentFullscreen = computed(
+  () => isSplit.value && presentExclusive.value && rightLeaf.value === 'present'
+)
+
 // 分屏左 pane 的引擎透镜由 store.editorLens 给出：orderedLeaves 首个
 // flow/column/paper 叶（LEAVES 序保证左细右粗、文左示右；paper M0 暂照
 // flow 渲染）。
@@ -250,6 +261,20 @@ const startDrag = (ev: PointerEvent): void => {
     &.paper-fullscreen {
       & > .pane-left {
         display: none;
+      }
+    }
+
+    /* 示面板独占：pane-left 收起不卸载（muya 保活，退出独占零重建）；
+       示 pane 占满整窗。 */
+    &.present-fullscreen {
+      & > .pane-left {
+        display: none;
+      }
+
+      & > .pane-right {
+        flex: 1 1 100%;
+        max-width: 100%;
+        border-left: none;
       }
     }
   }
