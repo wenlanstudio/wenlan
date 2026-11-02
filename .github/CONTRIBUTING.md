@@ -18,7 +18,7 @@ If you use an agent, run it from the Wenlan Studio root directory so that it can
 
 ## Issue and PR Guidelines
 
-Before opening an Issue or PR, please search for similar Issues and PRs first. Always follow the [Issue template](https://github.com/quqingyuan/wenlan-studio/tree/develop/.github/ISSUE_TEMPLATE/) and [PR template](https://github.com/quqingyuan/wenlan-studio/blob/develop/.github/PULL_REQUEST_TEMPLATE.md) when submitting them.
+Before opening an Issue or PR, please search for similar Issues and PRs first. Always follow the [Issue template](https://github.com/wenlanstudio/wenlan-studio/tree/develop/.github/ISSUE_TEMPLATE/) and [PR template](https://github.com/wenlanstudio/wenlan-studio/blob/develop/.github/PULL_REQUEST_TEMPLATE.md) when submitting them.
 
 Issues and PRs should follow the single-purpose principle: **one Issue should address one problem, and one PR should fix one issue or a set of closely related changes.** Do not submit multiple unrelated problems in a single Issue or multiple unrelated fixes in a single PR.
 
@@ -30,7 +30,7 @@ When submitting a PR, please keep the following in mind:
 
 - Submit PRs directly to the `develop` branch.
 - Reference the related Issue in the PR description.
-- Follow our [Commenting Guidelines](https://github.com/quqingyuan/wenlan-studio/blob/develop/.github/COMMENTING-GUIDELINES.md).
+- Follow our [Commenting Guidelines](https://github.com/wenlanstudio/wenlan-studio/blob/develop/.github/COMMENTING-GUIDELINES.md).
 - Ensure all tests pass.
 - Run `pnpm run lint` to lint your PR.
 - All PRs must pass **CI** before they can be merged. If CI fails, please try to resolve the issue. If you need help, feel free to ask.
@@ -47,7 +47,7 @@ If you are fixing a bug:
 
 ## Where Should I Start?
 
-A good way to get started is to look for Issues labeled `bug`, `help wanted`, or `feature request` in the [Issue tracker](https://github.com/quqingyuan/wenlan-studio/issues). Issues labeled `good first issue` are especially suitable for newcomers.
+A good way to get started is to look for Issues labeled `bug`, `help wanted`, or `feature request` in the [Issue tracker](https://github.com/wenlanstudio/wenlan-studio/issues). Issues labeled `good first issue` are especially suitable for newcomers.
 
 For larger Issues, please discuss the proposed solution first. Once the final solution has been approved by Wenlan Studio members, you can submit or start working on a PR. For smaller changes, you can open a PR directly.
 

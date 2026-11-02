@@ -12,13 +12,13 @@
 
 <div align="center">
   <a href="LICENSE">
-    <img src="https://img.shields.io/github/license/quqingyuan/wenlan-studio.svg" alt="LICENSE">
+    <img src="https://img.shields.io/github/license/wenlanstudio/wenlan-studio.svg" alt="LICENSE">
   </a>
-  <a href="https://github.com/quqingyuan/wenlan-studio/releases">
-    <img src="https://img.shields.io/github/downloads/quqingyuan/wenlan-studio/total.svg" alt="total download">
+  <a href="https://github.com/wenlanstudio/wenlan-studio/releases">
+    <img src="https://img.shields.io/github/downloads/wenlanstudio/wenlan-studio/total.svg" alt="total download">
   </a>
-  <a href="https://github.com/quqingyuan/wenlan-studio/releases/latest">
-    <img src="https://img.shields.io/github/downloads/quqingyuan/wenlan-studio/latest/total.svg" alt="latest download">
+  <a href="https://github.com/wenlanstudio/wenlan-studio/releases/latest">
+    <img src="https://img.shields.io/github/downloads/wenlanstudio/wenlan-studio/latest/total.svg" alt="latest download">
   </a>
 </div>
 
@@ -47,7 +47,7 @@
 
 ## Download
 
-<https://github.com/quqingyuan/wenlan-studio/releases/latest>
+<https://github.com/wenlanstudio/wenlan-studio/releases/latest>
 
 - Windows：`wenlan-win-x64-<version>-setup.exe`（NSIS，可选安装目录）
 - macOS：`wenlan-mac-<arch>-<version>.dmg`（未签名，首次打开需清理 quarantine）

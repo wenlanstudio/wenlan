@@ -19,8 +19,8 @@
       <li>Various edit modes and themes: source code mode, typewriter mode, focus mode</li>
     </ul>
   </description>
-  <url type="homepage">https://github.com/quqingyuan/wenlan-studio/</url>
-  <url type="bugtracker">https://github.com/quqingyuan/wenlan-studio/issues</url>
+  <url type="homepage">https://github.com/wenlanstudio/wenlan-studio/</url>
+  <url type="bugtracker">https://github.com/wenlanstudio/wenlan-studio/issues</url>
   <categories>
     <category>Utility</category>
     <category>TextEditor</category>

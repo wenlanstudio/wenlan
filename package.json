@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Wenlan Studio monorepo root",
   "private": true,
-  "homepage": "https://github.com/quqingyuan/wenlan-studio",
+  "homepage": "https://github.com/wenlanstudio/wenlan-studio",
   "packageManager": "pnpm@10.33.4",
   "engines": {
     "node": ">=20.19.0",

@@ -6,10 +6,10 @@
   "author": {
     "name": "Wenlan Studio Contributors"
   },
-  "homepage": "https://github.com/quqingyuan/wenlan-studio",
+  "homepage": "https://github.com/wenlanstudio/wenlan-studio",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/quqingyuan/wenlan-studio.git"
+    "url": "git+https://github.com/wenlanstudio/wenlan-studio.git"
   },
   "scripts": {
     "minify-locales": "tsx ../../scripts/minify-locales.ts",
