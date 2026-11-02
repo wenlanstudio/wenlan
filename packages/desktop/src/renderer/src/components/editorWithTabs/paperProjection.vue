@@ -154,10 +154,9 @@ const fragment = (): void => {
   deckEl.style.setProperty('--paper-page-height', `${geometry.pageHeightMm}mm`)
 
   const m = measurePaperBlocksV2(container, geometry)
-  // 空量测守卫：分片本身把块搬出 muya 容器——若一次过期的 fragment 在
-  // 搬移之后才量测（重建竞态），会读到 0 块并把上一副好牌换成交白卷。
-  // 保留现有 deck，等下一次重建（世代号新者胜，见 rebuild）。
-  if (!m.blocks.length) return
+  // 量测竞态由 rebuild 的世代号守卫负责（过期 fragment 不跑）；这里**不因
+  // 0 块早退**——空文档（新文件/加载失败的 tab）必须照常出一张空白 A4 卡，
+  // 否则纸叶全屏就是整屏空白（其它叶空文档都有可见面，Word 空白页同义）。
   const layout = paginateBlocksV2(m.blocks, m.pageContentHeight)
   const boundaries = [0, ...layout.seams.map(s => s.y)]
   const zoom = Number.parseFloat(getComputedStyle(container).zoom || '1') || 1

@@ -256,6 +256,31 @@ test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages
     expect(screenCount).toBe(pdfCount)
   })
 
+  test('an empty document renders a single blank A4 card (空文档白屏回归)', async() => {
+    test.setTimeout(150_000)
+    // 空文档（新文件 / 加载失败的 tab）：纸叶不得整屏空白——必须照常出
+    // 一张空白 A4 卡（Word 空白页语义）。
+    const launched = await launchWithMarkdown('')
+    const { app, page } = launched
+    try {
+      await waitForMenuReady(app)
+      const leafBtn = page.locator('.view-switcher .leaf-btn', { hasText: '纸' })
+      const flowBtn = page.locator('.view-switcher .leaf-btn', { hasText: '文' })
+      await leafBtn.waitFor({ state: 'visible', timeout: 15000 })
+      await leafBtn.click()
+      await flowBtn.click()
+
+      const deck = page.locator('.mu-paper-deck[data-page-count]')
+      await deck.waitFor({ state: 'visible', timeout: 15000 })
+      await page.waitForTimeout(700)
+      expect(Number(await deck.getAttribute('data-page-count'))).toBe(1)
+      const cardCount = await page.locator('.mu-paper-page').count()
+      expect(cardCount, 'one blank A4 card for the empty document').toBe(1)
+    } finally {
+      await app.close()
+    }
+  })
+
   test('paper projection renders page cards that match the fit and the print (真分片卡片)', async() => {
     test.setTimeout(150_000)
     const launched = await launchWithMarkdown(DOC)
