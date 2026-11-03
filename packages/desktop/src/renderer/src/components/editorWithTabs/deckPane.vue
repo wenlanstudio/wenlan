@@ -25,6 +25,13 @@
       :src="frameSrc"
       title="md2slides deck"
     />
+    <div
+      v-if="missingWarn"
+      class="deck-missing-warn"
+      :title="missingWarn"
+    >
+      {{ missingWarn }}
+    </div>
     <div class="deck-bar">
       <span class="page-indicator">
         {{ indicator }}
@@ -113,6 +120,7 @@ const toggleExclusive = (): void => {
 const deckFrame = ref<HTMLIFrameElement | null>(null)
 const origin = ref<string | null>(null)
 const error = ref('')
+const missingWarn = ref('')
 const status = ref('正在启动放映服务…')
 const index = ref(0)
 const total = ref(0)
@@ -234,7 +242,12 @@ const onMessage = (ev: MessageEvent): void => {
       index.value = Number(data.index) || index.value
       total.value = Number(data.total) || total.value
       break
+    case 'md2s:warn':
+      // 缺图占位等非致命提示：不挡演示，常驻展示到下次构建/出错
+      missingWarn.value = String(data.message ?? '')
+      break
     case 'md2s:error':
+      missingWarn.value = ''
       error.value = String(data.message ?? '未知错误')
       break
     case 'md2s:esc':
@@ -413,6 +426,32 @@ onBeforeUnmount(() => {
 .deck-pane.exclusive:hover .deck-bar {
   opacity: 1;
   pointer-events: auto;
+}
+
+/* 缺图占位提示（左下角琥珀色胶囊；独占态同 deck-bar 悬浮策略）。 */
+.deck-missing-warn {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 6px 12px;
+  border-radius: 14px;
+  background: rgba(180, 83, 9, 0.85);
+  color: #ffedd5;
+  font-size: 12px;
+  user-select: none;
+}
+
+.deck-pane.exclusive .deck-missing-warn {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.deck-pane.exclusive:hover .deck-missing-warn {
+  opacity: 1;
 }
 
 .page-indicator {
