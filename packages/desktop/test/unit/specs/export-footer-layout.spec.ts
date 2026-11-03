@@ -1,12 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+// 文览的 exportHtml 仍走旧 API：MarkdownToHtml(md, muya).generate() 直接返回 HTML 字符串
 vi.mock('@muyajs/core', () => ({
   MarkdownToHtml: class {
-    async generateWithHeadings({ extraCSS = '' }: { extraCSS?: string }) {
-      return {
-        html: `<html><head><style>${extraCSS}</style></head><body><article class="markdown-body"><p>Content</p></article></body></html>`,
-        headings: []
-      }
+    async generate({ extraCSS = '' }: { extraCSS?: string }) {
+      return `<html><head><style>${extraCSS}</style></head><body><article class="markdown-body"><p>Content</p></article></body></html>`
     }
   }
 }))
