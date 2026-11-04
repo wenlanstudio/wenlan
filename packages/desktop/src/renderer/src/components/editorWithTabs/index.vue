@@ -150,12 +150,6 @@
         :markdown="markdown"
       />
     </div>
-    <!-- mdcode2run 底部执行面板（M3）：编辑循环的输出面。全屏形态（纸叶/
-         示支独占/放映）隐藏——那是阅读/放映场景，不是编辑场景。 -->
-    <exec-panel
-      v-if="!isPaperFullscreen && !isPresentFullscreen && !isDeckFullscreen"
-      :markdown="markdown"
-    />
     <tab-notifications />
   </div>
 </template>
@@ -174,7 +168,6 @@ import DeckPane from './deckPane.vue'
 import LeafProjection from './leafProjection.vue'
 import PaperProjection from './paperProjection.vue'
 import TabNotifications from './notifications.vue'
-import ExecPanel from './execPanel.vue'
 
 defineProps<{
   markdown: string
@@ -192,6 +185,9 @@ const { zoom } = storeToRefs(usePreferencesStore())
 const editorViewStore = useEditorViewStore()
 const { topView, isSplit, leftLeaf, rightLeaf, activeLeaf, editorLens, rightRatio } =
   storeToRefs(editorViewStore)
+// 全屏/独占形态的判据收口在 store（底部执行面板挪到 app.vue 全宽层后，
+// 两处要用同一条判据，别再在这里复制一遍）。
+const { isPaperFullscreen, isPresentFullscreen } = storeToRefs(editorViewStore)
 // Actions 不经 storeToRefs（它只包 state/getter）。
 const { setRightRatio } = editorViewStore
 
@@ -204,24 +200,8 @@ const hasLeftPane = computed(
 // 全屏纸叶（A″）：可见面 = 真分片投影；活引擎留在 pane-left 里作隐藏服务
 // 后端（bus 导出/TOC 依赖 editor.vue 挂载），pane-left 由 .paper-fullscreen
 // 收起（display:none——导出走序列化不需要布局）。
-const isPaperFullscreen = computed(
-  () => !isSplit.value && topView.value === null && activeLeaf.value === 'paper'
-)
-
-// 示面板独占：分屏 + 用户点"独占"——放映占满整窗（pane-left 收起不卸载，
-// 与 paper-fullscreen 同构；LEAVES 序保证 present 恒为右叶）。
-const { presentExclusive } = storeToRefs(editorViewStore)
-const isPresentFullscreen = computed(
-  () => isSplit.value && presentExclusive.value && rightLeaf.value === 'present'
-)
-
-// 单选示支叶全屏（slide 列表 / present 放映独占编辑区）：编辑面已收起。
-const isDeckFullscreen = computed(
-  () =>
-    !isSplit.value &&
-    topView.value === null &&
-    (activeLeaf.value === 'slide' || activeLeaf.value === 'present')
-)
+// isPaperFullscreen / isPresentFullscreen / isDeckFullscreen 的判据在
+// store/editorView（app.vue 也要用），此处仅解构。
 
 // 分屏左 pane 的引擎透镜由 store.editorLens 给出：orderedLeaves 首个
 // flow/column/paper 叶（LEAVES 序保证左细右粗、文左示右；paper M0 暂照

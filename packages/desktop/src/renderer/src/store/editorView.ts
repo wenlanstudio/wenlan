@@ -208,6 +208,34 @@ export const useEditorViewStore = defineStore('editorView', () => {
     }
   })
 
+  // ── 全屏/独占形态（布局层消费：编辑列、底部工具窗口、浮层的显隐） ──
+  // 这三个判断原先各自长在 editorWithTabs/index.vue 里；底部执行面板挪到
+  // app.vue 全宽层后，两处都要用同一条判据，故收口进 store，避免两份漂移。
+
+  /** 全屏纸叶（A″）：可见面 = 真分片投影，活引擎收起作隐藏服务后端。 */
+  const isPaperFullscreen = computed(
+    () => !isSplit.value && topView.value === null && activeLeaf.value === 'paper'
+  )
+
+  /** 示面板独占：分屏 + 用户点「独占」，放映占满整窗。 */
+  const isPresentFullscreen = computed(
+    () => isSplit.value && presentExclusive.value && rightLeaf.value === 'present'
+  )
+
+  /** 单选示支叶全屏（slide 列表 / present 放映独占编辑区）。 */
+  const isDeckFullscreen = computed(
+    () =>
+      !isSplit.value &&
+      topView.value === null &&
+      (activeLeaf.value === 'slide' || activeLeaf.value === 'present')
+  )
+
+  /** 编辑面是否可见：任一全屏/独占形态下都不是编辑场景（底部执行面板只在
+   *  编辑场景露面——阅读、成页、放映时它是噪声）。 */
+  const isEditingSurface = computed(
+    () => !isPaperFullscreen.value && !isPresentFullscreen.value && !isDeckFullscreen.value
+  )
+
   // ── 窗口全屏态（与 titleBar 同源的 IPC；右下角 dock 等浮层消费） ──
   const isWindowFullScreen = ref(false)
   let fullScreenListenerBound = false
@@ -374,6 +402,10 @@ export const useEditorViewStore = defineStore('editorView', () => {
     sliderDuty,
     isEditorVisible,
     isWindowFullScreen,
+    isPaperFullscreen,
+    isPresentFullscreen,
+    isDeckFullscreen,
+    isEditingSurface,
     initWindowFullScreen,
     presentExclusive,
     setPresentExclusive,

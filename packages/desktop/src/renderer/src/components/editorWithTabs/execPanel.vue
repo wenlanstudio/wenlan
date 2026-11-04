@@ -113,13 +113,15 @@ import {
   PANEL_DEFAULT_HEIGHT
 } from '@/store/execPanel'
 import type { Md2rBlockInfo, Md2rEvent, Md2rRunResult } from '@shared/types/mdcode2run'
+import { diagramTypeOfLang } from '@muyajs/core'
 
 /**
  * mdcode2run 底部执行面板（M3 最小闭环）：**只渲染 body**。
  *
- * JetBrains 式分工：底部工具窗口的本体在编辑器列内向上生长，而它的「开关 +
- * 标题 + 计数」长在窗口状态栏里（statusBar 组件读 useExecPanelStore）。所以这里
- * 没有 header，展开时状态栏那条不移动——不存在「两条栏」。
+ * JetBrains 式分工：底部工具窗口横跨整个窗口宽度（挂在 app.vue 的
+ * .editor-container 上，不在编辑器列里），左侧栏只占它上方的区域，所以侧栏
+ * 展开/收起不会压缩面板；而它的「开关 + 标题 + 计数」长在窗口状态栏里
+ * （statusBar 组件读 useExecPanelStore），这里没有 header。
  *
  * 生命周期契约：面板卸载（切 tab/关文档）不 dispose 引擎——main 侧按
  * webContents 存亡 + 60s 宽限管理回收，切 tab 不杀 JVM/python 会话。
@@ -159,12 +161,36 @@ const MAX_OUTPUT_CHARS = 1_000_000
 const runnableBlocks = computed(() => blocks.value.filter(b => b.runnable))
 const runningCount = computed(() => Object.keys(running.value).length)
 
-/** 文中有围栏（不必经过 parse 就能判断）——未保存文档也据此亮出面板提示。 */
-const hasFenceLine = computed(() => /^(?:`{3,}|~{3,})/m.test(props.markdown))
+/** 围栏是否属于「图表」而非「代码」：语言表以 muya 的 DIAGRAM_LANGS 为
+ *  单一来源（mermaid/graphviz(dot)/plantuml/vega-lite/flowchart/sequence/
+ *  wavedrom/echarts/chart/abc/drawio/matplotlib），新增图表语言自动跟随。 */
+const isDiagramLang = (lang: string): boolean => diagramTypeOfLang(lang) !== null
 
-/** 面板可见性：有围栏 / 已解析出块 / 解析报错，三者其一即露面。 */
+/** 围栏 info-string 的首词（`{.python title="x"}` → `python`）。 */
+const fenceLangOf = (info: string): string =>
+  (info ?? '')
+    .replace(/^[{\s]+/, '')
+    .split(/[\s,{]/)[0]!
+    .toLowerCase()
+
+/**
+ * 文中有「代码」围栏——图表围栏不算。
+ *
+ * 未保存文档不经过 parse，可见性只能靠文本扫描判断；若只数围栏，一篇纯
+ * mermaid/graphviz 的文档也会亮出「代码执行」按钮，点开是空清单。
+ */
+const hasCodeFence = computed(() => {
+  const re = /^(?:`{3,}|~{3,})(.*)$/gm
+  let m: RegExpExecArray | null
+  while ((m = re.exec(props.markdown)) !== null) {
+    if (!isDiagramLang(fenceLangOf(m[1] ?? ''))) return true
+  }
+  return false
+})
+
+/** 面板可见性：有代码围栏 / 已解析出块 / 解析报错，三者其一即露面。 */
 const visible = computed(
-  () => hasFenceLine.value || blocks.value.length > 0 || parseError.value !== ''
+  () => hasCodeFence.value || blocks.value.length > 0 || parseError.value !== ''
 )
 
 // 状态栏读的就是这几个数：可见性、块计数、运行中数量。面板自己不算。
@@ -192,7 +218,10 @@ const refresh = async (): Promise<void> => {
   try {
     const parsed = await window.mdcode2run.parse({ docPath: path, md: props.markdown })
     parseError.value = ''
-    blocks.value = parsed.blocks
+    // 图表围栏（mermaid/graphviz/plantuml/…）不进执行面板：引擎的块清单是
+    // 「语法事实」（渲染端要画图），而 code run 是「可执行代码」的语义面，
+    // 图表既不可跑也不该以置灰块的形式占位——它根本不属于这个工具窗口。
+    blocks.value = parsed.blocks.filter(b => !isDiagramLang(fenceLangOf(b.lang)))
     // stale 重算：行号锚定的块若代码快照变了 → 旧结果标 stale；块没了 → 丢结果
     const byLine = new Map(blocks.value.map(b => [b.line, b]))
     for (const line of Object.keys(results.value).map(Number)) {
@@ -206,7 +235,7 @@ const refresh = async (): Promise<void> => {
     if (selectedLine.value !== null && !byLine.has(selectedLine.value)) {
       selectedLine.value = runnableBlocks.value[0]?.line ?? null
     }
-    if (!autoOpened && parsed.blocks.some(b => b.runnable)) {
+    if (!autoOpened && blocks.value.some(b => b.runnable)) {
       autoOpened = true
       panel.setOpen(true)
       if (selectedLine.value === null) {
@@ -417,9 +446,24 @@ let restoreHeight: number | null = null
 /** 拖动中挂到 window 上的清理函数：组件在拖动途中被卸载也能摘干净。 */
 let stopDrag: (() => void) | null = null
 
+/** 拖动时给编辑区留的最小高度：再小就没法写东西了。 */
+const MIN_EDITOR_HEIGHT = 200
+/** 状态栏高度缓存（CSS 变量不随主题变，读一次就够，避免拖动时逐帧取值）。 */
+let statusBarPx = 0
+const statusBarHeight = (): number => {
+  if (statusBarPx === 0) {
+    const raw = getComputedStyle(document.documentElement).getPropertyValue('--statusBarHeight')
+    statusBarPx = Number.parseFloat(raw) || 26
+  }
+  return statusBarPx
+}
+
 const maxHeight = (): number => {
-  const available = panelEl.value?.parentElement?.clientHeight ?? window.innerHeight
-  return Math.max(PANEL_MIN_HEIGHT, Math.round(available * 0.8))
+  // 面板现在挂在 app.vue 的全宽层（父级 = .editor-container），上限按「容器高
+  // − 状态栏 − 编辑区保底」算。别用「当前剩余空间」：它随面板自身变高而变小，
+  // 往上拖会自己把自己夹回去（拖动回环）。
+  const total = panelEl.value?.parentElement?.clientHeight ?? window.innerHeight
+  return Math.max(PANEL_MIN_HEIGHT, total - statusBarHeight() - MIN_EDITOR_HEIGHT)
 }
 
 const clampHeight = (px: number): number =>

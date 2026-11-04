@@ -33,6 +33,13 @@
         <import-modal />
       </div>
     </div>
+    <!-- 底部工具窗口（JetBrains 式）：横跨整个窗口宽度——左侧栏只占它上方的
+         区域，展开面板不压缩它、也不被它压缩。只在编辑场景露面：纸叶/示支/
+         放映全屏时收起（那是阅读与放映，不是编辑）。 -->
+    <exec-panel
+      v-if="init && hasCurrentFile && isEditingSurface"
+      :markdown="markdown"
+    />
     <status-bar />
   </div>
 </template>
@@ -47,6 +54,7 @@ import EditorWithTabs from '@/components/editorWithTabs/index.vue'
 import TitleBar from '@/components/titleBar/index.vue'
 import SideBar from '@/components/sideBar/index.vue'
 import StatusBar from '@/components/statusBar/index.vue'
+import ExecPanel from '@/components/editorWithTabs/execPanel.vue'
 import AboutDialog from '@/components/about/index.vue'
 import CommandPalette from '@/components/commandPalette/index.vue'
 import ExportSettingDialog from '@/components/exportSettings/index.vue'
@@ -82,6 +90,8 @@ const { windowActive, platform, init } = storeToRefs(mainStore)
 const { theme, customCss, textDirection, zoom, editorLineWidth } = storeToRefs(preferencesStore)
 const { projectTree } = storeToRefs(projectStore)
 const { currentFile } = storeToRefs(editorStore)
+// 编辑面是否可见（任一全屏/独占形态下都不是编辑场景）：底部执行面板据此露面
+const { isEditingSurface } = storeToRefs(editorViewStore)
 // 初始化窗口全屏态（进入/离开全屏由主进程 IPC 同步）
 editorViewStore.initWindowFullScreen()
 

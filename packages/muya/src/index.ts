@@ -47,6 +47,7 @@ export {
 } from './utils/columns/syntax';
 export type { ColumnAnalysis, ColumnDiagnostic, ColumnGroup, ColumnMarkerInfo, ColumnRule, StructToken } from './utils/columns/syntax';
 export { drawioEmbedUrl, exportDrawio, loadDrawioDiagram, renderDrawio } from './utils/diagram/drawio';
+export { diagramLangs, diagramTypeOfLang } from './utils/diagram/fence';
 export { renderDiagramForExport } from './utils/diagram/render';
 export type { IExportRenderOptions, IRenderOptions } from './utils/diagram/render';
 export type { IImageInfo } from './utils/image';
