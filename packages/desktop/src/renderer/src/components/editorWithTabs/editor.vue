@@ -1281,6 +1281,43 @@ const scrollToHighlight = () => {
   return scrollToElement('.mu-highlight')
 }
 
+/** 代码块定位时的顶部留白：块顶贴死在视口顶上太挤。 */
+const REVEAL_TOP_MARGIN = 48
+
+/**
+ * 把光标行对齐到视口顶部——执行面板点块行专用。
+ *
+ * 不能用 `scrollToCursor`：它对齐的是 STANDAR_Y（320px 的打字机位），底部
+ * 工具窗口展开后视口只剩半截，那个位置正好落在面板背后，块「跳过去就看不见」。
+ */
+const scrollCursorToTop = (duration = 200) => {
+  nextTick(() => {
+    const container = getScrollContainer()
+    if (!container) return
+    const y = getCursorY()
+    if (y == null) return
+    animatedScrollTo(
+      container,
+      Math.max(0, container.scrollTop + y - REVEAL_TOP_MARGIN),
+      duration
+    )
+  })
+}
+
+/**
+ * 把编辑区滚到指定源码行（0 基）——mdcode2run 执行面板点块行时定位用。
+ * 走引擎 sanctioned 的 `setCursorByOffset`（源码 {line,ch} → 块键光标），
+ * 再把该行滚到视口顶部（不是 STANDAR_Y 打字机位，见 scrollCursorToTop）。
+ */
+const revealSourceLine = (payload: unknown) => {
+  const line = (payload as { line?: unknown } | null)?.line
+  if (typeof line !== 'number' || !editor.value) return
+  const at = { line: Math.max(0, Math.floor(line)), ch: 0 }
+  if (editor.value.setCursorByOffset({ anchor: at, focus: at })) {
+    scrollCursorToTop(200)
+  }
+}
+
 /**
  * Scrolls the editor to the heading for a TOC entry. See
  * `resolveTocHeadingElement` for why the slug is resolved by document order
@@ -1927,6 +1964,7 @@ onMounted(() => {
   bus.on('insertParagraph', handleInsertParagraph)
   bus.on('columns.insert', handleInsertColumns)
   bus.on('scroll-to-header', scrollToHeader)
+  bus.on('mdcode2run-reveal-line', revealSourceLine)
   bus.on('scroll-to-anchor-element', scrollToAnchorElement)
   bus.on('screenshot-captured', handleScreenShot)
   bus.on('show-command-palette', handleModalOpening)
@@ -2123,6 +2161,7 @@ onBeforeUnmount(() => {
   bus.off('insertParagraph', handleInsertParagraph)
   bus.off('columns.insert', handleInsertColumns)
   bus.off('scroll-to-header', scrollToHeader)
+  bus.off('mdcode2run-reveal-line', revealSourceLine)
   bus.off('scroll-to-anchor-element', scrollToAnchorElement)
   bus.off('screenshot-captured', handleScreenShot)
   bus.off('show-command-palette', handleModalOpening)
