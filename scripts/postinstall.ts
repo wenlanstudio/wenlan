@@ -80,7 +80,11 @@ if (!fs.existsSync(electronInstall)) {
   const isComplete = () => {
     if (!fs.existsSync(pathTxt)) return false
     const rel = fs.readFileSync(pathTxt, 'utf8').trim()
-    if (!fs.existsSync(path.join(desktopRoot, 'node_modules', 'electron', rel))) return false
+    // path.txt 只存文件名（"electron.exe"），二进制实际位于 dist/ 下——与
+    // electron 官方 index.js 的解析一致（path.join(__dirname, 'dist', rel)）。
+    // 旧代码误查包根 node_modules/electron/electron.exe，永远 false，导致每次
+    // 安装都删 dist 重新下载；dev 进程运行时文件被锁，rmSync 直接 EPERM。
+    if (!fs.existsSync(path.join(distDir, rel))) return false
     if (plat === 'darwin' || plat === 'mas') {
       return fs.existsSync(path.join(distDir, 'Electron.app', 'Contents', 'Frameworks'))
     }
