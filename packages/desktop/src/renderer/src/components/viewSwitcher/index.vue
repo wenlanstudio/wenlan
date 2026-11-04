@@ -31,7 +31,7 @@
         class="leaf-btn"
         :class="{ active: leafSelection.includes(leaf), groupStart: leaf === 'paper' }"
         :title="LEAF_META[leaf].title"
-        @click="toggleLeaf(leaf)"
+        @click="onLeafClick(leaf)"
       >
         {{ LEAF_META[leaf].label }}
       </button>
@@ -91,10 +91,22 @@ import { t } from '@/i18n'
 const editorViewStore = useEditorViewStore()
 const preferencesStore = usePreferencesStore()
 const panel = useExecPanelStore()
-const { leafSelection, topView, hasColumns, sliderDuty, isCodeRunSurface } =
+const { leafSelection, topView, hasColumns, sliderDuty, isCodeRunSurface, presentImmersive } =
   storeToRefs(editorViewStore)
-const { toggleLeaf, toggleTopView } = editorViewStore
+const { toggleLeaf, toggleTopView, enterPresentImmersive, exitPresentImmersive } =
+  editorViewStore
 const { editorLineWidth } = storeToRefs(preferencesStore)
+
+/** 「示」是一键全屏放映，不参与「配置选择式」：点一下进全屏，再点一下退出。
+ *  其余五叶仍走 toggleLeaf 的选中/取消模型（store 语义保持不动）。 */
+const onLeafClick = (leaf: Leaf): void => {
+  if (leaf === 'present') {
+    if (presentImmersive.value) exitPresentImmersive()
+    else enterPresentImmersive()
+    return
+  }
+  toggleLeaf(leaf)
+}
 
 /** 「码」夹在「图」与「本」之间：按 code 把 TOP_VIEWS 切成前后两段，
  *  以后往 TOP_VIEWS 增删视图也不必改这段模板。 */
@@ -120,7 +132,7 @@ const LEAF_META: Record<Leaf, { label: string; title: string }> = {
   page: { label: '页', title: '逻辑页——连续流 + 分页缝提示（Word 草稿视图）' },
   paper: { label: '纸', title: '纸面——真分页预览（切行/续表真渲染，只读）' },
   slide: { label: '览', title: '页览——全部真实页排开看（溢出的逻辑页带「N页」徽章）' },
-  present: { label: '示', title: '放映（一次一页）' }
+  present: { label: '示', title: '全屏放映（一次一页，Esc 退出）' }
 }
 
 const TOP_VIEW_META: Record<string, { icon: string; title: string }> = {

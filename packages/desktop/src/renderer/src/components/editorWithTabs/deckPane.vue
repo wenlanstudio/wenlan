@@ -64,7 +64,7 @@
       </template>
       <button
         class="exit-button"
-        :title="isExclusive ? '退出独占（Esc）' : isPanel ? '关闭此视图' : '返回编辑（Esc）'"
+        :title="presentImmersive ? '退出全屏放映（Esc）' : isExclusive ? '退出独占（Esc）' : isPanel ? '关闭此视图' : '返回编辑（Esc）'"
         @click="exit"
       >
         ✕
@@ -110,7 +110,7 @@ const editorStore = useEditorStore()
 const editorViewStore = useEditorViewStore()
 const preferencesStore = usePreferencesStore()
 const { plantumlServer } = storeToRefs(preferencesStore)
-const { isSplit, presentExclusive } = storeToRefs(editorViewStore)
+const { isSplit, presentExclusive, presentImmersive } = storeToRefs(editorViewStore)
 
 // 独占开关只属于分屏中的 present pane（LEAVES 序保证 present 恒为右叶）。
 const canToggleExclusive = computed(() => isPanel.value && isSplit.value && props.leaf === 'present')
@@ -323,6 +323,11 @@ const onRpc = async (data: { id: number; diagramType: string; source: string }):
 }
 
 const exit = (): void => {
+  // 一键全屏放映态：Esc/✕ 整包退出（恢复视图 + 窗口全屏态）。
+  if (presentImmersive.value) {
+    editorViewStore.exitPresentImmersive()
+    return
+  }
   // 独占态下 Esc/✕ 第一优先退独占（回到分屏），不摘叶。
   if (isExclusive.value) {
     editorViewStore.setPresentExclusive(false)

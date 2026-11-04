@@ -3,10 +3,14 @@
     <!-- 工作区（JetBrains 三段式）：左右侧栏 + 编辑器列占满状态栏以上的空间。
          右侧栏后续接入，届时与 side-bar 对称，编辑器列宽度由 flex 自适应。 -->
     <div class="workspace">
-      <side-bar v-if="init" />
+      <side-bar
+        v-if="init"
+        :hidden="presentImmersive"
+      />
 
       <div class="editor-middle">
         <title-bar
+          v-show="!presentImmersive"
           :project="projectTree"
           :filename="filename"
           :active="windowActive"
@@ -41,12 +45,12 @@
       v-if="init && hasCurrentFile"
       :markdown="markdown"
     />
-    <status-bar />
+    <status-bar v-if="!presentImmersive" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, watch, nextTick, onMounted, ref } from 'vue'
+import { computed, watch, nextTick, onMounted, onBeforeUnmount, ref } from 'vue'
 import { useMainStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import { addStyles, addThemeStyle, addCustomStyle, setEditorWidth, type AddStylesOptions } from '@/util/theme'
@@ -91,6 +95,7 @@ const { windowActive, platform, init } = storeToRefs(mainStore)
 const { theme, customCss, textDirection, zoom, editorLineWidth } = storeToRefs(preferencesStore)
 const { projectTree } = storeToRefs(projectStore)
 const { currentFile } = storeToRefs(editorStore)
+const { presentImmersive } = storeToRefs(editorViewStore)
 // 初始化窗口全屏态（进入/离开全屏由主进程 IPC 同步）
 editorViewStore.initWindowFullScreen()
 
@@ -179,7 +184,17 @@ const setupDragDropHandler = (): void => {
     false
   )
 }
+// 沉浸式放映的窗口级 Esc 兜底：deckPane 未挂载（无文件）、或 iframe 还没
+// 起来时，放映条与 deck 页面都接不到按键，否则会卡在原生全屏里出不来。
+// deckPane 自己那条 Esc 与本条可能同时触发，exitPresentImmersive 是幂等的。
+const onImmersiveKeydown = (ev: KeyboardEvent): void => {
+  if (ev.key === 'Escape' && presentImmersive.value) {
+    editorViewStore.exitPresentImmersive()
+  }
+}
+
 onMounted(async () => {
+  window.addEventListener('keydown', onImmersiveKeydown)
   if (window.marktext?.initialState) {
     preferencesStore.SET_USER_PREFERENCE(window.marktext.initialState)
   }
@@ -241,6 +256,10 @@ onMounted(async () => {
     }
     addStyles(style)
   })
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onImmersiveKeydown)
 })
 </script>
 

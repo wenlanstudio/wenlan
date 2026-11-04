@@ -2,7 +2,7 @@
   <div
     class="editor-with-tabs"
     :style="{
-      'max-width': `calc(100vw - ${effectiveSideBarWidth}px)`,
+      'max-width': `calc(100vw - ${sideBarOffset}px)`,
       '--editor-zoom': zoom
     }"
   >
@@ -187,7 +187,12 @@ const { topView, isSplit, leftLeaf, rightLeaf, activeLeaf, editorLens, rightRati
   storeToRefs(editorViewStore)
 // 全屏/独占形态的判据收口在 store（底部执行面板挪到 app.vue 全宽层后，
 // 两处要用同一条判据，别再在这里复制一遍）。
-const { isPaperFullscreen, isPresentFullscreen } = storeToRefs(editorViewStore)
+const { isPaperFullscreen, isPresentFullscreen, presentImmersive } =
+  storeToRefs(editorViewStore)
+// 沉浸式放映时侧栏被显示层收起，宽度补偿要跟着归零，否则放映区右侧留白。
+const sideBarOffset = computed<number>(() =>
+  presentImmersive.value ? 0 : effectiveSideBarWidth.value
+)
 // Actions 不经 storeToRefs（它只包 state/getter）。
 const { setRightRatio } = editorViewStore
 

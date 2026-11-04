@@ -1,6 +1,6 @@
 <template>
   <div
-    v-show="showSideBar"
+    v-show="showSideBar && !hidden"
     ref="sideBar"
     class="side-bar"
     :style="[{ paddingTop: topInset }, { width: `${finalSideBarWidth}px` }]"
@@ -43,6 +43,9 @@ import Tree from './tree.vue'
 import Toc from './toc.vue'
 import { storeToRefs } from 'pinia'
 
+/** 沉浸式放映时由 app.vue 传入：只隐藏显示层，不改 showSideBar 用户偏好。 */
+const props = defineProps<{ hidden?: boolean }>()
+
 const layoutStore = useLayoutStore()
 const preferencesStore = usePreferencesStore()
 const projectStore = useProjectStore()
@@ -72,7 +75,7 @@ const sideBarTabs: { id: SidebarTab; label: () => string }[] = [
 ]
 
 const finalSideBarWidth = computed<number>(() => {
-  if (!showSideBar.value) return 0
+  if (!showSideBar.value || props.hidden) return 0
   return sideBarViewWidth.value < 220 ? 220 : sideBarViewWidth.value
 })
 

@@ -320,3 +320,84 @@ describe('editorView persistence & migration', () => {
     expect(reloaded().leafSelection).toEqual(['flow'])
   })
 })
+
+// 「示」一键全屏放映：点按钮不再走配置选择式，而是记住当前选择 → 单叶
+// present → 窗口原生全屏；布局层按 presentImmersive 收起侧栏/标题栏/状态栏/
+// 底部执行面板。✕、Esc 或系统退出全屏都整包复原。
+describe('「示」 immersive fullscreen presentation', () => {
+  let setFullScreen: ReturnType<typeof vi.fn>
+  let isFullScreen: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+    setFullScreen = vi.fn()
+    isFullScreen = vi.fn(() => Promise.resolve(false))
+    Object.assign(window.electron, {
+      windowControl: { setFullScreen, isFullScreen }
+    })
+  })
+
+  it('enters single-leaf present with native fullscreen and no editing surface', () => {
+    const store = useEditorViewStore()
+    store.toggleLeaf('slide') // 进入前是 (flow, slide) 分屏
+    store.enterPresentImmersive()
+
+    expect(store.presentImmersive).toBe(true)
+    expect(store.leafSelection).toEqual(['present'])
+    expect(store.activeLeaf).toBe('present')
+    expect(store.isSplit).toBe(false)
+    // 底部执行面板由 isCodeRunSurface 驱动，放映态必须为 false。
+    expect(store.isEditingSurface).toBe(false)
+    expect(store.isCodeRunSurface).toBe(false)
+    expect(setFullScreen).toHaveBeenCalledWith(true)
+  })
+
+  it('restores the previous leaves and top view on exit', () => {
+    const store = useEditorViewStore()
+    store.toggleLeaf('present')
+    store.toggleTopView('code')
+    store.enterPresentImmersive()
+    expect(store.topView).toBeNull()
+
+    store.exitPresentImmersive()
+    expect(store.presentImmersive).toBe(false)
+    expect(store.leafSelection).toEqual(['flow', 'present'])
+    expect(store.topView).toBe('code')
+    expect(setFullScreen).toHaveBeenLastCalledWith(false)
+  })
+
+  it('is idempotent: page Esc and leave-full-screen may both fire', () => {
+    const store = useEditorViewStore()
+    store.enterPresentImmersive()
+    store.enterPresentImmersive()
+    expect(setFullScreen).toHaveBeenCalledTimes(1)
+
+    store.exitPresentImmersive()
+    store.exitPresentImmersive()
+    expect(store.presentImmersive).toBe(false)
+    expect(store.leafSelection).toEqual(['flow'])
+    expect(setFullScreen).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps the window fullscreen when it was already fullscreen before entering', async() => {
+    isFullScreen.mockResolvedValue(true)
+    const store = useEditorViewStore()
+    await store.initWindowFullScreen()
+    store.enterPresentImmersive()
+    store.exitPresentImmersive()
+
+    expect(setFullScreen).toHaveBeenCalledTimes(1) // 只有进入时的 true
+    expect(setFullScreen).toHaveBeenCalledWith(true)
+  })
+
+  it('drops the immersive flag without overriding a view changed from outside', async() => {
+    const store = useEditorViewStore()
+    store.enterPresentImmersive()
+    store.toggleLeaf('slide') // 模拟菜单/命令切走
+    await nextTick()
+
+    expect(store.presentImmersive).toBe(false)
+    expect(store.leafSelection).toEqual(['present', 'slide'])
+  })
+})

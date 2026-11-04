@@ -208,6 +208,15 @@ export const useEditorViewStore = defineStore('editorView', () => {
     }
   })
 
+  // ── 「示」一键全屏放映（沉浸式；会话内状态，不持久化） ──
+  // 点「示」不再走配置选择式，而是单叶 present + Electron 原生全屏，布局层
+  // 据此隐藏侧栏/标题栏/状态栏/底部执行面板。进入前的选择与窗口全屏态由
+  // 下面三个变量暂存，退出时复原。侧栏只做显示层屏蔽，不动用户偏好。
+  const presentImmersive = ref(false)
+  let restoreLeaves: Leaf[] | null = null
+  let restoreTopView: TopView | null = null
+  let restoreWindowFullScreen = false
+
   // ── 全屏/独占形态（布局层消费：编辑列、底部工具窗口、浮层的显隐） ──
   // 这三个判断原先各自长在 editorWithTabs/index.vue 里；底部执行面板挪到
   // app.vue 全宽层后，两处都要用同一条判据，故收口进 store，避免两份漂移。
@@ -233,7 +242,11 @@ export const useEditorViewStore = defineStore('editorView', () => {
   /** 编辑面是否可见：任一全屏/独占形态下都不是编辑场景（底部执行面板只在
    *  编辑场景露面——阅读、成页、放映时它是噪声）。 */
   const isEditingSurface = computed(
-    () => !isPaperFullscreen.value && !isPresentFullscreen.value && !isDeckFullscreen.value
+    () =>
+      !isPaperFullscreen.value &&
+      !isPresentFullscreen.value &&
+      !isDeckFullscreen.value &&
+      !presentImmersive.value
   )
 
   // ── 窗口全屏态（与 titleBar 同源的 IPC；右下角 dock 等浮层消费） ──
@@ -252,6 +265,9 @@ export const useEditorViewStore = defineStore('editorView', () => {
     })
     window.electron.ipcRenderer.on('mt::window-leave-full-screen', () => {
       isWindowFullScreen.value = false
+      // OS/Chromium 在全屏下按 Esc 会先吃掉按键直接退出全屏，页面可能收不到
+      // keydown；此时若仍在沉浸式放映，说明不是我们主动触发的退出 → 同步收尾。
+      if (presentImmersive.value) exitPresentImmersive()
     })
   }
 
@@ -311,6 +327,56 @@ export const useEditorViewStore = defineStore('editorView', () => {
     // Keep the main-process menu checkbox in sync.
     preferencesStore.DISPATCH_EDITOR_VIEW_STATE({ sourceCode: shouldBeSource })
   }
+
+  /** 点「示」：记住当前选择 → 单叶放映 → 窗口原生全屏。
+   *  布局层（app.vue / sideBar / editorWithTabs）按 presentImmersive 收起所有
+   *  chrome；不改 layoutStore.showSideBar，退出即自动恢复侧栏。 */
+  const enterPresentImmersive = (): void => {
+    if (presentImmersive.value) return
+    restoreLeaves = [...leafSelection.value]
+    restoreTopView = topView.value
+    restoreWindowFullScreen = isWindowFullScreen.value
+    presentImmersive.value = true
+    presentExclusive.value = false
+    topView.value = null
+    leafSelection.value = ['present']
+    persist()
+    syncToPreferences()
+    try {
+      window.electron.windowControl.setFullScreen(true)
+    } catch {
+      // 窗口全屏是 best-effort：单测 / 无主进程环境下静默降级为应用内全屏。
+    }
+  }
+
+  /** 退出全屏放映，恢复进入前的视图与窗口全屏态。
+   *  幂等：Esc 可能同时触发页面 keydown 与 leave-full-screen，两条都会进来。 */
+  const exitPresentImmersive = (): void => {
+    if (!presentImmersive.value) return
+    presentImmersive.value = false // 先清，防止 leave-full-screen 回调递归
+    if (!restoreWindowFullScreen) {
+      try {
+        window.electron.windowControl.setFullScreen(false)
+      } catch {
+        // 同上
+      }
+    }
+    leafSelection.value = restoreLeaves?.length ? [...restoreLeaves] : ['flow']
+    topView.value = restoreTopView
+    restoreLeaves = null
+    restoreTopView = null
+    persist()
+    syncToPreferences()
+  }
+
+  // 沉浸式下若被外部切走（菜单/命令/持久化恢复），只收起沉浸式，不覆盖新选择。
+  watch(leafSelection, (sel) => {
+    if (presentImmersive.value && !(sel.length === 1 && sel[0] === 'present')) {
+      presentImmersive.value = false
+      restoreLeaves = null
+      restoreTopView = null
+    }
+  })
 
   /** 点叶：配置选择式——点一下选中，再点一下取消；选满两叶后第三叶点不动
    *  （先摘一片才能换）；最后一片不可摘。 */
@@ -423,6 +489,9 @@ export const useEditorViewStore = defineStore('editorView', () => {
     initWindowFullScreen,
     presentExclusive,
     setPresentExclusive,
+    presentImmersive,
+    enterPresentImmersive,
+    exitPresentImmersive,
     toggleLeaf,
     removeLeaf,
     toggleTopView,
