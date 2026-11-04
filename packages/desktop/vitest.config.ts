@@ -18,7 +18,11 @@ export default defineConfig({
     environment: 'jsdom',
     include: ['test/unit/specs/**/*.spec.ts'],
     globals: true,
-    execArgv: nodeWebStorageOff
+    execArgv: nodeWebStorageOff,
+    // Windows 上 ~110 个 spec 同时起 forks worker 偶发 "Timeout waiting for
+    // worker to respond"（每次随机落在不同文件，与用例本身无关）。限制并发
+    // worker 数即可消除，进程隔离模型不变。
+    maxWorkers: 4
   },
   resolve: {
     alias: {

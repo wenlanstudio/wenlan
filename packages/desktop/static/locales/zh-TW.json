@@ -346,7 +346,8 @@
       "themes": {
         "academic": "學術",
         "default": "GitHub（預設）",
-        "liber": "Liber"
+        "liber": "Liber",
+        "thesis": "Thesis (Undergraduate)"
       }
     }
   },
@@ -898,7 +899,16 @@
       "reloadImages": "重新載入圖片",
       "textDirection": "文字方向",
       "actualSize": "實際大小",
-      "devToggleDeveloperTools": "切換開發者工具"
+      "devToggleDeveloperTools": "切換開發者工具",
+      "readingView": "Reading View",
+      "slidesView": "Slides View",
+      "tableView": "Tables View",
+      "figureView": "Figure View",
+      "comingSoon": "Coming soon",
+      "pageWidth": "Page Width",
+      "cursorPosition": "Cursor Position",
+      "readOnlyLocked": "Read-only mode",
+      "readOnlyUnlocked": "Editable mode"
     },
     "tabs": {
       "cycleForward": "向前循環",
@@ -936,6 +946,11 @@
       "moveColumnRight": "右移該列",
       "copyTable": "複製表格",
       "deleteTable": "刪除表格"
+    },
+    "columns": {
+      "insertGroup": "Insert Column Group",
+      "insertSplit": "Insert Column Split",
+      "endGroup": "End Column Group"
     }
   },
   "common": {
@@ -1060,5 +1075,15 @@
     "output": "輸出",
     "resizeHint": "拖動調整高度 · 雙擊最大化/還原",
     "noBlocks": "文件中沒有可執行的程式碼區塊"
+  },
+  "view": {
+    "slidesView": "Slides View",
+    "tableView": "Tables View",
+    "figureView": "Figure View",
+    "comingSoon": "Coming soon",
+    "pageWidth": "Page Width",
+    "cursorPosition": "Cursor Position",
+    "readOnlyLocked": "Read-only mode",
+    "readOnlyUnlocked": "Editable mode"
   }
 }

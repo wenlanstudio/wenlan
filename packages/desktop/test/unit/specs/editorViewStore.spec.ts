@@ -34,15 +34,17 @@ import {
 } from '@/store/editorView'
 import { useEditorStore } from '@/store/editor'
 
-// 视图模型 v2（docs/design/view-model.md）：文示二支 × 四叶选择。
+// 视图模型 v2（docs/design/view-model.md）：文示二支 × 六叶选择。
+// M4.3 起 page（逻辑页）与 paper（物理纸）是两片独立的叶，LEAVES 从 5 扩到 6；
+// 顺序即分屏左右顺序（细→粗、编辑左展示右）。
 describe('editorView selection model', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
   })
 
-  it('declares the two-branch five-leaf structure (paper in the edit branch)', () => {
-    expect(LEAVES).toEqual(['flow', 'column', 'paper', 'slide', 'present'])
+  it('declares the two-branch six-leaf structure (page + paper in the edit branch)', () => {
+    expect(LEAVES).toEqual(['flow', 'column', 'page', 'paper', 'slide', 'present'])
     expect(TOP_VIEWS).toEqual(['table', 'figure', 'code'])
   })
 
@@ -73,18 +75,19 @@ describe('editorView selection model', () => {
     expect(store.rightLeaf).toBe('slide')
   })
 
-  it('paper (M0 skeleton): splits with flow, fullscreen keeps editor lens and zoom duty', () => {
+  it('paper (M4.3 projection): splits with flow, fullscreen hides the live editor lens', () => {
     const store = useEditorViewStore()
     store.toggleLeaf('paper')
     expect(store.leafSelection).toEqual(['flow', 'paper'])
     expect(store.leftLeaf).toBe('flow')
-    expect(store.rightLeaf).toBe('paper') // 右 pane = 纸面投影（M0 暂 flat 流）
+    expect(store.rightLeaf).toBe('paper') // 右 pane = 只读真分片投影
     expect(store.editorLens).toBe('flow') // 活引擎在左 pane
 
-    store.toggleLeaf('flow') // 摘掉 flow → 全屏 paper（骨架：引擎照 flow 渲染）
+    store.toggleLeaf('flow') // 摘掉 flow → 全屏 paper
     expect(store.activeLeaf).toBe('paper')
     expect(store.editorLens).toBe('paper')
-    expect(store.isEditorVisible).toBe(true) // 光标指示仍活
+    // M4.3：纸叶是只读投影，活引擎隐藏留任 bus 服务后端；光标指示无意义。
+    expect(store.isEditorVisible).toBe(false)
     expect(store.sliderDuty).toBe('paper-zoom') // 页缩放，待接线（§5）
 
     store.toggleLeaf('slide') // 纸×览不可配对 → 单选替换（§5 交互）

@@ -346,7 +346,8 @@
       "themes": {
         "academic": "학술",
         "default": "GitHub (기본값)",
-        "liber": "Liber"
+        "liber": "Liber",
+        "thesis": "Thesis (Undergraduate)"
       }
     }
   },
@@ -898,7 +899,16 @@
       "reloadImages": "이미지 새로고침",
       "textDirection": "텍스트 방향",
       "actualSize": "실제 크기",
-      "devToggleDeveloperTools": "개발자 도구 전환"
+      "devToggleDeveloperTools": "개발자 도구 전환",
+      "readingView": "Reading View",
+      "slidesView": "Slides View",
+      "tableView": "Tables View",
+      "figureView": "Figure View",
+      "comingSoon": "Coming soon",
+      "pageWidth": "Page Width",
+      "cursorPosition": "Cursor Position",
+      "readOnlyLocked": "Read-only mode",
+      "readOnlyUnlocked": "Editable mode"
     },
     "tabs": {
       "cycleForward": "앞으로 순환",
@@ -936,6 +946,11 @@
       "moveColumnRight": "Move Column Right",
       "copyTable": "Copy Table",
       "deleteTable": "Delete Table"
+    },
+    "columns": {
+      "insertGroup": "Insert Column Group",
+      "insertSplit": "Insert Column Split",
+      "endGroup": "End Column Group"
     }
   },
   "common": {
@@ -1060,5 +1075,15 @@
     "output": "Output",
     "resizeHint": "끌어서 크기 조절 · 더블클릭으로 최대화",
     "noBlocks": "실행 가능한 코드 블록이 없습니다"
+  },
+  "view": {
+    "slidesView": "Slides View",
+    "tableView": "Tables View",
+    "figureView": "Figure View",
+    "comingSoon": "Coming soon",
+    "pageWidth": "Page Width",
+    "cursorPosition": "Cursor Position",
+    "readOnlyLocked": "Read-only mode",
+    "readOnlyUnlocked": "Editable mode"
   }
 }

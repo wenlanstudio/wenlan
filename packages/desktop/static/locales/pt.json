@@ -346,7 +346,8 @@
       "themes": {
         "academic": "Acadêmico",
         "default": "GitHub (Padrão)",
-        "liber": "Liber"
+        "liber": "Liber",
+        "thesis": "Thesis (Undergraduate)"
       }
     }
   },
@@ -898,7 +899,16 @@
       "reloadImages": "Recarregar Imagens",
       "textDirection": "Direção do Texto",
       "actualSize": "Tamanho real",
-      "devToggleDeveloperTools": "Alternar ferramentas de desenvolvedor"
+      "devToggleDeveloperTools": "Alternar ferramentas de desenvolvedor",
+      "readingView": "Reading View",
+      "slidesView": "Slides View",
+      "tableView": "Tables View",
+      "figureView": "Figure View",
+      "comingSoon": "Coming soon",
+      "pageWidth": "Page Width",
+      "cursorPosition": "Cursor Position",
+      "readOnlyLocked": "Read-only mode",
+      "readOnlyUnlocked": "Editable mode"
     },
     "tabs": {
       "cycleForward": "Ciclar para Frente",
@@ -936,6 +946,11 @@
       "moveColumnRight": "Move Column Right",
       "copyTable": "Copy Table",
       "deleteTable": "Delete Table"
+    },
+    "columns": {
+      "insertGroup": "Insert Column Group",
+      "insertSplit": "Insert Column Split",
+      "endGroup": "End Column Group"
     }
   },
   "common": {
@@ -1060,5 +1075,15 @@
     "output": "Output",
     "resizeHint": "Arraste para redimensionar · Duplo clique para maximizar",
     "noBlocks": "Nenhum bloco de código executável neste documento"
+  },
+  "view": {
+    "slidesView": "Slides View",
+    "tableView": "Tables View",
+    "figureView": "Figure View",
+    "comingSoon": "Coming soon",
+    "pageWidth": "Page Width",
+    "cursorPosition": "Cursor Position",
+    "readOnlyLocked": "Read-only mode",
+    "readOnlyUnlocked": "Editable mode"
   }
 }

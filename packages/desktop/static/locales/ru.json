@@ -346,7 +346,8 @@
       "themes": {
         "academic": "Академическая",
         "default": "GitHub (по умолчанию)",
-        "liber": "Liber"
+        "liber": "Liber",
+        "thesis": "Thesis (Undergraduate)"
       }
     }
   },
@@ -898,7 +899,16 @@
       "reloadImages": "Обновить изображения",
       "textDirection": "Направление текста",
       "actualSize": "Реальный размер",
-      "devToggleDeveloperTools": "Переключить инструменты разработчика"
+      "devToggleDeveloperTools": "Переключить инструменты разработчика",
+      "readingView": "Reading View",
+      "slidesView": "Slides View",
+      "tableView": "Tables View",
+      "figureView": "Figure View",
+      "comingSoon": "Coming soon",
+      "pageWidth": "Page Width",
+      "cursorPosition": "Cursor Position",
+      "readOnlyLocked": "Read-only mode",
+      "readOnlyUnlocked": "Editable mode"
     },
     "tabs": {
       "cycleForward": "Следующая вкладка",
@@ -936,6 +946,11 @@
       "moveColumnRight": "Move Column Right",
       "copyTable": "Copy Table",
       "deleteTable": "Delete Table"
+    },
+    "columns": {
+      "insertGroup": "Insert Column Group",
+      "insertSplit": "Insert Column Split",
+      "endGroup": "End Column Group"
     }
   },
   "common": {
@@ -1060,5 +1075,15 @@
     "output": "Output",
     "resizeHint": "Перетащите, чтобы изменить высоту · Двойной щелчок — развернуть",
     "noBlocks": "В документе нет исполняемых блоков кода"
+  },
+  "view": {
+    "slidesView": "Slides View",
+    "tableView": "Tables View",
+    "figureView": "Figure View",
+    "comingSoon": "Coming soon",
+    "pageWidth": "Page Width",
+    "cursorPosition": "Cursor Position",
+    "readOnlyLocked": "Read-only mode",
+    "readOnlyUnlocked": "Editable mode"
   }
 }

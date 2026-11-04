@@ -346,7 +346,8 @@
       "themes": {
         "academic": "アカデミック",
         "default": "GitHub (デフォルト)",
-        "liber": "Liber"
+        "liber": "Liber",
+        "thesis": "Thesis (Undergraduate)"
       }
     }
   },
@@ -898,7 +899,16 @@
       "reloadImages": "画像を再読み込み",
       "textDirection": "テキスト方向",
       "actualSize": "実際のサイズ",
-      "devToggleDeveloperTools": "開発者ツールの切り替え"
+      "devToggleDeveloperTools": "開発者ツールの切り替え",
+      "readingView": "Reading View",
+      "slidesView": "Slides View",
+      "tableView": "Tables View",
+      "figureView": "Figure View",
+      "comingSoon": "Coming soon",
+      "pageWidth": "Page Width",
+      "cursorPosition": "Cursor Position",
+      "readOnlyLocked": "Read-only mode",
+      "readOnlyUnlocked": "Editable mode"
     },
     "tabs": {
       "cycleForward": "前方に循環",
@@ -936,6 +946,11 @@
       "moveColumnRight": "Move Column Right",
       "copyTable": "Copy Table",
       "deleteTable": "Delete Table"
+    },
+    "columns": {
+      "insertGroup": "Insert Column Group",
+      "insertSplit": "Insert Column Split",
+      "endGroup": "End Column Group"
     }
   },
   "common": {
@@ -1060,5 +1075,15 @@
     "output": "Output",
     "resizeHint": "ドラッグで高さ変更・ダブルクリックで最大化",
     "noBlocks": "実行可能なコードブロックがありません"
+  },
+  "view": {
+    "slidesView": "Slides View",
+    "tableView": "Tables View",
+    "figureView": "Figure View",
+    "comingSoon": "Coming soon",
+    "pageWidth": "Page Width",
+    "cursorPosition": "Cursor Position",
+    "readOnlyLocked": "Read-only mode",
+    "readOnlyUnlocked": "Editable mode"
   }
 }

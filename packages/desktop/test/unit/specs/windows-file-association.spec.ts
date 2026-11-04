@@ -31,8 +31,11 @@ const customInstall = macroBody('customInstall')
 const customUnInstall = macroBody('customUnInstall')
 
 describe('Windows Markdown file association (build/windows/installer.nsh)', () => {
+  // 8ece16a9 renamed the product before 1.0.0 shipped, so there are no
+  // MarkText-era UserChoice pins to preserve. What this guard still protects:
+  // once shipped, the ProgId must never change again.
   it('keeps the ProgId name an existing "Open with" choice points at', () => {
-    expect(script).toMatch(/!define\s+MT_PROGID\s+"MarkText\.Document"/)
+    expect(script).toMatch(/!define\s+MT_PROGID\s+"Wenlan\.Document"/)
   })
 
   it('registers without prompting, so no answer can leave the ProgId deleted', () => {
@@ -51,11 +54,11 @@ describe('Windows Markdown file association (build/windows/installer.nsh)', () =
   })
 
   it('quotes the executable path in every open command it writes', () => {
-    const commands = script.match(/shell\\open\\command[\s\S]*?marktext\.exe/g) ?? []
+    const commands = script.match(/shell\\open\\command[\s\S]*?wenlan\.exe/g) ?? []
     expect(commands.length, 'no open command is written').toBeGreaterThan(0)
     for (const command of commands) {
-      // Unquoted, `C:\Program Files\...\marktext.exe "%1"` runs `C:\Program`.
-      expect(command).toContain('"$INSTDIR\\marktext.exe')
+      // Unquoted, `C:\Program Files\...\wenlan.exe "%1"` runs `C:\Program`.
+      expect(command).toContain('"$INSTDIR\\wenlan.exe')
     }
   })
 
