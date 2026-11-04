@@ -162,6 +162,9 @@ const postToDeck = (msg: Record<string, unknown>): void => {
 }
 
 const sendBuild = (preservePage = false): void => {
+  // 每次重建先清旧提示：警告是「这次构建」的结论，修好（补图/改主题名）后
+  // 不该继续挂着上一轮的文字。
+  missingWarn.value = ''
   // 重建保页（面板态的生命线）：带上最近页号，改字不跳回第 1 页（list 视图
   // 页面侧自保滚动位置，startIndex 被忽略）。
   const startIndex =
