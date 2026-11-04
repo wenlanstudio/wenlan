@@ -12,6 +12,10 @@
       "file": "Arquivo",
       "newTab": "Nova Aba",
       "newWindow": "Nova Janela",
+      "newInProject": "Novo no projeto",
+      "newInProjectBlank": "Ficheiro em branco",
+      "newInProjectDeck": "Apresentação (md2slides)",
+      "newInProjectQuiz": "Apresentação de quiz",
       "openFile": "Abrir Arquivo...",
       "openFolder": "Abrir Pasta...",
       "openRecent": "Abrir Recente",
@@ -211,6 +215,9 @@
     "editDictionary": "Editar Dicionário...",
     "sideBar": {
       "newFile": "Novo Arquivo",
+      "newFromTemplate": "Novo a partir de modelo",
+      "newDeckFile": "Apresentação (md2slides)",
+      "newQuizFile": "Apresentação de quiz",
       "newDirectory": "Nova Pasta",
       "copy": "Copiar",
       "cut": "Cortar",
@@ -775,7 +782,7 @@
     }
   },
   "about": {
-    "copyright": "Copyright © wenlanstudio 2026-{year}",
+    "copyright": "Copyright © WenLanStudio 2026-{year}",
     "copyrightContributors": "Copyright Contribuidores"
   },
   "commands": {
@@ -1040,5 +1047,16 @@
       "switchError": "Erro ao alternar corretor para {languageCode}, {error}",
       "title": "Verificação Ortográfica"
     }
+  },
+  "execPanel": {
+    "needPath": "Save the file first — code execution needs a file path (sessions and logs are anchored per document)",
+    "title": "Code Run",
+    "run": "Run",
+    "stop": "Stop",
+    "running": "Running…",
+    "stale": "Modified",
+    "failed": "Failed",
+    "empty": "No output yet",
+    "output": "Output"
   }
 }

@@ -150,6 +150,12 @@
         :markdown="markdown"
       />
     </div>
+    <!-- mdcode2run 底部执行面板（M3）：编辑循环的输出面。全屏形态（纸叶/
+         示支独占/放映）隐藏——那是阅读/放映场景，不是编辑场景。 -->
+    <exec-panel
+      v-if="!isPaperFullscreen && !isPresentFullscreen && !isDeckFullscreen"
+      :markdown="markdown"
+    />
     <tab-notifications />
   </div>
 </template>
@@ -168,6 +174,7 @@ import DeckPane from './deckPane.vue'
 import LeafProjection from './leafProjection.vue'
 import PaperProjection from './paperProjection.vue'
 import TabNotifications from './notifications.vue'
+import ExecPanel from './execPanel.vue'
 
 defineProps<{
   markdown: string
@@ -206,6 +213,14 @@ const isPaperFullscreen = computed(
 const { presentExclusive } = storeToRefs(editorViewStore)
 const isPresentFullscreen = computed(
   () => isSplit.value && presentExclusive.value && rightLeaf.value === 'present'
+)
+
+// 单选示支叶全屏（slide 列表 / present 放映独占编辑区）：编辑面已收起。
+const isDeckFullscreen = computed(
+  () =>
+    !isSplit.value &&
+    topView.value === null &&
+    (activeLeaf.value === 'slide' || activeLeaf.value === 'present')
 )
 
 // 分屏左 pane 的引擎透镜由 store.editorLens 给出：orderedLeaves 首个

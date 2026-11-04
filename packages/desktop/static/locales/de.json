@@ -12,6 +12,10 @@
       "file": "Datei",
       "newTab": "Neuer Tab",
       "newWindow": "Neues Fenster",
+      "newInProject": "Neu im Projekt",
+      "newInProjectBlank": "Leere Datei",
+      "newInProjectDeck": "Foliensatz (md2slides)",
+      "newInProjectQuiz": "Quiz-Foliensatz",
       "openFile": "Datei öffnen...",
       "openFolder": "Ordner öffnen...",
       "openRecent": "Zuletzt verwendet",
@@ -211,6 +215,9 @@
     "editDictionary": "Wörterbuch bearbeiten...",
     "sideBar": {
       "newFile": "Neue Datei",
+      "newFromTemplate": "Neu aus Vorlage",
+      "newDeckFile": "Foliensatz (md2slides)",
+      "newQuizFile": "Quiz-Foliensatz",
       "newDirectory": "Neuer Ordner",
       "copy": "Kopieren",
       "cut": "Ausschneiden",
@@ -775,7 +782,7 @@
     }
   },
   "about": {
-    "copyright": "Copyright © wenlanstudio 2026-{year}",
+    "copyright": "Copyright © WenLanStudio 2026-{year}",
     "copyrightContributors": "Urheberrecht Mitwirkende"
   },
   "commands": {
@@ -1040,5 +1047,16 @@
       "switchError": "Rechtschreibprüfung-Wechselfehler für {languageCode}, {error}",
       "title": "Rechtschreibprüfung"
     }
+  },
+  "execPanel": {
+    "needPath": "Save the file first — code execution needs a file path (sessions and logs are anchored per document)",
+    "title": "Code Run",
+    "run": "Run",
+    "stop": "Stop",
+    "running": "Running…",
+    "stale": "Modified",
+    "failed": "Failed",
+    "empty": "No output yet",
+    "output": "Output"
   }
 }

@@ -12,6 +12,10 @@
       "file": "Файл",
       "newTab": "Новая вкладка",
       "newWindow": "Новое окно",
+      "newInProject": "Создать в проекте",
+      "newInProjectBlank": "Пустой файл",
+      "newInProjectDeck": "Презентация (md2slides)",
+      "newInProjectQuiz": "Викторина-презентация",
       "openFile": "Открыть файл...",
       "openFolder": "Открыть папку...",
       "openRecent": "Недавние",
@@ -211,6 +215,9 @@
     "editDictionary": "Редактировать словарь...",
     "sideBar": {
       "newFile": "Новый файл",
+      "newFromTemplate": "Создать из шаблона",
+      "newDeckFile": "Презентация (md2slides)",
+      "newQuizFile": "Викторина-презентация",
       "newDirectory": "Новая папка",
       "copy": "Копировать",
       "cut": "Вырезать",
@@ -775,7 +782,7 @@
     }
   },
   "about": {
-    "copyright": "Copyright © wenlanstudio 2026-{year}",
+    "copyright": "Copyright © WenLanStudio 2026-{year}",
     "copyrightContributors": "Сделано с <3 участниками GitHub"
   },
   "commands": {
@@ -1040,5 +1047,16 @@
       "switchError": "Ошибка переключения проверки орфографии для {languageCode}, {error}",
       "title": "Проверка орфографии"
     }
+  },
+  "execPanel": {
+    "needPath": "Save the file first — code execution needs a file path (sessions and logs are anchored per document)",
+    "title": "Code Run",
+    "run": "Run",
+    "stop": "Stop",
+    "running": "Running…",
+    "stale": "Modified",
+    "failed": "Failed",
+    "empty": "No output yet",
+    "output": "Output"
   }
 }

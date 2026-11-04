@@ -12,6 +12,10 @@
       "file": "파일",
       "newTab": "새 탭",
       "newWindow": "새 창",
+      "newInProject": "프로젝트에서 새로 만들기",
+      "newInProjectBlank": "빈 파일",
+      "newInProjectDeck": "슬라이드 강의 (md2slides)",
+      "newInProjectQuiz": "퀴즈 강의",
       "openFile": "파일 열기...",
       "openFolder": "폴더 열기...",
       "openRecent": "최근 파일",
@@ -211,6 +215,9 @@
     "editDictionary": "사전 편집...",
     "sideBar": {
       "newFile": "새 파일",
+      "newFromTemplate": "템플릿에서 새로 만들기",
+      "newDeckFile": "슬라이드 강의 (md2slides)",
+      "newQuizFile": "퀴즈 강의",
       "newDirectory": "새 디렉터리",
       "copy": "복사",
       "cut": "잘라내기",
@@ -775,7 +782,7 @@
     }
   },
   "about": {
-    "copyright": "Copyright © wenlanstudio 2026-{year}",
+    "copyright": "Copyright © WenLanStudio 2026-{year}",
     "copyrightContributors": "저작권 기여자"
   },
   "commands": {
@@ -1040,5 +1047,16 @@
       "switchError": "{languageCode} 맞춤법 검사 전환 오류, {error}",
       "title": "맞춤법 검사"
     }
+  },
+  "execPanel": {
+    "needPath": "Save the file first — code execution needs a file path (sessions and logs are anchored per document)",
+    "title": "Code Run",
+    "run": "Run",
+    "stop": "Stop",
+    "running": "Running…",
+    "stale": "Modified",
+    "failed": "Failed",
+    "empty": "No output yet",
+    "output": "Output"
   }
 }

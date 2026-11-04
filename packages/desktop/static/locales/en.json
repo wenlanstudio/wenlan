@@ -12,6 +12,10 @@
       "file": "File",
       "newTab": "New Tab",
       "newWindow": "New Window",
+      "newInProject": "New in Project",
+      "newInProjectBlank": "Blank File",
+      "newInProjectDeck": "Slide Deck (md2slides)",
+      "newInProjectQuiz": "Classroom Quiz Deck",
       "openFile": "Open File...",
       "openFolder": "Open Folder...",
       "openRecent": "Open Recent",
@@ -211,6 +215,9 @@
     "editDictionary": "Edit Dictionary...",
     "sideBar": {
       "newFile": "New File",
+      "newFromTemplate": "New from Template",
+      "newDeckFile": "Slide Deck (md2slides)",
+      "newQuizFile": "Classroom Quiz Deck",
       "newDirectory": "New Directory",
       "copy": "Copy",
       "cut": "Cut",
@@ -339,7 +346,8 @@
       "themes": {
         "academic": "Academic",
         "default": "GitHub (Default)",
-        "liber": "Liber"
+        "liber": "Liber",
+        "thesis": "Thesis (Undergraduate)"
       }
     }
   },
@@ -775,7 +783,7 @@
     }
   },
   "about": {
-    "copyright": "Copyright © wenlanstudio 2026-{year}",
+    "copyright": "Copyright © WenLanStudio 2026-{year}",
     "copyrightContributors": "Made with <3 by the Wenlan Studio Contributors"
   },
   "view": {
@@ -1064,5 +1072,16 @@
       "switchError": "Spellcheck switch error for {languageCode}, {error}",
       "title": "Spellcheck"
     }
+  },
+  "execPanel": {
+    "needPath": "Save the file first — code execution needs a file path (sessions and logs are anchored per document)",
+    "title": "Code Run",
+    "run": "Run",
+    "stop": "Stop",
+    "running": "Running…",
+    "stale": "Modified",
+    "failed": "Failed",
+    "empty": "No output yet",
+    "output": "Output"
   }
 }

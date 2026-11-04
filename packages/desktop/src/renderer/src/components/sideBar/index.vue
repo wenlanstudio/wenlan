@@ -20,8 +20,6 @@
       <tree
         v-if="sidebarTab === 'files'"
         :project-tree="projectTree"
-        :opened-files="openedFiles"
-        :tabs="editorTabs"
       />
       <toc v-else-if="sidebarTab === 'toc'" />
     </div>
@@ -37,7 +35,6 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useLayoutStore, type SidebarTab } from '@/store/layout'
 import { usePreferencesStore } from '@/store/preferences'
 import { useProjectStore } from '@/store/project'
-import { useEditorStore } from '@/store/editor'
 import { shouldShowInAppTitleBar } from '@/components/titleBar/visibility'
 import { t } from '@/i18n'
 import { isMac } from '@/util'
@@ -45,23 +42,19 @@ import { isMac } from '@/util'
 import Tree from './tree.vue'
 import Toc from './toc.vue'
 import { storeToRefs } from 'pinia'
-import type { TabDescriptor } from './types'
 
 const layoutStore = useLayoutStore()
 const preferencesStore = usePreferencesStore()
 const projectStore = useProjectStore()
-const editorStore = useEditorStore()
 
 const sideBar = ref<HTMLDivElement | null>(null)
 const dragBar = ref<HTMLDivElement | null>(null)
 
-const openedFiles = ref<TabDescriptor[]>([])
 const sideBarViewWidth = ref(280)
 
 const { sidebarTab, showSideBar, sideBarWidth } = storeToRefs(layoutStore)
 
 const { projectTree } = storeToRefs(projectStore)
-const editorTabs = storeToRefs(editorStore).tabs
 const { titleBarStyle } = storeToRefs(preferencesStore)
 
 // The in-app title bar is `position: fixed` across the *whole window width*, so
@@ -128,9 +121,12 @@ const handleTabClick = (id: SidebarTab): void => {
   flex-shrink: 0;
   flex-grow: 0;
   width: 280px;
-  height: 100vh;
+  /* 高度跟着 `.workspace` 走（= 视口 − 状态栏），不要用 100vh：100vh 会多出
+     状态栏那 26px，把底部状态栏的左段（☰ / 代码执行）压在侧栏下面。 */
+  height: 100%;
+  min-height: 0;
   min-width: 220px;
-  /* `height: 100vh` plus the title-bar inset must not exceed the viewport. */
+  /* `height: 100%` 加上 title-bar inset 仍不能超出视口。 */
   box-sizing: border-box;
   position: relative;
   color: var(--sideBarColor);

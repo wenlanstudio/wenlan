@@ -12,6 +12,10 @@
       "file": "Dosya",
       "newTab": "Yeni Sekme",
       "newWindow": "Yeni Pencere",
+      "newInProject": "Projede yeni",
+      "newInProjectBlank": "Boş dosya",
+      "newInProjectDeck": "Slayt destesi (md2slides)",
+      "newInProjectQuiz": "Yarışma sunumu",
       "openFile": "Dosya Aç...",
       "openFolder": "Klasör Aç...",
       "openRecent": "Son Kullanılanları Aç",
@@ -211,6 +215,9 @@
     "editDictionary": "Sözlüğü Düzenle...",
     "sideBar": {
       "newFile": "Yeni Dosya",
+      "newFromTemplate": "Şablondan yeni",
+      "newDeckFile": "Slayt destesi (md2slides)",
+      "newQuizFile": "Yarışma sunumu",
       "newDirectory": "Yeni Klasör",
       "copy": "Kopyala",
       "cut": "Kes",
@@ -775,7 +782,7 @@
     }
   },
   "about": {
-    "copyright": "Telif Hakkı © wenlanstudio 2026-{year}",
+    "copyright": "Telif Hakkı © WenLanStudio 2026-{year}",
     "copyrightContributors": "Github Katkıda Bulunanlar tarafından <3 ile yapıldı"
   },
   "commands": {
@@ -1040,5 +1047,16 @@
       "switchError": "{languageCode} için yazım denetimi değiştirme hatası, {error}",
       "title": "Yazım Denetimi"
     }
+  },
+  "execPanel": {
+    "needPath": "Save the file first — code execution needs a file path (sessions and logs are anchored per document)",
+    "title": "Code Run",
+    "run": "Run",
+    "stop": "Stop",
+    "running": "Running…",
+    "stale": "Modified",
+    "failed": "Failed",
+    "empty": "No output yet",
+    "output": "Output"
   }
 }

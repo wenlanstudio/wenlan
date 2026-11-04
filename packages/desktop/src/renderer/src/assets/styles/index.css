@@ -1,6 +1,9 @@
 /* Common CSS use by both light and dark themes */
 :root {
   --titleBarHeight: 32px;
+  /* 底部状态栏（app.vue 的 <status-bar>）恒占的高度。任何要撑满「状态栏以上」
+     剩余空间的容器都扣它，别再用裸 100vh —— 那样会溢出 26px 盖住状态栏。 */
+  --statusBarHeight: 26px;
   --editorAreaWidth: 750px;
 
   /*editor*/

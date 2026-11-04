@@ -12,6 +12,10 @@
       "file": "Fichier",
       "newTab": "Nouvel onglet",
       "newWindow": "Nouvelle fenêtre",
+      "newInProject": "Nouveau dans le projet",
+      "newInProjectBlank": "Fichier vierge",
+      "newInProjectDeck": "Diaporama (md2slides)",
+      "newInProjectQuiz": "Diaporama de quiz",
       "openFile": "Ouvrir un fichier...",
       "openFolder": "Ouvrir un dossier...",
       "openRecent": "Ouvrir récent",
@@ -211,6 +215,9 @@
     "editDictionary": "Modifier le dictionnaire...",
     "sideBar": {
       "newFile": "Nouveau fichier",
+      "newFromTemplate": "Nouveau à partir d'un modèle",
+      "newDeckFile": "Diaporama (md2slides)",
+      "newQuizFile": "Diaporama de quiz",
       "newDirectory": "Nouveau dossier",
       "copy": "Copier",
       "cut": "Couper",
@@ -775,7 +782,7 @@
     }
   },
   "about": {
-    "copyright": "Copyright © wenlanstudio 2026-{year}",
+    "copyright": "Copyright © WenLanStudio 2026-{year}",
     "copyrightContributors": "Contributeurs aux droits d'auteur"
   },
   "commands": {
@@ -1040,5 +1047,16 @@
       "switchError": "Erreur de changement du correcteur pour {languageCode}, {error}",
       "title": "Vérification orthographique"
     }
+  },
+  "execPanel": {
+    "needPath": "Save the file first — code execution needs a file path (sessions and logs are anchored per document)",
+    "title": "Code Run",
+    "run": "Run",
+    "stop": "Stop",
+    "running": "Running…",
+    "stale": "Modified",
+    "failed": "Failed",
+    "empty": "No output yet",
+    "output": "Output"
   }
 }

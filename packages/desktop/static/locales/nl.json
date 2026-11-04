@@ -12,6 +12,10 @@
       "file": "Bestand",
       "newTab": "Nieuw tabblad",
       "newWindow": "Nieuw venster",
+      "newInProject": "Nieuw in project",
+      "newInProjectBlank": "Leeg bestand",
+      "newInProjectDeck": "Diapresentatie (md2slides)",
+      "newInProjectQuiz": "Quizpresentatie",
       "openFile": "Bestand openen...",
       "openFolder": "Map openen...",
       "openRecent": "Recent geopend",
@@ -211,6 +215,9 @@
     "editDictionary": "Woordenboek bewerken...",
     "sideBar": {
       "newFile": "Nieuw bestand",
+      "newFromTemplate": "Nieuw vanaf sjabloon",
+      "newDeckFile": "Diapresentatie (md2slides)",
+      "newQuizFile": "Quizpresentatie",
       "newDirectory": "Nieuwe map",
       "copy": "Kopiëren",
       "cut": "Knippen",
@@ -775,7 +782,7 @@
     }
   },
   "about": {
-    "copyright": "Copyright © wenlanstudio 2026-{year}",
+    "copyright": "Copyright © WenLanStudio 2026-{year}",
     "copyrightContributors": "Gemaakt met <3 door GitHub-bijdragers"
   },
   "commands": {
@@ -1040,5 +1047,16 @@
       "switchError": "Spellingcontrole wisselfout voor {languageCode}, {error}",
       "title": "Spellingcontrole"
     }
+  },
+  "execPanel": {
+    "needPath": "Save the file first — code execution needs a file path (sessions and logs are anchored per document)",
+    "title": "Code Run",
+    "run": "Run",
+    "stop": "Stop",
+    "running": "Running…",
+    "stale": "Modified",
+    "failed": "Failed",
+    "empty": "No output yet",
+    "output": "Output"
   }
 }

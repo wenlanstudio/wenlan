@@ -524,7 +524,8 @@ onBeforeUnmount(() => {
 
 <style>
 .source-code {
-  height: calc(100vh - var(--titleBarHeight));
+  /* 视口扣除应用内标题栏与底部状态栏，剩下的才是编辑列可用高度。 */
+  height: calc(100vh - var(--titleBarHeight) - var(--statusBarHeight));
   box-sizing: border-box;
   overflow: auto;
 }

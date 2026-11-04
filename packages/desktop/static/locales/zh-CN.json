@@ -12,6 +12,10 @@
       "file": "文件",
       "newTab": "新建标签页",
       "newWindow": "新建窗口",
+      "newInProject": "在项目中新建",
+      "newInProjectBlank": "空白文档",
+      "newInProjectDeck": "放映讲义",
+      "newInProjectQuiz": "课堂竞答讲义",
       "openFile": "打开文件…",
       "openFolder": "打开文件夹…",
       "openRecent": "打开最近",
@@ -211,6 +215,9 @@
     "editDictionary": "编辑词典…",
     "sideBar": {
       "newFile": "新建文件",
+      "newFromTemplate": "从模板新建",
+      "newDeckFile": "放映讲义",
+      "newQuizFile": "课堂竞答讲义",
       "newDirectory": "新建目录",
       "copy": "复制",
       "cut": "剪切",
@@ -339,7 +346,8 @@
       "themes": {
         "academic": "学术",
         "default": "GitHub (默认)",
-        "liber": "Liber"
+        "liber": "Liber",
+        "thesis": "毕业论文（本科）"
       }
     }
   },
@@ -775,7 +783,7 @@
     }
   },
   "about": {
-    "copyright": "Copyright © wenlanstudio 2026-{year}",
+    "copyright": "Copyright © WenLanStudio 2026-{year}",
     "copyrightContributors": "版权贡献者"
   },
   "view": {
@@ -1064,5 +1072,16 @@
       "languageMissing": "拼写检查语言缺失 {languageCode}",
       "switchError": "{languageCode} 拼写检查切换错误，{error}"
     }
+  },
+  "execPanel": {
+    "needPath": "未保存的文档暂不能执行代码——请先保存为文件（会话与执行日志按文档路径锚定）",
+    "title": "代码执行",
+    "run": "运行",
+    "stop": "停止",
+    "running": "运行中…",
+    "stale": "已修改",
+    "failed": "失败",
+    "empty": "暂无输出",
+    "output": "输出"
   }
 }

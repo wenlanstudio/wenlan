@@ -12,6 +12,10 @@
       "file": "檔案",
       "newTab": "新建標籤頁",
       "newWindow": "新建視窗",
+      "newInProject": "在專案中新建",
+      "newInProjectBlank": "空白文件",
+      "newInProjectDeck": "放映講義",
+      "newInProjectQuiz": "課堂競答講義",
       "openFile": "開啟檔案…",
       "openFolder": "開啟資料夾…",
       "openRecent": "開啟最近使用",
@@ -211,6 +215,9 @@
     "editDictionary": "編輯字典…",
     "sideBar": {
       "newFile": "新建檔案",
+      "newFromTemplate": "從範本新建",
+      "newDeckFile": "放映講義",
+      "newQuizFile": "課堂競答講義",
       "newDirectory": "新建資料夾",
       "copy": "複製",
       "cut": "剪下",
@@ -775,7 +782,7 @@
     }
   },
   "about": {
-    "copyright": "Copyright © wenlanstudio 2026-{year}",
+    "copyright": "Copyright © WenLanStudio 2026-{year}",
     "copyrightContributors": "版權貢獻者"
   },
   "commands": {
@@ -1040,5 +1047,16 @@
       "switchError": "{languageCode} 拼字檢查切換錯誤，{error}",
       "title": "拼字檢查"
     }
+  },
+  "execPanel": {
+    "needPath": "未儲存的檔案暫不能執行程式碼——請先存成檔案（工作階段與執行日誌以檔案路徑為錨）",
+    "title": "程式碼執行",
+    "run": "執行",
+    "stop": "停止",
+    "running": "執行中…",
+    "stale": "已修改",
+    "failed": "失敗",
+    "empty": "暫無輸出",
+    "output": "輸出"
   }
 }

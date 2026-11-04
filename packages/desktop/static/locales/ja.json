@@ -12,6 +12,10 @@
       "file": "ファイル",
       "newTab": "新しいタブ",
       "newWindow": "新しいウィンドウ",
+      "newInProject": "プロジェクト内で新規作成",
+      "newInProjectBlank": "空のファイル",
+      "newInProjectDeck": "スライド講義 (md2slides)",
+      "newInProjectQuiz": "クイズ講義",
       "openFile": "ファイルを開く...",
       "openFolder": "フォルダーを開く...",
       "openRecent": "最近使ったファイル",
@@ -211,6 +215,9 @@
     "editDictionary": "辞書の編集...",
     "sideBar": {
       "newFile": "新しいファイル",
+      "newFromTemplate": "テンプレートから新規作成",
+      "newDeckFile": "スライド講義 (md2slides)",
+      "newQuizFile": "クイズ講義",
       "newDirectory": "新しいフォルダー",
       "copy": "コピー",
       "cut": "切り取り",
@@ -775,7 +782,7 @@
     }
   },
   "about": {
-    "copyright": "Copyright © wenlanstudio 2026-{year}",
+    "copyright": "Copyright © WenLanStudio 2026-{year}",
     "copyrightContributors": "著作権貢献者"
   },
   "commands": {
@@ -1040,5 +1047,16 @@
       "switchError": "{languageCode} のスペルチェック切り替えエラー、{error}",
       "title": "スペルチェック"
     }
+  },
+  "execPanel": {
+    "needPath": "Save the file first — code execution needs a file path (sessions and logs are anchored per document)",
+    "title": "Code Run",
+    "run": "Run",
+    "stop": "Stop",
+    "running": "Running…",
+    "stale": "Modified",
+    "failed": "Failed",
+    "empty": "No output yet",
+    "output": "Output"
   }
 }

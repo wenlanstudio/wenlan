@@ -1,127 +1,39 @@
 <template>
   <div class="editor-container">
-    <side-bar v-if="init" />
+    <!-- 工作区（JetBrains 三段式）：左右侧栏 + 编辑器列占满状态栏以上的空间。
+         右侧栏后续接入，届时与 side-bar 对称，编辑器列宽度由 flex 自适应。 -->
+    <div class="workspace">
+      <side-bar v-if="init" />
 
-    <div class="editor-middle">
-      <title-bar
-        :project="projectTree"
-        :filename="filename"
-        :active="windowActive"
-        :is-saved="isSaved"
-      />
-
-      <div
-        v-if="!init"
-        class="editor-placeholder"
-      />
-      <recent v-if="!hasCurrentFile && init" />
-      <editor-with-tabs
-        v-if="hasCurrentFile && init"
-        :markdown="markdown"
-        :cursor="cursor"
-        :muya-index-cursor="muyaIndexCursor"
-        :text-direction="textDirection"
-        :platform="platform"
-      />
-      <command-palette />
-      <about-dialog />
-      <export-setting-dialog />
-      <rename />
-      <import-modal />
-
-      <div
-        class="sidebar-toggle"
-        :title="t('sideBar.toggle')"
-        @click="toggleSideBar"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          width="16"
-          height="16"
-        >
-          <rect
-            x="3"
-            y="4.5"
-            width="18"
-            height="15"
-            rx="2"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.6"
-          />
-          <line
-            x1="9.5"
-            y1="4.5"
-            x2="9.5"
-            y2="19.5"
-            stroke="currentColor"
-            stroke-width="1.6"
-          />
-        </svg>
-      </div>
-
-      <!-- Right-corner dock: 从右往左不断细化（字数统计 → 读写锁 → 主视图 WPED → 子视图），
-           右侧三组固定不动，随模式增减的只有左侧的子视图/光标位置 -->
-      <div
-        v-if="!isWindowFullScreen && !presentExclusive"
-        class="right-corner-dock"
-      >
-        <div
-          v-if="showCursorPosition && !presentActive"
-          class="cursor-position"
-          :title="t('view.cursorPosition')"
-        >
-          {{ cursorPositionText }}
-        </div>
-        <ViewSwitcher />
-        <div
-          v-if="!presentActive"
-          class="dock-divider"
+      <div class="editor-middle">
+        <title-bar
+          :project="projectTree"
+          :filename="filename"
+          :active="windowActive"
+          :is-saved="isSaved"
         />
-        <button
-          v-if="!presentActive"
-          class="read-only-btn"
-          :class="{ locked: readOnly }"
-          :title="readOnly ? t('view.readOnlyLocked') : t('view.readOnlyUnlocked')"
-          @click="toggleReadOnly"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            width="14"
-            height="14"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <template v-if="readOnly">
-              <rect
-                x="3"
-                y="11"
-                width="18"
-                height="11"
-                rx="2"
-              />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </template>
-            <template v-else>
-              <rect
-                x="3"
-                y="11"
-                width="18"
-                height="11"
-                rx="2"
-              />
-              <path d="M7 11V7a5 5 0 0 1 10 0" />
-            </template>
-          </svg>
-        </button>
-        <WordCount
-          v-if="!presentActive"
-          :word-count="wordCount"
-          :selection-word-count="selectionWordCount"
+
+        <div
+          v-if="!init"
+          class="editor-placeholder"
         />
+        <recent v-if="!hasCurrentFile && init" />
+        <editor-with-tabs
+          v-if="hasCurrentFile && init"
+          :markdown="markdown"
+          :cursor="cursor"
+          :muya-index-cursor="muyaIndexCursor"
+          :text-direction="textDirection"
+          :platform="platform"
+        />
+        <command-palette />
+        <about-dialog />
+        <export-setting-dialog />
+        <rename />
+        <import-modal />
       </div>
     </div>
+    <status-bar />
   </div>
 </template>
 
@@ -134,15 +46,13 @@ import Recent from '@/components/recent/index.vue'
 import EditorWithTabs from '@/components/editorWithTabs/index.vue'
 import TitleBar from '@/components/titleBar/index.vue'
 import SideBar from '@/components/sideBar/index.vue'
+import StatusBar from '@/components/statusBar/index.vue'
 import AboutDialog from '@/components/about/index.vue'
 import CommandPalette from '@/components/commandPalette/index.vue'
 import ExportSettingDialog from '@/components/exportSettings/index.vue'
 import Rename from '@/components/rename/index.vue'
 import ImportModal from '@/components/import/index.vue'
-import WordCount from '@/components/wordCount/index.vue'
-import ViewSwitcher from '@/components/viewSwitcher/index.vue'
 import bus from '@/bus'
-import { t } from '@/i18n'
 import { DEFAULT_STYLE } from '@/config'
 import { listenForScrollbarReveal } from '@/util/scrollbarReveal'
 import { useLayoutStore } from '@/store/layout'
@@ -171,10 +81,7 @@ const timer = ref<ReturnType<typeof setTimeout> | null>(null)
 const { windowActive, platform, init } = storeToRefs(mainStore)
 const { theme, customCss, textDirection, zoom, editorLineWidth } = storeToRefs(preferencesStore)
 const { projectTree } = storeToRefs(projectStore)
-const { currentFile, selectionWordCount, readOnly } = storeToRefs(editorStore)
-const { isEditorVisible, isWindowFullScreen, leafSelection, presentExclusive } = storeToRefs(
-  editorViewStore
-)
+const { currentFile } = storeToRefs(editorStore)
 // 初始化窗口全屏态（进入/离开全屏由主进程 IPC 同步）
 editorViewStore.initWindowFullScreen()
 
@@ -186,7 +93,6 @@ const isSaved = computed(() => currentFile.value?.isSaved)
 // type is `string`. The `<editor-with-tabs>` mount is still gated.
 const markdown = computed<string>(() => currentFile.value?.markdown ?? '')
 const cursor = computed(() => currentFile.value?.cursor)
-const wordCount = computed(() => currentFile.value?.wordCount)
 // `muyaIndexCursor` is loosely typed as `unknown` on the editor store; the
 // downstream prop expects `Object | undefined`. Cast at the boundary.
 const muyaIndexCursor = computed<Record<string, unknown> | undefined>(
@@ -196,41 +102,6 @@ const muyaIndexCursor = computed<Record<string, unknown> | undefined>(
 const hasCurrentFile = computed<boolean>(() => {
   return currentFile.value?.markdown !== undefined
 })
-
-// Cursor position indicator (line:column) — shown in Document & Code modes.
-const cursorPosition = ref<{ line: number; ch: number } | null>(null)
-const showCursorPosition = computed(() => {
-  if (!hasCurrentFile.value) return false
-  return editorViewStore.isEditorVisible
-})
-
-// 窗口全屏（视图 → 全屏/F11）：放映无浮层，整个 dock 隐藏。
-// "示"激活（单开或配对）时 dock 只保留 ViewSwitcher（唯一换叶出口）——
-// 编辑姿态控件（光标位置/读写锁/字数）隐藏，但绝不能藏掉换叶入口。
-const presentActive = computed(() => leafSelection.value.includes('present'))
-const cursorPositionText = computed(() => {
-  const pos = cursorPosition.value
-  return pos ? `${pos.line}:${pos.ch}` : ''
-})
-
-bus.on('cursor-position', (payload: unknown) => {
-  const p = payload as { line: number; ch: number } | undefined
-  if (p && typeof p.line === 'number' && typeof p.ch === 'number') {
-    cursorPosition.value = p
-  }
-})
-
-// Toggle global read-only lock.
-const toggleReadOnly = (): void => {
-  editorStore.TOGGLE_READ_ONLY()
-}
-
-// The only sidebar switch left: the small button in the content's bottom-left
-// corner. Routed through the same bus entry as the View menu so the native
-// menu checkbox stays in sync.
-const toggleSideBar = (): void => {
-  bus.emit('view:toggle-layout-entry', 'showSideBar')
-}
 
 // Watchers
 watch(theme, (value, oldValue) => {
@@ -365,10 +236,9 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.editor-placeholder,
 .editor-container {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   position: absolute;
   width: 100vw;
   height: 100vh;
@@ -383,88 +253,30 @@ onMounted(async () => {
   position: absolute;
   left: -10000px;
 }
+
+/* 工作区 = 左右侧栏 + 编辑器列（JetBrains 三段式）。右侧栏接入时与 side-bar
+   对称即可，编辑器列宽度交给 flex，不再用 calc(100vw - sidebarWidth) 硬算。 */
+.workspace {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  min-height: 0;
+}
+
 .editor-placeholder {
+  flex: 1;
   background: var(--editorBgColor);
 }
+
 .editor-middle {
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-height: 100vh;
+  min-width: 0;
+  min-height: 0;
   position: relative;
   & > .editor {
     flex: 1;
   }
-}
-
-.sidebar-toggle {
-  position: absolute;
-  left: 6px;
-  bottom: 6px;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--iconColor);
-  opacity: 0.4;
-  cursor: pointer;
-  border-radius: 4px;
-  z-index: 100;
-
-  &:hover {
-    opacity: 1;
-    background: var(--itemBgColor);
-  }
-}
-
-/* Right-corner dock groups the view switcher and word count. */
-.right-corner-dock {
-  position: absolute;
-  right: 6px;
-  bottom: 6px;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.cursor-position {
-  font-size: 11px;
-  color: var(--editorColor40);
-  font-variant-numeric: tabular-nums;
-  user-select: none;
-  line-height: 24px;
-}
-
-.dock-divider {
-  width: 1px;
-  height: 14px;
-  background: var(--editorColor10);
-}
-
-.read-only-btn {
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 3px;
-  background: transparent;
-  color: var(--editorColor40);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  padding: 0;
-}
-
-.read-only-btn:hover {
-  color: var(--editorColor80);
-  background: var(--editorColor04);
-}
-
-.read-only-btn.locked {
-  color: var(--editorColor);
-  background: var(--editorColor10);
 }
 </style>
