@@ -411,6 +411,33 @@ class EditorWindow extends BaseWindow {
   }
 
   /**
+   * Switch the sidebar directory tree root to `pathname` — the folder of the
+   * currently edited file — without recording it as a user-opened folder
+   * (Typora-style file panel). Unlike `openFolder`, this does not touch
+   * `lastOpenedFolder` or the recently-used-documents menu.
+   */
+  switchFolder(pathname: string): void {
+    if (
+      !pathname ||
+      this.lifecycle === WindowLifecycle.QUITTED ||
+      isSamePathSync(pathname, this._openedRootDirectory ?? '')
+    ) {
+      return
+    }
+
+    if (this.lifecycle !== WindowLifecycle.READY) return
+
+    const { browserWindow } = this
+    if (this._openedRootDirectory) {
+      ipcMain.emit('watcher-unwatch-directory', browserWindow, this._openedRootDirectory)
+    }
+
+    this._openedRootDirectory = pathname
+    ipcMain.emit('watcher-watch-directory', browserWindow, pathname)
+    browserWindow!.webContents.send('mt::open-directory', pathname)
+  }
+
+  /**
    * Add a new path to the file list and watch the given path.
    */
   addToOpenedFiles(filePath: string): void {

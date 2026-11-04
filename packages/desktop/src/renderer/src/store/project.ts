@@ -12,6 +12,7 @@ import {
 import { usePreferencesStore } from './preferences'
 import bus from '../bus'
 import { create, paste, rename, type FileCreateType, type PasteOptions } from '../util/fileSystem'
+import { isNewFileTemplateKind, renderNewFileTemplate } from '../util/newFileTemplates'
 import { PATH_SEPARATOR } from '../config'
 import notice from '../services/notification'
 import { getFileStateFromData } from './help'
@@ -67,6 +68,9 @@ interface OpenProjectOptions {
 interface CreateCacheEntry {
   dirname: string
   type: 'file' | 'directory' | string
+  // Optional template kind for "New from template" (e.g. 'deck' | 'quiz').
+  // Undefined for the plain blank-file create.
+  template?: string
 }
 
 interface ClipboardEntry {
@@ -105,6 +109,28 @@ export const useProjectStore = defineStore('project', () => {
       if (projectTree.value) {
         resortTree(projectTree.value, String(sortBy), String(sortOrder))
       }
+    }
+  )
+
+  // Typora-style file panel: the tree root tracks the folder of the currently
+  // edited file. When the active tab changes, ask the main process to re-watch
+  // the new folder; `mt::open-directory` then rebuilds the tree via OPEN_PROJECT.
+  const editorStoreForTree = useEditorStore()
+  watch(
+    () => editorStoreForTree.currentFile?.pathname,
+    (pathname) => {
+      if (!pathname) return
+      const dirname = window.path.dirname(pathname)
+      if (!dirname) return
+      // No-op when the root already matches (also guards the main-process
+      // isSamePathSync early-return and the bootstrap re-open).
+      if (
+        projectTree.value &&
+        window.fileUtils.isSamePathSync(projectTree.value.pathname, dirname)
+      ) {
+        return
+      }
+      window.electron.ipcRenderer.send('mt::switch-directory', dirname)
     }
   )
 
@@ -282,12 +308,38 @@ export const useProjectStore = defineStore('project', () => {
     bus.on('SIDEBAR::reveal-file', (pathname: unknown) => {
       REVEAL_FILE_IN_SIDE_BAR(typeof pathname === 'string' ? pathname : null)
     })
-    bus.on('SIDEBAR::new', (type: unknown) => {
+    const startCreate = (type: string, template?: string): void => {
+      // App-menu entry point has no tree context: without an open project the
+      // active item is empty and dirname would be computed from undefined.
+      if (!projectTree.value) {
+        notice.notify({
+          title: 'New File',
+          type: 'warning',
+          message: 'Open a folder first to create files in it.'
+        })
+        return
+      }
       const { pathname, isDirectory } = activeItem.value
-      const dirname = isDirectory ? pathname : window.path.dirname(pathname)
-      createCache.value = { dirname, type: String(type) }
+      // No selection yet (fresh project): fall back to the project root.
+      const dirname = pathname
+        ? (isDirectory ? pathname : window.path.dirname(pathname))
+        : projectTree.value.pathname
+      // A falsy/unknown template kind is normalized away so the blank-file
+      // fast path stays byte-identical to before.
+      const templateKind = isNewFileTemplateKind(template) ? template : undefined
+      createCache.value = { dirname, type, template: templateKind }
       nameInputValue.value = ''
       bus.emit('SIDEBAR::show-new-input')
+    }
+    // mitt events are single-payload, so the template create uses its own
+    // event instead of a second argument on SIDEBAR::new.
+    bus.on('SIDEBAR::new', (type: unknown) => startCreate(String(type)))
+    bus.on('SIDEBAR::new-template', (kind: unknown) => {
+      startCreate('file', typeof kind === 'string' ? kind : undefined)
+    })
+    // File-menu "New in Project" lands here (see main/menu/actions/file.ts).
+    window.electron.ipcRenderer.on('mt::sidebar::new-file-in-project', (_e, kind: unknown) => {
+      startCreate('file', typeof kind === 'string' ? kind : undefined)
     })
     bus.on('SIDEBAR::remove', async() => {
       const { pathname } = activeItem.value
@@ -384,6 +436,13 @@ export const useProjectStore = defineStore('project', () => {
 
     const fullName = dirname + PATH_SEPARATOR + name
 
+    // Seeded content for template creates; blank files stay ''.
+    let content = ''
+    if (type === 'file' && isNewFileTemplateKind(cache.template)) {
+      const baseName = name.replace(/\.(?:md|markdown)$/i, '')
+      content = renderNewFileTemplate(cache.template, baseName)
+    }
+
     try {
       // Creating over an existing path would silently overwrite it (outputFile
       // truncates). Refuse instead of destroying the existing file (#1946).
@@ -396,7 +455,7 @@ export const useProjectStore = defineStore('project', () => {
         return
       }
 
-      await create(fullName, type as FileCreateType)
+      await create(fullName, type as FileCreateType, content)
       if (type === 'file') {
         newFileNameCache.value = fullName
       }

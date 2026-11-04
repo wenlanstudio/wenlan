@@ -1,6 +1,7 @@
 import {
   SEPARATOR,
   getNewFile,
+  getNewFromTemplate,
   getNewDirectory,
   getCOPY,
   getCUT,
@@ -18,6 +19,7 @@ export const showContextMenu = (
 ): void => {
   const contextItems: ContextMenuItem[] = [
     getNewFile(),
+    getNewFromTemplate(),
     getNewDirectory(),
     SEPARATOR,
     getCOPY(),
@@ -31,8 +33,8 @@ export const showContextMenu = (
     getShowInFolder()
   ]
 
-  // PASTE entry (index 5) toggles based on the cached source path.
-  contextItems[5].enabled = hasPathCache
+  // PASTE entry (index 6) toggles based on the cached source path.
+  contextItems[6].enabled = hasPathCache
 
   const items: ContextMenuItem[] = contextItems.map((item) => {
     if (!item || item.type === 'separator') return item

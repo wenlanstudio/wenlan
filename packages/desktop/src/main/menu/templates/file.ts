@@ -67,6 +67,32 @@ export default function(
       }
     },
     {
+      // Sidebar project create, reachable from the app menu too. The blank
+      // entry mirrors the tree context menu's fast path; template kinds share
+      // the same inline name-input flow in the renderer.
+      label: t('menu.file.newInProject'),
+      submenu: [
+        {
+          label: t('menu.file.newInProjectBlank'),
+          click(_menuItem, browserWindow) {
+            actions.newFileInProject(browserWindow as BrowserWindow | undefined, '')
+          }
+        },
+        {
+          label: t('menu.file.newInProjectDeck'),
+          click(_menuItem, browserWindow) {
+            actions.newFileInProject(browserWindow as BrowserWindow | undefined, 'deck')
+          }
+        },
+        {
+          label: t('menu.file.newInProjectQuiz'),
+          click(_menuItem, browserWindow) {
+            actions.newFileInProject(browserWindow as BrowserWindow | undefined, 'quiz')
+          }
+        }
+      ]
+    },
+    {
       type: 'separator'
     },
     {

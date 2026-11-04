@@ -77,11 +77,6 @@
           :on-change="(value) => onSelectChange('wordWrapInToc', value)"
         />
         <bool
-          :description="t('preferences.general.sidebar.showOpenedFiles')"
-          :bool="openedFilesInSidebar"
-          :on-change="(value) => onSelectChange('openedFilesInSidebar', value)"
-        />
-        <bool
           :description="t('preferences.general.sidebar.autoReveal')"
           :bool="autoRevealInSidebar"
           :on-change="(value) => onSelectChange('autoRevealInSidebar', value)"
@@ -257,7 +252,6 @@ const {
   fileSortBy,
   fileSortOrder,
   language,
-  openedFilesInSidebar,
   autoRevealInSidebar,
   showPandocConvert
 } = storeToRefs(preferenceStore)

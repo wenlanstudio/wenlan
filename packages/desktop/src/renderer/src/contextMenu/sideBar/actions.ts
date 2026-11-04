@@ -7,6 +7,12 @@ export const newFile = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowA
   bus.emit('SIDEBAR::new', 'file')
 }
 
+// "New from template": same inline-input flow, but the created file is seeded
+// with the template skeleton (see util/newFileTemplates.ts).
+export const newFileFromTemplate = (kind: string): void => {
+  bus.emit('SIDEBAR::new-template', kind)
+}
+
 export const newDirectory = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
   bus.emit('SIDEBAR::new', 'directory')
 }

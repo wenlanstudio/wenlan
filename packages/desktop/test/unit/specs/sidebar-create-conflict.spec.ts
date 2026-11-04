@@ -59,7 +59,8 @@ describe('CREATE_FILE_DIRECTORY — name conflict guard (#1946)', () => {
 
     await store.CREATE_FILE_DIRECTORY('fresh')
 
-    expect(create).toHaveBeenCalledWith('/docs/fresh.md', 'file')
+    // Third arg is the seeded content; blank-file creates pass ''.
+    expect(create).toHaveBeenCalledWith('/docs/fresh.md', 'file', '')
     expect(notice.notify).not.toHaveBeenCalled()
   })
 })

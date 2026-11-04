@@ -758,6 +758,18 @@ class App {
       }
     })
 
+    // Switch the sidebar directory tree to the folder of the currently edited
+    // file (Typora-style file panel). Silent: does not record the folder in the
+    // recently-used list or `lastOpenedFolder`.
+    ipcMain.on('mt::switch-directory', (_e, directoryPath: string) => {
+      const win = BrowserWindow.fromWebContents(_e.sender)
+      if (!win) return
+      const editor = this._windowManager.get(win.id) as EditorWindow | undefined
+      if (editor) {
+        editor.switchFolder(directoryPath)
+      }
+    })
+
     ipcMain.on('mt::select-default-directory-to-open', async(e) => {
       const { preferences } = this._accessor
       const { defaultDirectoryToOpen } = preferences.getAll()

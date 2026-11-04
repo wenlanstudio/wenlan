@@ -2,10 +2,12 @@ export type FileCreateType = 'file' | 'directory'
 export type PasteType = 'cut' | 'copy'
 export type HashType = 'sha1' | 'sha256' | 'sha512'
 
-export const create = async(pathname: string, type: FileCreateType): Promise<void> => {
+// `content` lets callers seed the file (e.g. the "New from template" skeletons);
+// the plain sidebar create passes the default empty string.
+export const create = async(pathname: string, type: FileCreateType, content = ''): Promise<void> => {
   return type === 'directory'
     ? window.fileUtils.ensureDir(pathname)
-    : window.fileUtils.outputFile(pathname, '')
+    : window.fileUtils.outputFile(pathname, content)
 }
 
 export interface PasteOptions {

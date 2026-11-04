@@ -913,6 +913,15 @@ export const newBlankTab = (win: Win): void => {
   }
 }
 
+// "New in Project" (File menu): forwards the requested template kind to the
+// renderer, which routes it into the same sidebar create flow as the tree's
+// context menu (kind '' = blank file). No-op when the window has no renderer.
+export const newFileInProject = (win: Win, kind: string): void => {
+  if (win && win.webContents) {
+    win.webContents.send('mt::sidebar::new-file-in-project', kind)
+  }
+}
+
 export const newEditorWindow = (): void => {
   ipcMain.emit('app-create-editor-window')
 }

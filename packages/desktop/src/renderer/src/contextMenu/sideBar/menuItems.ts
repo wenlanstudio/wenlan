@@ -16,6 +16,28 @@ export const getNewFile = () => ({
   }
 })
 
+// Submenu with the built-in document skeletons (deck / quiz deck).
+export const getNewFromTemplate = () => ({
+  label: t('contextMenu.sideBar.newFromTemplate'),
+  id: 'newFromTemplateMenuItem',
+  submenu: [
+    {
+      label: t('contextMenu.sideBar.newDeckFile'),
+      id: 'newDeckFileMenuItem',
+      click() {
+        contextMenu.newFileFromTemplate('deck')
+      }
+    },
+    {
+      label: t('contextMenu.sideBar.newQuizFile'),
+      id: 'newQuizFileMenuItem',
+      click() {
+        contextMenu.newFileFromTemplate('quiz')
+      }
+    }
+  ]
+})
+
 export const getNewDirectory = () => ({
   label: t('contextMenu.sideBar.newDirectory'),
   id: 'newDirectoryMenuItem',
