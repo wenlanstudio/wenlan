@@ -9,7 +9,7 @@
     >
       <img
         class="logo"
-        :src="WenlanLogo"
+        :src="WenlanIcon"
       >
       <el-row>
         <el-col :span="24">
@@ -44,7 +44,7 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useMainStore } from '@/store'
 import bus from '../../bus'
-import WenlanLogo from '../../assets/images/logo.png'
+import WenlanIcon from '../../assets/images/icon.png'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
