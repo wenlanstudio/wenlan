@@ -12,7 +12,7 @@ const cli = (): ParsedArgs => {
   let argv = process.argv.slice(1)
   if (import.meta.env.DEV) {
     // Don't pass electron development arguments to Wenlan and change user data path.
-    const devUserDataPath = path.join(getPath('appData'), 'wenlan-studio-dev')
+    const devUserDataPath = path.join(getPath('appData'), 'wenlan-dev')
     argv = ['--user-data-dir', devUserDataPath]
   }
 

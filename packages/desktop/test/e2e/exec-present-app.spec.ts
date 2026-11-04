@@ -97,10 +97,10 @@ test.describe('示视图代码运行 — 完整 Electron 应用', () => {
 
 /**
  * 远端 Hive 真跑：默认关闭，因为要 node0 免密 + HS2 在线 +
- * `~/.wenlan-studio/mdcode2run.json` 里配好 hive.SSH_*。
+ * `~/.wenlan/mdcode2run.json` 里配好 hive.SSH_*。
  * 打开方式：WENLAN_E2E_HIVE=1 pnpm test:e2e -- exec-present-app
  */
-const HIVE_CONFIG = path.join(os.homedir(), '.wenlan-studio', 'mdcode2run.json')
+const HIVE_CONFIG = path.join(os.homedir(), '.wenlan', 'mdcode2run.json')
 const HIVE_ENABLED = process.env.WENLAN_E2E_HIVE === '1' && fs.existsSync(HIVE_CONFIG)
 
 const HIVE_MD = `# Hive 应用级回归

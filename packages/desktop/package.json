@@ -1,5 +1,5 @@
 {
-  "name": "wenlan-studio",
+  "name": "wenlan",
   "version": "1.0.0",
   "description": "Wenlan — a Markdown editor with document, column, slide and present views",
   "main": "./out/main/index.js",

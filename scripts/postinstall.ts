@@ -50,7 +50,7 @@ if (!fs.existsSync(nativeKeymapDir)) {
   // native-keymap is already in Wenlan's optionalDependencies; the add
   // re-installs without changing the version range.
   if (isPnpm) {
-    run('pnpm --filter wenlan-studio add native-keymap --ignore-scripts')
+    run('pnpm --filter wenlan add native-keymap --ignore-scripts')
   } else {
     run('npm install native-keymap --ignore-scripts --no-save', { cwd: desktopRoot })
   }

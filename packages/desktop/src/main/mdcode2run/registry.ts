@@ -85,7 +85,7 @@ const detectPython = (): string | null => {
 
 /**
  * 引擎层配置文件（与 CLI `--config` 同形）：秘密、机器相关参数只放这里，
- * 讲义 front-matter 无权指定。默认 `~/.wenlan-studio/mdcode2run.json`，
+ * 讲义 front-matter 无权指定。默认 `~/.wenlan/mdcode2run.json`，
  * 可用 `MD2R_CONFIG_FILE` 指到别处（多套集群配置切换）。
  *
  * 例：HS2 只在集群节点本机监听时，本机没有 beeline，靠 `hive.SSH_HOST` 走 SSH：
@@ -95,7 +95,7 @@ const detectPython = (): string | null => {
  */
 export const engineConfigPath = (): string => {
   const override = process.env.MD2R_CONFIG_FILE?.trim()
-  return override || path.join(os.homedir(), '.wenlan-studio', 'mdcode2run.json')
+  return override || path.join(os.homedir(), '.wenlan', 'mdcode2run.json')
 }
 
 /** 读配置：坏文件只告警不阻断启动（没配置时引擎仍按 PATH 探测 Python 等）。 */

@@ -10,7 +10,7 @@ import {
 } from '../../../src/main/mdcode2run/registry'
 
 /**
- * 引擎层配置文件（~/.wenlan-studio/mdcode2run.json 或 MD2R_CONFIG_FILE）——
+ * 引擎层配置文件（~/.wenlan/mdcode2run.json 或 MD2R_CONFIG_FILE）——
  * Hive 的 SSH_HOST / CLIENT 这类机器参数只能从这里进引擎，讲义 front-matter 无权指定。
  * 钉死：路径解析、坏文件不阻断启动、文件配置与 Python 自动探测按族合并。
  */
@@ -33,9 +33,9 @@ afterEach(() => {
 })
 
 describe('mdcode2run 引擎配置文件', () => {
-  it('默认路径是用户目录下的 .wenlan-studio/mdcode2run.json', () => {
+  it('默认路径是用户目录下的 .wenlan/mdcode2run.json', () => {
     vi.stubEnv('MD2R_CONFIG_FILE', '')
-    expect(engineConfigPath()).toBe(path.join(os.homedir(), '.wenlan-studio', 'mdcode2run.json'))
+    expect(engineConfigPath()).toBe(path.join(os.homedir(), '.wenlan', 'mdcode2run.json'))
   })
 
   it('MD2R_CONFIG_FILE 可覆盖路径', () => {

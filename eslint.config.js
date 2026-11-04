@@ -23,7 +23,7 @@ export default [
       'packages/website/**',
       // muya v2 (TS) self-lints with its own antfu-based config
       // (packages/muya/eslint.config.mjs). Different style rules from the
-      // wenlan-studio desktop config (4-space indent, semis required, strict
+      // wenlan desktop config (4-space indent, semis required, strict
       // ts/no-explicit-any), so we keep them isolated rather than try to
       // merge two flat configs.
       'packages/muya/**',

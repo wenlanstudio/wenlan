@@ -64,7 +64,7 @@ pnpm run build:win:x64   # Windows installer + zip -> dist/
 ### 代码块运行配置
 
 引擎层参数（解释器路径、数据库连接、SSH 目标等机器相关配置）读
-`~/.wenlan-studio/mdcode2run.json`，可用环境变量 `MD2R_CONFIG_FILE` 改路径。格式与
+`~/.wenlan/mdcode2run.json`，可用环境变量 `MD2R_CONFIG_FILE` 改路径。格式与
 mdcode2run CLI 的 `--config` 一致：
 
 ```json
