@@ -11,6 +11,20 @@ import { defineStore } from 'pinia'
  * 为什么要共享而不是 Teleport：Teleport 依赖目标节点在挂载时已存在，而状态栏
  * 与编辑器列是兄弟分支，首帧顺序不可靠；共享状态没有这类时序问题。
  */
+
+/** 面板高度的持久化键（renderer 侧 localStorage，与侧栏宽度同一套惯例）。 */
+const HEIGHT_KEY = 'exec-panel-height'
+/** 拖拽下限：再矮就只剩两三行，块清单与输出都没法读。 */
+export const PANEL_MIN_HEIGHT = 160
+/** 默认高度：够看块清单 + 一屏输出，又不至于一开就把编辑区挤没。 */
+export const PANEL_DEFAULT_HEIGHT = 280
+const DEFAULT_HEIGHT = PANEL_DEFAULT_HEIGHT
+
+const readHeight = (): number => {
+  const raw = Number(localStorage.getItem(HEIGHT_KEY))
+  return Number.isFinite(raw) && raw >= PANEL_MIN_HEIGHT ? raw : DEFAULT_HEIGHT
+}
+
 export const useExecPanelStore = defineStore('execPanel', () => {
   /** 是否值得露面（有围栏 / 已解析出块 / 解析报错）。 */
   const visible = ref(false)
@@ -21,6 +35,18 @@ export const useExecPanelStore = defineStore('execPanel', () => {
   const runnable = ref(0)
   /** 运行中的块数（状态栏脉冲点）。 */
   const running = ref(0)
+  /** 面板高度（px）。拖动时每帧更新，松手才落盘。 */
+  const height = ref(readHeight())
+
+  /**
+   * @param persist 拖动过程中传 false（每帧写 localStorage 白费 IO），
+   *                mouseup / 双击最大化时传 true 落盘。
+   */
+  const setHeight = (px: number, persist = false): void => {
+    const next = Math.max(PANEL_MIN_HEIGHT, Math.round(px))
+    height.value = next
+    if (persist) localStorage.setItem(HEIGHT_KEY, String(next))
+  }
 
   const toggle = (): void => {
     open.value = !open.value
@@ -42,5 +68,5 @@ export const useExecPanelStore = defineStore('execPanel', () => {
     if (patch.running !== undefined) running.value = patch.running
   }
 
-  return { visible, open, total, runnable, running, toggle, setOpen, sync }
+  return { visible, open, total, runnable, running, height, setHeight, toggle, setOpen, sync }
 })

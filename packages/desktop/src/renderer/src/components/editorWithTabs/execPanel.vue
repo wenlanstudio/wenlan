@@ -1,9 +1,22 @@
 <template>
   <div
     v-if="visible && panel.open"
+    ref="panelEl"
     class="exec-panel"
   >
-    <div class="panel-body">
+    <!-- 顶边拖拽条：热区跨在分隔线上（上 3px 在编辑区、下 3px 在面板内），
+         双击 = 最大化 / 还原。 -->
+    <div
+      class="panel-resizer"
+      :class="{ dragging }"
+      :title="t('execPanel.resizeHint')"
+      @mousedown="startResize"
+      @dblclick="toggleMaximize"
+    />
+    <div
+      class="panel-body"
+      :style="{ height: `${panel.height}px` }"
+    >
       <div
         v-if="!docPath"
         class="panel-error"
@@ -94,7 +107,11 @@ import { storeToRefs } from 'pinia'
 import { t } from '@/i18n'
 import bus from '@/bus'
 import { useEditorStore } from '@/store/editor'
-import { useExecPanelStore } from '@/store/execPanel'
+import {
+  useExecPanelStore,
+  PANEL_MIN_HEIGHT,
+  PANEL_DEFAULT_HEIGHT
+} from '@/store/execPanel'
 import type { Md2rBlockInfo, Md2rEvent, Md2rRunResult } from '@shared/types/mdcode2run'
 
 /**
@@ -389,6 +406,75 @@ onMounted(() => {
   void refresh()
 })
 
+// —— 面板高度：顶边拖拽 + 双击最大化（JetBrains 式底部工具窗口）——
+// 高度存 store（renderer localStorage，与侧栏宽度同一套惯例），拖动时每帧只改
+// 内存、松手才落盘。上限按「编辑列高度的 80%」现算，不写死 vh：窗口变矮后
+// 旧的像素高度会挤掉整个编辑区。
+const panelEl = ref<HTMLDivElement | null>(null)
+const dragging = ref(false)
+/** 双击最大化前的还原高度（没最大化过就是默认值）。 */
+let restoreHeight: number | null = null
+/** 拖动中挂到 window 上的清理函数：组件在拖动途中被卸载也能摘干净。 */
+let stopDrag: (() => void) | null = null
+
+const maxHeight = (): number => {
+  const available = panelEl.value?.parentElement?.clientHeight ?? window.innerHeight
+  return Math.max(PANEL_MIN_HEIGHT, Math.round(available * 0.8))
+}
+
+const clampHeight = (px: number): number =>
+  Math.min(maxHeight(), Math.max(PANEL_MIN_HEIGHT, Math.round(px)))
+
+const endResize = (): void => {
+  dragging.value = false
+  document.body.classList.remove('exec-panel-resizing')
+  stopDrag?.()
+  stopDrag = null
+}
+
+const startResize = (event: MouseEvent): void => {
+  if (event.button !== 0) return
+  event.preventDefault()
+  const startY = event.clientY
+  const startHeight = panel.height
+  // 每帧都读一次上限：拖动过程中若触发 resize，仍不会越界
+  let last = startHeight
+  const onMove = (e: MouseEvent): void => {
+    last = clampHeight(startHeight - (e.clientY - startY))
+    panel.setHeight(last)
+  }
+  const onUp = (): void => {
+    panel.setHeight(last, true)
+    endResize()
+  }
+  stopDrag = () => {
+    window.removeEventListener('mousemove', onMove)
+    window.removeEventListener('mouseup', onUp)
+  }
+  dragging.value = true
+  document.body.classList.add('exec-panel-resizing')
+  window.addEventListener('mousemove', onMove)
+  window.addEventListener('mouseup', onUp)
+}
+
+const toggleMaximize = (): void => {
+  const max = maxHeight()
+  if (panel.height >= max - 1) {
+    panel.setHeight(restoreHeight ?? PANEL_DEFAULT_HEIGHT, true)
+    restoreHeight = null
+    return
+  }
+  restoreHeight = panel.height
+  panel.setHeight(max, true)
+}
+
+// 窗口变矮：把高度收回上限内（不然编辑区被挤没），顺带丢掉失效的还原值
+const onWindowResize = (): void => {
+  if (panel.height > maxHeight()) panel.setHeight(maxHeight(), true)
+}
+
+window.addEventListener('resize', onWindowResize)
+
 onBeforeUnmount(() => {
   offEvent?.()
   offEvent = null
@@ -396,6 +482,8 @@ onBeforeUnmount(() => {
     clearTimeout(parseTimer)
     parseTimer = null
   }
+  window.removeEventListener('resize', onWindowResize)
+  endResize()
   // 状态栏是共享的：本组件卸载（切视图/关文档）时把可见性收回，别留一个能点
   // 但打不开任何东西的按钮。
   panel.sync({ visible: false })
@@ -404,8 +492,10 @@ onBeforeUnmount(() => {
 
 <style scoped>
 /* 只渲染 body：开关与计数在状态栏（statusBar），这里没有 header。
-   高度上限 40vh，超过就在块清单/输出内部滚动，别把编辑区挤没。 */
+   高度由拖拽条决定（store 里的 px，上限按编辑列高度现算），越界就在块清单/
+   输出内部滚动，别把编辑区挤没。 */
 .exec-panel {
+  position: relative;
   flex: none;
   border-top: 1px solid var(--editorColor10);
   background: var(--editorBgColor);
@@ -414,10 +504,42 @@ onBeforeUnmount(() => {
   user-select: none;
 }
 
+/* 拖拽热区跨在分隔线上：上半截落在编辑区里，鼠标够得着。 */
+.panel-resizer {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  z-index: 3;
+  cursor: ns-resize;
+}
+
+.panel-resizer::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: transparent;
+  transition: background 0.12s ease;
+}
+
+.panel-resizer:hover::after,
+.panel-resizer.dragging::after {
+  background: var(--themeColor);
+}
+
+/* 拖动时鼠标可能已经跑出热区：整窗锁光标并禁掉选中，松手即摘。 */
+:global(body.exec-panel-resizing) {
+  cursor: ns-resize;
+  user-select: none;
+}
+
 .panel-body {
   display: flex;
-  height: 240px;
-  max-height: 40vh;
+  min-height: 0;
 }
 
 .block-list {

@@ -1057,6 +1057,7 @@
     "stale": "Modified",
     "failed": "Failed",
     "empty": "No output yet",
-    "output": "Output"
+    "output": "Output",
+    "resizeHint": "Yüksekliği sürükleyerek ayarlayın · Çift tıklayarak büyütün"
   }
 }

@@ -1057,6 +1057,7 @@
     "stale": "已修改",
     "failed": "失敗",
     "empty": "暫無輸出",
-    "output": "輸出"
+    "output": "輸出",
+    "resizeHint": "拖動調整高度 · 雙擊最大化/還原"
   }
 }

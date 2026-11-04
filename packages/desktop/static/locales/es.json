@@ -1057,6 +1057,7 @@
     "stale": "Modified",
     "failed": "Failed",
     "empty": "No output yet",
-    "output": "Output"
+    "output": "Output",
+    "resizeHint": "Arrastra para cambiar el tamaño · Doble clic para maximizar"
   }
 }
