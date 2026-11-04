@@ -1058,6 +1058,7 @@
     "failed": "Failed",
     "empty": "No output yet",
     "output": "Output",
-    "resizeHint": "Yüksekliği sürükleyerek ayarlayın · Çift tıklayarak büyütün"
+    "resizeHint": "Yüksekliği sürükleyerek ayarlayın · Çift tıklayarak büyütün",
+    "noBlocks": "Bu belgede çalıştırılabilir kod bloğu yok"
   }
 }

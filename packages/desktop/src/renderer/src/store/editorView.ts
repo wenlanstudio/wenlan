@@ -255,6 +255,19 @@ export const useEditorViewStore = defineStore('editorView', () => {
     })
   }
 
+  /** 「码」工具窗口（底部代码执行面板）的可用判据。
+   *
+   *  只在「文」**独占**时可用：分屏（哪怕左叶是文）也不算——面板定位走源码行
+   *  → setCursorByOffset，分屏下两侧共享同一编辑面，工具窗口横跨全宽会把两
+   *  侧一起挤掉，且与另一侧的视图语义冲突。activeLeaf 只在非分屏的单叶态有值，
+   *  故 `activeLeaf === 'flow'` 本身已含 topView === null。
+   *
+   *  单一来源给 viewSwitcher 的按钮禁用态与 execPanel 的 body 显隐共用，避免
+   *  两处各写一份判据后漂移。 */
+  const isCodeRunSurface = computed<boolean>(
+    () => !isWindowFullScreen.value && isEditingSurface.value && activeLeaf.value === 'flow'
+  )
+
   /** 滑块职责：分屏时一律收起（宽度控制被分割条吸收），单视图按叶/顶级视图定。 */
   const sliderDuty = computed<SliderDuty>(() => {
     if (isSplit.value) return 'none'
@@ -406,6 +419,7 @@ export const useEditorViewStore = defineStore('editorView', () => {
     isPresentFullscreen,
     isDeckFullscreen,
     isEditingSurface,
+    isCodeRunSurface,
     initWindowFullScreen,
     presentExclusive,
     setPresentExclusive,

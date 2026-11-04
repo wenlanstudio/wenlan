@@ -1058,6 +1058,7 @@
     "failed": "Failed",
     "empty": "No output yet",
     "output": "Output",
-    "resizeHint": "Arraste para redimensionar · Duplo clique para maximizar"
+    "resizeHint": "Arraste para redimensionar · Duplo clique para maximizar",
+    "noBlocks": "Nenhum bloco de código executável neste documento"
   }
 }

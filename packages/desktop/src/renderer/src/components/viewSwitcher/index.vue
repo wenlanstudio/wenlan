@@ -37,10 +37,32 @@
       </button>
     </div>
 
-    <!-- 顶级正交视图：表 / 图 / 本（不进文示树） -->
+    <!-- 顶级正交视图：表 / 图 / [码] / 本（不进文示树）。
+         「码」是底部代码执行工具窗口的开关，与视图按钮同组、夹在「图」与
+         「本」之间；只在「文」**独占**时可点，分屏时同样禁用（判据在
+         store.isCodeRunSurface）。 -->
     <div class="main-views">
       <button
-        v-for="tv in TOP_VIEWS"
+        v-for="tv in topViewsBeforeCode"
+        :key="tv"
+        class="main-view-btn"
+        :class="{ active: topView === tv }"
+        :title="TOP_VIEW_META[tv].title"
+        @click="toggleTopView(tv)"
+      >
+        {{ TOP_VIEW_META[tv].icon }}
+      </button>
+      <button
+        class="main-view-btn code-run-btn"
+        :class="{ active: codeRunEnabled && panel.open, running: panel.running > 0 }"
+        :disabled="!codeRunEnabled"
+        :title="codeRunTitle"
+        @click="panel.toggle()"
+      >
+        码
+      </button>
+      <button
+        v-for="tv in topViewsAfterCode"
         :key="tv"
         class="main-view-btn"
         :class="{ active: topView === tv }"
@@ -63,13 +85,30 @@ import {
   type Leaf
 } from '@/store/editorView'
 import { usePreferencesStore } from '@/store/preferences'
+import { useExecPanelStore } from '@/store/execPanel'
 import { t } from '@/i18n'
 
 const editorViewStore = useEditorViewStore()
 const preferencesStore = usePreferencesStore()
-const { leafSelection, topView, hasColumns, sliderDuty } = storeToRefs(editorViewStore)
+const panel = useExecPanelStore()
+const { leafSelection, topView, hasColumns, sliderDuty, isCodeRunSurface } =
+  storeToRefs(editorViewStore)
 const { toggleLeaf, toggleTopView } = editorViewStore
 const { editorLineWidth } = storeToRefs(preferencesStore)
+
+/** 「码」夹在「图」与「本」之间：按 code 把 TOP_VIEWS 切成前后两段，
+ *  以后往 TOP_VIEWS 增删视图也不必改这段模板。 */
+const topViewsBeforeCode = TOP_VIEWS.filter((v) => v !== 'code')
+const topViewsAfterCode = TOP_VIEWS.filter((v) => v === 'code')
+
+const codeRunEnabled = computed<boolean>(() => isCodeRunSurface.value)
+/** 计数与运行中状态不占按钮面积，收进 hover 提示；运行中另有角标脉冲。 */
+const codeRunTitle = computed<string>(() => {
+  if (!codeRunEnabled.value) return `${t('execPanel.title')}（仅「文」独占视图可展开）`
+  const counts = panel.total > 0 ? ` ${panel.runnable}/${panel.total}` : ''
+  const running = panel.running > 0 ? ` · ${t('execPanel.running')}` : ''
+  return `${t('execPanel.title')}${counts}${running}`
+})
 
 // 叶的短名与提示。label 是单字 CJK 刻度（与主视图图标同族，刻意不翻译）；
 // title 中文提示——与 deck 工具条同策略（该用户群中文工作语言）。
@@ -206,6 +245,45 @@ const handleSliderChange = () => {
 .main-view-btn.active {
   color: var(--editorBgColor);
   background: var(--editorColor50);
+}
+
+/* 非「文」视图：按钮常驻但不可点，也不吃 hover。 */
+.main-view-btn:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.main-view-btn:disabled:hover {
+  color: var(--editorColor40);
+  background: transparent;
+}
+
+.code-run-btn {
+  position: relative;
+}
+
+/* 运行中：右上角主题色脉冲点（原状态栏 running-dot 移到按钮上）。 */
+.code-run-btn.running::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--themeColor);
+  animation: code-run-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes code-run-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
 }
 
 /* Page width slider */

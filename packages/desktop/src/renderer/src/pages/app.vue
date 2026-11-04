@@ -34,10 +34,11 @@
       </div>
     </div>
     <!-- 底部工具窗口（JetBrains 式）：横跨整个窗口宽度——左侧栏只占它上方的
-         区域，展开面板不压缩它、也不被它压缩。只在编辑场景露面：纸叶/示支/
-         放映全屏时收起（那是阅读与放映，不是编辑）。 -->
+         区域，展开面板不压缩它、也不被它压缩。组件常驻（不随视图切换卸载，
+         引擎事件订阅/输出缓存不丢）；body 由 execPanel 按 isCodeRunSurface
+         + open 控制，只在「文」独占、面板展开时出现。 -->
     <exec-panel
-      v-if="init && hasCurrentFile && isEditingSurface"
+      v-if="init && hasCurrentFile"
       :markdown="markdown"
     />
     <status-bar />
@@ -90,8 +91,6 @@ const { windowActive, platform, init } = storeToRefs(mainStore)
 const { theme, customCss, textDirection, zoom, editorLineWidth } = storeToRefs(preferencesStore)
 const { projectTree } = storeToRefs(projectStore)
 const { currentFile } = storeToRefs(editorStore)
-// 编辑面是否可见（任一全屏/独占形态下都不是编辑场景）：底部执行面板据此露面
-const { isEditingSurface } = storeToRefs(editorViewStore)
 // 初始化窗口全屏态（进入/离开全屏由主进程 IPC 同步）
 editorViewStore.initWindowFullScreen()
 

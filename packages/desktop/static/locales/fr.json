@@ -1058,6 +1058,7 @@
     "failed": "Failed",
     "empty": "No output yet",
     "output": "Output",
-    "resizeHint": "Glisser pour redimensionner · Double-clic pour agrandir"
+    "resizeHint": "Glisser pour redimensionner · Double-clic pour agrandir",
+    "noBlocks": "Aucun bloc de code exécutable dans ce document"
   }
 }

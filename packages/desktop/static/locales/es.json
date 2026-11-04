@@ -1058,6 +1058,7 @@
     "failed": "Failed",
     "empty": "No output yet",
     "output": "Output",
-    "resizeHint": "Arrastra para cambiar el tamaño · Doble clic para maximizar"
+    "resizeHint": "Arrastra para cambiar el tamaño · Doble clic para maximizar",
+    "noBlocks": "No hay bloques de código ejecutables en este documento"
   }
 }

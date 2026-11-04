@@ -1058,6 +1058,7 @@
     "failed": "Failed",
     "empty": "No output yet",
     "output": "Output",
-    "resizeHint": "끌어서 크기 조절 · 더블클릭으로 최대화"
+    "resizeHint": "끌어서 크기 조절 · 더블클릭으로 최대화",
+    "noBlocks": "실행 가능한 코드 블록이 없습니다"
   }
 }

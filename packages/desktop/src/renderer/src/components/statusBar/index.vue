@@ -1,7 +1,8 @@
 <template>
   <div class="status-bar">
     <div class="status-left">
-      <!-- 窗口级开关（JetBrains 状态栏最左的做法）：侧栏 + 底部工具窗口 -->
+      <!-- 窗口级开关（JetBrains 状态栏最左的做法）：侧栏。
+           底部工具窗口的开关已挪到右下角视图按钮组里的「码」。 -->
       <button
         class="status-btn"
         :title="t('sideBar.toggle')"
@@ -30,38 +31,6 @@
             stroke="currentColor"
             stroke-width="1.6"
           />
-        </svg>
-      </button>
-
-      <!-- 执行面板的「标题」长在状态栏里：面板 body 在编辑器列内向上生长，
-           状态栏本身不随面板开合移动（这是与「两条栏」方案的唯一区别）。 -->
-      <button
-        v-if="panel.visible"
-        class="status-btn panel-btn"
-        :class="{ open: panel.open, busy: panel.running > 0 }"
-        :title="t('execPanel.title')"
-        @click="panel.toggle()"
-      >
-        <span class="panel-title">{{ t('execPanel.title') }}</span>
-        <span
-          v-if="panel.total > 0"
-          class="panel-count"
-        >{{ panel.runnable }}<template v-if="panel.total !== panel.runnable">/{{ panel.total }}</template></span>
-        <span
-          v-if="panel.running > 0"
-          class="running-dot"
-          :title="t('execPanel.running')"
-        />
-        <svg
-          class="chevron"
-          viewBox="0 0 24 24"
-          width="12"
-          height="12"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
     </div>
@@ -136,21 +105,19 @@ import { t } from '@/i18n'
 import bus from '@/bus'
 import { useEditorStore } from '@/store/editor'
 import { useEditorViewStore } from '@/store/editorView'
-import { useExecPanelStore } from '@/store/execPanel'
 import ViewSwitcher from '@/components/viewSwitcher/index.vue'
 import WordCount from '@/components/wordCount/index.vue'
 
 /**
  * 底部状态栏（JetBrains 式）：窗口最底一行，横跨全宽，从不参与编辑区布局竞争。
  *
- * 左段放「窗口级开关」：侧栏、底部执行面板（面板的本体在编辑器列内向上生长，
- * 状态栏只承担它的开关与计数）。右段放「文档级指示器」：光标位置、视图切换、
- * 读写锁、字数——从右往左逐级细化，右侧三组位置固定。
+ * 左段只放侧栏开关；右段放「文档级指示器」：光标位置、视图切换（含底部代码
+ * 执行工具窗口的「码」开关）、读写锁、字数——从右往左逐级细化，右侧三组位置
+ * 固定。状态栏本身不随工具窗口开合移动。
  */
 
 const editorStore = useEditorStore()
 const editorViewStore = useEditorViewStore()
-const panel = useExecPanelStore()
 
 const { currentFile, selectionWordCount, readOnly } = storeToRefs(editorStore)
 const { isWindowFullScreen, leafSelection, presentExclusive } = storeToRefs(editorViewStore)
@@ -235,49 +202,6 @@ const toggleReadOnly = (): void => {
 .status-btn:hover {
   color: var(--editorColor);
   background: var(--itemBgColor);
-}
-
-.panel-btn {
-  color: var(--editorColor50);
-}
-
-.panel-btn.open {
-  color: var(--editorColor);
-  background: var(--editorColor04);
-}
-
-.panel-count {
-  padding: 0 5px;
-  border-radius: 7px;
-  background: var(--editorColor10);
-  color: var(--editorColor60);
-  font-variant-numeric: tabular-nums;
-}
-
-.running-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--themeColor);
-  animation: status-pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes status-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.3;
-  }
-}
-
-.chevron {
-  transition: transform 0.15s ease;
-}
-
-.panel-btn.open .chevron {
-  transform: rotate(180deg);
 }
 
 .cursor-position {

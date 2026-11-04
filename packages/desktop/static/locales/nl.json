@@ -1058,6 +1058,7 @@
     "failed": "Failed",
     "empty": "No output yet",
     "output": "Output",
-    "resizeHint": "Sleep om te vergroten · Dubbelklik om te maximaliseren"
+    "resizeHint": "Sleep om te vergroten · Dubbelklik om te maximaliseren",
+    "noBlocks": "Geen uitvoerbare codeblokken in dit document"
   }
 }

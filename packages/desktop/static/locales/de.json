@@ -1058,6 +1058,7 @@
     "failed": "Failed",
     "empty": "No output yet",
     "output": "Output",
-    "resizeHint": "Ziehen zum Anpassen · Doppelklick zum Maximieren"
+    "resizeHint": "Ziehen zum Anpassen · Doppelklick zum Maximieren",
+    "noBlocks": "Keine ausführbaren Codeblöcke in diesem Dokument"
   }
 }

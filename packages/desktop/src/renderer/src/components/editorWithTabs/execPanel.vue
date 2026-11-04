@@ -1,6 +1,6 @@
 <template>
   <div
-    v-if="visible && panel.open"
+    v-if="isCodeRunSurface && panel.open"
     ref="panelEl"
     class="exec-panel"
   >
@@ -17,8 +17,15 @@
       class="panel-body"
       :style="{ height: `${panel.height}px` }"
     >
+      <!-- 按钮常驻在视图组里：没有代码围栏的文档点开也要有反馈，别像坏了一样。 -->
       <div
-        v-if="!docPath"
+        v-if="!visible"
+        class="panel-empty"
+      >
+        {{ t('execPanel.noBlocks') }}
+      </div>
+      <div
+        v-else-if="!docPath"
         class="panel-error"
       >
         {{ t('execPanel.needPath') }}
@@ -77,7 +84,7 @@
         </div>
       </div>
       <div
-        v-if="docPath && !parseError && selectedLine !== null"
+        v-if="visible && docPath && !parseError && selectedLine !== null"
         class="output-area"
       >
         <div class="output-toolbar">
@@ -107,6 +114,7 @@ import { storeToRefs } from 'pinia'
 import { t } from '@/i18n'
 import bus from '@/bus'
 import { useEditorStore } from '@/store/editor'
+import { useEditorViewStore } from '@/store/editorView'
 import {
   useExecPanelStore,
   PANEL_MIN_HEIGHT,
@@ -120,11 +128,13 @@ import { diagramTypeOfLang } from '@muyajs/core'
  *
  * JetBrains 式分工：底部工具窗口横跨整个窗口宽度（挂在 app.vue 的
  * .editor-container 上，不在编辑器列里），左侧栏只占它上方的区域，所以侧栏
- * 展开/收起不会压缩面板；而它的「开关 + 标题 + 计数」长在窗口状态栏里
- * （statusBar 组件读 useExecPanelStore），这里没有 header。
+ * 展开/收起不会压缩面板；开关是右下角视图按钮组里的「码」（viewSwitcher），
+ * 这里只渲染 body，没有 header。
  *
- * 生命周期契约：面板卸载（切 tab/关文档）不 dispose 引擎——main 侧按
- * webContents 存亡 + 60s 宽限管理回收，切 tab 不杀 JVM/python 会话。
+ * 组件常驻挂载、由 isCodeRunSurface + panel.open 控制 body 显隐——不随视图
+ * 切换卸载，引擎事件订阅和进行中的输出缓存才不会丢。isCodeRunSurface 只在
+ * 「文」独占时为真（分屏不算）。引擎实例本身更不随面板卸载：main 侧按
+ * webContents 存亡 + 60s 宽限回收，切 tab 不杀 JVM/python 会话。
  */
 
 const props = defineProps<{
@@ -132,7 +142,9 @@ const props = defineProps<{
 }>()
 
 const editorStore = useEditorStore()
+const editorViewStore = useEditorViewStore()
 const { currentFile } = storeToRefs(editorStore)
+const { isCodeRunSurface } = storeToRefs(editorViewStore)
 const panel = useExecPanelStore()
 
 const docPath = computed(() => currentFile.value?.pathname ?? '')
@@ -235,7 +247,7 @@ const refresh = async (): Promise<void> => {
     if (selectedLine.value !== null && !byLine.has(selectedLine.value)) {
       selectedLine.value = runnableBlocks.value[0]?.line ?? null
     }
-    if (!autoOpened && blocks.value.some(b => b.runnable)) {
+    if (!autoOpened && isCodeRunSurface.value && blocks.value.some(b => b.runnable)) {
       autoOpened = true
       panel.setOpen(true)
       if (selectedLine.value === null) {
@@ -619,6 +631,14 @@ onBeforeUnmount(() => {
   overflow: auto;
   color: var(--dangerColor, #eb4d4d);
   user-select: text;
+}
+
+.panel-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--editorColor40);
 }
 
 .lang-badge {
