@@ -223,10 +223,16 @@
 
 /* overlay 挂在滚动区（.mu-editor）内随之滚动；锚定 .mu-container 的
    border-box（尺寸/位置由 usePaperPagination 以视觉 px 写入）。z-index 高于
-   正文让穿缝虚线可见，pointer-events:none 保持编辑交互纯净。 */
+   正文让穿缝虚线可见，pointer-events:none 保持编辑交互纯净。
+
+   `:not(.paper-projection-muya)` 排除纸叶真分片的隐藏量测宿主：muya 构造
+   把宿主替换成自带 .mu-editor 的新节点（muyajs muya.ts getContainer），本
+   规则因此与组件 scoped 的 `.paper-projection-muya{position:absolute}` 同为
+   (0,2,0)、按源序胜出——宿主落回文档流，整张 A4 高度把纸卡顶下去（上方
+   一大片空白回归，e2e「真分片卡片」断言锁死）。 */
 [data-lens='page'] .mu-editor,
 [data-lens='paper'] .mu-editor,
-.paper-projection .mu-editor {
+.paper-projection .mu-editor:not(.paper-projection-muya) {
     position: relative;
     /* 圈住堆叠上下文：纸姿态卡层 z:-1 沉到正文之下，但不跌出引擎背景。 */
     isolation: isolate;

@@ -74,6 +74,10 @@ export const getExportThemeList = (): PrefSelectOption<string>[] => [
   {
     label: t('exportSettings.options.themes.liber'),
     value: 'liber'
+  },
+  {
+    label: t('exportSettings.options.themes.thesis'),
+    value: 'thesis'
   }
 ]
 

@@ -67,6 +67,18 @@ export const parsePaperGeometry = (markdown: string): PaperGeometry => {
   return declared === 'letter' ? PAPER_SIZES_MM.letter : PAPER_SIZES_MM.a4
 }
 
+/**
+ * frontmatter `paperTheme: <名>` → 声明的纸面主题名（如 `thesis`）；未声明
+ * = null。纸面主题只动排版层（字体/字号/标题/表格），不动纸面几何——
+ * 屏显与打印两侧吃同一份主题 CSS（assets/themes/export/thesis.theme.css）
+ *，「屏显页数 = printToPDF 页数」的等价性不因主题而破。
+ */
+export const parsePaperTheme = (markdown: string): string | null => {
+  const fm = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(markdown ?? '')
+  const theme = fm ? /^paperTheme:\s*['"]?([A-Za-z0-9_-]+)['"]?\s*$/m.exec(fm[1]) : null
+  return theme?.[1]?.toLowerCase() ?? null
+}
+
 export interface PaperBlockBox {
   /** 块的 tagName（小写）。 */
   tag: string

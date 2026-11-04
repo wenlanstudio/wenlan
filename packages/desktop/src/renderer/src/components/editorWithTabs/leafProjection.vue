@@ -36,7 +36,7 @@ import { Muya, type IMuyaOptions } from '@muyajs/core'
 import { usePreferencesStore } from '@/store/preferences'
 import { buildMuyaViewOptions } from '@/util/muyaViewOptions'
 import { getMuyaLocale } from '@/util/muyaLocale'
-import { usePaperPagination, parsePaperGeometry } from '@/util/paperPagination'
+import { usePaperPagination, parsePaperGeometry, parsePaperTheme } from '@/util/paperPagination'
 
 const props = defineProps<{
   /** 投影哪种文支叶：column=分栏透镜；page=逻辑页（行级缝叠加）。
@@ -64,6 +64,12 @@ let applyTimer = 0
 
 const applyMarkdown = (): void => {
   if (muya.value) muya.value.setContent(props.markdown ?? '')
+  // 纸面主题同拍（文/纸叶同一套 thesis CSS，单源）：挂在 domNode（
+  // .mu-container 祖先）上，命中 .paper-theme-thesis 作用域组。
+  muya.value?.domNode?.classList.toggle(
+    'paper-theme-thesis',
+    parsePaperTheme(props.markdown ?? '') === 'thesis'
+  )
 }
 
 watch(
@@ -87,6 +93,11 @@ onMounted(() => {
   const instance = new Muya(host.value, options)
   instance.init()
   muya.value = instance
+  // 首挂内容经构造器传入（不走 applyMarkdown），主题类在此补挂。
+  instance.domNode?.classList.toggle(
+    'paper-theme-thesis',
+    parsePaperTheme(props.markdown ?? '') === 'thesis'
+  )
 })
 
 onBeforeUnmount(() => {

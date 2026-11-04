@@ -312,8 +312,28 @@ test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages
           const kid = [...c.children].find(el => !el.classList.contains('mu-paper-page-num'))
           return kid ? kid.getBoundingClientRect().top : -1
         })
-        return { tops, heights, firstChildTop, pageHeightPx: 297 * MM }
+        const view = document.querySelector('.paper-projection-view') as HTMLElement
+        const viewRect = view.getBoundingClientRect()
+        const viewContentTop = viewRect.top + Number.parseFloat(getComputedStyle(view).paddingTop)
+        // 隐藏量测宿主（muya 根 = .mu-editor）必须脱离文档流：它整张 A4 的
+        // 高度若在流内，会把纸卡整体顶下去 = 纸视图上方一大片空白。
+        const host = document.querySelector('.paper-projection-muya') as HTMLElement
+        return {
+          tops,
+          heights,
+          firstChildTop,
+          pageHeightPx: 297 * MM,
+          viewContentTop,
+          hostPosition: getComputedStyle(host).position
+        }
       })
+      // 纸卡顶 = 滚动区内容顶（宿主脱流回归断言）：宿主 position 必须为
+      // absolute，纸卡上方不许有整页高度的空白。
+      expect(geo.hostPosition).toBe('absolute')
+      expect(
+        Math.abs(geo.tops[0]! - geo.viewContentTop),
+        'deck must start at the scroll view content top (no hidden-host blank above)'
+      ).toBeLessThan(2)
       expect(geo.tops).toHaveLength(pageCount)
       expect(Math.abs(geo.tops[1]! - geo.tops[0]! - (geo.heights[0]! + 8 * (96 / 25.4)))).toBeLessThan(2)
       expect(Math.abs(geo.heights[0]! - geo.pageHeightPx)).toBeLessThan(2)

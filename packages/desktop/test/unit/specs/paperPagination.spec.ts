@@ -4,6 +4,7 @@ import {
   paginateBlocksV2,
   parsePaperGeometry,
   parseDeclaredPaperSize,
+  parsePaperTheme,
   type PaperBlockBox,
   type PaperBlockBoxV2
 } from '@/util/paperPagination'
@@ -378,4 +379,14 @@ describe('paper geometry from frontmatter (view-model §5 / M3)', () => {
     expect(insertPagebreakMarkers('A\n\n<!-- pagebreak -->\n\nB\n\n<!-- pagebreak -->\n\nC').match(/mt-pagebreak/g))
       .toHaveLength(2)
   }, 30_000)
+})
+
+describe('paper theme from frontmatter (paperTheme)', () => {
+  it('reports the declared theme, null when silent or malformed', () => {
+    expect(parsePaperTheme('')).toBeNull()
+    expect(parsePaperTheme('---\ntitle: x\n---\nbody')).toBeNull()
+    expect(parsePaperTheme('---\ntheme: lecture\n---\nbody')).toBeNull()
+    expect(parsePaperTheme('---\npaperTheme: thesis\n---\nbody')).toBe('thesis')
+    expect(parsePaperTheme('---\npaperTheme: "Thesis"\n---\nbody')).toBe('thesis')
+  })
 })

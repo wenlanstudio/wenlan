@@ -36,9 +36,14 @@ import {
   measurePaperBlocksV2,
   paginateBlocksV2,
   parsePaperGeometry,
+  parsePaperTheme,
   type PaperBlockBoxV2,
   type PaperSeamV2
 } from '@/util/paperPagination'
+// 论文主题双作用域单源：本文件的 .paper-theme-thesis 组作用于纸面（量测
+// 面 + 投影面），.markdown-body 组在应用 DOM 里无宿主（惰性）。挂类必须
+// 发生在量测前（fragment 开头），主题的排版值才进分页账目。
+import '@/assets/themes/export/thesis.theme.css'
 
 const props = defineProps<{
   markdown: string
@@ -152,6 +157,14 @@ const fragment = (): void => {
   const geometry = parsePaperGeometry(props.markdown ?? '')
   deckEl.style.setProperty('--paper-page-width', `${geometry.pageWidthMm}mm`)
   deckEl.style.setProperty('--paper-page-height', `${geometry.pageHeightMm}mm`)
+
+  // 纸面主题（frontmatter paperTheme）：量测面与投影面同拍挂类——量测在
+  // 隐藏 muya 宿主里做，只挂投影面会让主题排版不进分页账目（卡高漂移）。
+  // 挂类先于 measurePaperBlocksV2，本代 fragment 的量测即含主题排版。
+  // 目前唯一主题 = thesis；新主题在 thesis.theme.css 旁加同构 CSS 后在此登记。
+  const thesis = parsePaperTheme(props.markdown ?? '') === 'thesis'
+  root.classList.toggle('paper-theme-thesis', thesis)
+  deckEl.classList.toggle('paper-theme-thesis', thesis)
 
   const m = measurePaperBlocksV2(container, geometry)
   // 量测竞态由 rebuild 的世代号守卫负责（过期 fragment 不跑）；这里**不因

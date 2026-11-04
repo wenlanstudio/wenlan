@@ -1,0 +1,297 @@
+/**
+ * thesis — 本科毕业论文主题（文视图纸面 + 打印/导出双作用域单源）。
+ *
+ * 排版基准（国内本科论文常见规范的最小公倍数，v1 只做排版层）：
+ *   - 正文：宋体小四（12pt）、1.5 倍行距、首行缩进 2em、段间不加空；
+ *   - 章标题 h1：黑体三号（16pt）居中；h2 四号（14pt）黑体；h3 小四（12pt）
+ *     黑体；h4-h6 12pt 加粗——均无下划线/分隔线；
+ *   - 表格：三线表（顶/底线 1.5pt、栏目线 0.75pt，无竖线无斑马纹），
+ *     表内文字五号（10.5pt）居中；
+ *   - 图/表题（figure > figcaption）：五号居中，置于图下/表下；
+ *   - 链接正文中黑色不带下划线（纸质论文惯例），引用块去左边线、两侧缩进。
+ *
+ * 几何边界（硬约定，勿在本主题动）：纸面边距 20/15mm 与页容量
+ * (页高−40mm) 是「屏显页数 = printToPDF 页数」的物理前提（paperLens.css
+ * 头注 / paperPagination.ts measurePaperBlocksV2）。本主题只改排版层——
+ * 字体/字号/行距/边距类 margin——屏测与打印两侧吃同一份值，等价性不破。
+ *
+ * 两个作用域，值经 --thesis-* 变量单源：
+ *   - `.markdown-body`：打印/导出链（pdf.ts getCssForOptions 按序追加在
+ *     github-css 之后，同特异性靠源序取胜——此组禁用 !important，别破坏
+ *     「导出字号覆写在主题之后」的级联约定）；
+ *   - `.paper-theme-thesis`：文视图纸面投影（paperProjection.vue 按
+ *     frontmatter `paperTheme: thesis` 挂类；须压过 paperLens.css 的块度量
+ *     与 muya 外观变量——此组显式 !important，是主题层的合法越权）。
+ * 屏/打两侧改值必须同拍：改这里就是改两边。
+ */
+
+.markdown-body,
+.paper-theme-thesis {
+  --thesis-serif: 'SimSun', 'Songti SC', 'STSong', 'Noto Serif CJK SC', 'Source Han Serif SC',
+    serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  --thesis-hei: 'SimHei', 'Heiti SC', 'STHeiti', 'Noto Sans CJK SC', 'Source Han Sans SC',
+    'Microsoft YaHei', sans-serif;
+  --thesis-ink: #000;
+  --thesis-rule: #000; /* 三线表线色 */
+  --thesis-body-size: 12pt; /* 小四 */
+  --thesis-h1-size: 16pt; /* 三号 */
+  --thesis-h2-size: 14pt; /* 四号 */
+  --thesis-h3-size: 12pt; /* 小四 */
+  --thesis-small-size: 10.5pt; /* 五号：表文/题注/代码/脚注 */
+  --thesis-line-height: 1.5;
+}
+
+/* ============ 打印 / 导出链（.markdown-body）============ */
+
+.markdown-body {
+  font-family: var(--thesis-serif);
+  font-size: var(--thesis-body-size);
+  line-height: var(--thesis-line-height);
+  color: var(--thesis-ink);
+}
+
+.markdown-body p {
+  margin: 0 0 0;
+  text-indent: 2em;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  font-family: var(--thesis-hei);
+  font-weight: bold;
+  color: var(--thesis-ink);
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.markdown-body h1 {
+  font-size: var(--thesis-h1-size);
+  text-align: center;
+  margin: 24pt 0 18pt;
+}
+
+.markdown-body h2 {
+  font-size: var(--thesis-h2-size);
+  margin: 18pt 0 12pt;
+}
+
+.markdown-body h3 {
+  font-size: var(--thesis-h3-size);
+  margin: 12pt 0 6pt;
+}
+
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  font-size: var(--thesis-body-size);
+  margin: 12pt 0 6pt;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin: 0 0 6pt;
+  padding-left: 2em;
+}
+
+.markdown-body a {
+  color: var(--thesis-ink);
+  text-decoration: none;
+}
+
+/* 三线表：顶/底粗线、栏目细线，无竖线无斑马纹；表文五号居中 */
+.markdown-body table {
+  border-collapse: collapse;
+  font-size: var(--thesis-small-size);
+}
+
+.markdown-body table td,
+.markdown-body table th {
+  border: none;
+  border-top: 0.75pt solid var(--thesis-rule);
+  border-bottom: 0.75pt solid var(--thesis-rule);
+  padding: 2pt 6pt;
+  text-align: center;
+  background: none;
+}
+
+.markdown-body table tr {
+  border: none;
+  background: none;
+}
+
+.markdown-body table thead tr {
+  border-top: 1.5pt solid var(--thesis-rule);
+  border-bottom: 0.75pt solid var(--thesis-rule);
+}
+
+.markdown-body table tbody tr:last-child {
+  border-bottom: 1.5pt solid var(--thesis-rule);
+}
+
+/* 图/表题：五号居中（题注随图，muya 导出链同构） */
+.markdown-body figure {
+  text-align: center;
+}
+
+.markdown-body figure > figcaption {
+  text-align: center;
+  font-size: var(--thesis-small-size);
+  color: var(--thesis-ink);
+}
+
+.markdown-body blockquote {
+  border: none;
+  margin: 0 2em;
+  padding: 0;
+  color: var(--thesis-ink);
+}
+
+.markdown-body hr {
+  height: 0.75pt;
+  background-color: var(--thesis-rule);
+}
+
+.markdown-body pre {
+  font-size: var(--thesis-small-size);
+  background: #f7f7f7;
+  border: 0.75pt solid #d9d9d9;
+  border-radius: 0;
+}
+
+.markdown-body footnotes,
+.markdown-body .footnotes {
+  font-size: var(--thesis-small-size);
+}
+
+/* ============ 文视图纸面（.paper-theme-thesis）============ */
+/* 须压过 paperLens.css 的块度量镜像与 muya 外观变量：本组显式 !important。
+   量测面（隐藏 muya 宿主）与投影面（页卡 .mu-paper-page.mu-container）都
+   在挂类节点之内，同一组选择器两侧命中——几何账目天然一致。 */
+
+.paper-theme-thesis .mu-container {
+  font-family: var(--thesis-serif) !important;
+  color: var(--thesis-ink) !important;
+}
+
+.paper-theme-thesis .mu-container p {
+  margin: 0 0 0 !important;
+  text-indent: 2em !important;
+}
+
+.paper-theme-thesis .mu-container h1,
+.paper-theme-thesis .mu-container h2,
+.paper-theme-thesis .mu-container h3,
+.paper-theme-thesis .mu-container h4,
+.paper-theme-thesis .mu-container h5,
+.paper-theme-thesis .mu-container h6 {
+  font-family: var(--thesis-hei) !important;
+  font-weight: bold !important;
+  color: var(--thesis-ink) !important;
+  border-bottom: none !important;
+  padding-bottom: 0 !important;
+}
+
+.paper-theme-thesis .mu-container h1 {
+  font-size: var(--thesis-h1-size) !important;
+  text-align: center !important;
+  margin: 24pt 0 18pt !important;
+}
+
+.paper-theme-thesis .mu-container h2 {
+  font-size: var(--thesis-h2-size) !important;
+  margin: 18pt 0 12pt !important;
+}
+
+.paper-theme-thesis .mu-container h3 {
+  font-size: var(--thesis-h3-size) !important;
+  margin: 12pt 0 6pt !important;
+}
+
+.paper-theme-thesis .mu-container h4,
+.paper-theme-thesis .mu-container h5,
+.paper-theme-thesis .mu-container h6 {
+  font-size: var(--thesis-body-size) !important;
+  margin: 12pt 0 6pt !important;
+}
+
+.paper-theme-thesis .mu-container ul,
+.paper-theme-thesis .mu-container ol {
+  margin: 0 0 6pt !important;
+  padding-left: 2em !important;
+}
+
+.paper-theme-thesis .mu-container a {
+  color: var(--thesis-ink) !important;
+  text-decoration: none !important;
+}
+
+.paper-theme-thesis .mu-container .mu-table {
+  font-size: var(--thesis-small-size) !important;
+}
+
+.paper-theme-thesis .mu-container .mu-table table,
+.paper-theme-thesis .mu-container table {
+  border-collapse: collapse !important;
+}
+
+.paper-theme-thesis .mu-container .mu-table td,
+.paper-theme-thesis .mu-container .mu-table th,
+.paper-theme-thesis .mu-container td,
+.paper-theme-thesis .mu-container th {
+  border: none !important;
+  border-top: 0.75pt solid var(--thesis-rule) !important;
+  border-bottom: 0.75pt solid var(--thesis-rule) !important;
+  padding: 2pt 6pt !important;
+  text-align: center !important;
+  background: none !important;
+}
+
+.paper-theme-thesis .mu-container .mu-table tr,
+.paper-theme-thesis .mu-container tr {
+  border: none !important;
+  background: none !important;
+}
+
+.paper-theme-thesis .mu-container .mu-table thead tr,
+.paper-theme-thesis .mu-container thead tr {
+  border-top: 1.5pt solid var(--thesis-rule) !important;
+  border-bottom: 0.75pt solid var(--thesis-rule) !important;
+}
+
+.paper-theme-thesis .mu-container .mu-table tbody tr:last-child,
+.paper-theme-thesis .mu-container tbody tr:last-child {
+  border-bottom: 1.5pt solid var(--thesis-rule) !important;
+}
+
+.paper-theme-thesis .mu-container figure:not(.mu-table) {
+  text-align: center !important;
+}
+
+.paper-theme-thesis .mu-container figure > figcaption {
+  text-align: center !important;
+  font-size: var(--thesis-small-size) !important;
+  color: var(--thesis-ink) !important;
+}
+
+.paper-theme-thesis .mu-container blockquote {
+  border: none !important;
+  margin: 0 2em !important;
+  padding: 0 !important;
+  color: var(--thesis-ink) !important;
+}
+
+.paper-theme-thesis .mu-container hr {
+  height: 0.75pt !important;
+  background: var(--thesis-rule) !important;
+}
+
+.paper-theme-thesis .mu-container pre {
+  font-size: var(--thesis-small-size) !important;
+  background: #f7f7f7 !important;
+  border: 0.75pt solid #d9d9d9 !important;
+  border-radius: 0 !important;
+}

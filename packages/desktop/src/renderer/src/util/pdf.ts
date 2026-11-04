@@ -8,6 +8,7 @@
 import { escapeHTML, unescapeHTML, generateGithubSlug } from '@muyajs/core'
 import academicTheme from '@/assets/themes/export/academic.theme.css?inline'
 import liberTheme from '@/assets/themes/export/liber.theme.css?inline'
+import thesisTheme from '@/assets/themes/export/thesis.theme.css?inline'
 import { deepClone } from '../util'
 import { sanitize, EXPORT_DOMPURIFY_CONFIG } from '../util/dompurify'
 
@@ -76,6 +77,10 @@ export const getCssForOptions = async(options: PdfCssOptions): Promise<string> =
       output += academicTheme
     } else if (theme === 'liber') {
       output += liberTheme
+    } else if (theme === 'thesis') {
+      // 本科毕业论文主题：与文视图纸面（frontmatter paperTheme: thesis）
+      // 同一份单源 CSS——屏/打两侧吃同一组值，页数等价性不因主题而破。
+      output += thesisTheme
     } else {
       // Read theme from disk
       const { userDataPath } = window.marktext!.paths as { userDataPath: string }

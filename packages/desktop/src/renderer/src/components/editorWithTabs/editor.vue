@@ -106,7 +106,7 @@ import { moveImageToFolder, uploadImage } from '@/util/fileSystem'
 import { guessClipboardFilePath } from '@/util/clipboard'
 import { dataURLToFile } from '@/util/dataURLToFile'
 import { getCssForOptions, getHtmlToc, type PdfCssOptions, type HtmlTocOptions } from '@/util/pdf'
-import { usePaperPagination, parsePaperGeometry } from '@/util/paperPagination'
+import { usePaperPagination, parsePaperGeometry, parsePaperTheme } from '@/util/paperPagination'
 import {
   getTocHeadingScrollTop,
   resolveTocHeadingElement,
@@ -416,7 +416,24 @@ const applyLens = (): void => {
   const container = editor.value?.domNode as HTMLElement | undefined
   if (!container) return
   container.classList.toggle('mu-columns-layout', props.lens === 'column')
+  applyPaperTheme()
 }
+
+// 纸面主题（frontmatter `paperTheme`，如 thesis）：文/栏/页透镜同拍生效——
+// 同一类名命中 thesis.theme.css 的同一组规则（.paper-theme-thesis .mu-container），
+// 与纸叶真分片投影、打印导出链单源。只动排版层不动几何，分页等价性不破。
+const applyPaperTheme = (): void => {
+  const container = editor.value?.domNode as HTMLElement | undefined
+  if (!container) return
+  container.classList.toggle('paper-theme-thesis', parsePaperTheme(props.markdown ?? '') === 'thesis')
+}
+
+watch(
+  () => props.markdown,
+  () => {
+    applyPaperTheme()
+  }
+)
 
 // flow/column/page/paper render the same blocks in different layouts, so the
 // same `scrollTop` lands on a different region of the document — re-apply the
