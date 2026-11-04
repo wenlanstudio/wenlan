@@ -34,6 +34,12 @@ import type {
 import type { BufferedState as BufferedStateType } from './bufferedState'
 import type { MenuTemplate, MenuPopupPosition, MenuStructureItem } from './menu'
 import type { PandocCommandInfo } from './pandoc'
+import type {
+  Md2rEvent,
+  Md2rJournalEntry,
+  Md2rParseResult,
+  Md2rRunResult
+} from './mdcode2run'
 
 export interface SaveDialogRequest {
   title?: string
@@ -64,6 +70,39 @@ export interface IpcInvokeChannels {
   'mt::md2slides::server': {
     args: [opts: { action: 'start' | 'stop'; allowRoots?: string[] }]
     ret: { running: boolean; origin: string | null }
+  }
+  // mdcode2run 讲义代码执行引擎（git 依赖，main 托管）：块解析建 UI 用。
+  'mt::mdcode2run::parse': {
+    args: [opts: { docPath: string; md: string }]
+    ret: Md2rParseResult
+  }
+  // 跑一块（或章重放）：结果契约返回；stdout/stderr 实时流走
+  // mt::mdcode2run::event 推送（invoke 返回值没法流式）。
+  'mt::mdcode2run::run': {
+    args: [
+      opts: { docPath: string; md: string; line: number; replay?: boolean; timeout?: number }
+    ]
+    ret: Md2rRunResult
+  }
+  // ⟳ 销毁第 line 行所在块的章会话（下次运行重建）。
+  'mt::mdcode2run::reset-session': {
+    args: [opts: { docPath: string; md: string; line: number }]
+    ret: boolean
+  }
+  // 章执行日志（▶ 序列，供渲染端显示 ran #N / stale）。
+  'mt::mdcode2run::journal': {
+    args: [opts: { docPath: string; chapterLine: number }]
+    ret: Md2rJournalEntry[]
+  }
+  // 宿主关文档：立即回收该文档的全部常驻会话。
+  'mt::mdcode2run::dispose': {
+    args: [opts: { docPath: string }]
+    ret: boolean
+  }
+  // 停一个作业（run 结果里 job.id 捎回来）。
+  'mt::mdcode2run::job-stop': {
+    args: [opts: { docPath: string; jobId: string }]
+    ret: boolean
   }
   // M2 一键导出的出片半边（取数在 renderer 经 deck 页面完成）。大位图走服务旁路
   // 落盘（/x），IPC 只传目录路径——数百 MB 过 invoke 会把进程挂死（真机教训）。
@@ -188,6 +227,7 @@ export interface IpcSendChannels {
   'mt::rename': [payload: { id: string; pathname: string; newPathname: string; currentFile?: unknown }]
   'mt::request-keybindings': []
   'mt::set-editor-format-menus-enabled': [windowId: number, enabled: boolean]
+  'mt::switch-directory': [directoryPath: string]
   'mt::response-export': [
     payload: {
       type: ExportType
@@ -303,7 +343,10 @@ export interface IpcMainEventChannels {
   'mt::load-state': [state: BufferedStateType]
   'mt::menu::click': [menuId: string]
   'mt::menu::closed': []
+  // mdcode2run 引擎事件转发（started/chunk/done/job-done），按 watcher 定向推送。
+  'mt::mdcode2run::event': [payload: Md2rEvent]
   'mt::new-untitled-tab': [selected?: boolean, markdown?: string]
+  'mt::sidebar::new-file-in-project': [templateKind: string]
   'mt::open-directory': [directoryPath: string]
   'mt::open-new-tab': [
     markdownDocument: MarkdownDocument | null,

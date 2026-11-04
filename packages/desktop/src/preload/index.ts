@@ -19,6 +19,7 @@ import type {
   BootInfo,
   SaveDialogRequest
 } from '@shared/types/ipc'
+import type { Md2rEvent } from '@shared/types/mdcode2run'
 
 type RendererEventListener<K extends keyof IpcMainEventChannels> = (
   event: IpcRendererEvent,
@@ -304,6 +305,28 @@ const md2slidesAPI = {
   }) => invoke('mt::md2slides::export', opts)
 }
 
+// mdcode2run 讲义代码执行引擎（main 托管，渲染进程沙箱起不了子进程）。
+// 实时输出不走 invoke 返回值（没法流式），走 onEvent 的 started/chunk/done 推送。
+const mdcode2runAPI = {
+  parse: (opts: { docPath: string; md: string }) => invoke('mt::mdcode2run::parse', opts),
+  run: (opts: {
+    docPath: string
+    md: string
+    line: number
+    replay?: boolean
+    timeout?: number
+  }) => invoke('mt::mdcode2run::run', opts),
+  resetSession: (opts: { docPath: string; md: string; line: number }) =>
+    invoke('mt::mdcode2run::reset-session', opts),
+  journal: (opts: { docPath: string; chapterLine: number }) =>
+    invoke('mt::mdcode2run::journal', opts),
+  dispose: (opts: { docPath: string }) => invoke('mt::mdcode2run::dispose', opts),
+  stopJob: (opts: { docPath: string; jobId: string }) =>
+    invoke('mt::mdcode2run::job-stop', opts),
+  onEvent: (listener: (event: Md2rEvent) => void): (() => void) =>
+    ipcWrapper.on('mt::mdcode2run::event', (_event, payload) => listener(payload))
+}
+
 try {
   contextBridge.exposeInMainWorld('electron', electronAPI)
   contextBridge.exposeInMainWorld('process', processShim)
@@ -317,6 +340,7 @@ try {
   contextBridge.exposeInMainWorld('fonts', fontsAPI)
   contextBridge.exposeInMainWorld('diagram', diagramAPI)
   contextBridge.exposeInMainWorld('md2slides', md2slidesAPI)
+  contextBridge.exposeInMainWorld('mdcode2run', mdcode2runAPI)
 } catch (error) {
   console.error(error)
 }

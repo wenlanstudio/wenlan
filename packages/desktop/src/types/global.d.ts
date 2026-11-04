@@ -15,6 +15,7 @@ import type {
 } from '@shared/types/ipc'
 import type { MenuTemplate, MenuPopupPosition, MenuStructureItem } from '@shared/types/menu'
 import type { SerializedStat } from '@shared/types/files'
+import type { Md2rEvent, Md2rJournalEntry, Md2rParseResult, Md2rRunResult } from '@shared/types/mdcode2run'
 
 declare global {
   // ---- Build-time defines (electron-vite `define`) ----
@@ -223,6 +224,27 @@ declare global {
         | { ok: true; pages?: number; warnings?: string[] }
         | { ok: false; error: string }
       >
+    }
+    mdcode2run: {
+      parse(opts: {
+        docPath: string
+        md: string
+      }): Promise<Md2rParseResult>
+      run(opts: {
+        docPath: string
+        md: string
+        line: number
+        replay?: boolean
+        timeout?: number
+      }): Promise<Md2rRunResult>
+      resetSession(opts: { docPath: string; md: string; line: number }): Promise<boolean>
+      journal(opts: {
+        docPath: string
+        chapterLine: number
+      }): Promise<Md2rJournalEntry[]>
+      dispose(opts: { docPath: string }): Promise<boolean>
+      stopJob(opts: { docPath: string; jobId: string }): Promise<boolean>
+      onEvent(listener: (event: Md2rEvent) => void): () => void
     }
     process: ProcessShim
     rgPath: string
