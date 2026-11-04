@@ -1,24 +1,31 @@
 import { autoUpdater } from 'electron-updater'
 import { BrowserWindow, Menu, ipcMain } from 'electron'
+import log from 'electron-log'
 import { COMMANDS } from '../../commands'
 import type { CommandManager } from '../../commands'
 import { isOsx } from '../../config'
 
+export const RELEASES_URL = 'https://github.com/wenlanstudio/wenlan-studio/releases'
+
 let runningUpdate = false
 let win: BrowserWindow | null = null
+// Startup checks are silent: they only surface when an update is actually
+// available, and swallow "not available"/error noise instead of notifying.
+let silentCheck = false
 
 autoUpdater.autoDownload = false
 
 autoUpdater.on('error', (error: Error) => {
-  if (win) {
-    // Preserve the JS behavior: it tolerated `null` here; the typed event
-    // shape doesn't, but the same defensive code below stays in place.
-    const err = error as Error | null
-    win.webContents.send(
-      'mt::UPDATE_ERROR',
-      err === null ? 'Error: unknown' : (err.message || err).toString()
-    )
+  // Preserve the JS behavior: it tolerated `null` here; the typed event
+  // shape doesn't, but the same defensive code below stays in place.
+  const err = error as Error | null
+  const message = err === null ? 'Error: unknown' : (err.message || err).toString()
+  if (silentCheck) {
+    log.warn('[update] silent update check failed:', message)
+  } else if (win) {
+    win.webContents.send('mt::UPDATE_ERROR', message)
   }
+  silentCheck = false
 })
 
 autoUpdater.on('update-available', (_info) => {
@@ -28,13 +35,15 @@ autoUpdater.on('update-available', (_info) => {
       'Found an update, do you want download and install now?'
     )
   }
+  silentCheck = false
   runningUpdate = false
 })
 
 autoUpdater.on('update-not-available', (_info) => {
-  if (win) {
+  if (win && !silentCheck) {
     win.webContents.send('mt::UPDATE_NOT_AVAILABLE', 'Current version is up-to-date.')
   }
+  silentCheck = false
   runningUpdate = false
 })
 
@@ -76,6 +85,25 @@ export const checkUpdates = (browserWindow: BrowserWindow | null): void => {
     win = browserWindow
     autoUpdater.checkForUpdates()
   }
+}
+
+// Startup check: same flow as the menu action, but "not available" and errors
+// are only logged instead of notifying the user.
+export const checkUpdatesSilently = (browserWindow: BrowserWindow | null): void => {
+  if (runningUpdate) {
+    return
+  }
+  runningUpdate = true
+  silentCheck = true
+  win = browserWindow
+  autoUpdater.checkForUpdates().catch((err: unknown) => {
+    log.warn(
+      '[update] silent update check failed:',
+      err instanceof Error ? err.message : String(err)
+    )
+    runningUpdate = false
+    silentCheck = false
+  })
 }
 
 export const osxHide = (): void => {

@@ -1,5 +1,12 @@
 appId: io.github.quqingyuan.wenlan
 productName: Wenlan Studio
+# Update feed: electron-builder generates `latest.yml` (the version manifest)
+# and attaches it to the GitHub Release. electron-updater on the client reads
+# it via the `app-update.yml` shipped inside the installer to detect updates.
+publish:
+  provider: github
+  owner: wenlanstudio
+  repo: wenlan-studio
 directories:
   buildResources: build
   output: ../../dist

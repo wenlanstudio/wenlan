@@ -18,6 +18,7 @@ import { dockMenu } from '../menu/templates'
 import registerSpellcheckerListeners from '../spellchecker'
 import { watchers } from '../utils/imagePathAutoComplement'
 import { onInternalChannel } from '../utils/internalIpc'
+import { scheduleStartupUpdateCheck } from '../updateStartup'
 import { WindowType } from '../windows/base'
 import EditorWindow from '../windows/editor'
 import SettingWindow from '../windows/setting'
@@ -388,6 +389,9 @@ class App {
       // Create immediately on Windows/macOS
       createWindow()
     }
+
+    // Silent update check (throttled to once per day, 30s after boot).
+    scheduleStartupUpdateCheck()
 
     // this.shortcutCapture = new ShortcutCapture()
     // if (process.env.NODE_ENV === 'development') {
