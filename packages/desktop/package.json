@@ -1,15 +1,15 @@
 {
   "name": "wenlan-studio",
   "version": "1.0.0",
-  "description": "Wenlan Studio — a Markdown editor with document, column, slide and present views",
+  "description": "Wenlan — a Markdown editor with document, column, slide and present views",
   "main": "./out/main/index.js",
   "author": {
-    "name": "Wenlan Studio Contributors"
+    "name": "Wenlan Contributors"
   },
-  "homepage": "https://github.com/wenlanstudio/wenlan-studio",
+  "homepage": "https://github.com/wenlanstudio/wenlan",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/wenlanstudio/wenlan-studio.git"
+    "url": "git+https://github.com/wenlanstudio/wenlan.git"
   },
   "scripts": {
     "minify-locales": "tsx ../../scripts/minify-locales.ts",

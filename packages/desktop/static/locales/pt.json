@@ -99,21 +99,21 @@
       "reportBug": "Reportar Bug",
       "viewSource": "Ver Código Fonte",
       "followUs": "Siga-nos",
-      "support": "Apoiar Wenlan Studio",
+      "support": "Apoiar Wenlan",
       "license": "Licença",
       "about": "Sobre",
       "checkUpdates": "Verificar Atualizações"
     },
     "marktext": {
-      "title": "Wenlan Studio",
-      "about": "Sobre Wenlan Studio",
+      "title": "Wenlan",
+      "about": "Sobre Wenlan",
       "checkUpdates": "Verificar Atualizações...",
       "preferences": "Preferências",
       "services": "Serviços",
-      "hide": "Ocultar Wenlan Studio",
+      "hide": "Ocultar Wenlan",
       "hideOthers": "Ocultar Outros",
       "showAll": "Mostrar Todos",
-      "quit": "Sair do Wenlan Studio"
+      "quit": "Sair do Wenlan"
     },
     "view": {
       "view": "Visualizar",
@@ -357,7 +357,7 @@
   },
   "import": {
     "title": "Importar ou Abrir",
-    "description": "Solte aqui para colocar suas coisas no Wenlan Studio"
+    "description": "Solte aqui para colocar suas coisas no Wenlan"
   },
   "preferences": {
     "title": "Preferências",
@@ -386,10 +386,10 @@
         "hideScrollbar": "Se ocultar as barras de rolagem",
         "wordWrapInToc": "Se habilitar a quebra de linha na tabela de conteúdos",
         "fileSortBy": "Ordenar arquivos na pasta aberta por tempo de criação, tempo de modificação e título",
-        "startUpAction": "A ação após a inicialização do Wenlan Studio, abrir o último conteúdo editado, abrir a pasta especificada ou página em branco",
+        "startUpAction": "A ação após a inicialização do Wenlan, abrir o último conteúdo editado, abrir a pasta especificada ou página em branco",
         "restoreLayoutState": "Restaurar o estado anterior do editor na inicialização",
         "defaultDirectoryToOpen": "O diretório padrão que deve ser aberto na inicialização quando startUp=folder",
-        "language": "O idioma que o Wenlan Studio usa",
+        "language": "O idioma que o Wenlan usa",
         "editorFontFamily": "Família de fonte do editor",
         "fontSize": "Tamanho da fonte em pixels",
         "lineHeight": "Altura da linha",
@@ -414,7 +414,7 @@
         "preferLooseListItem": "O tipo de lista preferido",
         "bulletListMarker": "O marcador usado na lista de marcadores",
         "orderListDelimiter": "O delimitador usado na lista ordenada",
-        "preferHeadingStyle": "O estilo de cabeçalho preferido no Wenlan Studio",
+        "preferHeadingStyle": "O estilo de cabeçalho preferido no Wenlan",
         "tabSize": "Substituir a tabulação com x espaços",
         "listIndentation": "Selecionar a indentação da lista",
         "frontmatterType": "O tipo de frontmatter",
@@ -431,7 +431,7 @@
         "softNewlineAsSpace": "Tratar quebras de linha suaves como espaços",
         "sequenceTheme": "Tema do diagrama de sequência",
         "plantumlServer": "URL do servidor PlantUML",
-        "theme": "Selecionar o tema usado no Wenlan Studio",
+        "theme": "Selecionar o tema usado no Wenlan",
         "followSystemTheme": "Seguir tema do sistema",
         "lightModeTheme": "Tema a ser usado quando o sistema está no modo claro",
         "darkModeTheme": "Tema a ser usado quando o sistema está no modo escuro",
@@ -652,7 +652,7 @@
         "neverDetected": "Nunca detectado",
         "neverSuccessful": "Nunca bem-sucedido"
       },
-      "defaultBehavior": "O comportamento padrão após colar ou arrastar a imagem para o Wenlan Studio"
+      "defaultBehavior": "O comportamento padrão após colar ou arrastar a imagem para o Wenlan"
     },
     "markdown": {
       "title": "Markdown",
@@ -783,12 +783,12 @@
     }
   },
   "about": {
-    "copyright": "Copyright © WenLanStudio 2026-{year}",
+    "copyright": "Copyright © Wenlan 2026-{year}",
     "copyrightContributors": "Copyright Contribuidores"
   },
   "commands": {
     "mt": {
-      "hide": "Ocultar Wenlan Studio",
+      "hide": "Ocultar Wenlan",
       "hideOthers": "Ocultar Outros"
     },
     "file": {
@@ -967,7 +967,7 @@
     "fileExists": "O arquivo já existe: {filename}",
     "files": "Arquivos",
     "importWarning": "Aviso de importação",
-    "installPandoc": "Pandoc não foi encontrado. Instale-o, ou defina a variável de ambiente MARKTEXT_PANDOC com o caminho do executável do pandoc e reinicie o Wenlan Studio.",
+    "installPandoc": "Pandoc não foi encontrado. Instale-o, ou defina a variável de ambiente MARKTEXT_PANDOC com o caminho do executável do pandoc e reinicie o Wenlan.",
     "exportWarning": "Aviso de exportação",
     "exportWarningMore": "…e mais {count}",
     "keepOpen": "Manter aberto",
@@ -984,7 +984,7 @@
     "configSchemaViolation": "Violação do esquema de configuração",
     "copyError": "Erro de cópia",
     "initializationFailed": "Falha na inicialização {hint}",
-    "otherInstanceDetected": "Outra instância do Wenlan Studio já está em execução",
+    "otherInstanceDetected": "Outra instância do Wenlan já está em execução",
     "report": "Reportar",
     "startupError": "Erro de inicialização",
     "terminatedDueToError": "Terminado devido a erro",

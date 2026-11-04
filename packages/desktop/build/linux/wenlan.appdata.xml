@@ -3,11 +3,13 @@
   <id>io.github.quqingyuan.wenlan</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
-  <name>Wenlan Studio</name>
+  <name>Wenlan</name>
+  <name xml:lang="zh-CN">文览</name>
   <summary>A Markdown editor with document, column, slide and present views</summary>
+  <summary xml:lang="zh-CN">文览 · 一文多览</summary>
   <description>
     <p>
-      Wenlan Studio is a free and open-source Markdown editor based on MarkText. It keeps the realtime preview workflow and adds document, column, slide, present and A4 paper views over a single source file.
+      Wenlan is a free and open-source Markdown editor based on MarkText. It keeps the realtime preview workflow and adds document, column, slide, present and A4 paper views over a single source file.
     </p>
     <p>Features:</p>
     <ul>
@@ -19,8 +21,8 @@
       <li>Various edit modes and themes: source code mode, typewriter mode, focus mode</li>
     </ul>
   </description>
-  <url type="homepage">https://github.com/wenlanstudio/wenlan-studio/</url>
-  <url type="bugtracker">https://github.com/wenlanstudio/wenlan-studio/issues</url>
+  <url type="homepage">https://github.com/wenlanstudio/wenlan/</url>
+  <url type="bugtracker">https://github.com/wenlanstudio/wenlan/issues</url>
   <categories>
     <category>Utility</category>
     <category>TextEditor</category>

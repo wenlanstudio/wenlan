@@ -1,4 +1,4 @@
-# 文览（wenlan-studio）front-matter 配置（本仓库权威参考）
+# 文览 front-matter 配置（本仓库权威参考）
 
 > 依据源码逐项核实（2026-11-04）：`packages/desktop/src/renderer/src/util/paperPagination.ts`
 > （paper 叶读取）。键有增删先改代码，再同步本文件。

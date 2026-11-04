@@ -666,7 +666,7 @@ const commands: CommandDescriptor[] = [
   },
 
   // --------------------------------------------------------------------------
-  // Wenlan Studio
+  // Wenlan
 
   {
     id: 'file.preferences',

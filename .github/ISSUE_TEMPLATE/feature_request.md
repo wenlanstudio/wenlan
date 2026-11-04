@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Suggest an idea or improvement for Wenlan Studio
+about: Suggest an idea or improvement for Wenlan
 title: '[Feature] '
 labels: ['enhancement']
 ---

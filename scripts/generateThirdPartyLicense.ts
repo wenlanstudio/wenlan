@@ -43,7 +43,7 @@ ${licenseText}
   const output = `# Third Party Notices
 -------------------------------------------------
 
-This file contains all third-party packages that are bundled and shipped with Wenlan Studio.
+This file contains all third-party packages that are bundled and shipped with Wenlan.
 
 -------------------------------------------------
 # Summary

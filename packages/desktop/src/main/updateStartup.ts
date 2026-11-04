@@ -8,7 +8,7 @@ import { checkUpdatesSilently, RELEASES_URL } from './menu/actions/marktext'
 const UPDATE_STORE_NAME = 'update-check'
 const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000
 const STARTUP_DELAY_MS = 30_000
-const GITHUB_LATEST_API = 'https://api.github.com/repos/wenlanstudio/wenlan-studio/releases/latest'
+const GITHUB_LATEST_API = 'https://api.github.com/repos/wenlanstudio/wenlan/releases/latest'
 
 interface UpdateCheckStore {
   lastStartupCheckAt: number
@@ -60,7 +60,7 @@ const checkForUpdateOnMac = async(): Promise<void> => {
     const { response: button } = await dialog.showMessageBox(win, {
       type: 'info',
       message: 'A new version is available',
-      detail: `Wenlan Studio ${latest.replace(/^v/, '')} is available for download.`,
+      detail: `Wenlan ${latest.replace(/^v/, '')} is available for download.`,
       buttons: ['Open Releases Page', 'Later'],
       defaultId: 0,
       cancelId: 1

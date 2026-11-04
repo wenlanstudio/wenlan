@@ -1,4 +1,4 @@
-name: Release Wenlan Studio
+name: Release Wenlan
 
 on:
   push:
@@ -199,9 +199,9 @@ jobs:
               echo ""
             fi
             echo "## ⚠️ Note for macOS users"
-            echo "Builds are unsigned (no Apple Developer ID). After dragging Wenlan Studio into Applications, clear the quarantine flag once:"
+            echo "Builds are unsigned (no Apple Developer ID). After dragging Wenlan into Applications, clear the quarantine flag once:"
             echo '```'
-            echo 'xattr -d com.apple.quarantine "/Applications/Wenlan Studio.app"'
+            echo 'xattr -d com.apple.quarantine "/Applications/Wenlan.app"'
             echo '```'
             echo ""
             echo "## Verifying downloads"

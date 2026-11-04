@@ -415,7 +415,7 @@ class Watcher {
 
   /**
    * Check whether we should ignore the current event because the file may be
-   * changed from Wenlan Studio itself.
+   * changed from Wenlan itself.
    */
   async _shouldIgnoreEvent(
     winId: number,

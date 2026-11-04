@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   update:
-    if: github.repository == 'wenlanstudio/wenlan-studio'
+    if: github.repository == 'wenlanstudio/wenlan'
     runs-on: ubuntu-latest
     permissions:
       contents: write

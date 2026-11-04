@@ -11,7 +11,7 @@ const writeLine = (s: string): boolean => write(s + '\n')
 const cli = (): ParsedArgs => {
   let argv = process.argv.slice(1)
   if (import.meta.env.DEV) {
-    // Don't pass electron development arguments to Wenlan Studio and change user data path.
+    // Don't pass electron development arguments to Wenlan and change user data path.
     const devUserDataPath = path.join(getPath('appData'), 'wenlan-studio-dev')
     argv = ['--user-data-dir', devUserDataPath]
   }
@@ -36,7 +36,7 @@ const cli = (): ParsedArgs => {
   }
 
   if (args['--version']) {
-    writeLine(`Wenlan Studio: ${MARKTEXT_VERSION_STRING}`)
+    writeLine(`Wenlan: ${MARKTEXT_VERSION_STRING}`)
     writeLine(`Node.js: ${process.versions.node}`)
     writeLine(`Electron: ${process.versions.electron}`)
     writeLine(`Chromium: ${process.versions.chrome}`)

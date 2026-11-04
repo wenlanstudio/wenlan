@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Ask a Question
-    url: https://github.com/wenlanstudio/wenlan-studio/discussions
-    about: Use GitHub Discussions for questions, help, and general conversation about Wenlan Studio.
+    url: https://github.com/wenlanstudio/wenlan/discussions
+    about: Use GitHub Discussions for questions, help, and general conversation about Wenlan.
   - name: Documentation
-    url: https://github.com/wenlanstudio/wenlan-studio/tree/develop/docs
+    url: https://github.com/wenlanstudio/wenlan/tree/develop/docs
     about: Check the docs before asking — your answer may already be there.

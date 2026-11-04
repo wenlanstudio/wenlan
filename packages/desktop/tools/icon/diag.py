@@ -1,8 +1,8 @@
 import numpy as np
 from PIL import Image
 
-SRC = r'D:/md-ecosystem/wenlan-studio/packages/desktop/build/icons/icon.png'
-OUT = r'D:/md-ecosystem/wenlan-studio/packages/desktop/tools/icon'
+SRC = r'D:/md-ecosystem/wenlan/packages/desktop/build/icons/icon.png'
+OUT = r'D:/md-ecosystem/wenlan/packages/desktop/tools/icon'
 
 im = Image.open(SRC).convert('RGBA')
 rgb = np.asarray(im)[..., :3].astype(np.float32)

@@ -1,12 +1,12 @@
 name: Bug Report
-description: Create a bug report to help us improve Wenlan Studio
+description: Create a bug report to help us improve Wenlan
 title: '[Bug] '
 labels: ['bug', 'triage']
 body:
   - type: markdown
     attributes:
       value: |
-        **Before reporting:** Search [existing issues](https://github.com/wenlanstudio/wenlan-studio/issues) to avoid duplicates. If you find a match, use 👍 instead of opening a new issue.
+        **Before reporting:** Search [existing issues](https://github.com/wenlanstudio/wenlan/issues) to avoid duplicates. If you find a match, use 👍 instead of opening a new issue.
 
   - type: textarea
     id: description
@@ -67,7 +67,7 @@ body:
   - type: input
     id: wenlan-version
     attributes:
-      label: Wenlan Studio Version
+      label: Wenlan Version
       placeholder: 'e.g. 0.17.1'
     validations:
       required: true

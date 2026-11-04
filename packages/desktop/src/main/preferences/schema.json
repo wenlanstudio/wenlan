@@ -54,11 +54,11 @@
     "default": "asc"
   },
   "lastOpenedFolder": {
-    "description": "General--The last folder that was opened in Wenlan Studio.--internal",
+    "description": "General--The last folder that was opened in Wenlan.--internal",
     "type": "string"
   },
   "startUpAction": {
-    "description": "General--The action after Wenlan Studio startup, open the last opened folder, open the specified folder or blank page",
+    "description": "General--The action after Wenlan startup, open the last opened folder, open the specified folder or blank page",
     "enum": ["folder", "openLastFolder", "blank", "restoreAll"],
     "default": "restoreAll"
   },
@@ -67,7 +67,7 @@
     "type": "string"
   },
   "language": {
-    "description": "General--The language Wenlan Studio uses. No default on purpose: the language is auto-detected from the system locale on first start (after app ready), so a schema default would always win over detection.",
+    "description": "General--The language Wenlan uses. No default on purpose: the language is auto-detected from the system locale on first start (after app ready), so a schema default would always win over detection.",
     "type": "string"
   },
   "editorFontFamily": {
@@ -242,7 +242,7 @@
     "default": "."
   },
   "preferHeadingStyle": {
-    "description": "Markdown--The preferred heading style in Wenlan Studio",
+    "description": "Markdown--The preferred heading style in Wenlan",
     "enum": ["atx", "setext"],
     "default": "atx"
   },
@@ -344,7 +344,7 @@
     "default": ""
   },
   "theme": {
-    "description": "Theme--Select the theme used in Wenlan Studio",
+    "description": "Theme--Select the theme used in Wenlan",
     "type": "string",
     "default": "light"
   },

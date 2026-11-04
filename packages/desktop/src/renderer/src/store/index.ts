@@ -10,7 +10,7 @@ export const useMainStore = defineStore('main', () => {
   const appVersion = ref<string>(window.electron.process.env.MARKTEXT_VERSION_STRING ?? '')
   // Whether current window is active or focused
   const windowActive = ref(true)
-  // Whether Wenlan Studio is initialized
+  // Whether Wenlan is initialized
   const init = ref(false)
 
   function SET_WIN_STATUS(status: boolean): void {

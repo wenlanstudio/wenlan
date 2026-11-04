@@ -99,21 +99,21 @@
       "reportBug": "Hata Bildir",
       "viewSource": "Kaynağı Görüntüle",
       "followUs": "Bizi Takip Edin",
-      "support": "Wenlan Studio'e Destek Ol",
+      "support": "Wenlan'e Destek Ol",
       "license": "Lisans",
       "about": "Hakkında",
       "checkUpdates": "Güncellemeleri Denetle"
     },
     "marktext": {
-      "title": "Wenlan Studio",
-      "about": "Wenlan Studio Hakkında",
+      "title": "Wenlan",
+      "about": "Wenlan Hakkında",
       "checkUpdates": "Güncellemeleri Denetle...",
       "preferences": "Tercihler",
       "services": "Hizmetler",
-      "hide": "Wenlan Studio'i Gizle",
+      "hide": "Wenlan'i Gizle",
       "hideOthers": "Diğerlerini Gizle",
       "showAll": "Tümünü Göster",
-      "quit": "Wenlan Studio'ten Çık"
+      "quit": "Wenlan'ten Çık"
     },
     "view": {
       "view": "Görünüm",
@@ -357,7 +357,7 @@
   },
   "import": {
     "title": "İçe Aktar veya Aç",
-    "description": "İçeriklerinizi Wenlan Studio'e almak için buraya bırakın"
+    "description": "İçeriklerinizi Wenlan'e almak için buraya bırakın"
   },
   "preferences": {
     "title": "Tercihler",
@@ -385,10 +385,10 @@
         "hideScrollbar": "Kaydırma çubuklarının gizlenip gizlenmeyeceği",
         "wordWrapInToc": "İçindekilerde sözcük kaydırmanın etkinleştirilip etkinleştirilmeyeceği",
         "fileSortBy": "Açık klasördeki dosyaları oluşturulma zamanı, değiştirilme zamanı ve başlığa göre sırala",
-        "startUpAction": "Wenlan Studio başladıktan sonraki eylem: son düzenlenen içeriği aç, belirtilen klasörü aç veya boş sayfa",
+        "startUpAction": "Wenlan başladıktan sonraki eylem: son düzenlenen içeriği aç, belirtilen klasörü aç veya boş sayfa",
         "restoreLayoutState": "Başlangıçta önceki düzenleyici durumunu geri yükle",
         "defaultDirectoryToOpen": "startUp=folder olduğunda başlangıçta açılması gereken varsayılan klasör",
-        "language": "Wenlan Studio'in kullandığı dil",
+        "language": "Wenlan'in kullandığı dil",
         "editorFontFamily": "Düzenleyici yazı tipi ailesi",
         "fontSize": "Piksel cinsinden yazı tipi boyutu",
         "lineHeight": "Satır Yüksekliği",
@@ -413,7 +413,7 @@
         "preferLooseListItem": "Tercih edilen liste türü",
         "bulletListMarker": "Sırasız listede kullanılan işaret",
         "orderListDelimiter": "Sıralı listede kullanılan ayraç",
-        "preferHeadingStyle": "Wenlan Studio'te tercih edilen başlık stili",
+        "preferHeadingStyle": "Wenlan'te tercih edilen başlık stili",
         "tabSize": "Sekmeyi x boşlukla değiştir",
         "listIndentation": "Liste girintisini seçin",
         "frontmatterType": "Ön bilgi türü",
@@ -429,7 +429,7 @@
         "isHtmlEnabled": "HTML işlemeyi etkinleştir",
         "softNewlineAsSpace": "Yumuşak satır sonlarını boşluk olarak değerlendir",
         "sequenceTheme": "Dizi diyagramı teması",
-        "theme": "Wenlan Studio'te kullanılan temayı seçin",
+        "theme": "Wenlan'te kullanılan temayı seçin",
         "followSystemTheme": "Sistem Temasını Takip Et",
         "lightModeTheme": "Sistem açık moddayken kullanılacak tema",
         "darkModeTheme": "Sistem koyu moddayken kullanılacak tema",
@@ -652,7 +652,7 @@
         "pleaseInstall": "Lütfen yükleyin",
         "scriptPath": "Betik yolu"
       },
-      "defaultBehavior": "Görseli Wenlan Studio'e yapıştırdıktan veya sürükledikten sonraki varsayılan davranış"
+      "defaultBehavior": "Görseli Wenlan'e yapıştırdıktan veya sürükledikten sonraki varsayılan davranış"
     },
     "markdown": {
       "title": "Markdown",
@@ -783,12 +783,12 @@
     }
   },
   "about": {
-    "copyright": "Telif Hakkı © WenLanStudio 2026-{year}",
+    "copyright": "Telif Hakkı © Wenlan 2026-{year}",
     "copyrightContributors": "Github Katkıda Bulunanlar tarafından <3 ile yapıldı"
   },
   "commands": {
     "mt": {
-      "hide": "Wenlan Studio'i Gizle",
+      "hide": "Wenlan'i Gizle",
       "hideOthers": "Diğerlerini Gizle"
     },
     "file": {
@@ -967,7 +967,7 @@
     "fileExists": "Dosya zaten var: {filename}",
     "files": "Dosyalar",
     "importWarning": "İçe aktarma uyarısı",
-    "installPandoc": "Pandoc bulunamadı. Yükleyin veya MARKTEXT_PANDOC ortam değişkenini pandoc çalıştırılabilir dosyasının yolu olarak ayarlayıp Wenlan Studio'i yeniden başlatın.",
+    "installPandoc": "Pandoc bulunamadı. Yükleyin veya MARKTEXT_PANDOC ortam değişkenini pandoc çalıştırılabilir dosyasının yolu olarak ayarlayıp Wenlan'i yeniden başlatın.",
     "exportWarning": "Dışa aktarma uyarısı",
     "exportWarningMore": "…ve {count} tane daha",
     "keepOpen": "Açık tut",
@@ -984,7 +984,7 @@
     "configSchemaViolation": "Yapılandırma şeması ihlali",
     "copyError": "Kopyalama hatası",
     "initializationFailed": "Başlatma başarısız {hint}",
-    "otherInstanceDetected": "Başka bir Wenlan Studio penceresi zaten açık",
+    "otherInstanceDetected": "Başka bir Wenlan penceresi zaten açık",
     "report": "Bildir",
     "startupError": "Başlangıç hatası",
     "terminatedDueToError": "Hata nedeniyle sonlandırıldı",

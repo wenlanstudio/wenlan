@@ -8,7 +8,7 @@
 //       can be produced with ^ or ` on any keyboard. --> ^, `, ", ~, ...
 
 const keybindings: Map<string, string> = new Map([
-  // Wenlan Studio menu on macOS only
+  // Wenlan menu on macOS only
   ['mt.hide', ''],
   ['mt.hide-others', ''],
 

@@ -47,7 +47,7 @@ const electronRebuildBin = path.join(desktopRoot, 'node_modules', '.bin', `elect
 const nativeKeymapDir = path.join(desktopRoot, 'node_modules', 'native-keymap')
 if (!fs.existsSync(nativeKeymapDir)) {
   console.log('Installing native-keymap source (skipping compilation)...')
-  // native-keymap is already in Wenlan Studio's optionalDependencies; the add
+  // native-keymap is already in Wenlan's optionalDependencies; the add
   // re-installs without changing the version range.
   if (isPnpm) {
     run('pnpm --filter wenlan-studio add native-keymap --ignore-scripts')

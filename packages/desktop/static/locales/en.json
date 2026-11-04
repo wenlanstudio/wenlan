@@ -99,21 +99,21 @@
       "reportBug": "Report Bug",
       "viewSource": "View Source",
       "followUs": "Follow Us",
-      "support": "Support Wenlan Studio",
+      "support": "Support Wenlan",
       "license": "License",
       "about": "About",
       "checkUpdates": "Check for Updates"
     },
     "marktext": {
-      "title": "Wenlan Studio",
-      "about": "About Wenlan Studio",
+      "title": "Wenlan",
+      "about": "About Wenlan",
       "checkUpdates": "Check for Updates...",
       "preferences": "Preferences",
       "services": "Services",
-      "hide": "Hide Wenlan Studio",
+      "hide": "Hide Wenlan",
       "hideOthers": "Hide Others",
       "showAll": "Show All",
-      "quit": "Quit Wenlan Studio"
+      "quit": "Quit Wenlan"
     },
     "view": {
       "view": "View",
@@ -357,7 +357,7 @@
   },
   "import": {
     "title": "Import or Open",
-    "description": "Drop here to get your stuff into Wenlan Studio"
+    "description": "Drop here to get your stuff into Wenlan"
   },
   "preferences": {
     "title": "Preferences",
@@ -385,10 +385,10 @@
         "hideScrollbar": "Whether to hide scrollbars",
         "wordWrapInToc": "Whether to enable word wrap in TOC",
         "fileSortBy": "Sort files in opened folder by created time, modified time and title",
-        "startUpAction": "The action after Wenlan Studio startup, open the last edited content, open the specified folder or blank page",
+        "startUpAction": "The action after Wenlan startup, open the last edited content, open the specified folder or blank page",
         "restoreLayoutState": "Restore previous editor state on startup",
         "defaultDirectoryToOpen": "The default directory that should be opened on startup when startUp=folder",
-        "language": "The language Wenlan Studio uses",
+        "language": "The language Wenlan uses",
         "editorFontFamily": "Editor font family",
         "fontSize": "Font size in pixels",
         "lineHeight": "Line Height",
@@ -413,7 +413,7 @@
         "preferLooseListItem": "The preferred list type",
         "bulletListMarker": "The marker used in bullet list",
         "orderListDelimiter": "The delimiter used in order list",
-        "preferHeadingStyle": "The preferred heading style in Wenlan Studio",
+        "preferHeadingStyle": "The preferred heading style in Wenlan",
         "tabSize": "Replace the tab with x spaces",
         "listIndentation": "Select the indent of list",
         "frontmatterType": "The frontmatter type",
@@ -430,7 +430,7 @@
         "softNewlineAsSpace": "Treat soft newlines as spaces",
         "sequenceTheme": "Sequence diagram theme",
         "plantumlServer": "PlantUML server URL",
-        "theme": "Select the theme used in Wenlan Studio",
+        "theme": "Select the theme used in Wenlan",
         "followSystemTheme": "Follow System Theme",
         "lightModeTheme": "Theme to use when system is in light mode",
         "darkModeTheme": "Theme to use when system is in dark mode",
@@ -652,7 +652,7 @@
         "pleaseInstall": "Please install",
         "scriptPath": "Script path"
       },
-      "defaultBehavior": "The default behavior after pasting or dragging the image to Wenlan Studio"
+      "defaultBehavior": "The default behavior after pasting or dragging the image to Wenlan"
     },
     "markdown": {
       "title": "Markdown",
@@ -783,8 +783,8 @@
     }
   },
   "about": {
-    "copyright": "Copyright © WenLanStudio 2026-{year}",
-    "copyrightContributors": "Made with <3 by the Wenlan Studio Contributors"
+    "copyright": "Copyright © Wenlan 2026-{year}",
+    "copyrightContributors": "Made with <3 by the Wenlan Contributors"
   },
   "view": {
     "slidesView": "Slides View",
@@ -798,7 +798,7 @@
   },
   "commands": {
     "mt": {
-      "hide": "Hide Wenlan Studio",
+      "hide": "Hide Wenlan",
       "hideOthers": "Hide Others"
     },
     "file": {
@@ -977,7 +977,7 @@
     "fileExists": "File exists {filename}",
     "files": "Files",
     "importWarning": "Import warning",
-    "installPandoc": "Pandoc was not found. Install it, or set the MARKTEXT_PANDOC environment variable to the pandoc binary and restart Wenlan Studio.",
+    "installPandoc": "Pandoc was not found. Install it, or set the MARKTEXT_PANDOC environment variable to the pandoc binary and restart Wenlan.",
     "exportWarning": "Export warning",
     "exportWarningMore": "…and {count} more",
     "keepOpen": "Keep open",
@@ -994,7 +994,7 @@
     "configSchemaViolation": "Configuration schema violation",
     "copyError": "Copy error",
     "initializationFailed": "Initialization failed {hint}",
-    "otherInstanceDetected": "Another instance of Wenlan Studio is already running",
+    "otherInstanceDetected": "Another instance of Wenlan is already running",
     "report": "Report",
     "startupError": "Startup error",
     "terminatedDueToError": "Terminated due to error",

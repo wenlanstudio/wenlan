@@ -41,7 +41,7 @@ export default function(): MenuItemConstructorOptions {
     {
       label: t('menu.help.changelog'),
       click() {
-        shell.openExternal('https://github.com/wenlanstudio/wenlan-studio/releases')
+        shell.openExternal('https://github.com/wenlanstudio/wenlan/releases')
       }
     },
     {
@@ -50,19 +50,19 @@ export default function(): MenuItemConstructorOptions {
     {
       label: t('menu.help.askQuestion'),
       click() {
-        shell.openExternal('https://github.com/wenlanstudio/wenlan-studio/issues')
+        shell.openExternal('https://github.com/wenlanstudio/wenlan/issues')
       }
     },
     {
       label: t('menu.help.reportBug'),
       click() {
-        shell.openExternal('https://github.com/wenlanstudio/wenlan-studio/issues/new/choose')
+        shell.openExternal('https://github.com/wenlanstudio/wenlan/issues/new/choose')
       }
     },
     {
       label: t('menu.help.viewSource'),
       click() {
-        shell.openExternal('https://github.com/wenlanstudio/wenlan-studio')
+        shell.openExternal('https://github.com/wenlanstudio/wenlan')
       }
     },
     {
@@ -71,7 +71,7 @@ export default function(): MenuItemConstructorOptions {
     {
       label: t('menu.help.license'),
       click() {
-        shell.openExternal('https://github.com/wenlanstudio/wenlan-studio/blob/develop/LICENSE')
+        shell.openExternal('https://github.com/wenlanstudio/wenlan/blob/develop/LICENSE')
       }
     }
   ]

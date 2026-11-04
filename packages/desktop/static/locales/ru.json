@@ -99,21 +99,21 @@
       "reportBug": "Сообщить об ошибке",
       "viewSource": "Исходный код",
       "followUs": "Подписаться на нас",
-      "support": "Поддержать Wenlan Studio",
+      "support": "Поддержать Wenlan",
       "license": "Лицензия",
       "about": "О программе",
       "checkUpdates": "Проверить обновления"
     },
     "marktext": {
-      "title": "Wenlan Studio",
-      "about": "О Wenlan Studio",
+      "title": "Wenlan",
+      "about": "О Wenlan",
       "checkUpdates": "Проверить обновления...",
       "preferences": "Настройки",
       "services": "Службы",
-      "hide": "Скрыть Wenlan Studio",
+      "hide": "Скрыть Wenlan",
       "hideOthers": "Скрыть остальные",
       "showAll": "Показать все",
-      "quit": "Выйти из Wenlan Studio"
+      "quit": "Выйти из Wenlan"
     },
     "view": {
       "view": "Вид",
@@ -357,7 +357,7 @@
   },
   "import": {
     "title": "Импорт или открытие",
-    "description": "Перетащите сюда, чтобы добавить файлы в Wenlan Studio"
+    "description": "Перетащите сюда, чтобы добавить файлы в Wenlan"
   },
   "preferences": {
     "title": "Настройки",
@@ -385,10 +385,10 @@
         "hideScrollbar": "Скрывать полосы прокрутки",
         "wordWrapInToc": "Включать перенос слов в оглавлении",
         "fileSortBy": "Сортировать файлы в открытой папке по времени создания, изменения и имени",
-        "startUpAction": "Действие после запуска Wenlan Studio: открыть последнее содержимое, указанную папку или пустую страницу",
+        "startUpAction": "Действие после запуска Wenlan: открыть последнее содержимое, указанную папку или пустую страницу",
         "restoreLayoutState": "Восстанавливать предыдущее состояние редактора при запуске",
         "defaultDirectoryToOpen": "Папка по умолчанию, открываемая при запуске, если startUp=folder",
-        "language": "Язык интерфейса Wenlan Studio",
+        "language": "Язык интерфейса Wenlan",
         "editorFontFamily": "Семейство шрифтов редактора",
         "fontSize": "Размер шрифта в пикселях",
         "lineHeight": "Высота строки",
@@ -413,7 +413,7 @@
         "preferLooseListItem": "Предпочитаемый тип списка",
         "bulletListMarker": "Маркер маркированного списка",
         "orderListDelimiter": "Разделитель нумерованного списка",
-        "preferHeadingStyle": "Предпочитаемый стиль заголовков в Wenlan Studio",
+        "preferHeadingStyle": "Предпочитаемый стиль заголовков в Wenlan",
         "tabSize": "Заменять табуляцию на x пробелов",
         "listIndentation": "Выберите отступ списка",
         "frontmatterType": "Тип front matter",
@@ -430,7 +430,7 @@
         "softNewlineAsSpace": "Считать мягкие переносы строк пробелами",
         "sequenceTheme": "Тема диаграмм последовательностей",
         "plantumlServer": "URL сервера PlantUML",
-        "theme": "Выберите тему, используемую в Wenlan Studio",
+        "theme": "Выберите тему, используемую в Wenlan",
         "followSystemTheme": "Следовать системной теме",
         "lightModeTheme": "Тема для светлого режима системы",
         "darkModeTheme": "Тема для тёмного режима системы",
@@ -652,7 +652,7 @@
         "pleaseInstall": "Пожалуйста, установите",
         "scriptPath": "Путь к скрипту"
       },
-      "defaultBehavior": "Поведение по умолчанию после вставки или перетаскивания изображения в Wenlan Studio"
+      "defaultBehavior": "Поведение по умолчанию после вставки или перетаскивания изображения в Wenlan"
     },
     "markdown": {
       "title": "Markdown",
@@ -783,12 +783,12 @@
     }
   },
   "about": {
-    "copyright": "Copyright © WenLanStudio 2026-{year}",
+    "copyright": "Copyright © Wenlan 2026-{year}",
     "copyrightContributors": "Сделано с <3 участниками GitHub"
   },
   "commands": {
     "mt": {
-      "hide": "Скрыть Wenlan Studio",
+      "hide": "Скрыть Wenlan",
       "hideOthers": "Скрыть остальные"
     },
     "file": {
@@ -967,7 +967,7 @@
     "fileExists": "Файл существует {filename}",
     "files": "Файлы",
     "importWarning": "Предупреждение импорта",
-    "installPandoc": "Pandoc не найден. Установите его или задайте переменную окружения MARKTEXT_PANDOC с путём к бинарнику pandoc и перезапустите Wenlan Studio.",
+    "installPandoc": "Pandoc не найден. Установите его или задайте переменную окружения MARKTEXT_PANDOC с путём к бинарнику pandoc и перезапустите Wenlan.",
     "exportWarning": "Предупреждение экспорта",
     "exportWarningMore": "…и ещё {count}",
     "keepOpen": "Оставить открытым",
@@ -984,7 +984,7 @@
     "configSchemaViolation": "Нарушение схемы конфигурации",
     "copyError": "Ошибка копирования",
     "initializationFailed": "Ошибка инициализации {hint}",
-    "otherInstanceDetected": "Другой экземпляр Wenlan Studio уже запущен",
+    "otherInstanceDetected": "Другой экземпляр Wenlan уже запущен",
     "report": "Сообщить",
     "startupError": "Ошибка запуска",
     "terminatedDueToError": "Завершено из-за ошибки",

@@ -1,12 +1,12 @@
 appId: io.github.quqingyuan.wenlan
-productName: Wenlan Studio
+productName: Wenlan
 # Update feed: electron-builder generates `latest.yml` (the version manifest)
 # and attaches it to the GitHub Release. electron-updater on the client reads
 # it via the `app-update.yml` shipped inside the installer to detect updates.
 publish:
   provider: github
   owner: wenlanstudio
-  repo: wenlan-studio
+  repo: wenlan
 directories:
   buildResources: build
   output: ../../dist
@@ -63,7 +63,7 @@ extraResources:
       - '**/*'
       - '!locales/**/!(*.min).json'
 npmRebuild: false
-electronLanguages: # Keep Chromium/AppKit locales for the UI languages Wenlan Studio supports
+electronLanguages: # Keep Chromium/AppKit locales for the UI languages Wenlan supports
   # Values must cover both spellings: "xx-YY" .pak files on Windows/Linux and
   # "xx_YY" .lproj bundles on macOS. Keeping them lets OS-provided strings
   # (e.g. the macOS Window management items) localize on non-English systems;
@@ -89,8 +89,8 @@ electronLanguages: # Keep Chromium/AppKit locales for the UI languages Wenlan St
 
 electronFuses:
   # Node's CLI parser inside Electron rejects `--debug` (DEP0062, exit 9) before
-  # Wenlan Studio can read it (#5409). With this fuse off the packaged app ignores
-  # Node's inspector flags, so `--debug` reaches Wenlan Studio.
+  # Wenlan can read it (#5409). With this fuse off the packaged app ignores
+  # Node's inspector flags, so `--debug` reaches Wenlan.
   enableNodeCliInspectArguments: false
   # Flipping a fuse rewrites the Electron Framework binary, invalidating the
   # ad-hoc signature its linker wrote. Unsigned macOS arm64 builds are then
@@ -179,7 +179,7 @@ linux:
   artifactName: 'wenlan-linux-${version}.${ext}'
   executableName: 'wenlan'
   description: 'A Markdown editor with document, column, slide, present and A4 paper views.'
-  maintainer: 'Wenlan Studio Contributors'
+  maintainer: 'Wenlan Contributors'
   category: 'Office;TextEditor;Utility'
   mimeTypes:
     - 'text/markdown'

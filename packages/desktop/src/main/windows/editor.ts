@@ -219,7 +219,7 @@ class EditorWindow extends BaseWindow {
       const { response } = await dialog.showMessageBox(win!, {
         type: 'warning',
         buttons: ['Close', 'Reload', 'Keep It Open'],
-        message: 'Wenlan Studio has crashed',
+        message: 'Wenlan has crashed',
         detail: msg
       })
 

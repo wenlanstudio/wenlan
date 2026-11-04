@@ -1,9 +1,9 @@
-<p align="center"><img src="packages/desktop/static/logo-small.png" alt="文览 Wenlan Studio" width="100" height="100"></p>
+<p align="center"><img src="packages/desktop/static/logo-small.png" alt="文览 Wenlan" width="100" height="100"></p>
 
-<h1 align="center">文览 · Wenlan Studio</h1>
+<h1 align="center">文览 Wenlan</h1>
 
 <div align="center">
-  <strong>一份 Markdown，多种看法。</strong><br>
+  <strong>文览 · 一文多览</strong><br>
   A Markdown editor with document, column, slide, present and A4 paper views.<br>
   <sub>Available for Windows, macOS and Linux.</sub>
 </div>
@@ -12,13 +12,13 @@
 
 <div align="center">
   <a href="LICENSE">
-    <img src="https://img.shields.io/github/license/wenlanstudio/wenlan-studio.svg" alt="LICENSE">
+    <img src="https://img.shields.io/github/license/wenlanstudio/wenlan.svg" alt="LICENSE">
   </a>
-  <a href="https://github.com/wenlanstudio/wenlan-studio/releases">
-    <img src="https://img.shields.io/github/downloads/wenlanstudio/wenlan-studio/total.svg" alt="total download">
+  <a href="https://github.com/wenlanstudio/wenlan/releases">
+    <img src="https://img.shields.io/github/downloads/wenlanstudio/wenlan/total.svg" alt="total download">
   </a>
-  <a href="https://github.com/wenlanstudio/wenlan-studio/releases/latest">
-    <img src="https://img.shields.io/github/downloads/wenlanstudio/wenlan-studio/latest/total.svg" alt="latest download">
+  <a href="https://github.com/wenlanstudio/wenlan/releases/latest">
+    <img src="https://img.shields.io/github/downloads/wenlanstudio/wenlan/latest/total.svg" alt="latest download">
   </a>
 </div>
 
@@ -47,7 +47,7 @@
 
 ## Download
 
-<https://github.com/wenlanstudio/wenlan-studio/releases/latest>
+<https://github.com/wenlanstudio/wenlan/releases/latest>
 
 - Windows：`wenlan-win-x64-<version>-setup.exe`（NSIS，可选安装目录）
 - macOS：`wenlan-mac-<arch>-<version>.dmg`（未签名，首次打开需清理 quarantine）
@@ -91,7 +91,7 @@ More detail lives in [AGENTS.md](AGENTS.md).
 
 ## Attribution
 
-Wenlan Studio is a fork of [MarkText](https://github.com/marktext/marktext), which is
+Wenlan is a fork of [MarkText](https://github.com/marktext/marktext), which is
 MIT-licensed. The original copyright notice is retained in [LICENSE](LICENSE).
 The slide/present rendering engine is built on
 [md2slides](https://github.com/wenlanstudio/md2slides).

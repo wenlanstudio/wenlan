@@ -19,6 +19,11 @@
         </el-col>
         <el-col :span="24">
           <div class="text">
+            文览 · 一文多览
+          </div>
+        </el-col>
+        <el-col :span="24">
+          <div class="text">
             {{ store.appVersion }}
           </div>
         </el-col>

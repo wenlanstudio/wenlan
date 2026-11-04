@@ -1,12 +1,12 @@
-# Wenlan Studio Contributing Guide
+# Wenlan Contributing Guide
 
-Thank you very much for your interest in contributing to Wenlan Studio. Before submitting your contribution, please take a moment to read the following guidelines.
+Thank you very much for your interest in contributing to Wenlan. Before submitting your contribution, please take a moment to read the following guidelines.
 
 ## Philosophy
 
 Our philosophy is to keep things clean, clear, and minimal.
 
-Wenlan Studio is constantly evolving, and we want these improvements to stay aligned with this philosophy. For example, the sidebar and tabs provide useful functionality without distracting users, while keeping the default interface clean and minimal. In the future, we hope to expand Wenlan Studio's capabilities through a plugin system.
+Wenlan is constantly evolving, and we want these improvements to stay aligned with this philosophy. For example, the sidebar and tabs provide useful functionality without distracting users, while keeping the default interface clean and minimal. In the future, we hope to expand Wenlan's capabilities through a plugin system.
 
 ## The One Rule
 
@@ -14,11 +14,11 @@ Wenlan Studio is constantly evolving, and we want these improvements to stay ali
 
 Using AI to write code is fine. Submitting AI-generated code that you do not understand is not.
 
-If you use an agent, run it from the Wenlan Studio root directory so that it can automatically pick up `AGENTS.md`. Your agent must follow the rules and guidelines in that file.
+If you use an agent, run it from the Wenlan root directory so that it can automatically pick up `AGENTS.md`. Your agent must follow the rules and guidelines in that file.
 
 ## Issue and PR Guidelines
 
-Before opening an Issue or PR, please search for similar Issues and PRs first. Always follow the [Issue template](https://github.com/wenlanstudio/wenlan-studio/tree/develop/.github/ISSUE_TEMPLATE/) and [PR template](https://github.com/wenlanstudio/wenlan-studio/blob/develop/.github/PULL_REQUEST_TEMPLATE.md) when submitting them.
+Before opening an Issue or PR, please search for similar Issues and PRs first. Always follow the [Issue template](https://github.com/wenlanstudio/wenlan/tree/develop/.github/ISSUE_TEMPLATE/) and [PR template](https://github.com/wenlanstudio/wenlan/blob/develop/.github/PULL_REQUEST_TEMPLATE.md) when submitting them.
 
 Issues and PRs should follow the single-purpose principle: **one Issue should address one problem, and one PR should fix one issue or a set of closely related changes.** Do not submit multiple unrelated problems in a single Issue or multiple unrelated fixes in a single PR.
 
@@ -30,7 +30,7 @@ When submitting a PR, please keep the following in mind:
 
 - Submit PRs directly to the `develop` branch.
 - Reference the related Issue in the PR description.
-- Follow our [Commenting Guidelines](https://github.com/wenlanstudio/wenlan-studio/blob/develop/.github/COMMENTING-GUIDELINES.md).
+- Follow our [Commenting Guidelines](https://github.com/wenlanstudio/wenlan/blob/develop/.github/COMMENTING-GUIDELINES.md).
 - Ensure all tests pass.
 - Run `pnpm run lint` to lint your PR.
 - All PRs must pass **CI** before they can be merged. If CI fails, please try to resolve the issue. If you need help, feel free to ask.
@@ -38,7 +38,7 @@ When submitting a PR, please keep the following in mind:
 If you are adding a new feature:
 
 - Open a feature request Issue first.
-- Explain why you want to add the feature, and confirm the final solution with Wenlan Studio members before submitting a PR.
+- Explain why you want to add the feature, and confirm the final solution with Wenlan members before submitting a PR.
 
 If you are fixing a bug:
 
@@ -47,18 +47,18 @@ If you are fixing a bug:
 
 ## Where Should I Start?
 
-A good way to get started is to look for Issues labeled `bug`, `help wanted`, or `feature request` in the [Issue tracker](https://github.com/wenlanstudio/wenlan-studio/issues). Issues labeled `good first issue` are especially suitable for newcomers.
+A good way to get started is to look for Issues labeled `bug`, `help wanted`, or `feature request` in the [Issue tracker](https://github.com/wenlanstudio/wenlan/issues). Issues labeled `good first issue` are especially suitable for newcomers.
 
-For larger Issues, please discuss the proposed solution first. Once the final solution has been approved by Wenlan Studio members, you can submit or start working on a PR. For smaller changes, you can open a PR directly.
+For larger Issues, please discuss the proposed solution first. Once the final solution has been approved by Wenlan members, you can submit or start working on a PR. For smaller changes, you can open a PR directly.
 
-There are also other ways you can help Wenlan Studio:
+There are also other ways you can help Wenlan:
 
 - Improve the documentation
-- Translate Wenlan Studio (currently unavailable)
+- Translate Wenlan (currently unavailable)
 - Design icons and logos
 - Improve the UI
-- Write tests for Wenlan Studio
-- Share your thoughts! We want to hear about features you think Wenlan Studio is missing, bugs you find, and why you ❤️ Wenlan Studio.
+- Write tests for Wenlan
+- Share your thoughts! We want to hear about features you think Wenlan is missing, bugs you find, and why you ❤️ Wenlan.
 
 ## Developer Documentation
 

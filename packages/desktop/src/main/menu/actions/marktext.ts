@@ -5,7 +5,7 @@ import { COMMANDS } from '../../commands'
 import type { CommandManager } from '../../commands'
 import { isOsx } from '../../config'
 
-export const RELEASES_URL = 'https://github.com/wenlanstudio/wenlan-studio/releases'
+export const RELEASES_URL = 'https://github.com/wenlanstudio/wenlan/releases'
 
 let runningUpdate = false
 let win: BrowserWindow | null = null

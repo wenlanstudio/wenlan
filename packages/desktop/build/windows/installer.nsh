@@ -23,7 +23,7 @@
 !macroend
 
 ; The extension key also carries the OpenWithProgids entries of every other
-; Markdown editor the user has installed, so only Wenlan Studio's own values go.
+; Markdown editor the user has installed, so only Wenlan's own values go.
 !macro mtUnassociateExtension EXT
   DeleteRegValue SHELL_CONTEXT "Software\Classes\${EXT}\OpenWithProgids" "${MT_PROGID}"
   Push $0
@@ -46,7 +46,7 @@
   !insertmacro mtAssociateExtension ".mdx"
 
   WriteRegStr SHELL_CONTEXT "Software\Classes\${MT_PROGID}" \
-    "" "Wenlan Studio Markdown Document"
+    "" "Wenlan Markdown Document"
   WriteRegExpandStr SHELL_CONTEXT "Software\Classes\${MT_PROGID}\DefaultIcon" \
     "" "$INSTDIR\resources\icons\md.ico,0"
   WriteRegExpandStr SHELL_CONTEXT "Software\Classes\${MT_PROGID}\shell\open\command" \

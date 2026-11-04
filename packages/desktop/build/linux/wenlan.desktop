@@ -1,6 +1,8 @@
 [Desktop Entry]
-Name=Wenlan Studio
+Name=Wenlan
+Name[zh_CN]=文览
 Comment=A Markdown editor with document, column, slide and present views
+Comment[zh_CN]=文览 · 一文多览
 Exec=wenlan %F
 Terminal=false
 Type=Application

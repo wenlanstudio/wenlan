@@ -55,7 +55,7 @@ initializeLogger(appEnvironment)
 // Handles native level crashes
 crashReporter.start({
   companyName: '',
-  productName: 'Wenlan Studio',
+  productName: 'Wenlan',
   uploadToServer: false, // collect locally
   compress: true
 })

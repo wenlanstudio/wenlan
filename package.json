@@ -1,9 +1,9 @@
 {
   "name": "wenlan-studio-monorepo",
   "version": "1.0.0",
-  "description": "Wenlan Studio monorepo root",
+  "description": "Wenlan monorepo root",
   "private": true,
-  "homepage": "https://github.com/wenlanstudio/wenlan-studio",
+  "homepage": "https://github.com/wenlanstudio/wenlan",
   "packageManager": "pnpm@10.33.4",
   "engines": {
     "node": ">=20.19.0",

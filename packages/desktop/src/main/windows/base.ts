@@ -5,7 +5,7 @@ import type Accessor from '../app/accessor'
 import { getThemeBackgroundColor } from '../../common/theme'
 
 /**
- * A Wenlan Studio window.
+ * A Wenlan window.
  * @property id Identifier (= browserWindow.id) or null during initialization.
  * @property browserWindow The browser window.
  * @property lifecycle The window lifecycle state.
