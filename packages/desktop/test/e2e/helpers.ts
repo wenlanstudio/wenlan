@@ -86,6 +86,11 @@ export const launchElectron = async(
   const args = [projectRoot, '--user-data-dir', userDataDir].concat(userArgs)
   const env: Record<string, string> = {}
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined) env[k] = v
+  // The host IDE can itself be an Electron app and leak ELECTRON_RUN_AS_NODE=1
+  // into child processes. Left in place, electron.exe boots as bare Node and
+  // rejects Playwright's --remote-debugging-port with `bad option`. Never pass
+  // it through to the app under test.
+  delete env.ELECTRON_RUN_AS_NODE
   if (options.suppressErrorDialog) env.MARKTEXT_ERROR_INTERACTION = '1'
   Object.assign(env, options.env)
   const app = await _electron.launch({

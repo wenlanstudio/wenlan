@@ -31,6 +31,7 @@
     "test": "pnpm --filter wenlan-studio test",
     "test:unit": "pnpm --filter wenlan-studio test:unit",
     "test:e2e": "pnpm --filter wenlan-studio test:e2e",
+    "test:ui:exec-present": "pnpm --filter wenlan-studio test:ui:exec-present",
     "typecheck": "pnpm --filter wenlan-studio typecheck",
     "typecheck:watch": "pnpm --filter wenlan-studio typecheck:watch",
     "check": "pnpm lint && pnpm typecheck",

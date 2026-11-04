@@ -39,7 +39,7 @@
 - **文（Flow）**：专注写作的实时预览编辑器。
 - **栏（Column）**：长文分栏阅读。
 - **览（Slide）**：把同一份 Markdown 逐页浏览。
-- **示（Present）**：全屏放映，Esc 退出。
+- **示（Present）**：全屏放映，Esc 退出；放映中可点 ▶ 运行代码块。
 - **纸（Paper）**：A4 纸面投影，所见即所印。
 - 同一份源文档在几种形态间切换，不导出、不复制。
 - 支持 CommonMark、GFM、KaTeX 数学公式、front matter、代码高亮与图表。
@@ -60,6 +60,32 @@ pnpm install
 pnpm run dev
 pnpm run build:win:x64   # Windows installer + zip -> dist/
 ```
+
+### 代码块运行配置
+
+引擎层参数（解释器路径、数据库连接、SSH 目标等机器相关配置）读
+`~/.wenlan-studio/mdcode2run.json`，可用环境变量 `MD2R_CONFIG_FILE` 改路径。格式与
+mdcode2run CLI 的 `--config` 一致：
+
+```json
+{
+  "hive": {
+    "SSH_HOST": "node0",
+    "SSH_USER": "zhangsan",
+    "SSH_BIN": "C:/Windows/System32/OpenSSH/ssh.exe",
+    "CLIENT": "/opt/bigdata/hive/default/bin/beeline",
+    "HOST": "localhost",
+    "DATABASE": "zjsm",
+    "USER": "zhangsan",
+    "TIMEOUT": 60000
+  }
+}
+```
+
+HiveServer2 只在集群节点本机监听、本机又没有 beeline 时，`hive.SSH_HOST` 会把查询经
+SSH 送到远端 beeline（SQL 走 stdin，不经 cmd / ssh / 远端 shell 的引号解析）。改配置后
+需重启应用或关闭文档重开——引擎按文档路径单例，运行中不会重读。秘密与机器参数只放
+这里，讲义 front-matter 无权指定。
 
 More detail lives in [AGENTS.md](AGENTS.md).
 

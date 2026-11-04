@@ -91,6 +91,8 @@
  */
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
+import { diagramTypeOfLang } from '@muyajs/core'
+import type { Md2rEvent } from '@shared/types/mdcode2run'
 import { useEditorStore } from '@/store/editor'
 import { useEditorViewStore } from '@/store/editorView'
 import { usePreferencesStore } from '@/store/preferences'
@@ -182,6 +184,130 @@ const sendBuild = (preservePage = false): void => {
   })
 }
 
+// —— 放映执行桥（只有 present 叶启用）——
+// 页面侧 exec-present.js 是跨源 iframe 里的纯 postMessage 客户端，碰不到 IPC；
+// 本层负责：① 把「可跑块能力表」下发让它装饰 ▶；② 把 ▶ 请求转成
+// window.mdcode2run.run；③ 把 main 推的事件与结果回灌进 iframe。引擎实例本身
+// 由 main 按 docPath 单例托管，与底部 execPanel 共用（会话/journal/trace 互通）。
+// 同一时刻只允许一个运行——页面侧结果浮层也是单例。
+const EXEC_TIMEOUT_MS = 60000
+type ExecReq = { reqId: string; docPath: string; line: number; jobId?: string }
+let execReq: ExecReq | null = null
+let offExecEvent: (() => void) | null = null
+
+/** 每次 deck 就绪（含 300ms 防抖重建）重新下发：重建会换掉整份 DOM，▶ 要重挂。 */
+const sendExecCapability = async (): Promise<void> => {
+  if (props.leaf !== 'present') return
+  const docPath = pathname.value
+  if (!docPath) {
+    // 未保存文档不下发 ▶：引擎按 docPath 锚定会话与 documentDir（file= 物化要用）。
+    postToDeck({ type: 'md2s:exec-capability', docPath: '', enabled: false, blocks: [] })
+    return
+  }
+  try {
+    const parsed = await window.mdcode2run.parse({ docPath, md: props.markdown })
+    const runnable = parsed.blocks.filter(
+      b => b.runnable && diagramTypeOfLang(b.lang) === null
+    )
+    const runnableSet = new Set(runnable.map(b => b.line))
+    // ⏩ 重放以 h1 章为边界：只有章内已有前置可跑块时才有意义。
+    const chapters = [...parsed.chapters].sort((a, b) => a.line - b.line)
+    const firstByChapter = new Map<number, number>()
+    for (const ch of chapters) {
+      const first = ch.fenceLines.find(l => runnableSet.has(l))
+      if (first !== undefined) firstByChapter.set(ch.line, first)
+    }
+    const chapterLineOf = (line: number): number => {
+      let key = -1
+      for (const ch of chapters) {
+        if (ch.line > line) break
+        key = ch.line
+      }
+      return key
+    }
+    const blocks = runnable.map(b => {
+      const first = firstByChapter.get(chapterLineOf(b.line))
+      return {
+        line: b.line,
+        end: b.end,
+        runnable: b.runnable,
+        lang: b.lang,
+        job: b.job,
+        replayable: first !== undefined && b.line > first
+      }
+    })
+    postToDeck({ type: 'md2s:exec-capability', docPath, enabled: true, blocks })
+  } catch (e) {
+    // parse 挂了别把放映拖下水：静默降级为无 ▶，只在控制台留痕。
+    console.error('[deckPane] mdcode2run parse failed:', e)
+    postToDeck({ type: 'md2s:exec-capability', docPath, enabled: false, blocks: [] })
+  }
+}
+
+const onExecRequest = async (data: {
+  reqId: string
+  line: number
+  replay?: boolean
+}): Promise<void> => {
+  const reqId = String(data.reqId ?? '')
+  const line = Number(data.line)
+  const docPath = pathname.value
+  if (!reqId || !Number.isFinite(line) || !docPath) {
+    postToDeck({ type: 'md2s:exec-error', reqId, error: '文档未保存或运行请求不合法' })
+    return
+  }
+  if (execReq) {
+    postToDeck({ type: 'md2s:exec-error', reqId, error: '已有代码块在运行，请先关闭结果面板' })
+    return
+  }
+  const req: ExecReq = { reqId, docPath, line }
+  execReq = req
+  try {
+    const result = await window.mdcode2run.run({
+      docPath,
+      md: props.markdown,
+      line,
+      replay: !!data.replay,
+      timeout: EXEC_TIMEOUT_MS
+    })
+    if (execReq !== req) return // 面板已关 / 文档已换：结果作废
+    if (result.job) req.jobId = result.job.id
+    postToDeck({ type: 'md2s:exec-result', reqId, result })
+  } catch (e) {
+    if (execReq !== req) return
+    postToDeck({
+      type: 'md2s:exec-error',
+      reqId,
+      error: e instanceof Error ? e.message : String(e)
+    })
+    execReq = null
+  } finally {
+    // 同步执行完就释放；job 要留到 job-done 事件（或页面 cancel）才清。
+    if (execReq === req && !req.jobId) execReq = null
+  }
+}
+
+const onExecStop = (data: { jobId: string }): void => {
+  const docPath = pathname.value
+  const jobId = String(data.jobId ?? '')
+  if (docPath && jobId) {
+    void window.mdcode2run.stopJob({ docPath, jobId }).catch(() => undefined)
+  }
+}
+
+/** main 的 started/chunk/done/job-done → iframe；按 docPath + 行号/jobId 定向。 */
+const handleExecEvent = (event: Md2rEvent): void => {
+  const req = execReq
+  if (!req || event.docPath !== req.docPath) return
+  if (event.type === 'job-done') {
+    if (event.id !== req.jobId) return
+  } else if (event.line !== req.line) {
+    return
+  }
+  postToDeck({ type: 'md2s:exec-state', reqId: req.reqId, event })
+  if (event.type === 'job-done' && execReq === req) execReq = null
+}
+
 /** 图表托渲染：deck 页面画不了的两类（graphviz / plantuml），本进程离屏出位图。 */
 const onRpc = async (data: { id: number; diagramType: string; source: string }): Promise<void> => {
   try {
@@ -240,6 +366,8 @@ const onMessage = (ev: MessageEvent): void => {
       // 交点给 deck：←/→/触屏手势在 iframe 里生效（点击幻灯片同样可聚焦）。
       // 面板态不抢焦点——编辑器必须保住键盘（视图模型 §3）。
       if (!isPanel.value) deckFrame.value?.contentWindow?.focus()
+      // DOM 已分页、player 已就绪：此刻装饰 ▶ 才能进 refreshSteps 的步进表。
+      void sendExecCapability()
       break
     case 'md2s:change':
       index.value = Number(data.index) || index.value
@@ -258,6 +386,15 @@ const onMessage = (ev: MessageEvent): void => {
       break
     case 'md2s:rpc':
       void onRpc(data as unknown as { id: number; diagramType: string; source: string })
+      break
+    case 'md2s:exec':
+      void onExecRequest(data as unknown as { reqId: string; line: number; replay?: boolean })
+      break
+    case 'md2s:exec-stop':
+      onExecStop(data as unknown as { jobId: string })
+      break
+    case 'md2s:exec-cancel':
+      if (execReq && execReq.reqId === String(data.reqId)) execReq = null
       break
     case 'md2s:export-result':
       exportWaiter?.(data)
@@ -369,18 +506,23 @@ watch(
 
 // 换文档：图片白名单变了 → 服务重启（端口变、origin 变 → iframe 重挂 → boot 重来）。
 watch(pathname, () => {
+  execReq = null // 旧文档的运行结果不再回灌到新 iframe
   if (origin.value) void startServer()
 })
 
 onMounted(() => {
   deckPaneAlive += 1
   window.addEventListener('message', onMessage)
+  offExecEvent = window.mdcode2run.onEvent(handleExecEvent)
   if (listensWindowKeys) window.addEventListener('keydown', onKeydown)
   void startServer()
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('message', onMessage)
+  offExecEvent?.()
+  offExecEvent = null
+  execReq = null
   if (listensWindowKeys) window.removeEventListener('keydown', onKeydown)
   window.clearTimeout(rebuildTimer)
   deckPaneAlive -= 1

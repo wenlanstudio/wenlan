@@ -32,6 +32,7 @@
     "test": "vitest run",
     "test:unit": "vitest run test/unit",
     "test:e2e": "playwright test test/e2e",
+    "test:ui:exec-present": "node test/ui/exec-present-ui.cjs",
     "typecheck": "pnpm --filter @muyajs/core build:types && vue-tsc --noEmit -p tsconfig.json",
     "typecheck:watch": "pnpm --filter @muyajs/core build:types && vue-tsc --noEmit -p tsconfig.json --watch"
   },
@@ -67,7 +68,7 @@
     "katex": "^0.19.0",
     "keytar": "^7.9.0",
     "lodash": "^4.18.1",
-    "mdcode2run": "github:wenlanstudio/mdcode2run#v0.1.1",
+    "mdcode2run": "github:wenlanstudio/mdcode2run#v0.1.2",
     "mermaid": "^12.1.0",
     "minimatch": "^10.2.6",
     "mitt": "^3.0.1",

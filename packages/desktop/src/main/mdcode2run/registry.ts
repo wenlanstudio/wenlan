@@ -14,6 +14,7 @@
  */
 
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
 import {
   createEngine,
@@ -82,9 +83,54 @@ const detectPython = (): string | null => {
   return null
 }
 
-const resolveEngineConfig = (): Record<string, Record<string, unknown>> => {
+/**
+ * 引擎层配置文件（与 CLI `--config` 同形）：秘密、机器相关参数只放这里，
+ * 讲义 front-matter 无权指定。默认 `~/.wenlan-studio/mdcode2run.json`，
+ * 可用 `MD2R_CONFIG_FILE` 指到别处（多套集群配置切换）。
+ *
+ * 例：HS2 只在集群节点本机监听时，本机没有 beeline，靠 `hive.SSH_HOST` 走 SSH：
+ * { "hive": { "SSH_HOST": "node0", "SSH_USER": "zhangsan",
+ *             "CLIENT": "/opt/bigdata/hive/default/bin/beeline",
+ *             "HOST": "localhost", "DATABASE": "zjsm", "USER": "zhangsan" } }
+ */
+export const engineConfigPath = (): string => {
+  const override = process.env.MD2R_CONFIG_FILE?.trim()
+  return override || path.join(os.homedir(), '.wenlan-studio', 'mdcode2run.json')
+}
+
+/** 读配置：坏文件只告警不阻断启动（没配置时引擎仍按 PATH 探测 Python 等）。 */
+export const loadEngineProfile = (): Record<string, Record<string, unknown>> => {
+  const file = engineConfigPath()
+  if (!fs.existsSync(file)) return {}
+  try {
+    const parsed: unknown = JSON.parse(fs.readFileSync(file, 'utf8'))
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      console.warn(`[mdcode2run] 配置文件不是 JSON 对象：${file}`)
+      return {}
+    }
+    const profile: Record<string, Record<string, unknown>> = {}
+    for (const [family, value] of Object.entries(parsed as Record<string, unknown>)) {
+      // 只收对象值：语言族配置与 config.secrets 都从这层走；数组 / 标量忽略。
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        profile[family] = value as Record<string, unknown>
+      }
+    }
+    return profile
+  } catch (error) {
+    console.warn(`[mdcode2run] 配置文件读取失败：${file}`, error)
+    return {}
+  }
+}
+
+/** 自动探测打底，文件配置覆盖同族同键（文件只给部分参数时不丢探测结果）。 */
+export const resolveEngineConfig = (): Record<string, Record<string, unknown>> => {
   const python = detectPython()
-  return python ? { python: { PYTHON_PATH: python } } : {}
+  const merged: Record<string, Record<string, unknown>> = {}
+  if (python) merged.python = { PYTHON_PATH: python }
+  for (const [family, value] of Object.entries(loadEngineProfile())) {
+    merged[family] = { ...(merged[family] ?? {}), ...value }
+  }
+  return merged
 }
 
 const wireEvents = (entry: EngineEntry): void => {

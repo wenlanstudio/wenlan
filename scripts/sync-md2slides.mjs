@@ -14,7 +14,7 @@
  * 挂到本地服务的 `/` 下。deck 页面（deck.html + dist/deck-full.js）、主题、KaTeX
  * 字体、图表运行时全从这里出。
  */
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -61,3 +61,28 @@ if (esmBody === body || /module\.exports/.test(esmBody)) {
 }
 writeFileSync(resolve(vendorDestDir, 'layout-core.js'), banner + esmBody)
 console.log(`layout-core 已 vendor（CJS→ESM）→ ${vendorDestDir}`)
+
+// 「示」视图放映执行桥：本仓自有的页面内脚本（不是 md2slides 上游产物）。
+// 放在 resources-src/ 里进 git，随着每次全量覆盖重新拷入 + 重新注入，避免手改
+// gitignored 的 resources/ 副本被下一次 sync 抹掉。脚本与 deck.html 同源，能直调
+// window.deckFull.getPlayer()，也绕开了跨源 iframe 不能从宿主写 DOM 的限制。
+const execSrc = resolve(
+  here, '..', 'packages', 'desktop', 'resources-src', 'md2slides', 'exec-present.js'
+)
+if (!existsSync(execSrc)) {
+  console.error('缺 resources-src/md2slides/exec-present.js——放映执行桥源文件不见了')
+  process.exit(1)
+}
+copyFileSync(execSrc, resolve(dest, 'exec-present.js'))
+
+const deckHtmlPath = resolve(dest, 'deck.html')
+const execTag = '<script src="/exec-present.js"></script>'
+const deckHtml = readFileSync(deckHtmlPath, 'utf-8')
+if (!deckHtml.includes(execTag)) {
+  if (!deckHtml.includes('</body>')) {
+    console.error('deck.html 结构变了（找不到 </body>）——注入执行桥需要人工核对')
+    process.exit(1)
+  }
+  writeFileSync(deckHtmlPath, deckHtml.replace('</body>', `  ${execTag}\n</body>`))
+}
+console.log('放映执行桥已注入 → resources/md2slides/exec-present.js + deck.html')
