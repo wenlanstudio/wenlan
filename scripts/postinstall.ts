@@ -16,11 +16,13 @@
  * its own node_modules (workspace-local deps are not hoisted to the root —
  * `shamefully-hoist=true` only flattens transitive deps). All Electron-related
  * lookups (binary, install.js, native-keymap, patch-package) therefore resolve
- * under packages/desktop/node_modules. patch-package runs with
- * cwd=packages/desktop so that `patches/` is picked up; electron-rebuild is
- * invoked through the desktop package's `rebuild-native` script (pnpm sets
- * that package as cwd), which also keeps the native-module whitelist in one
- * place shared with every build:* script.
+ * under packages/desktop/node_modules. patch-package and electron-rebuild run
+ * with cwd=packages/desktop so that `patches/` and the local package.json are
+ * picked up correctly. electron-rebuild is executed directly from the local
+ * .bin: on Windows CI, running it through a pnpm script wrapper makes
+ * node-gyp 12.4.0 fail to detect Visual Studio ("Could not find any Visual
+ * Studio installation to use"), while the direct invocation works on both
+ * windows-x64 and windows-11-arm runners.
  */
 
 const { execSync } = require('child_process')
@@ -39,12 +41,13 @@ function run(cmd, opts = {}) {
 // regardless of whether the caller is pnpm (primary) or npm (fallback).
 const userAgent = process.env.npm_config_user_agent || ''
 const isPnpm = userAgent.startsWith('pnpm')
-// patch-package is locally installed; call its node_modules/.bin entry
-// directly (hoisted by shamefully-hoist=true). electron-rebuild runs through
-// the desktop package's `rebuild-native` script, which owns the single
-// native-module whitelist shared with every build:* script.
+// patch-package and electron-rebuild are locally installed; call their
+// node_modules/.bin entries directly (hoisted by shamefully-hoist=true).
+// Keep NATIVE_MODULES in sync with packages/desktop's `rebuild-native` script.
 const ext = process.platform === 'win32' ? '.cmd' : ''
 const patchPackageBin = path.join(desktopRoot, 'node_modules', '.bin', `patch-package${ext}`)
+const electronRebuildBin = path.join(desktopRoot, 'node_modules', '.bin', `electron-rebuild${ext}`)
+const NATIVE_MODULES = ['ced', 'keytar', 'native-keymap']
 
 // ── 1. Ensure native-keymap source is present (pm removes it on optional failure) ──
 const nativeKeymapDir = path.join(desktopRoot, 'node_modules', 'native-keymap')
@@ -158,14 +161,16 @@ if (!fs.existsSync(electronInstall)) {
 console.log('Applying patches...')
 run(`"${patchPackageBin}"`, { cwd: desktopRoot })
 
-// ── 4. Rebuild native modules for Electron ABI ──────────────────────────────
-// The desktop `rebuild-native` script owns the single native-module whitelist
-// and is shared with every build:* script. `cpu-features` is deliberately
-// excluded: its npm tarball lacks deps/cpu_features/buildcheck.gypi, so gyp
-// fails on every platform; ssh2 wraps its require in try/catch and falls back
-// to pure JS. Keep the whitelist in sync when adding new native modules.
+// ── 4. Rebuild native modules for Electron ABI (the only rebuild in CI) ─────
+// `cpu-features` is deliberately excluded: its npm tarball lacks
+// deps/cpu_features/buildcheck.gypi, so gyp fails on every platform; ssh2
+// wraps its require in try/catch and falls back to pure JS. build:* scripts
+// deliberately do not rebuild again: postinstall already produced Electron-ABI
+// binaries, and a second rebuild on Windows CI reliably breaks node-gyp's
+// Visual Studio detection. Keep NATIVE_MODULES in sync with the desktop
+// `rebuild-native` script when adding new native modules.
 console.log('Rebuilding native modules for Electron...')
-run('pnpm --filter wenlan rebuild-native')
+run(`"${electronRebuildBin}" -f -o ${NATIVE_MODULES.join(',')}`, { cwd: desktopRoot })
 
 // ── 5. Generate minified locale files ───────────────────────────────────────
 console.log('Minifying locales...')
