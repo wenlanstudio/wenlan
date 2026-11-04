@@ -157,7 +157,16 @@ run(`"${patchPackageBin}"`, { cwd: desktopRoot })
 
 // ── 4. Rebuild native modules for Electron ABI ──────────────────────────────
 console.log('Rebuilding native modules for Electron...')
-run(`"${electronRebuildBin}" -f`, { cwd: desktopRoot })
+// `cpu-features` (optional dep of ssh2) ships without
+// deps/cpu_features/buildcheck.gypi, so electron-rebuild's default
+// prod+optional scan fails on EVERY platform. ssh2 wraps the require in
+// try/catch and falls back to pure JS, so skipping it is safe. `-o` sets
+// onlyModules, which also bypasses the --types filter (native-keymap is an
+// optional dep but still needs rebuilding). Keep this list in sync whenever
+// a new native module is added, or it will fail at runtime with
+// "Could not locate the bindings file".
+const NATIVE_MODULES = ['ced', 'keytar', 'native-keymap']
+run(`"${electronRebuildBin}" -f -o ${NATIVE_MODULES.join(',')}`, { cwd: desktopRoot })
 
 // ── 5. Generate minified locale files ───────────────────────────────────────
 console.log('Minifying locales...')
