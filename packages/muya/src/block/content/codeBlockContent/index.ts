@@ -91,6 +91,30 @@ const LANG_HASH = {
     'math-block': 'latex',
 };
 
+/**
+ * Three Enters in quick succession split the fenced code block at the caret
+ * (issue #1, Shimo-style gesture). The window is deliberately shorter than
+ * History's 1000ms coalescing delay, so the whole burst plus the split lands
+ * in ONE undo entry. jsonState is flushed around the split because real
+ * keystrokes span several animation frames (see enterHandler).
+ *
+ * This is a keystroke gesture, not a content rule: three consecutive empty
+ * lines arriving from setContent or paste never trigger it (see the 5294
+ * line-number regression).
+ */
+const ENTER_BURST_WINDOW_MS = 500;
+
+interface IEnterBurst {
+    count: number;
+    lastAt: number;
+    // Caret offset right after the previous Enter. Any typing, caret move or
+    // block change makes the next Enter miss this value and resets the burst.
+    expectedOffset: number;
+    // Caret offset before the FIRST Enter — everything inserted by the burst
+    // (newlines plus auto-indent whitespace) lives between these two offsets.
+    originOffset: number;
+}
+
 function hasStateMeta(
     state: CodeContentState,
 ): state is ICodeBlockState | IDiagramState | IFrontmatterState {
@@ -139,6 +163,8 @@ class CodeBlockContent extends Content {
     // text so the create-pass update() does not re-trigger a render that races
     // the preview's own one-shot render on append (async for diagrams).
     private _lastPreviewText: string;
+
+    private _enterBurst: IEnterBurst | null = null;
 
     constructor(muya: Muya, state: CodeContentState) {
         super(muya, state.text);
@@ -279,6 +305,7 @@ class CodeBlockContent extends Content {
 
         // Shift + Enter to jump out of code block.
         if (event.shiftKey) {
+            this._enterBurst = null;
             let cursorBlock;
             const nextContentBlock = this.nextContentInContext();
             if (nextContentBlock) {
@@ -302,8 +329,37 @@ class CodeBlockContent extends Content {
             return;
         }
 
+        const { start, end } = this.getCursor()!;
+        const burst = this._enterBurst;
+        const now = Date.now();
+        const continues = burst !== null
+            && burst.count < 3
+            && now - burst.lastAt <= ENTER_BURST_WINDOW_MS
+            && burst.expectedOffset === start.offset
+            && start.offset === end.offset
+            && this._isFencedCodeBlock();
+
+        // Split BEFORE inserting the third newline. Everything the first two
+        // Enters inserted (newlines plus auto-indent whitespace) sits in
+        // [originOffset, start.offset) and is consumed by the split, so no
+        // insert-then-delete op pair is needed — that pair did not refresh the
+        // code DOM in a real browser and left three stray empty lines behind.
+        if (continues && burst!.count === 2) {
+            this._enterBurst = null;
+            // jsonState batches ops until the next animation frame. Three real
+            // keystrokes span several frames, so without flushing here the split
+            // would be recorded against a stale document and the first Ctrl+Z
+            // would race the pending op (state, DOM and undo stack each one
+            // edit behind). Flush both sides so the whole gesture lands on the
+            // same, coherent document.
+            this.jsonState.flush();
+            this._splitCodeBlock(burst!.originOffset, start.offset);
+            this.jsonState.flush();
+
+            return;
+        }
+
         const { tabSize } = this.muya.options;
-        const { start } = this.getCursor()!;
         const { text } = this;
         const autoIndent = checkAutoIndent(text, start.offset);
         const indent = getIndentSpace(text, start.offset);
@@ -321,6 +377,57 @@ class CodeBlockContent extends Content {
             offset += tabSize;
 
         this.setCursor(offset, offset, true);
+
+        this._enterBurst = {
+            count: continues ? burst!.count + 1 : 1,
+            lastAt: now,
+            expectedOffset: offset,
+            originOffset: continues ? burst!.originOffset : start.offset,
+        };
+    }
+
+    /**
+     * This Content class is shared by code-block, diagram, frontmatter, html
+     * and math containers. Only a fenced code block may be split: two adjacent
+     * INDENTED blocks cannot be expressed in markdown and would merge back
+     * into one on save.
+     */
+    private _isFencedCodeBlock() {
+        const container = this._codeContainer;
+        if (container?.blockName !== 'code-block')
+            return false;
+
+        const { meta } = container.getState() as ICodeBlockState;
+
+        return meta?.type !== 'indented';
+    }
+
+    /**
+     * Consume the newlines AND the auto-indent whitespace the burst inserted,
+     * keep the head here and move the tail into a sibling block that inherits
+     * meta verbatim. `update()` is mandatory: the `text` setter only writes
+     * jsonState, while the code leaf's DOM (Prism highlight + line numbers) is
+     * rebuilt by update() — normally reached through setCursor(..., true).
+     */
+    private _splitCodeBlock(originOffset: number, splitOffset: number) {
+        const container = this._codeContainer;
+        if (!container?.parent)
+            return;
+
+        const { text } = this;
+        const before = text.substring(0, originOffset);
+        const after = text.substring(splitOffset);
+        // getState() already copies meta, so the new block keeps lang /
+        // fenceChar / fenceLength without the language-input setter emitting
+        // an extra json1 op.
+        const state = container.getState() as ICodeBlockState;
+        state.text = after;
+
+        const newBlock = ScrollPage.loadBlock('code-block').create(this.muya, state);
+        this.text = before;
+        this.update();
+        container.parent.insertAfter(newBlock, container);
+        newBlock.lastContentInDescendant()?.setCursor(0, 0, true);
     }
 
     override tabHandler(event: KeyboardEvent): void {
