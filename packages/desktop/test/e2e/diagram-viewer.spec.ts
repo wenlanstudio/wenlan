@@ -225,7 +225,20 @@ const inkedPixels = (page: Page, dataUrl: string): Promise<number> =>
     return inked
   }, dataUrl)
 
-test.describe('diagram viewer', () => {
+// 整批雪藏（2026-11-05 用户裁决）：图表放大查看器目前没有 UI 入口。
+// 10-17 的 45d20c2d 起 desktop 不再注册 PreviewToolBar（editor.vue 的
+// Muya.use 列表里明确排除），而 `preview-diagram` 事件全仓库只有工具条的
+// 「查看」按钮会发；图片随后补了 Ctrl/Cmd-click 入口，图表没有补。
+// 于是 openDiagram / 缩放 / 导出的产品代码仍在，用户却点不到，本文件每个
+// 用例的第一步 hoverDiagram() 必然超时。改断言救不回来，先整批 skip。
+//
+// 恢复条件：给图表块补一个入口（例如 Ctrl/Cmd-click → format-click 的
+// diagram 分支 → editor.vue 调 mediaViewer.openDiagram），把本文件的
+// openDiagram() helper 换成新入口，再去掉下面的 .skip。相关代码未删除：
+//   packages/muya/src/ui/previewToolBar/index.ts:179  emit('preview-diagram')
+//   .../editorWithTabs/editor.vue:2097                preview-diagram 监听
+//   .../components/mediaViewer/index.vue:431          openDiagram()
+test.describe.skip('diagram viewer (frozen: no UI entry)', () => {
   let app: ElectronApplication
   let page: Page
 
