@@ -1,6 +1,7 @@
 import type { JSONOp, JSONOpComponent, JSONOpList } from 'ot-json1';
 import type Content from '../block/base/content';
 import type Format from '../block/base/format';
+import type Parent from '../block/base/parent';
 import type { Muya } from '../muya';
 import type { IHistorySelection } from '../selection/types';
 import type { TState } from '../state/types';
@@ -10,7 +11,7 @@ import { fromEvent, merge } from 'rxjs';
 import { registerBlocks } from '../block';
 import { ScrollPage } from '../block/scrollPage';
 import Clipboard from '../clipboard';
-import { CLASS_NAMES, isFirefox } from '../config';
+import { CLASS_NAMES, EVENT_KEYS, isFirefox } from '../config';
 import History from '../history';
 import InlineRenderer from '../inlineRenderer';
 import { Search } from '../search';
@@ -307,6 +308,12 @@ export class Editor {
                 return;
             }
 
+            // A preview island has no caret of its own (issue #5); handle it
+            // before the selection gate below, which would otherwise swallow
+            // Backspace/Delete with `activeContentBlock = null`.
+            if (this._deleteHtmlPreviewFromKeydown(event))
+                return;
+
             const selectionResult = this.selection.getSelection();
             const anchorBlock = selectionResult?.anchor.block;
             const isSelectionInSameBlock = selectionResult?.isSelectionInSameBlock;
@@ -362,6 +369,69 @@ export class Editor {
             fromEvent(domNode, 'compositionend'),
             fromEvent(domNode, 'compositionstart'),
         ).subscribe(eventHandler);
+    }
+
+    /**
+     * HTML preview is a `contenteditable=false` attachment: its children come
+     * from innerHTML and carry no `__MUYA_BLOCK__`, while the source container
+     * is collapsed to 0x0 by CSS. `getSelection()` cannot resolve a Content
+     * block, so Backspace/Delete used to die in the dispatch gate. Desktop does
+     * not register PreviewToolBar (the only other delete entry point), which
+     * made a plain HTML block such as <details> undeletable in the WYSIWYG view.
+     *
+     * Mirror PreviewToolBar's delete action: swap the whole block for an empty
+     * paragraph and put the caret there, so the edit is undoable like any other.
+     */
+    private _deleteHtmlPreviewFromKeydown(event: Event): boolean {
+        if (event.type !== 'keydown')
+            return false;
+
+        const { key } = event as KeyboardEvent;
+        if (key !== EVENT_KEYS.Backspace && key !== EVENT_KEYS.Delete)
+            return false;
+
+        // `<summary>` and friends are focusable: the keydown target may be the
+        // island element itself, or the contenteditable root while the native
+        // caret still sits inside the island. Check both.
+        const anchorNode = this._muya.domNode.ownerDocument.getSelection()?.anchorNode ?? null;
+        const anchorEl = anchorNode?.nodeType === 1
+            ? anchorNode as Element
+            : anchorNode?.parentElement ?? null;
+        const candidates: Array<Element | null> = [
+            isHTMLElement(event.target) ? event.target : null,
+            anchorEl,
+        ];
+
+        for (const el of candidates) {
+            const preview = el?.closest(`.${CLASS_NAMES.MU_HTML_PREVIEW}`);
+            // A split view renders read-only projections in other muya hosts;
+            // the native selection may still point into one of them. Only ever
+            // delete a block owned by THIS editor instance.
+            if (!preview || !this._muya.domNode.contains(preview))
+                continue;
+
+            const figure = preview.closest(`.${CLASS_NAMES.MU_HTML_BLOCK}`);
+            // An active block shows the SOURCE instead of the preview; it has
+            // a real caret and must go through the normal dispatch path.
+            if (!figure || figure.classList.contains(CLASS_NAMES.MU_ACTIVE))
+                continue;
+
+            const block = getBlock(figure) as Parent | undefined;
+            if (!block?.parent)
+                continue;
+
+            const newBlock = ScrollPage.loadBlock('paragraph').create(this._muya, {
+                name: 'paragraph',
+                text: '',
+            });
+            block.replaceWith(newBlock);
+            newBlock.firstContentInDescendant()?.setCursor(0, 0, true);
+            event.preventDefault();
+
+            return true;
+        }
+
+        return false;
     }
 
     focus() {
