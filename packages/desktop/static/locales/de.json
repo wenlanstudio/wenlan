@@ -11,6 +11,7 @@
     "file": {
       "file": "Datei",
       "newTab": "Neuer Tab",
+      "newDocument": "Neues Dokument",
       "newWindow": "Neues Fenster",
       "newInProject": "Neu im Projekt",
       "newInProjectBlank": "Leere Datei",

@@ -11,6 +11,7 @@
     "file": {
       "file": "Arquivo",
       "newTab": "Nova Aba",
+      "newDocument": "Novo documento",
       "newWindow": "Nova Janela",
       "newInProject": "Novo no projeto",
       "newInProjectBlank": "Ficheiro em branco",

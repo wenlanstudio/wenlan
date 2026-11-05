@@ -11,6 +11,7 @@
     "file": {
       "file": "ファイル",
       "newTab": "新しいタブ",
+      "newDocument": "新規文書",
       "newWindow": "新しいウィンドウ",
       "newInProject": "プロジェクト内で新規作成",
       "newInProjectBlank": "空のファイル",

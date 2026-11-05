@@ -7,7 +7,9 @@
     <!-- Hibernate state: only the burger stays in the title bar. Hovering the
          bar — no click needed — reveals the flat entries beside it, the way the
          JetBrains new UI does it. Clicking the burger opens the first menu,
-         which is what the hamburger used to do with the old popup menu. -->
+         which is what the hamburger used to do with the old popup menu.
+         Pressing Alt alone does the same reveal + open (#8, Word convention:
+         Alt lands on 「文件」). -->
     <div
       class="menu-bar-burger"
       :class="{ 'is-open': openIndex !== -1 }"
@@ -72,11 +74,17 @@ import MenuDropdown from './menuDropdown.vue'
 const menus = ref<MenuStructureItem[]>([])
 const openIndex = ref(-1)
 const hovered = ref(false)
+// Alt 唤出（#8）：单独按 Alt 展开菜单栏并打开首个菜单（「文件」）。
+// 与悬停揭示互不干扰，Esc / 再按 Alt / 点外面收起。
+const altRevealed = ref(false)
+// Alt 组合键判别：Alt 按下后若夹进任何其它键，就不是「单独 Alt」——
+// 在 keyup 时不再触发（Chromium 菜单栏同款语义，Alt+X 加速键不受扰）。
+let altArmed = false
 
 // The entries are hidden until the pointer arrives, and stay visible while a
 // dropdown is open so hiding the bar can never pull it out from under the
 // menu the user is reading.
-const expanded = computed(() => hovered.value || openIndex.value !== -1)
+const expanded = computed(() => hovered.value || openIndex.value !== -1 || altRevealed.value)
 
 const load = async (): Promise<void> => {
   try {
@@ -90,6 +98,19 @@ const load = async (): Promise<void> => {
 
 const close = (): void => {
   openIndex.value = -1
+}
+
+// Alt 唤出与收起（#8）：已开 → 收；未开 → 展示菜单栏并打开首个菜单。
+const handleAltToggle = async (): Promise<void> => {
+  if (openIndex.value !== -1) {
+    close()
+    altRevealed.value = false
+    return
+  }
+  altRevealed.value = true
+  await load()
+  if (!menus.value.length) return
+  openIndex.value = 0
 }
 
 const toggle = async (index: number): Promise<void> => {
@@ -132,10 +153,30 @@ const run = (item: MenuStructureItem): void => {
   window.electron.windowControl.executeMenuItem(item.id)
 }
 
-const onDocumentClick = (): void => close()
+const onDocumentClick = (): void => {
+  close()
+  altRevealed.value = false
+}
 
 const onKeydown = (event: KeyboardEvent): void => {
-  if (event.key === 'Escape') close()
+  if (event.key === 'Escape') {
+    close()
+    altRevealed.value = false
+    return
+  }
+  if (event.key === 'Alt' && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+    if (!event.repeat) altArmed = true
+    return
+  }
+  // 夹进其它键：Alt 组合键（加速键），不算单独 Alt。
+  altArmed = false
+}
+
+const onKeyup = (event: KeyboardEvent): void => {
+  if (event.key === 'Alt' && altArmed) {
+    altArmed = false
+    void handleAltToggle()
+  }
 }
 
 onMounted(async () => {
@@ -143,12 +184,14 @@ onMounted(async () => {
 
   document.addEventListener('click', onDocumentClick)
   document.addEventListener('keydown', onKeydown)
+  document.addEventListener('keyup', onKeyup)
   window.addEventListener('blur', close)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', onDocumentClick)
   document.removeEventListener('keydown', onKeydown)
+  document.removeEventListener('keyup', onKeyup)
   window.removeEventListener('blur', close)
 })
 </script>

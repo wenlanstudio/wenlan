@@ -11,6 +11,7 @@
     "file": {
       "file": "파일",
       "newTab": "새 탭",
+      "newDocument": "새 문서",
       "newWindow": "새 창",
       "newInProject": "프로젝트에서 새로 만들기",
       "newInProjectBlank": "빈 파일",

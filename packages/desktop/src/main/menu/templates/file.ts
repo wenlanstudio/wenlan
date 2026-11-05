@@ -53,13 +53,6 @@ export default function(
 
   const submenu: MenuItemConstructorOptions[] = [
     {
-      label: t('menu.file.newTab'),
-      accelerator: keybindings.getAccelerator('file.new-tab') ?? undefined,
-      click(_menuItem, browserWindow) {
-        actions.newBlankTab(browserWindow as BrowserWindow | undefined)
-      }
-    },
-    {
       label: t('menu.file.newWindow'),
       accelerator: keybindings.getAccelerator('file.new-window') ?? undefined,
       click() {
@@ -67,30 +60,14 @@ export default function(
       }
     },
     {
-      // Sidebar project create, reachable from the app menu too. The blank
-      // entry mirrors the tree context menu's fast path; template kinds share
-      // the same inline name-input flow in the renderer.
-      label: t('menu.file.newInProject'),
-      submenu: [
-        {
-          label: t('menu.file.newInProjectBlank'),
-          click(_menuItem, browserWindow) {
-            actions.newFileInProject(browserWindow as BrowserWindow | undefined, '')
-          }
-        },
-        {
-          label: t('menu.file.newInProjectDeck'),
-          click(_menuItem, browserWindow) {
-            actions.newFileInProject(browserWindow as BrowserWindow | undefined, 'deck')
-          }
-        },
-        {
-          label: t('menu.file.newInProjectQuiz'),
-          click(_menuItem, browserWindow) {
-            actions.newFileInProject(browserWindow as BrowserWindow | undefined, 'quiz')
-          }
-        }
-      ]
+      // Word 式「新建文档」（#8）：先开无名缓冲 tab，保存时才确定路径；
+      // deck/quiz 模板仍走侧栏树右键的「在项目中新建」。「新建标签页」
+      // 菜单项随本裁决雪藏（action / 快捷键 / i18n 保留，肌肉记忆可达）。
+      label: t('menu.file.newDocument'),
+      accelerator: keybindings.getAccelerator('file.new-tab') ?? undefined,
+      click(_menuItem, browserWindow) {
+        actions.newBlankTab(browserWindow as BrowserWindow | undefined)
+      }
     },
     {
       type: 'separator'

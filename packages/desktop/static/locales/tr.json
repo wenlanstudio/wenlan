@@ -11,6 +11,7 @@
     "file": {
       "file": "Dosya",
       "newTab": "Yeni Sekme",
+      "newDocument": "Yeni Belge",
       "newWindow": "Yeni Pencere",
       "newInProject": "Projede yeni",
       "newInProjectBlank": "Boş dosya",

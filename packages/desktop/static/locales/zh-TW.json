@@ -11,6 +11,7 @@
     "file": {
       "file": "檔案",
       "newTab": "新建標籤頁",
+      "newDocument": "新增文件",
       "newWindow": "新建視窗",
       "newInProject": "在專案中新建",
       "newInProjectBlank": "空白文件",
