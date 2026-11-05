@@ -109,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue'
 import { storeToRefs } from 'pinia'
 import { t } from '@/i18n'
 import bus from '@/bus'
@@ -312,13 +312,16 @@ const handleEvent = (event: Md2rEvent): void => {
 }
 
 // —— 运行 ——
-const runBlock = async (line: number): Promise<void> => {
+const runBlock = async (line: number, opts: { reveal?: boolean } = {}): Promise<void> => {
   const path = docPath.value
   if (!path) return
   const b = blocks.value.find(x => x.line === line)
   if (!b) return
   selectedLine.value = line
-  revealBlock(line)
+  // reveal 默认开：面板里点块行 / 点 ▶ 要「所见即所跑」。但编辑器围栏上的 ▶
+  // 例外（runFenceByText 传 reveal:false）——用户既然点得到这个按钮，说明块就
+  // 在眼前，再把它滚到视口顶是干扰（issue #4 反馈：点击后代码块位置跳动）。
+  if (opts.reveal !== false) revealBlock(line)
   running.value[line] = true
   outputs.value[line] = ''
   delete results.value[line]
@@ -362,9 +365,33 @@ const runFenceByText = (text: string): boolean => {
   const target = findFenceByCode(props.markdown, blocks.value, text)
   if (!target) return false
   selectedLine.value = target.line
-  if (target.runnable) void runBlock(target.line)
+  if (target.runnable) void runBlock(target.line, { reveal: false })
   return true
 }
+
+/**
+ * 「文」视图光标进了某个代码块（issue #4 反馈第二问）：反向联动——反查开栏行，
+ * 块清单里对应 block-row 高亮并滚到可见。与 runFenceByText 不同：这里**绝不**
+ * 调 revealBlock——光标本来就是用户亲手放进去的，任何编辑区滚动都是干扰。
+ */
+const handleFenceSelectRequest = (payload: unknown): void => {
+  const text = (payload as { text?: string } | null)?.text ?? ''
+  if (!text) return
+  if (text === lastSelectedFenceText) return
+  const target = findFenceByCode(props.markdown, blocks.value, text)
+  if (!target) return
+  lastSelectedFenceText = text
+  if (selectedLine.value === target.line) return
+  selectedLine.value = target.line
+  void nextTick(() => {
+    document
+      .querySelector('.exec-panel .block-row.active')
+      ?.scrollIntoView({ block: 'nearest' })
+  })
+}
+
+/** 上一次反向联动命中的块体原文：同一块内反复按键/移动光标不重查。 */
+let lastSelectedFenceText = ''
 
 const handleFenceRunRequest = (payload: unknown): void => {
   if (!isCodeRunSurface.value) return
@@ -466,6 +493,7 @@ const finalOutputOf = (line: number): string => {
 onMounted(() => {
   offEvent = window.mdcode2run.onEvent(handleEvent)
   bus.on('mdcode2run-run-fence', handleFenceRunRequest)
+  bus.on('mdcode2run-select-fence', handleFenceSelectRequest)
   void refresh()
 })
 
@@ -556,6 +584,7 @@ window.addEventListener('resize', onWindowResize)
 
 onBeforeUnmount(() => {
   bus.off('mdcode2run-run-fence', handleFenceRunRequest)
+  bus.off('mdcode2run-select-fence', handleFenceSelectRequest)
   offEvent?.()
   offEvent = null
   if (parseTimer !== null) {

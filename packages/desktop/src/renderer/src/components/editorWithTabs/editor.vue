@@ -1305,16 +1305,20 @@ const scrollToHighlight = () => {
   return scrollToElement('.mu-highlight')
 }
 
-/** 代码块定位时的顶部留白：块顶贴死在视口顶上太挤。 */
-const REVEAL_TOP_MARGIN = 48
-
 /**
- * 把光标行对齐到视口顶部——执行面板点块行专用。
+ * 把光标行对齐到剩余视口的竖直中点——执行面板点块行定位专用。
  *
- * 不能用 `scrollToCursor`：它对齐的是 STANDAR_Y（320px 的打字机位），底部
- * 工具窗口展开后视口只剩半截，那个位置正好落在面板背后，块「跳过去就看不见」。
+ * 两个参照位都不对：
+ * - `scrollToCursor` 对齐 STANDAR_Y（320px 打字机位）：底部工具窗口展开后
+ *   视口只剩半截，那个位置正好落在面板背后，块「跳过去就看不见」；
+ * - 视口顶部（旧做法）：块顶贴死太挤，且「定位」的自然语义是出现在眼前，
+ *   居中比顶边更符合直觉。
+ *
+ * clientHeight 本身就是被面板占掉下半截之后的剩余视口（#2 真收缩），居中
+ * 即「剩余空间的中点」；滚动目标越界由 scrollTop 的原生钳位兜底（贴文档
+ * 顶/底时退化为尽力居中）。
  */
-const scrollCursorToTop = (duration = 200) => {
+const scrollCursorToCenter = (duration = 200) => {
   nextTick(() => {
     const container = getScrollContainer()
     if (!container) return
@@ -1322,7 +1326,7 @@ const scrollCursorToTop = (duration = 200) => {
     if (y == null) return
     animatedScrollTo(
       container,
-      Math.max(0, container.scrollTop + y - REVEAL_TOP_MARGIN),
+      Math.max(0, container.scrollTop + y - container.clientHeight / 2),
       duration
     )
   })
@@ -1331,14 +1335,14 @@ const scrollCursorToTop = (duration = 200) => {
 /**
  * 把编辑区滚到指定源码行（0 基）——mdcode2run 执行面板点块行时定位用。
  * 走引擎 sanctioned 的 `setCursorByOffset`（源码 {line,ch} → 块键光标），
- * 再把该行滚到视口顶部（不是 STANDAR_Y 打字机位，见 scrollCursorToTop）。
+ * 再把该行滚到剩余视口的竖直中点（见 scrollCursorToCenter）。
  */
 const revealSourceLine = (payload: unknown) => {
   const line = (payload as { line?: unknown } | null)?.line
   if (typeof line !== 'number' || !editor.value) return
   const at = { line: Math.max(0, Math.floor(line)), ch: 0 }
   if (editor.value.setCursorByOffset({ anchor: at, focus: at })) {
-    scrollCursorToTop(200)
+    scrollCursorToCenter(200)
   }
 }
 
@@ -2182,6 +2186,24 @@ onMounted(() => {
       editorStore.PERSIST_CURSOR(currentFile.value.id, serializeCursor(editor.value.getSelection()))
     }
     pushSelectionMenuState(changes)
+
+    // 「文」→ 执行面板反向联动（issue #4 反馈第二问）：光标落进代码围栏时，
+    // 让底部面板块清单里对应的 block-row 高亮。判定条件：焦点叶是
+    // codeblock.content 且祖先链上是 code-block——frontmatter 的内容叶与代码
+    // 内容叶同名（见 codeBlockContent 的容器判断），靠祖先链区分，frontmatter
+    // 不该点亮任何块行。块体原文与围栏 ▶ 的 detail.text 同源（focus 叶 text），
+    // 面板侧按原文反查行号；此处绝不滚动编辑区。
+    const focusLeafName = (changes.focusBlockInfo as { blockName?: string } | null)?.blockName
+    if (
+      focusLeafName === 'codeblock.content' &&
+      ((changes.affiliation ?? []) as EngineAffiliationEntry[]).some(
+        (e) => e.blockName === 'code-block'
+      ) &&
+      !sourceCode.value
+    ) {
+      const fenceText = (changes.focusBlock as { text?: string } | null)?.text
+      if (fenceText) bus.emit('mdcode2run-select-fence', { text: fenceText })
+    }
   })
 
   document.addEventListener('keyup', keyup)
