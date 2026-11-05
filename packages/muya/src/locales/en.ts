@@ -69,6 +69,7 @@ export const en = {
         'Eliminate': 'Eliminate',
         // Code block
         'Copy content': 'Copy content',
+        'Run code block': 'Run code block',
         'Input Language Identifier...': 'Input Language Identifier...',
         // emojiPicker
         'Smileys & Emotion': 'Smileys & Emotion',

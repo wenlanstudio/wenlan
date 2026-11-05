@@ -81,6 +81,7 @@ import {
   LinkTools,
   ParagraphQuickInsertMenu,
   TableChessboard,
+  CODE_RUN_EVENT,
   wordCount as muyaWordCount,
   type IHistorySelection,
   type IPreviewDiagramPayload,
@@ -1825,6 +1826,13 @@ const handleLanguageChanged = (newLocale?: unknown) => {
 }
 const resizeObserverForEditor = new ResizeObserver(handleResetPaddingBottom)
 
+/** 围栏 ▶ 只发一个 DOM 事件；行号换算 / 展开面板由 execPanel 接手（issue #4）。 */
+const handleCodeRunRequest = (event: Event): void => {
+  const text = (event as CustomEvent<{ text?: string }>).detail?.text
+  if (!text) return
+  bus.emit('mdcode2run-run-fence', { text })
+}
+
 onMounted(() => {
   printer = new Printer()
   const ele = editorRef.value
@@ -1937,6 +1945,10 @@ onMounted(() => {
   }
 
   const container = getScrollContainer()!
+
+  // Bubbles up from `code.mu-code` inside this editor only; read-only
+  // projections live in a different DOM subtree (and hide the button via CSS).
+  editorRef.value?.addEventListener(CODE_RUN_EVENT, handleCodeRunRequest)
 
   // Listen for language changes and update the engine locale.
   bus.on('language-changed', handleLanguageChanged)
@@ -2142,6 +2154,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  editorRef.value?.removeEventListener(CODE_RUN_EVENT, handleCodeRunRequest)
   // 切到 code/source 或占位视图时本组件经 `v-if` 销毁，下面的 destroy() 会连
   // muya 实例与 undo 栈一起丢掉（page ↔ columns 已共用同一实例，不再销毁）。
   // json-change handler 每次都

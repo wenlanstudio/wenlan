@@ -69,6 +69,7 @@ export const zhCN = {
         'Eliminate': '清除样式',
         // Code block
         'Copy content': '复制内容',
+        'Run code block': '执行代码块',
         'Input Language Identifier...': '输入程序语言标识...',
         // emojiPicker
         'Smileys & Emotion': '笑脸 & 情绪',

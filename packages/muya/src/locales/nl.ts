@@ -66,6 +66,7 @@ export const nl = {
         'Eliminate': 'Opmaak wissen',
         // Code block
         'Copy content': 'Inhoud kopiëren',
+        'Run code block': 'Codeblok uitvoeren',
         'Input Language Identifier...': 'Voer taalidentificatie in...',
         // emojiPicker
         'Smileys & Emotion': 'Smileys & Emotie',

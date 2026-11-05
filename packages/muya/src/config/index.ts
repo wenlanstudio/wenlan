@@ -6,6 +6,13 @@ export const HTML_TAGS = htmlTags;
 export const BLOCK_DOM_PROPERTY = '__MUYA_BLOCK__';
 
 /**
+ * A fenced code block's run button asks the HOST to execute it. Muya knows
+ * nothing about mdcode2run / IPC; the desktop layer listens for this event,
+ * locates the fence in markdown and opens the code run panel.
+ */
+export const CODE_RUN_EVENT = 'muya:code-run';
+
+/**
  * [genUpper2LowerKeyHash generate constants map hash, the value is lowercase of the key,
  * also translate `_` to `-`]
  */

@@ -69,6 +69,7 @@ export const fr = {
         'Eliminate': 'Effacer le formatage',
         // Code block
         'Copy content': 'Copier le contenu',
+        'Run code block': 'Exécuter le bloc de code',
         'Input Language Identifier...': 'Saisir l\'identifiant de langage...',
         // emojiPicker
         'Smileys & Emotion': 'Émoticônes & émotions',

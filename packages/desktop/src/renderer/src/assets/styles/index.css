@@ -449,3 +449,8 @@ button.button-primary:not(.custom):focus,
 .el-tabs__active-bar {
   background-color: var(--themeColor);
 }
+
+/* 「文」视图独占时才有 code run 面板；只读投影（栏/页/览/示）不显示围栏 ▶。 */
+.leaf-projection .mu-code-run {
+  display: none;
+}

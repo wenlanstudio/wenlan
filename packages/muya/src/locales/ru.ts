@@ -69,6 +69,7 @@ export const ru = {
         'Eliminate': 'Очистить форматирование',
         // Code block
         'Copy content': 'Копировать',
+        'Run code block': 'Выполнить блок кода',
         'Input Language Identifier...': 'Язык кода...',
         // emojiPicker
         'Smileys & Emotion': 'Смайлы и эмоции',

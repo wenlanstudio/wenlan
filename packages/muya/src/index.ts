@@ -1,3 +1,4 @@
+export { CODE_RUN_EVENT } from './config';
 export type { ISerializedHistory } from './history';
 export type { ILocale } from './i18n/types';
 

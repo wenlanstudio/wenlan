@@ -6,6 +6,7 @@ import type CodeBlock from './index';
 import { fromEvent } from 'rxjs';
 import copyIcon from '../../../assets/icons/copy/2.png';
 import { CopyType } from '../../../clipboard/types';
+import { CODE_RUN_EVENT } from '../../../config';
 import { LINE_NUMBERS_ROWS_CLASS, lineNumbersWrapperHTML } from '../../../utils/codeBlockLineNumbers';
 import logger from '../../../utils/logger';
 import { h, toHTML } from '../../../utils/snabbdom';
@@ -39,6 +40,23 @@ function renderCopyButton(i18n: I18n) {
             },
         },
         iconVnode,
+    );
+}
+
+/**
+ * Host-executed run button. Only real fenced code blocks get one; the
+ * frontmatter / math / diagram / html containers reuse this Code class.
+ */
+function renderRunButton(i18n: I18n) {
+    return h(
+        'a.mu-code-run',
+        {
+            attrs: {
+                title: i18n.t('Run code block'),
+                contenteditable: 'false',
+            },
+        },
+        '▶',
     );
 }
 
@@ -84,15 +102,18 @@ class Code extends Parent {
         return {} as TState;
     }
 
-    // Create the copy button at the top-right; when codeBlockLineNumbers is on
-    // AND this Code is hosted inside a real code-block (not frontmatter / math /
-    // diagram / html), also create an empty line-numbers wrapper and cache
-    // its element so CodeBlockContent.update() can sync rows without a
-    // querySelector per keystroke.
+    // Create the copy + run buttons at the top-right. `_withLineNumbers` is
+    // true exactly for a real `code-block` state (frontmatter / math / diagram
+    // / html containers reuse Code), so it also gates the run button. When
+    // codeBlockLineNumbers is on, additionally create an empty line-numbers
+    // wrapper and cache its element so CodeBlockContent.update() can sync rows
+    // without a querySelector per keystroke.
     private _createCopyNode() {
         const { i18n, options } = this.muya;
         const withLineNumbers = options.codeBlockLineNumbers && this._withLineNumbers;
         let html = toHTML(renderCopyButton(i18n));
+        if (this._withLineNumbers)
+            html += toHTML(renderRunButton(i18n));
         if (withLineNumbers)
             html += lineNumbersWrapperHTML();
         this.domNode!.innerHTML = html;
@@ -131,6 +152,30 @@ class Code extends Parent {
 
         const mousedownObservable = fromEvent(this.domNode.firstElementChild!, 'mousedown');
         mousedownObservable.subscribe(mousedownHandler);
+
+        // Run button: muya only dispatches a DOM event, it knows nothing about
+        // mdcode2run / IPC. The desktop host listens for CODE_RUN_EVENT,
+        // resolves the fence's source line and opens the code run panel (#4).
+        const runButton = this.domNode.querySelector<HTMLElement>('a.mu-code-run');
+        if (runButton) {
+            fromEvent(runButton, 'mousedown').subscribe(mousedownHandler);
+            fromEvent(runButton, 'click').subscribe((event: Event) => {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const codeContent = this.firstContentInDescendant();
+                if (codeContent == null) {
+                    debug.error('Has no code content');
+                    return;
+                }
+
+                this.domNode!.dispatchEvent(new CustomEvent(CODE_RUN_EVENT, {
+                    bubbles: true,
+                    composed: true,
+                    detail: { text: codeContent.text },
+                }));
+            });
+        }
     }
 }
 

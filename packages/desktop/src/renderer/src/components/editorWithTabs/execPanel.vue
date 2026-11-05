@@ -122,6 +122,7 @@ import {
 } from '@/store/execPanel'
 import type { Md2rBlockInfo, Md2rEvent, Md2rRunResult } from '@shared/types/mdcode2run'
 import { diagramTypeOfLang } from '@muyajs/core'
+import { codeSlice, findFenceByCode } from '@/util/fenceRun'
 
 /**
  * mdcode2run 底部执行面板（M3 最小闭环）：**只渲染 body**。
@@ -217,12 +218,6 @@ watchEffect(() => {
 
 // —— parse（markdown 变化防抖重解析 + stale 重算）——
 let parseTimer: ReturnType<typeof setTimeout> | null = null
-
-const codeSlice = (md: string, b: { line: number; end: number }): string => {
-  const lines = md.split('\n')
-  // 围栏体 = (line, end-1)：跳过开栏行与闭栏行
-  return lines.slice(b.line + 1, Math.max(b.line + 1, b.end - 1)).join('\n')
-}
 
 const refresh = async (): Promise<void> => {
   const path = docPath.value
@@ -358,6 +353,23 @@ const runBlock = async (line: number): Promise<void> => {
   }
 }
 
+/**
+ * 「文」视图围栏 ▶（issue #4）：muya 只带来块体原文，这里按原文反查开栏行，
+ * 展开面板后复用 runBlock 的完整链路（逐块输出 / stale / 反向定位）。
+ * 面板原先只在首次 parse 出可跑块时自动展开一次，手动执行不会展开。
+ */
+const handleFenceRunRequest = (payload: unknown): void => {
+  if (!isCodeRunSurface.value) return
+  const text = (payload as { text?: string } | null)?.text ?? ''
+  if (!text) return
+
+  panel.setOpen(true)
+  const target = findFenceByCode(props.markdown, blocks.value, text)
+  if (!target) return // parse 还没回来 / 未保存文档：只展开，等 refresh 后再点
+  selectedLine.value = target.line
+  if (target.runnable) void runBlock(target.line)
+}
+
 const stopSelected = (): void => {
   const line = selectedLine.value
   if (line === null) return
@@ -444,6 +456,7 @@ const finalOutputOf = (line: number): string => {
 
 onMounted(() => {
   offEvent = window.mdcode2run.onEvent(handleEvent)
+  bus.on('mdcode2run-run-fence', handleFenceRunRequest)
   void refresh()
 })
 
@@ -532,6 +545,7 @@ const onWindowResize = (): void => {
 window.addEventListener('resize', onWindowResize)
 
 onBeforeUnmount(() => {
+  bus.off('mdcode2run-run-fence', handleFenceRunRequest)
   offEvent?.()
   offEvent = null
   if (parseTimer !== null) {
