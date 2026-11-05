@@ -116,6 +116,74 @@ describe('codeBlockContent — triple Enter splits a fenced code block', () => {
         expect(state[1].text).toBe('llo');
     });
 
+    it('consumes the original line separator when the caret is at the end of a line', async () => {
+        const muya = bootMuya('```js\na\nb\nc\n```\n');
+        const content = codeContent(muya);
+        muya.editor.activeContentBlock = content;
+        content.setCursor(3, 3, true); // "a\nb" | "\nc"
+
+        enter(content);
+        enter(content);
+        enter(content);
+        await flush();
+
+        const state = stateOf(muya);
+        expect(state.length).toBe(2);
+        expect(state[0].text).toBe('a\nb'); // no trailing empty line
+        expect(state[1].text).toBe('c'); // no leading empty line
+    });
+
+    it('consumes the original line separator when the caret is at the start of a line', async () => {
+        const muya = bootMuya('```js\na\nb\nc\n```\n');
+        const content = codeContent(muya);
+        muya.editor.activeContentBlock = content;
+        content.setCursor(4, 4, true); // "a\nb\n" | "c"
+
+        enter(content);
+        enter(content);
+        enter(content);
+        await flush();
+
+        const state = stateOf(muya);
+        expect(state.length).toBe(2);
+        expect(state[0].text).toBe('a\nb');
+        expect(state[1].text).toBe('c');
+    });
+
+    it('consumes blank lines that already surrounded the caret', async () => {
+        const muya = bootMuya('```js\na\n\nb\n```\n');
+        const content = codeContent(muya);
+        muya.editor.activeContentBlock = content;
+        content.setCursor(3, 3, true); // "a\n\n" | "b"
+
+        enter(content);
+        enter(content);
+        enter(content);
+        await flush();
+
+        const state = stateOf(muya);
+        expect(state.length).toBe(2);
+        expect(state[0].text).toBe('a');
+        expect(state[1].text).toBe('b');
+    });
+
+    it('keeps one blank line in the new block when the burst ends the block', async () => {
+        const muya = bootMuya('```js\nhello\n```\n');
+        const content = codeContent(muya);
+        muya.editor.activeContentBlock = content;
+        content.setCursor(content.text.length, content.text.length, true);
+
+        enter(content);
+        enter(content);
+        enter(content);
+        await flush();
+
+        // An empty code block serializes to a single blank line; the fence
+        // meta is inherited by getState() in _splitCodeBlock.
+        expect(muya.getMarkdown()).toContain('```js\n\n```');
+        expect(stateOf(muya)[1].text).toBe('');
+    });
+
     it('inherits lang / fence meta into the new block', async () => {
         const muya = bootMuya('```python\nprint(1)\n```\n');
         const content = codeContent(muya);

@@ -408,6 +408,18 @@ class CodeBlockContent extends Content {
      * meta verbatim. `update()` is mandatory: the `text` setter only writes
      * jsonState, while the code leaf's DOM (Prism highlight + line numbers) is
      * rebuilt by update() — normally reached through setCursor(..., true).
+     *
+     * The line separator that sat at the caret in the ORIGINAL document must
+     * go as well. Once two fences separate the blocks it belongs to neither
+     * side: leaving it behind turns it into a leading empty line in the new
+     * block (caret at end of a line) or a trailing one in the old block
+     * (caret at start of a line). Markdown source view shows that stray `\n`
+     * even though the WYSIWYG code leaf visually folds the first empty line,
+     * so the two views disagree until the next reload.
+     *
+     * At the END of the block there is no separator to consume: `after` is
+     * empty, and an empty code block serializes to a single blank line — the
+     * wanted "one blank line in a new block" case, with meta inherited.
      */
     private _splitCodeBlock(originOffset: number, splitOffset: number) {
         const container = this._codeContainer;
@@ -415,8 +427,18 @@ class CodeBlockContent extends Content {
             return;
 
         const { text } = this;
-        const before = text.substring(0, originOffset);
-        const after = text.substring(splitOffset);
+        // Trim line separators on both sides of the cut. The burst's own
+        // newlines already live in [originOffset, splitOffset); these loops
+        // only consume separators that came from the ORIGINAL document (the
+        // break right after the caret, or a caret sitting on blank lines).
+        let beforeEnd = originOffset;
+        while (beforeEnd > 0 && text[beforeEnd - 1] === '\n')
+            beforeEnd--;
+        let afterStart = splitOffset;
+        while (afterStart < text.length && text[afterStart] === '\n')
+            afterStart++;
+        const before = text.substring(0, beforeEnd);
+        const after = text.substring(afterStart);
         // getState() already copies meta, so the new block keeps lang /
         // fenceChar / fenceLength without the language-input setter emitting
         // an extra json1 op.

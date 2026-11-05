@@ -27,6 +27,30 @@ async function placeCaret(page: Page, fromEnd: number): Promise<void> {
         await page.keyboard.press('ArrowLeft');
 }
 
+/**
+ * Put the caret at an exact text offset. Arrow keys move by VISUAL line, so
+ * a wrapped long line makes them useless for placing the caret on a specific
+ * logical line — set the cursor on the muya Content instead.
+ */
+async function placeCaretAtOffset(page: Page, offset: number): Promise<void> {
+    await page.locator(editor.codeContent).first().click();
+    await page.evaluate((o) => {
+        interface IBlock {
+            constructor: { blockName?: string };
+            children?: { forEach: (cb: (b: unknown) => void) => void };
+        }
+        let hit: unknown = null;
+        const visit = (b: IBlock) => {
+            if (b.constructor.blockName === 'codeblock.content')
+                hit ??= b;
+            b.children?.forEach(c => visit(c as IBlock));
+        };
+        visit(window.muya!.editor.scrollPage as unknown as IBlock);
+        (hit as { setCursor: (s: number, e: number, force?: boolean) => void })
+            .setCursor(o, o, true);
+    }, offset);
+}
+
 /** Three real Enters with no artificial delay — well inside the 500ms window. */
 async function burst(page: Page): Promise<void> {
     await page.keyboard.press('Enter');
@@ -137,6 +161,85 @@ test.describe('issue #1 — the gesture only fires on a fast, uninterrupted burs
         await page.keyboard.press('Enter');
 
         await expect(page.locator(editor.codeBlock)).toHaveCount(1);
+    });
+});
+
+test.describe('issue #1 — splitting on a line boundary / at the end of the block', () => {
+    const A = '(new String("a").hashCode() & Integer.MAX_VALUE) % 3;';
+    const B = '(new String("b").hashCode() & Integer.MAX_VALUE) % 3;';
+    const C = '(new String("c").hashCode() & Integer.MAX_VALUE) % 3;';
+    const FENCE = '```';
+    const THREE_LINES = `${FENCE}jshell\n${A}\n${B}\n${C}\n${FENCE}\n`;
+    const END_OF_B = `${A}\n${B}`.length;
+    const START_OF_C = `${A}\n${B}\n`.length;
+
+    test('caret at the end of a line: neither block is padded with blank lines', async ({ page }) => {
+        await loadCode(page, THREE_LINES);
+        await placeCaretAtOffset(page, END_OF_B); // end of line b
+        await burst(page);
+
+        await expect(page.locator(editor.codeBlock)).toHaveCount(2);
+        await expect.poll(() => codeText(page, 0)).toBe(
+            '(new String("a").hashCode() & Integer.MAX_VALUE) % 3;\n(new String("b").hashCode() & Integer.MAX_VALUE) % 3;',
+        );
+        await expect.poll(() => codeText(page, 1)).toBe(
+            '(new String("c").hashCode() & Integer.MAX_VALUE) % 3;',
+        );
+
+        const md = await getMarkdown(page);
+        expect(md).not.toContain('```jshell\n\n'); // no leading empty line
+        // Two blocks are legitimately separated by one blank line, so match
+        // the trailing empty line against the last code line instead.
+        expect(md).not.toContain(`${B}\n\n${FENCE}`);
+        expect(md.match(/```jshell/g)).toHaveLength(2);
+    });
+
+    test('caret at the start of a line: no trailing empty line in the first block', async ({ page }) => {
+        await loadCode(page, THREE_LINES);
+        await placeCaretAtOffset(page, START_OF_C); // start of line c
+        await burst(page);
+
+        await expect(page.locator(editor.codeBlock)).toHaveCount(2);
+        await expect.poll(() => codeText(page, 0)).toBe(
+            '(new String("a").hashCode() & Integer.MAX_VALUE) % 3;\n(new String("b").hashCode() & Integer.MAX_VALUE) % 3;',
+        );
+        await expect.poll(() => codeText(page, 1)).toBe(
+            '(new String("c").hashCode() & Integer.MAX_VALUE) % 3;',
+        );
+        expect(await getMarkdown(page)).not.toContain('```jshell\n\n');
+    });
+
+    test('markdown round-trip (source view ↔ editor) stays identical', async ({ page }) => {
+        await loadCode(page, THREE_LINES);
+        await placeCaretAtOffset(page, END_OF_B);
+        await burst(page);
+        const md = await getMarkdown(page);
+
+        // Switching leaves re-parses the markdown. A stray separator used to
+        // survive in the state while the WYSIWYG leaf hid the empty line.
+        await page.evaluate(m => window.muya!.setContent(m), md);
+
+        await expect(page.locator(editor.codeBlock)).toHaveCount(2);
+        await expect.poll(() => codeText(page, 1)).toBe(
+            '(new String("c").hashCode() & Integer.MAX_VALUE) % 3;',
+        );
+        expect(await getMarkdown(page)).toBe(md);
+    });
+
+    test('caret at the very end: new block has one blank line and inherits the fence', async ({ page }) => {
+        await loadCode(page, '~~~jshell\na\nb\n~~~\n');
+        await page.locator(editor.codeContent).first().click();
+        await page.keyboard.press('Control+End');
+        await burst(page);
+
+        await expect(page.locator(editor.codeBlock)).toHaveCount(2);
+        await expect.poll(() => codeText(page, 0)).toBe('a\nb');
+        await expect.poll(() => codeText(page, 1)).toBe('');
+
+        const md = await getMarkdown(page);
+        expect(md).toContain('~~~jshell\na\nb\n~~~');
+        expect(md).toContain('~~~jshell\n\n~~~'); // exactly one blank line
+        expect(md.match(/~~~jshell/g)).toHaveLength(2);
     });
 });
 
