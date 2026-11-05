@@ -1826,10 +1826,20 @@ const handleLanguageChanged = (newLocale?: unknown) => {
 }
 const resizeObserverForEditor = new ResizeObserver(handleResetPaddingBottom)
 
-/** 围栏 ▶ 只发一个 DOM 事件；行号换算 / 展开面板由 execPanel 接手（issue #4）。 */
+/** 围栏 ▶ 只发一个 DOM 事件；行号换算 / 展开面板由 execPanel 接手（issue #4）。
+ *  空围栏也要把事件送出去：execPanel 至少会展开面板给出提示，静默 return
+ *  会让用户以为按钮是坏的。 */
 const handleCodeRunRequest = (event: Event): void => {
-  const text = (event as CustomEvent<{ text?: string }>).detail?.text
-  if (!text) return
+  // 多个 editor 实例可能同时挂 document 监听；同一事件只转发一次。
+  const once = event as Event & { __codeRunHandled?: boolean }
+  if (once.__codeRunHandled) return
+  once.__codeRunHandled = true
+
+  // 只读投影里按钮被 CSS 隐藏，归属校验仍做一层，避免别的 muya 实例误触。
+  const target = event.target as Element | null
+  if (!target || !target.closest('.editor-component') || target.closest('.leaf-projection')) return
+
+  const text = (event as CustomEvent<{ text?: string }>).detail?.text ?? ''
   bus.emit('mdcode2run-run-fence', { text })
 }
 
@@ -1946,9 +1956,10 @@ onMounted(() => {
 
   const container = getScrollContainer()!
 
-  // Bubbles up from `code.mu-code` inside this editor only; read-only
-  // projections live in a different DOM subtree (and hide the button via CSS).
-  editorRef.value?.addEventListener(CODE_RUN_EVENT, handleCodeRunRequest)
+  // 监听必须挂在 document：`editorRef` 指向的节点会被视图重建换掉（曾出现
+  // 监听器留在已脱离文档的旧 .editor-component 上，点 ▶ 完全没反应）。
+  // 事件本身 bubbles+composed，归属由 handleCodeRunRequest 校验。
+  document.addEventListener(CODE_RUN_EVENT, handleCodeRunRequest)
 
   // Listen for language changes and update the engine locale.
   bus.on('language-changed', handleLanguageChanged)
@@ -2154,7 +2165,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  editorRef.value?.removeEventListener(CODE_RUN_EVENT, handleCodeRunRequest)
+  document.removeEventListener(CODE_RUN_EVENT, handleCodeRunRequest)
   // 切到 code/source 或占位视图时本组件经 `v-if` 销毁，下面的 destroy() 会连
   // muya 实例与 undo 栈一起丢掉（page ↔ columns 已共用同一实例，不再销毁）。
   // json-change handler 每次都

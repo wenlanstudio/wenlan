@@ -358,16 +358,25 @@ const runBlock = async (line: number): Promise<void> => {
  * 展开面板后复用 runBlock 的完整链路（逐块输出 / stale / 反向定位）。
  * 面板原先只在首次 parse 出可跑块时自动展开一次，手动执行不会展开。
  */
+const runFenceByText = (text: string): boolean => {
+  const target = findFenceByCode(props.markdown, blocks.value, text)
+  if (!target) return false
+  selectedLine.value = target.line
+  if (target.runnable) void runBlock(target.line)
+  return true
+}
+
 const handleFenceRunRequest = (payload: unknown): void => {
   if (!isCodeRunSurface.value) return
   const text = (payload as { text?: string } | null)?.text ?? ''
-  if (!text) return
+  panel.setOpen(true) // 先给可见反馈，后面的反查失败也不能让按钮像坏了一样
+  if (!text || runFenceByText(text)) return
 
-  panel.setOpen(true)
-  const target = findFenceByCode(props.markdown, blocks.value, text)
-  if (!target) return // parse 还没回来 / 未保存文档：只展开，等 refresh 后再点
-  selectedLine.value = target.line
-  if (target.runnable) void runBlock(target.line)
+  // refresh() 有 300ms 防抖：刚打开文档 / 刚改完代码块就点 ▶ 时 blocks 还是
+  // 旧快照，按块体原文反查必然落空。强制同步重解析一次再试，别让用户再点一遍。
+  void refresh().then(() => {
+    runFenceByText(text)
+  })
 }
 
 const stopSelected = (): void => {
