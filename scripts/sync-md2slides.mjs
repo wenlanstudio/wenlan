@@ -13,13 +13,21 @@
  * md2slides IPC（src/main/ipc/md2slides.ts）按这份布局 require server.js 并把整包
  * 挂到本地服务的 `/` 下。deck 页面（deck.html + dist/deck-full.js）、主题、KaTeX
  * 字体、图表运行时全从这里出。
+ *
+ * CI 里源目录不在兄弟仓、而是 checkout 到工作区的子目录，用环境变量指过去：
+ *   MD2SLIDES_ASSETS=.ci-md2slides/out/marktext node scripts/sync-md2slides.mjs
+ * 同步结束会跑 scripts/check-md2slides-assets.mjs 做完整性闸门（缺件直接失败）。
  */
+import { spawnSync } from 'node:child_process'
 import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const src = resolve(here, '..', '..', 'md2slides', 'out', 'marktext')
+// 默认布局：本仓与 md2slides 仓是兄弟目录；CI 用 MD2SLIDES_ASSETS 覆盖（相对工作区根）。
+const src = process.env.MD2SLIDES_ASSETS
+  ? resolve(process.env.MD2SLIDES_ASSETS)
+  : resolve(here, '..', '..', 'md2slides', 'out', 'marktext')
 const dest = resolve(here, '..', 'packages', 'desktop', 'resources', 'md2slides')
 
 if (!existsSync(resolve(src, 'deck.html')) || !existsSync(resolve(src, 'server.js'))) {
@@ -31,7 +39,7 @@ if (!existsSync(resolve(src, 'deck.html')) || !existsSync(resolve(src, 'server.j
 rmSync(dest, { recursive: true, force: true })
 mkdirSync(dest, { recursive: true })
 cpSync(src, dest, { recursive: true })
-console.log(`md2slides 资产包已同步 → ${dest}`)
+console.log(`md2slides 资产包已同步：${src} → ${dest}`)
 
 // M4.2：分页决策内核（md2slides 产包 lib/layout-core.js，纯函数零 DOM）
 // vendor 进 renderer 源树——单源在 md2slides，本仓只读；纸叶 v2 块内切分
@@ -86,3 +94,10 @@ if (!deckHtml.includes(execTag)) {
   writeFileSync(deckHtmlPath, deckHtml.replace('</body>', `  ${execTag}\n</body>`))
 }
 console.log('放映执行桥已注入 → resources/md2slides/exec-present.js + deck.html')
+
+// 打包前的最后一道闸门：这份目录是 extraResources 的唯一来源，缺件会让安装包
+// 静默残废（装得上、点「览/示」才炸）。宁可在这里失败，也不要出残包。
+const check = spawnSync(process.execPath, [resolve(here, 'check-md2slides-assets.mjs')], {
+  stdio: 'inherit'
+})
+if (check.status !== 0) process.exit(check.status ?? 1)

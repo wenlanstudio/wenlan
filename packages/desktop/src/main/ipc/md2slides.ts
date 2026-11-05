@@ -1,3 +1,4 @@
+import { existsSync } from 'fs'
 import path from 'path'
 import { app, ipcMain } from 'electron'
 
@@ -12,15 +13,34 @@ import { app, ipcMain } from 'electron'
  * md2slides 仓 `docs/design/integration-marktext.md` §5。
  *
  * 资产包经 `scripts/sync-md2slides.mjs` 从 `md2slides/out/marktext` 同步（先在
- * md2slides 仓跑 `npm run pack:marktext`）。
+ * md2slides 仓跑 `npm run pack:marktext`）。这份目录是 gitignored 生成物：CI 由
+ * `.github/actions/md2slides-assets` 产出，打包前 `check-md2slides-assets.mjs`
+ * 把关——没它就会装出一个点「览 / 示」才报错的残包（v1.0.0 的 release 事故）。
  */
 
 // 打包后的布局随 resources 走；dev / preview / e2e 从应用目录读。
+// 注意：process.resourcesPath 本身已以 /resources 结尾，下面的 'resources' 是
+// electron-builder.yml 里 extraResources 的 `to: resources`，两层不是笔误。
 const md2slidesDir = path.join(
   app.isPackaged ? process.resourcesPath : app.getAppPath(),
   'resources',
   'md2slides'
 )
+
+/** 修复话术按运行环境分流：装了 release 的用户没法跑本仓的开发脚本。 */
+const fixHint = (): string =>
+  app.isPackaged
+    ? '安装包不完整或已损坏——请重新下载安装最新版；若仍然出现，请把上面的路径和错误一起反馈。'
+    : '本机缺 md2slides 资产包：在 md2slides 仓跑 `npm run pack:marktext`，再跑 `node scripts/sync-md2slides.mjs`。'
+
+const describeError = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error)
+
+const missingError = (what: string, entry: string): Error =>
+  new Error(`md2slides ${what}缺失：${entry}\n${fixHint()}`)
+
+const loadError = (what: string, entry: string, error: unknown): Error =>
+  new Error(`md2slides ${what}加载失败：${entry}\n${describeError(error)}\n${fixHint()}`)
 
 interface Md2sServerHandle {
   url: string
@@ -61,6 +81,7 @@ let exporter: { exportFromData: ExportFromDataFn } | null = null
 const loadExporter = (): { exportFromData: ExportFromDataFn } => {
   if (exporter) return exporter
   const entry = path.join(md2slidesDir, 'pptx.js')
+  if (!existsSync(entry)) throw missingError('导出后端', entry)
   let create: CreateExporterFn
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -69,14 +90,12 @@ const loadExporter = (): { exportFromData: ExportFromDataFn } => {
       default?: { createExporter?: CreateExporterFn }
     }
     create = (mod.createExporter ?? mod.default?.createExporter) as CreateExporterFn
-  } catch {
-    throw new Error(
-      `md2slides 导出后端不在：${entry}\n` +
-        '先在 md2slides 仓跑 npm run pack:marktext，再跑 node scripts/sync-md2slides.mjs'
-    )
+  } catch (error) {
+    // 原样带出底层错误：以前统一报「资产包不在」，把 require 内部异常也吞了。
+    throw loadError('导出后端', entry, error)
   }
   if (typeof create !== 'function') {
-    throw new Error(`md2slides 导出后端形状不对（没有 createExporter）：${entry}\n请重跑 sync-md2slides.mjs`)
+    throw new Error(`md2slides 导出后端形状不对（没有 createExporter）：${entry}\n${fixHint()}`)
   }
   exporter = create({ libDir: path.join(md2slidesDir, 'lib') })
   return exporter
@@ -115,8 +134,9 @@ export const registerMd2slidesHandlers = (): void => {
       await server?.close()
 
       // 计算路径的 require：打包器无法静态分析，原样留在 CJS 产物里；缺包时给出
-      // 人话（同步脚本没跑，而不是一句 "Cannot find module"）。
+      // 人话（安装包不完整，而不是一句 "Cannot find module"）。
       const serverPath = path.join(md2slidesDir, 'server.js')
+      if (!existsSync(serverPath)) throw missingError('资产包', serverPath)
       let startServer: StartServerFn | undefined
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -125,16 +145,12 @@ export const registerMd2slidesHandlers = (): void => {
           default?: { startServer?: StartServerFn }
         }
         startServer = mod.startServer ?? mod.default?.startServer
-      } catch {
-        throw new Error(
-          `md2slides 资产包不在：${serverPath}\n` +
-            '先在 md2slides 仓跑 npm run pack:marktext，再跑 node scripts/sync-md2slides.mjs'
-        )
+      } catch (error) {
+        throw loadError('资产包', serverPath, error)
       }
       if (typeof startServer !== 'function') {
         throw new Error(
-          `md2slides 资产包里的 server.js 没导出 startServer：${serverPath}\n` +
-            '资产包可能损坏或版本不匹配——重跑 node scripts/sync-md2slides.mjs'
+          `md2slides 资产包里的 server.js 没导出 startServer：${serverPath}\n${fixHint()}`
         )
       }
 

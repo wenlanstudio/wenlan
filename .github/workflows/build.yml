@@ -67,6 +67,11 @@ jobs:
           npm_config_user_agent: 'pnpm'
           USE_ELECTRON_CLANG: ${{ matrix.platform == 'linux' && '0' || '' }}
 
+      # Keep PR installers on the same asset pipeline as releases: the md2slides
+      # bundle is a gitignored artifact and must be built before electron-builder.
+      - name: Build md2slides runtime assets
+        uses: ./.github/actions/md2slides-assets
+
       - name: build-linux
         if: matrix.platform == 'linux'
         run: pnpm run build:linux

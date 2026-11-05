@@ -1,6 +1,6 @@
 <template>
   <div class="view-switcher">
-    <!-- 从右往左：主视图（六叶 + 表图本）最右固定，页宽滑块最左。
+    <!-- 从右往左：主视图（可见叶 + 表图本）最右固定，页宽滑块最左。
          滑块职责由 store.sliderDuty 给出——分屏时一律收起（宽度控制被
          分割条吸收，视图模型 §3）。 -->
     <div
@@ -20,16 +20,18 @@
       <span class="width-label">{{ sliderValue }}</span>
     </div>
 
-    <!-- 二组六叶（视图模型 §1/§2）：编辑组 { 文 全文, 栏 分栏, 页 逻辑页 } │
-         展示组 { 纸 物理纸, 览 页览, 示 放映 }。配置选择式：点选/点消至多两叶
+    <!-- 刻度「文 栏│页 览 示」（2026-11-05 命名调整，视图模型文首）：
+         旧 key page（逻辑页）→ spare「备」并雪藏；旧 key paper（物理纸）
+         → page「页」。可见五叶 = 文 / 栏 / 页 / 览 / 示；分隔线落在
+         展示组首叶 page（现「页」）前。配置选择式：点选/点消至多两叶
          （1=全屏 2=分屏，选满点不动、不可选空）。column 只对真有分栏标记的
-         文档显示（§4.4 #5）。 -->
+         文档显示（§4.4 #5），隐藏叶由 store.HIDDEN_LEAVES 统一收口。 -->
     <div class="leaves">
       <button
         v-for="leaf in visibleLeaves"
         :key="leaf"
         class="leaf-btn"
-        :class="{ active: leafSelection.includes(leaf), groupStart: leaf === 'paper' }"
+        :class="{ active: leafSelection.includes(leaf), groupStart: leaf === 'page' }"
         :title="LEAF_META[leaf].title"
         @click="onLeafClick(leaf)"
       >
@@ -81,7 +83,7 @@ import { storeToRefs } from 'pinia'
 import {
   useEditorViewStore,
   TOP_VIEWS,
-  LEAVES,
+  visibleLeafList,
   type Leaf
 } from '@/store/editorView'
 import { usePreferencesStore } from '@/store/preferences'
@@ -98,7 +100,7 @@ const { toggleLeaf, toggleTopView, enterPresentImmersive, exitPresentImmersive }
 const { editorLineWidth } = storeToRefs(preferencesStore)
 
 /** 「示」是一键全屏放映，不参与「配置选择式」：点一下进全屏，再点一下退出。
- *  其余五叶仍走 toggleLeaf 的选中/取消模型（store 语义保持不动）。 */
+ *  其余可见叶仍走 toggleLeaf 的选中/取消模型（store 语义保持不动）。 */
 const onLeafClick = (leaf: Leaf): void => {
   if (leaf === 'present') {
     if (presentImmersive.value) exitPresentImmersive()
@@ -124,13 +126,13 @@ const codeRunTitle = computed<string>(() => {
 
 // 叶的短名与提示。label 是单字 CJK 刻度（与主视图图标同族，刻意不翻译）；
 // title 中文提示——与 deck 工具条同策略（该用户群中文工作语言）。
-// 刻度「文 栏 页│纸 览 示」：页 = 逻辑纸（缝叠加投影）、纸 = 物理纸（纸卡
-// 推挤流），共享同一测量基座（视图模型 §5）。
+// 2026-11-05 命名调整（视图模型文首映射表）：旧 key page → spare「备」并隐藏，
+// 旧 key paper → page「页」。日后启用「备」只需清空 HIDDEN_LEAVES。
 const LEAF_META: Record<Leaf, { label: string; title: string }> = {
   flow: { label: '文', title: '全文（连续流编辑）' },
   column: { label: '栏', title: '分栏（空间离散，需 begin 标记）' },
-  page: { label: '页', title: '逻辑页——连续流 + 分页缝提示（Word 草稿视图）' },
-  paper: { label: '纸', title: '纸面——真分页预览（切行/续表真渲染，只读）' },
+  spare: { label: '备', title: '备用——逻辑页（连续流 + 分页缝提示），暂不启用' },
+  page: { label: '页', title: '页——A4 真分页预览（切行/续表真渲染，只读）' },
   slide: { label: '览', title: '页览——全部真实页排开看（溢出的逻辑页带「N页」徽章）' },
   present: { label: '示', title: '全屏放映（一次一页，Esc 退出）' }
 }
@@ -141,9 +143,7 @@ const TOP_VIEW_META: Record<string, { icon: string; title: string }> = {
   code: { icon: '本', title: 'Markdown Source' }
 }
 
-const visibleLeaves = computed<Leaf[]>(() =>
-  LEAVES.filter((leaf) => leaf !== 'column' || hasColumns.value)
-)
+const visibleLeaves = computed<Leaf[]>(() => visibleLeafList(hasColumns.value))
 
 // TODO1 #5 — the slider is shared by all views; the active view's duty decides
 // whether it renders and what it adjusts. `slide-zoom` (slide 列表缩放) 接线时
@@ -185,7 +185,8 @@ const handleSliderChange = () => {
   gap: 1px;
 }
 
-/* 编辑组与展示组之间一道分隔，提示二组两根正交轴（视图模型 §1） */
+/* 编辑组与展示组之间一道分隔，提示二组两根正交轴（视图模型 §1）。
+   groupStart 落在 page（UI 名「页」）前，即展示组首叶。 */
 .leaf-btn.groupStart {
   border-left: 1px solid var(--editorColor10);
   padding-left: 7px;

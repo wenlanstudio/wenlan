@@ -50,9 +50,13 @@ extraResources:
     to: icons # ends up at resources/icons/
     filter:
       - '*.ico'
-  # main/ipc/md2slides.ts resolves vendored assets as
-  # process.resourcesPath/resources/md2slides, so they must land one level
-  # deeper than the default extraResources root.
+  # The doubled `resources` is intentional: process.resourcesPath already ends
+  # in .../resources, and main/ipc/md2slides.ts reads
+  # process.resourcesPath/resources/md2slides.
+  # `from: resources` is a gitignored build artifact (scripts/sync-md2slides.mjs
+  # locally, .github/actions/md2slides-assets in CI). If that directory is
+  # missing electron-builder skips this entry SILENTLY and ships an installer
+  # with no deck assets; check-md2slides-assets.mjs guards every build:* script.
   - from: resources
     to: resources
     filter:

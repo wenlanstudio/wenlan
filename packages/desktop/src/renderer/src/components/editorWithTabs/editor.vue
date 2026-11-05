@@ -266,7 +266,7 @@ const rowInput = ref<InputNumberInstance | null>(null)
 // 只读真分片投影（paperProjection.vue），活引擎不再承担纸姿态；zoom 改变
 // 视觉坐标，作为额外重测源。
 usePaperPagination({
-  isActive: () => props.lens === 'page',
+  isActive: () => props.lens === 'spare',
   getRoot: () => editor.value?.domNode ?? null,
   getGeometry: () => parsePaperGeometry(currentFile.value?.markdown ?? ''),
   watchSources: [() => preferencesStore.zoom]
@@ -441,7 +441,7 @@ watch(
 // lens hides blocks instead, which invalidates a block index captured in
 // another lens, so it is deliberately left alone. Paper is the read-only
 // projection's hidden service backend in fullscreen (A″) — no visible surface.
-const FORM_LENSES = ['flow', 'column', 'page', 'paper'] as const
+const FORM_LENSES = ['flow', 'column', 'spare', 'page'] as const
 const isFormLens = (lens: string | null | undefined): lens is (typeof FORM_LENSES)[number] =>
   lens != null && (FORM_LENSES as readonly string[]).includes(lens)
 const restoreLensAnchor = (): void => {

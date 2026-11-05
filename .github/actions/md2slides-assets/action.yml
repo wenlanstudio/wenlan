@@ -1,0 +1,49 @@
+name: Build md2slides runtime assets
+description: >-
+  Produces the vendored md2slides asset bundle from the pinned
+  wenlanstudio/md2slides commit and syncs it into packages/desktop/resources/.
+  That directory is a gitignored build artifact, so every job that calls
+  electron-builder must run this action first.
+
+inputs:
+  ref:
+    description: >-
+      Pinned commit in wenlanstudio/md2slides. Bump deliberately when the
+      asset bundle changes; never track a moving branch from a release build.
+    required: false
+    default: 'dea81c427131532219afd72e94d83b2d4fcd3691'
+
+runs:
+  using: composite
+  steps:
+    - name: Check out md2slides (pinned)
+      uses: actions/checkout@v7.0.1
+      with:
+        repository: wenlanstudio/md2slides
+        ref: ${{ inputs.ref }}
+        path: .ci-md2slides
+        fetch-depth: 1
+        persist-credentials: false
+
+    # Intentionally no setup-node here: the job already installed Node (24 on
+    # release, 22 on PR builds) and re-running setup-node would silently switch
+    # the version for the electron-builder steps that follow. pack:marktext is
+    # pure fs/path bundling and works on both.
+    - name: Build out/marktext
+      shell: bash
+      run: |
+        cd .ci-md2slides
+        npm ci --ignore-scripts --no-audit --no-fund
+        npm run pack:marktext
+
+    - name: Sync into desktop resources
+      shell: bash
+      env:
+        MD2SLIDES_ASSETS: .ci-md2slides/out/marktext
+      run: node scripts/sync-md2slides.mjs
+
+    # sync already runs the check; keep an explicit gate here so the CI log
+    # shows a named failing step even if the sync script is later refactored.
+    - name: Verify asset bundle before packaging
+      shell: bash
+      run: node scripts/check-md2slides-assets.mjs

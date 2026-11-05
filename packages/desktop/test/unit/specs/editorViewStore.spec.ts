@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 // `@/store/editorView` pulls in `@/store/editor` and `@/store/preferences`,
 // which read `window.path.sep` / `window.electron.ipcRenderer` at load and at
@@ -30,12 +33,21 @@ vi.mock('@/services/notification', () => ({
 import {
   LEAVES,
   TOP_VIEWS,
+  HIDDEN_LEAVES,
+  visibleLeafList,
   useEditorViewStore
 } from '@/store/editorView'
 import { useEditorStore } from '@/store/editor'
 
+const switcherPath = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '../../../src/renderer/src/components/viewSwitcher/index.vue'
+)
+
 // 视图模型 v2（docs/design/view-model.md）：文示二支 × 六叶选择。
-// M4.3 起 page（逻辑页）与 paper（物理纸）是两片独立的叶，LEAVES 从 5 扩到 6；
+// 2026-11-05 key 重排：旧 page（逻辑页）→ spare 雪藏为「备」，旧 paper
+// （物理纸）→ page 显示为「页」；用户只见五叶。持久化按 leafSchema 区分
+// 旧 key 与新 key（旧 page→flow、旧 paper→page）。
 // 顺序即分屏左右顺序（细→粗、编辑左展示右）。
 describe('editorView selection model', () => {
   beforeEach(() => {
@@ -43,12 +55,39 @@ describe('editorView selection model', () => {
     setActivePinia(createPinia())
   })
 
-  it('declares the two-branch six-leaf structure (page + paper in the edit branch)', () => {
-    expect(LEAVES).toEqual(['flow', 'column', 'page', 'paper', 'slide', 'present'])
+  it('declares the two-branch six-leaf structure (spare + page)', () => {
+    expect(LEAVES).toEqual(['flow', 'column', 'spare', 'page', 'slide', 'present'])
     expect(TOP_VIEWS).toEqual(['table', 'figure', 'code'])
   })
 
-  it('defaults to page fullscreen with the width slider', () => {
+  // 2026-11-05 命名调整：用户只会看到「文 [栏] 页 览 示」。
+  it('hides only the spare leaf and exposes five visible leaves', () => {
+    expect(HIDDEN_LEAVES).toEqual(['spare'])
+    expect(visibleLeafList(false)).toEqual(['flow', 'page', 'slide', 'present'])
+    expect(visibleLeafList(true)).toEqual(['flow', 'column', 'page', 'slide', 'present'])
+  })
+
+  it('refuses to select the hidden spare leaf from any entry point', () => {
+    const store = useEditorViewStore()
+    store.toggleLeaf('spare')
+    expect(store.leafSelection).toEqual(['flow'])
+    expect(store.activeLeaf).toBe('flow')
+
+    // 正式的「页」= page（旧 key paper），仍可与文分屏。
+    store.toggleLeaf('page')
+    expect(store.leafSelection).toEqual(['flow', 'page'])
+    expect(store.rightLeaf).toBe('page')
+  })
+
+  it('labels page as 页 and the hidden spare as 备 in the switcher', () => {
+    const src = readFileSync(switcherPath, 'utf8')
+    expect(src).toMatch(/page:\s*\{ label: '页'/)
+    expect(src).toMatch(/spare:\s*\{ label: '备'/)
+    // 「备」必须真的被挡在可见叶之外，而不只是换了个字。
+    expect(src).toContain('visibleLeafList(hasColumns.value)')
+  })
+
+  it('defaults to flow fullscreen with the width slider', () => {
     const store = useEditorViewStore()
     expect(store.leafSelection).toEqual(['flow'])
     expect(store.activeLeaf).toBe('flow')
@@ -68,39 +107,39 @@ describe('editorView selection model', () => {
     expect(store.sliderDuty).toBe('none') // 宽度控制被分割条吸收
   })
 
-  it('cross-branch pairs work: (page, slide) needs no column markers', () => {
+  it('cross-branch pairs work: (flow, slide) needs no column markers', () => {
     const store = useEditorViewStore()
     store.toggleLeaf('slide')
     expect(store.leftLeaf).toBe('flow')
     expect(store.rightLeaf).toBe('slide')
   })
 
-  it('paper (M4.3 projection): splits with flow, fullscreen hides the live editor lens', () => {
+  it('page (M4.3 projection): splits with flow, fullscreen hides the live editor lens', () => {
     const store = useEditorViewStore()
-    store.toggleLeaf('paper')
-    expect(store.leafSelection).toEqual(['flow', 'paper'])
+    store.toggleLeaf('page')
+    expect(store.leafSelection).toEqual(['flow', 'page'])
     expect(store.leftLeaf).toBe('flow')
-    expect(store.rightLeaf).toBe('paper') // 右 pane = 只读真分片投影
+    expect(store.rightLeaf).toBe('page') // 右 pane = 只读真分片投影
     expect(store.editorLens).toBe('flow') // 活引擎在左 pane
 
-    store.toggleLeaf('flow') // 摘掉 flow → 全屏 paper
-    expect(store.activeLeaf).toBe('paper')
-    expect(store.editorLens).toBe('paper')
-    // M4.3：纸叶是只读投影，活引擎隐藏留任 bus 服务后端；光标指示无意义。
+    store.toggleLeaf('flow') // 摘掉 flow → 全屏 page
+    expect(store.activeLeaf).toBe('page')
+    expect(store.editorLens).toBe('page')
+    // M4.3：页叶是只读投影，活引擎隐藏留任 bus 服务后端；光标指示无意义。
     expect(store.isEditorVisible).toBe(false)
-    expect(store.sliderDuty).toBe('paper-zoom') // 页缩放，待接线（§5）
+    expect(store.sliderDuty).toBe('page-zoom') // 页缩放，待接线（§5）
 
-    store.toggleLeaf('slide') // 纸×览不可配对 → 单选替换（§5 交互）
+    store.toggleLeaf('slide') // 页×览不可配对 → 单选替换（§5 交互）
     expect(store.leafSelection).toEqual(['slide'])
     expect(store.activeLeaf).toBe('slide')
   })
 
-  it('paper pairs only within the edit branch: (flow, paper) split survives', () => {
+  it('page pairs only within the edit branch: (flow, page) split survives', () => {
     const store = useEditorViewStore()
-    store.toggleLeaf('paper')
-    expect(store.leafSelection).toEqual(['flow', 'paper'])
+    store.toggleLeaf('page')
+    expect(store.leafSelection).toEqual(['flow', 'page'])
     expect(store.leftLeaf).toBe('flow')
-    expect(store.rightLeaf).toBe('paper')
+    expect(store.rightLeaf).toBe('page')
     expect(store.editorLens).toBe('flow')
   })
 
@@ -120,7 +159,7 @@ describe('editorView selection model', () => {
   it('toggling a selected leaf removes it, but the last one is protected', () => {
     const store = useEditorViewStore()
     store.toggleLeaf('present')
-    store.toggleLeaf('present') // 摘掉 present → 回 page 全屏
+    store.toggleLeaf('present') // 摘掉 present → 回 flow 全屏
     expect(store.leafSelection).toEqual(['flow'])
     expect(store.activeLeaf).toBe('flow')
 
@@ -158,7 +197,7 @@ describe('editorView selection model', () => {
     expect(store.activeLeaf).toBe('flow')
   })
 
-  it('focusEditor resets to page fullscreen (deck view Esc path)', () => {
+  it('focusEditor resets to flow fullscreen (deck view Esc path)', () => {
     const store = useEditorViewStore()
     store.toggleLeaf('slide')
     store.focusEditor()
@@ -183,12 +222,12 @@ describe('editorView selection model', () => {
     expect(store.rightRatio).toBe(0.2)
     store.setRightRatio(0.6)
     const raw = JSON.parse(localStorage.getItem('marktext-editor-view') ?? '{}')
-    expect(raw).toMatchObject({ leaves: ['flow'], rightRatio: 0.6 })
+    expect(raw).toMatchObject({ leafSchema: 2, leaves: ['flow'], rightRatio: 0.6 })
   })
 
-  it('fullscreen column falls back to page when the document has no markers', async() => {
+  it('fullscreen column falls back to flow when the document has no markers', async() => {
     const store = useEditorViewStore()
-    store.toggleLeaf('column') // → [page, column] 分屏（无标记也合法）
+    store.toggleLeaf('column') // → [flow, column] 分屏（无标记也合法）
     store.toggleLeaf('flow') // 摘掉 flow → 全屏 column
     // 无 begin 标记 → 健康回退（§4.4 #5）。watch 异步 flush，等一拍。
     await nextTick()
@@ -232,22 +271,52 @@ describe('editorView persistence & migration', () => {
     expect(store.rightRatio).toBe(0.6)
   })
 
-  it('round-trips the paper leaf (new enum value, no migration)', () => {
+  it('round-trips the page leaf (new key, no migration)', () => {
     let store = reloaded()
-    store.toggleLeaf('paper')
-    store.toggleLeaf('flow') // → 全屏 paper
+    store.toggleLeaf('page')
+    store.toggleLeaf('flow') // → 全屏 page
 
     store = reloaded()
-    expect(store.leafSelection).toEqual(['paper'])
-    expect(store.editorLens).toBe('paper')
+    expect(store.leafSelection).toEqual(['page'])
+    expect(store.editorLens).toBe('page')
   })
 
-  it('sanitizes a persisted paper×show pair down to one leaf', () => {
+  it('never restores a fullscreen hidden spare leaf (unclickable state)', () => {
+    // 单叶隐藏态最危险：最后一片点不掉、又没有按钮可切换，会卡死。
+    localStorage.setItem(
+      'marktext-editor-view',
+      JSON.stringify({ leafSchema: 2, leaves: ['spare'] })
+    )
+    const store = reloaded()
+    expect(store.leafSelection).toEqual(['flow'])
+    expect(store.activeLeaf).toBe('flow')
+  })
+
+  it('migrates the legacy paper key to page', () => {
+    localStorage.setItem(
+      'marktext-editor-view',
+      JSON.stringify({ leaves: ['paper'], rightRatio: 0.45 })
+    )
+    expect(reloaded().leafSelection).toEqual(['page'])
+  })
+
+  it('treats a versioned page as the physical-paper leaf, never the old logical page', () => {
+    // 没有 leafSchema 就无法区分「旧 page = 逻辑页」与「新 page = 物理纸」。
+    localStorage.setItem(
+      'marktext-editor-view',
+      JSON.stringify({ leafSchema: 2, leaves: ['page'], rightRatio: 0.45 })
+    )
+    const store = reloaded()
+    expect(store.leafSelection).toEqual(['page'])
+    expect(store.activeLeaf).toBe('page')
+  })
+
+  it('migrates a legacy paper×show pair and sanitizes it down to one leaf', () => {
     localStorage.setItem(
       'marktext-editor-view',
       JSON.stringify({ leaves: ['paper', 'slide'], rightRatio: 0.45 })
     )
-    expect(reloaded().leafSelection).toEqual(['paper']) // 留 LEAVES 序靠前者
+    expect(reloaded().leafSelection).toEqual(['page']) // 留 LEAVES 序靠前者
   })
 
   it('migrates the v1 pair shape (document/page → flow, slides, previewForm)', () => {
@@ -257,7 +326,8 @@ describe('editorView persistence & migration', () => {
     )
     expect(reloaded().leafSelection).toEqual(['flow'])
 
-    // 四叶形状里的 page 键 → flow（给将来 A4「纸面」叶让位）
+    // 旧 page = 逻辑页（现 key spare、已雪藏）→ 落回 flow；
+    // 新版带 leafSchema 的 page 才是物理纸，见上面的迁移护栏。
     localStorage.setItem(
       'marktext-editor-view',
       JSON.stringify({ leaves: ['page', 'slide'], rightRatio: 0.45 })
@@ -277,7 +347,7 @@ describe('editorView persistence & migration', () => {
     )
     expect(reloaded().leafSelection).toEqual(['flow', 'present'])
 
-    // 已废的 document/slide 编辑视图 → 落回 page
+    // 已废的 document/slide 编辑视图 → 落回 flow
     localStorage.setItem(
       'marktext-editor-view',
       JSON.stringify({ mainView: 'document', subView: 'slide' })
@@ -305,7 +375,7 @@ describe('editorView persistence & migration', () => {
       'marktext-editor-view',
       JSON.stringify({ mainView: 'document', subView: 'reading' })
     )
-    // reading→column 的改名链要喂标记，否则全屏 column 的健康回退先把它打回 page
+    // reading→column 的改名链要喂标记，否则全屏 column 的健康回退先把它打回 flow
     expect(reloaded('<!-- begin -->\nA\n<!-- end -->').leafSelection).toEqual(['column'])
   })
 
@@ -367,7 +437,7 @@ describe('「示」 immersive fullscreen presentation', () => {
     expect(setFullScreen).toHaveBeenLastCalledWith(false)
   })
 
-  it('is idempotent: page Esc and leave-full-screen may both fire', () => {
+  it('is idempotent: Esc and leave-full-screen may both fire', () => {
     const store = useEditorViewStore()
     store.enterPresentImmersive()
     store.enterPresentImmersive()

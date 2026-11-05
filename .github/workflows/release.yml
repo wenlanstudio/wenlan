@@ -108,6 +108,13 @@ jobs:
           npm_config_user_agent: 'pnpm'
           USE_ELECTRON_CLANG: ${{ matrix.platform == 'linux' && '0' || '' }}
 
+      # packages/desktop/resources/ is a gitignored build artifact. Without this
+      # step electron-builder silently skips the extraResources entry and ships
+      # an installer with no md2slides assets — it installs fine, then fails at
+      # runtime on every machine (the v1.0.0 release bug).
+      - name: Build md2slides runtime assets
+        uses: ./.github/actions/md2slides-assets
+
       - name: build-linux
         if: matrix.platform == 'linux'
         run: pnpm run build:linux
