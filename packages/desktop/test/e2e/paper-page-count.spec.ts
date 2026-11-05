@@ -100,31 +100,28 @@ const countPdfPages = (data: Buffer): number => {
 }
 
 test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages', () => {
-  // 一文档一实例：启动 → 进页/纸叶全屏 → 读屏测页数（两读稳定）→ 走真实
+  // 一文档一实例：启动 → 进「页」叶全屏 → 读屏测页数（两读稳定）→ 走真实
   // 导出管线数 PDF 页。Windows 冷启动慢，hook/test 超时给足。
+  // 2026-11-05 刻度裁决：原「纸」（物理纸/真分片）改称「页」，原「页」
+  // （逻辑页/活引擎缝）改称「备」并隐藏。因此可见页叶的计数一律在
+  // .mu-paper-deck 上；.mu-paper-overlay 只属于已隐藏的「备」叶。
   const runAcceptance = async(
-    doc: string,
-    leafLabel = '纸'
+    doc: string
   ): Promise<{ screenCount: number; pdfCount: number }> => {
     const launched = await launchWithMarkdown(doc)
     const { app, page } = launched
     try {
       await waitForMenuReady(app)
 
-      // —— 进页/纸叶全屏：(文, 叶) 成对后摘掉 文。 ——
-      const leafBtn = page.locator('.view-switcher .leaf-btn', { hasText: leafLabel })
+      // —— 进「页」叶全屏：(文, 叶) 成对后摘掉 文。 ——
+      const leafBtn = page.locator('.view-switcher .leaf-btn', { hasText: '页' })
       const flowBtn = page.locator('.view-switcher .leaf-btn', { hasText: '文' })
       await leafBtn.waitFor({ state: 'visible', timeout: 15000 })
       await leafBtn.click()
       await flowBtn.click()
 
-      // —— 屏测页数：等 overlay/deck 出数，并确认两读稳定（防抖合帧后不再
-      //    变动）。纸叶 = 只读真分片投影（A″），计数在 .mu-paper-deck 上；
-      //    页叶 = 活引擎缝叠加，计数在 .mu-paper-overlay 上。 ——
-      const counter =
-        leafLabel === '纸'
-          ? page.locator('.mu-paper-deck[data-page-count]')
-          : page.locator('.mu-paper-overlay[data-page-count]')
+      // —— 屏测页数：等 deck 出数，并确认两读稳定（防抖合帧后不再变动）。 ——
+      const counter = page.locator('.mu-paper-deck[data-page-count]')
       await counter.waitFor({ state: 'visible', timeout: 15000 })
       const readCount = async(): Promise<number> =>
         Number(await counter.getAttribute('data-page-count'))
@@ -146,7 +143,7 @@ test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages
       const pdf = await pollForPdfFile(outPath)
       const pdfCount = countPdfPages(pdf)
 
-      expect(screenCount, `${leafLabel} leaf screen page count`).toBeGreaterThan(0)
+      expect(screenCount, 'page leaf screen page count').toBeGreaterThan(0)
       expect(pdfCount, 'printToPDF page count').toBeGreaterThan(0)
       return { screenCount, pdfCount }
     } finally {
@@ -163,13 +160,23 @@ test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages
     expect(screenCount).toBe(pdfCount)
   })
 
-  test('the page leaf (logical paper) matches print too (评审补裁：页钉纸面版式基)', async() => {
-    test.setTimeout(150_000)
-    // 同一文档走页叶：版式基同纸叶钉死纸面宽度 → 缝叠加的页数与纸叶、
-    // 打印三方一致（页宽若游离，等式即破）。
-    const { screenCount, pdfCount } = await runAcceptance(DOC, '页')
-    expect(screenCount).toBe(2)
-    expect(screenCount).toBe(pdfCount)
+  test('the retired logical-page leaf stays hidden (刻度裁决：旧「页」→「备」隐藏)', async() => {
+    // 旧「页」叶（活引擎缝叠加 / .mu-paper-overlay）已改名「备」并隐藏，
+    // 刻度裁决后用户只见「文 [栏] 页 览 示」。这里守住「不再出现第二套
+    // 页计数」这一语义，避免旧 data-lens 分支被误重新接上。
+    const { app, page } = await launchWithMarkdown(DOC)
+    try {
+      await waitForMenuReady(app)
+      const labels = (await page.locator('.view-switcher .leaf-btn').allInnerTexts()).map(s =>
+        s.trim()
+      )
+      expect(labels).not.toContain('备')
+      expect(labels).not.toContain('纸')
+      expect(labels).toContain('页')
+      expect(await page.locator('.mu-paper-overlay').count()).toBe(0)
+    } finally {
+      await app.close()
+    }
   })
 
   test('an oversized paragraph fragments at line boundaries on screen and in print alike (v2 行级切分判别)', async() => {
@@ -199,14 +206,15 @@ test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages
       await leafBtn.click()
       await flowBtn.click()
 
-      const overlay = page.locator('.mu-paper-overlay[data-page-count]')
-      await overlay.waitFor({ state: 'visible', timeout: 15000 })
+      const deck = page.locator('.mu-paper-deck[data-page-count]')
+      await deck.waitFor({ state: 'visible', timeout: 15000 })
       await page.waitForTimeout(700)
-      const screenCount = Number(await overlay.getAttribute('data-page-count'))
+      const screenCount = Number(await deck.getAttribute('data-page-count'))
 
-      // 判别器：行界切分缝真实存在（v1 时代只会是穿缝虚线，无 data-split）。
-      const splitSeams = await page.locator('.mu-paper-seam[data-split="lines"]').count()
-      expect(splitSeams, 'line-boundary split seams should exist').toBeGreaterThanOrEqual(1)
+      // 判别器：真分片投影把内容结构性搬进页卡，卡片数与屏显页数严格一致
+      // （旧逻辑页的 .mu-paper-seam[data-split] 随「备」叶一起隐藏）。
+      const cardCount = await page.locator('.mu-paper-page').count()
+      expect(cardCount, 'true-fragment page cards should match the page count').toBe(screenCount)
 
       const outPath = path.join(
         fs.mkdtempSync(path.join(os.tmpdir(), 'mt-paper-split-')),
@@ -264,7 +272,7 @@ test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages
     const { app, page } = launched
     try {
       await waitForMenuReady(app)
-      const leafBtn = page.locator('.view-switcher .leaf-btn', { hasText: '纸' })
+      const leafBtn = page.locator('.view-switcher .leaf-btn', { hasText: '页' })
       const flowBtn = page.locator('.view-switcher .leaf-btn', { hasText: '文' })
       await leafBtn.waitFor({ state: 'visible', timeout: 15000 })
       await leafBtn.click()
@@ -287,7 +295,7 @@ test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages
     const { app, page } = launched
     try {
       await waitForMenuReady(app)
-      const leafBtn = page.locator('.view-switcher .leaf-btn', { hasText: '纸' })
+      const leafBtn = page.locator('.view-switcher .leaf-btn', { hasText: '页' })
       const flowBtn = page.locator('.view-switcher .leaf-btn', { hasText: '文' })
       await leafBtn.waitFor({ state: 'visible', timeout: 15000 })
       await leafBtn.click()

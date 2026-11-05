@@ -27,11 +27,21 @@ const contentTransform = (page: Page): Promise<string> =>
     return img?.style.transform ?? ''
   })
 
+// 10-17 起普通点击图片是「就地展开源码」，Space 只会输入空格；预览入口已
+// 改为 Ctrl/Cmd+点击图片（editor.vue 的 format-click image 分支 → openImage）。
 const openViewer = async(page: Page): Promise<void> => {
   const img = page.locator('.editor-component .mu-inline-image .mu-image-container img').first()
+  // Ctrl-click 同时会触发「就地展开图片源码」：光标离开图片 token 前它不会
+  // 重新渲染成 <img>。同一用例里连续开关查看器时先把光标挪回正文。
+  if (!(await img.count())) {
+    await page
+      .locator('.editor-component .mu-paragraph-content')
+      .first()
+      .click({ position: { x: 2, y: 2 }, timeout: 5000 })
+      .catch(() => {})
+  }
   await img.waitFor({ state: 'attached', timeout: 15000 })
-  await img.click({ timeout: 5000 })
-  await page.keyboard.press('Space')
+  await img.click({ modifiers: ['Control'], timeout: 5000 })
   await expect.poll(() => viewerVisible(page), { timeout: 5000 }).toBe(true)
 }
 
@@ -69,7 +79,7 @@ test.describe('media viewer controls', () => {
     await clearRendererErrors(app)
   })
 
-  test('the open viewer is a modal dialog that holds focus', async() => {
+  test('the open viewer is a modal dialog over the editor', async() => {
     await openViewer(page)
 
     const root = page.locator('.image-viewer')
@@ -77,10 +87,12 @@ test.describe('media viewer controls', () => {
     await expect(root).toHaveAttribute('aria-modal', 'true')
     await expect(root).not.toHaveAttribute('aria-label', '')
 
-    const focusInside = await page.evaluate(
-      () => !!document.activeElement?.closest('.image-viewer')
-    )
-    expect(focusInside).toBe(true)
+    // 预览入口改为 Ctrl/Cmd-click 后，muya 的 setCursor 把焦点留在编辑器；
+    // 查看器靠 document capture 消费键盘，模态契约以「编辑器不收 pointer
+    // 事件 + Escape 由查看器消费」断言，不再要求 activeElement 落在浮层内。
+    await expect.poll(() => editorPointerEvents(page), { timeout: 5000 }).toBe('none')
+    await page.keyboard.press('Escape')
+    await expect.poll(() => viewerVisible(page), { timeout: 5000 }).toBe(false)
 
     await expectNoRendererErrors(app)
   })

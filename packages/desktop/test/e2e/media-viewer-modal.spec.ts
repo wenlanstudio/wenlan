@@ -24,11 +24,12 @@ const viewerVisible = (page: Page): Promise<boolean> =>
     return !!el && getComputedStyle(el).display !== 'none'
   })
 
+// 普通点击图片现在是「就地展开源码」，Space 只会输入空格；预览入口已改为
+// Cmd/Ctrl-click（editor.vue 的 format-click image 分支 → openImage）。
 const openViewer = async(page: Page): Promise<void> => {
   const img = page.locator('.editor-component .mu-inline-image .mu-image-container img').first()
   await img.waitFor({ state: 'attached', timeout: 15000 })
-  await img.click({ timeout: 5000 })
-  await page.keyboard.press('Space')
+  await img.click({ modifiers: ['Control'], timeout: 5000 })
   await expect.poll(() => viewerVisible(page), { timeout: 5000 }).toBe(true)
 }
 
@@ -164,13 +165,13 @@ test.describe('media viewer is modal to the keyboard', () => {
   test('Space does not re-open the viewer over itself', async() => {
     await openViewer(page)
 
-    const focusBefore = await page.evaluate(
-      () => !!document.activeElement?.closest('.image-viewer')
-    )
-    expect(focusBefore).toBe(true)
+    // 预览入口改为 Ctrl/Cmd-click 后焦点留在编辑器；查看器靠 document
+    // capture 消费键盘，模态语义不依赖 activeElement 落在浮层内。
+    expect(await viewerVisible(page)).toBe(true)
 
     await page.keyboard.press('Space')
     await page.waitForTimeout(300)
+    expect(await viewerVisible(page)).toBe(true) // Space 不应在查看器上再叠一层
 
     await page.keyboard.press('Escape')
     await expect.poll(() => viewerVisible(page), { timeout: 5000 }).toBe(false)

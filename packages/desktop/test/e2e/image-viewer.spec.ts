@@ -27,16 +27,15 @@ const viewerVisible = (page: Page): Promise<boolean> =>
 const viewerImgCount = (page: Page): Promise<number> =>
   page.locator('.image-viewer img').count()
 
-// Click the rendered inline image to populate the engine's selected-image
-// state (ImageSelection._handleClick → selectImage). Returns the clicked
-// element handle so the caller can keep driving it.
-const selectImage = async(page: Page): Promise<void> => {
+// 10-17 起普通点击图片是「就地展开源码」，Space 只会输入空格；预览入口改为
+// Cmd/Ctrl-click（editor.vue 的 format-click image 分支 → mediaViewer.openImage）。
+const openImageViewer = async(page: Page): Promise<void> => {
   const img = page.locator('.editor-component .mu-inline-image .mu-image-container img').first()
   await img.waitFor({ state: 'attached', timeout: 15000 })
-  await img.click({ timeout: 5000 })
+  await img.click({ timeout: 5000, modifiers: [modifierKey] })
 }
 
-test.describe('image preview (Space-to-preview + Esc close)', () => {
+test.describe('image preview (Cmd/Ctrl-click + Esc close)', () => {
   let app: ElectronApplication
   let page: Page
 
@@ -66,7 +65,7 @@ test.describe('image preview (Space-to-preview + Esc close)', () => {
       await expect.poll(() => viewerVisible(page), { timeout: 5000 }).toBe(false)
     }
     // Restore a real text caret in the image's paragraph before each test.
-    // After a Space-preview/Escape cycle the paragraph stays the active block
+    // After a preview/Escape cycle the paragraph stays the active block
     // but its DOM selection is null; re-clicking the image from that state
     // trips a pre-existing engine `blurHandler` crash (see the `bug` report) —
     // unrelated to the viewer feature under test. Clicking the paragraph
@@ -90,9 +89,8 @@ test.describe('image preview (Space-to-preview + Esc close)', () => {
     expect(await viewerVisible(page)).toBe(false)
   })
 
-  test('Space on a selected image opens the .image-viewer overlay', async() => {
-    await selectImage(page)
-    await page.keyboard.press('Space')
+  test('Cmd/Ctrl-click on an image opens the .image-viewer overlay', async() => {
+    await openImageViewer(page)
 
     await expect.poll(() => viewerVisible(page), { timeout: 5000 }).toBe(true)
     await expect.poll(() => viewerImgCount(page), { timeout: 5000 }).toBeGreaterThanOrEqual(1)
@@ -104,8 +102,7 @@ test.describe('image preview (Space-to-preview + Esc close)', () => {
   })
 
   test('Esc closes the viewer and destroys its mounted image', async() => {
-    await selectImage(page)
-    await page.keyboard.press('Space')
+    await openImageViewer(page)
     await expect.poll(() => viewerVisible(page), { timeout: 5000 }).toBe(true)
 
     await page.keyboard.press('Escape')
@@ -117,11 +114,10 @@ test.describe('image preview (Space-to-preview + Esc close)', () => {
     await expectNoRendererErrors(app)
   })
 
-  test('Space on a selected image does NOT insert a literal space into the markdown', async() => {
+  test('opening the preview does NOT change the markdown', async() => {
     const before = await getMarkdownContent(page, app)
 
-    await selectImage(page)
-    await page.keyboard.press('Space')
+    await openImageViewer(page)
     await expect.poll(() => viewerVisible(page), { timeout: 5000 }).toBe(true)
 
     // Close the viewer before reading the document so getMarkdownContent's
@@ -131,7 +127,7 @@ test.describe('image preview (Space-to-preview + Esc close)', () => {
 
     const after = await getMarkdownContent(page, app)
     expect(after.trim()).toBe(before.trim())
-    // The original image markdown is intact (no stray space injected).
+    // The original image markdown is intact (no stray edit injected).
     expect(after).toContain(`![alt](${SVG_DATA_URI})`)
 
     await expectNoRendererErrors(app)

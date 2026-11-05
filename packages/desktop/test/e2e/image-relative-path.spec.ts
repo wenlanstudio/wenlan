@@ -102,7 +102,11 @@ test.describe('Relative-path image resolves to a DIRNAME-anchored file:// URL', 
     // relative path and contains the document directory.
     const withoutQuery = value.split('?')[0]
     expect(withoutQuery.endsWith('assets/cat.png')).toBe(true)
-    const expectedSrc = `file://${docDir.replace(/\\/g, '/')}/assets/cat.png`
+    // Chromium now emits the canonical three-slash form (`file:///D:/...` on
+    // Windows, `file:///tmp/...` on POSIX); the old two-slash expectation
+    // only held before the Electron/Chromium URL normalisation change.
+    const docDirUrl = docDir.replace(/\\/g, '/')
+    const expectedSrc = `file://${docDirUrl.startsWith('/') ? '' : '/'}${docDirUrl}/assets/cat.png`
     expect(withoutQuery).toBe(expectedSrc)
   })
 
@@ -115,7 +119,10 @@ test.describe('Relative-path image resolves to a DIRNAME-anchored file:// URL', 
     const withoutQuery = (src as string).split('?')[0]
     // Convert the file:// URL back to a filesystem path and confirm the engine
     // resolved it to the on-disk sibling we wrote in setup.
-    const onDiskPath = withoutQuery.replace(/^file:\/\//, '')
+    // `file:///D:/...` leaves a leading slash after stripping the scheme on
+    // Windows; `fs.existsSync('/D:/...')` is not the same path.
+    const stripped = withoutQuery.replace(/^file:\/\//, '')
+    const onDiskPath = process.platform === 'win32' ? stripped.replace(/^\//, '') : stripped
     expect(fs.existsSync(onDiskPath)).toBe(true)
     expect(onDiskPath).toBe(path.join(docDir, 'assets', 'cat.png').replace(/\\/g, '/'))
   })
@@ -155,8 +162,8 @@ test.describe('Relative-path image in a directory named with URL delimiters (#52
       .getAttribute('src')
     expect(src).not.toBeNull()
     const url = new URL(src as string)
-    expect(decodeURIComponent(url.pathname)).toBe(
-      path.join(docDir, 'assets', 'cat.png').replace(/\\/g, '/')
-    )
+    const decoded = decodeURIComponent(url.pathname)
+    const onDiskPath = process.platform === 'win32' ? decoded.replace(/^\//, '') : decoded
+    expect(onDiskPath).toBe(path.join(docDir, 'assets', 'cat.png').replace(/\\/g, '/'))
   })
 })

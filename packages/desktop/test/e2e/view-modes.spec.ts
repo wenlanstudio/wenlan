@@ -100,11 +100,14 @@ test.describe('View modes', () => {
   test('Toggle source-code mode swaps editor for CodeMirror', async() => {
     await clickMenuById(app, 'sourceCodeModeMenuItem')
     await page.waitForSelector('.source-code .CodeMirror', { state: 'attached', timeout: 10000 })
-    await expect(page.locator('.editor-wrapper')).toHaveClass(/(^|\s)source(\s|$)/)
+    // 源码模式现在把整个 .editor-wrapper 换成 .source-code（不再只是给
+    // wrapper 加 `source` class），所以旧 toHaveClass(/source/) 永远等不到。
+    expect(await page.locator('.editor-wrapper').count()).toBe(0)
     await clickMenuById(app, 'sourceCodeModeMenuItem')
     await page.waitForFunction(() => !document.querySelector('.source-code'), null, {
       timeout: 10000
     })
+    await expect(page.locator('.editor-wrapper')).toBeVisible()
   })
 
   // Item 155 — In source-code mode the Typewriter and Focus menu items are
