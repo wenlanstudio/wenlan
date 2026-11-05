@@ -29,18 +29,18 @@
  */
 
 :root {
-    --paper-page-width: 210mm;
-    --paper-page-height: 297mm;
-    --paper-page-gap: 8mm; /* 页间灰隙（值承自 util/paperPagination PAPER_PAGE_GAP_MM） */
-    --paper-margin-top: 20mm;
-    --paper-margin-bottom: 20mm;
-    --paper-margin-x: 15mm;
-    --paper-font-size: 16px;
-    --paper-line-height: 1.5;
-    --paper-text-color: #1f2328;
-    --paper-border-color: #d1d9e0;
-    --paper-code-bg: #f6f8fa;
-    --paper-quote-color: #59636e;
+  --paper-page-width: 210mm;
+  --paper-page-height: 297mm;
+  --paper-page-gap: 8mm; /* 页间灰隙（值承自 util/paperPagination PAPER_PAGE_GAP_MM） */
+  --paper-margin-top: 20mm;
+  --paper-margin-bottom: 20mm;
+  --paper-margin-x: 15mm;
+  --paper-font-size: 16px;
+  --paper-line-height: 1.5;
+  --paper-text-color: #1f2328;
+  --paper-border-color: #d1d9e0;
+  --paper-code-bg: #f6f8fa;
+  --paper-quote-color: #59636e;
 }
 
 /* —— 引擎度量对齐（字号/行高/字体 = 打印链实际值） —— */
@@ -49,18 +49,19 @@
 [data-lens='page'] .mu-editor,
 .paper-projection .mu-editor,
 .paper-projection .mu-paper-page {
-    --mu-font-size: var(--paper-font-size) !important;
-    --mu-line-height: var(--paper-line-height) !important;
-    /* gh-css pre 为 85%（相对正文 16px），非偏好里的 codeFontSize */
-    --mu-code-font-size: 85% !important;
-    /* exportStyle.css 的正文栈 */
-    --mu-font-family: 'Noto Music', 'Noto Sans Math', -apple-system, 'Segoe UI', Helvetica, Arial,
-        sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji' !important;
-    /* gh-css pre 的等宽栈 */
-    --mu-code-font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
-        'Liberation Mono', monospace !important;
+  --mu-font-size: var(--paper-font-size) !important;
+  --mu-line-height: var(--paper-line-height) !important;
+  /* gh-css pre 为 85%（相对正文 16px），非偏好里的 codeFontSize */
+  --mu-code-font-size: 85% !important;
+  /* exportStyle.css 的正文栈 */
+  --mu-font-family:
+    'Noto Music', 'Noto Sans Math', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji' !important;
+  /* gh-css pre 的等宽栈 */
+  --mu-code-font-family:
+    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace !important;
 
-    color: var(--paper-text-color);
+  color: var(--paper-text-color);
 }
 
 /* —— 页/纸面容器：纸卡片即 .mu-container（连续纸；页缝/页码 M2 叠加） —— */
@@ -68,27 +69,26 @@
 [data-lens='spare'] .mu-container,
 [data-lens='page'] .mu-container,
 .paper-projection .mu-container {
-    box-sizing: border-box;
-    width: var(--paper-page-width) !important;
-    max-width: none !important;
-    min-height: var(--paper-page-height) !important;
-    margin: 0 auto !important;
-    /* 底 padding 保打字滚动舒适：跟随实测编辑视口（活引擎）/ 工作区（只读
+  box-sizing: border-box;
+  width: var(--paper-page-width) !important;
+  max-width: none !important;
+  min-height: var(--paper-page-height) !important;
+  margin: 0 auto !important;
+  /* 底 padding 保打字滚动舒适：跟随实测编辑视口（活引擎）/ 工作区（只读
        投影），不是整窗 100vh —— 底部工具窗口展开时那半屏是面板的地盘。 */
-    padding: var(--paper-margin-top) var(--paper-margin-x)
-        var(--editorViewportHeight, var(--workspaceHeight, 100vh))
-        var(--paper-margin-x) !important;
+  padding: var(--paper-margin-top) var(--paper-margin-x)
+    var(--editorViewportHeight, var(--workspaceHeight, 100vh)) var(--paper-margin-x) !important;
 
-    color: var(--paper-text-color);
-    background: #fff !important;
-    box-shadow:
-        0 1px 3px rgba(0, 0, 0, 0.16),
-        0 0 0 1px rgba(0, 0, 0, 0.06);
+  color: var(--paper-text-color);
+  background: #fff !important;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.16),
+    0 0 0 1px rgba(0, 0, 0, 0.06);
 }
 
 /* 分屏右 pane 的纸面投影：纸卡与 pane 边缘留口气 */
 .paper-projection {
-    padding: 16px 0;
+  padding: 16px 0;
 }
 
 /* —— 块度量镜像 github-markdown-css@5.9（gh 值，非 blockSyntax 值） —— */
@@ -97,7 +97,7 @@
 [data-lens='spare'] .mu-container p,
 [data-lens='page'] .mu-container p,
 .paper-projection .mu-container p {
-    margin: 0 0 10px;
+  margin: 0 0 10px;
 }
 
 /* 标题：1.5rem/1rem、行高 1.25、gh 字号阶；h1/h2 带 .3em 底距与分隔线 */
@@ -119,49 +119,49 @@
 .paper-projection .mu-container h4,
 .paper-projection .mu-container h5,
 .paper-projection .mu-container h6 {
-    margin: 1.5rem 0 1rem;
-    color: var(--paper-text-color); /* 压过主题的 --h1-color/--editor-color-80 */
-    line-height: 1.25;
+  margin: 1.5rem 0 1rem;
+  color: var(--paper-text-color); /* 压过主题的 --h1-color/--editor-color-80 */
+  line-height: 1.25;
 }
 
 [data-lens='spare'] .mu-container h1,
 [data-lens='page'] .mu-container h1,
 .paper-projection .mu-container h1 {
-    font-size: 2em;
-    padding-bottom: 0.3em;
-    border-bottom: 1px solid var(--paper-border-color);
+  font-size: 2em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--paper-border-color);
 }
 
 [data-lens='spare'] .mu-container h2,
 [data-lens='page'] .mu-container h2,
 .paper-projection .mu-container h2 {
-    font-size: 1.5em;
-    padding-bottom: 0.3em;
-    border-bottom: 1px solid var(--paper-border-color);
+  font-size: 1.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--paper-border-color);
 }
 
 [data-lens='spare'] .mu-container h3,
 [data-lens='page'] .mu-container h3,
 .paper-projection .mu-container h3 {
-    font-size: 1.25em;
+  font-size: 1.25em;
 }
 
 [data-lens='spare'] .mu-container h4,
 [data-lens='page'] .mu-container h4,
 .paper-projection .mu-container h4 {
-    font-size: 1em;
+  font-size: 1em;
 }
 
 [data-lens='spare'] .mu-container h5,
 [data-lens='page'] .mu-container h5,
 .paper-projection .mu-container h5 {
-    font-size: 0.875em;
+  font-size: 0.875em;
 }
 
 [data-lens='spare'] .mu-container h6,
 [data-lens='page'] .mu-container h6,
 .paper-projection .mu-container h6 {
-    font-size: 0.85em;
+  font-size: 0.85em;
 }
 
 /* ul/ol：0 0 1rem、缩进 2em（gh :424 组 + :328） */
@@ -171,8 +171,8 @@
 [data-lens='page'] .mu-container ol,
 .paper-projection .mu-container ul,
 .paper-projection .mu-container ol {
-    margin: 0 0 1rem;
-    padding-left: 2em;
+  margin: 0 0 1rem;
+  padding-left: 2em;
 }
 
 /* dl/table/pre 同组：0 0 1rem（gh :424）。表格单元格 6px 13px 两边本就一致 */
@@ -185,45 +185,59 @@
 .paper-projection .mu-container dl,
 .paper-projection .mu-container .mu-table,
 .paper-projection .mu-container pre {
-    margin: 0 0 1rem;
-    padding: 0;
+  margin: 0 0 1rem;
+  padding: 0;
 }
 
 [data-lens='spare'] .mu-container pre,
 [data-lens='page'] .mu-container pre,
 .paper-projection .mu-container pre {
-    padding: 1rem;
-    line-height: 1.45; /* gh pre 行高独立于正文 */
-    background: var(--paper-code-bg);
-    border-radius: 6px;
+  padding: 1rem;
+  line-height: 1.45; /* gh pre 行高独立于正文 */
+  background: var(--paper-code-bg);
+  border-radius: 6px;
+  /* #7：与打印链（exportStyle `.markdown-body pre{white-space:pre-wrap}`）
+       同源——屏打行带一致，长代码行两侧同为换行而非屏侧溢出。 */
+  white-space: pre-wrap;
+}
+
+/* #7 边界①修复：muya 的内容 span 自设 `white-space: pre`（编辑面不折行），
+ * 继承链盖过外层 pre 的 pre-wrap——外层规则对折行根本不生效（e2e 探针实
+ * 证：单逻辑行横向溢出、视觉行只有 1）。纸面透镜里内容 span 必须显式跟
+ * pre-wrap 对齐，屏打两侧折点才同源；行带测量（文本节点 range 矩形）随之
+ * 拿到视觉行级 top，折行处也能切缝。 */
+[data-lens='spare'] .mu-container pre .mu-codeblock-content,
+[data-lens='page'] .mu-container pre .mu-codeblock-content,
+.paper-projection .mu-container pre .mu-codeblock-content {
+  white-space: pre-wrap;
 }
 
 /* blockquote：margin 0、左右 1em、.25em 左线（gh） */
 [data-lens='spare'] .mu-container blockquote,
 [data-lens='page'] .mu-container blockquote,
 .paper-projection .mu-container blockquote {
-    margin: 0;
-    padding: 0 1em;
-    border-left: 0.25em solid var(--paper-border-color);
-    color: var(--paper-quote-color);
+  margin: 0;
+  padding: 0 1em;
+  border-left: 0.25em solid var(--paper-border-color);
+  color: var(--paper-quote-color);
 }
 
 /* hr：高 .25em、1.5rem 0（gh） */
 [data-lens='spare'] .mu-container hr,
 [data-lens='page'] .mu-container hr,
 .paper-projection .mu-container hr {
-    height: 0.25em;
-    margin: 1.5rem 0;
-    padding: 0;
-    background: var(--paper-border-color);
-    border: 0;
+  height: 0.25em;
+  margin: 1.5rem 0;
+  padding: 0;
+  background: var(--paper-border-color);
+  border: 0;
 }
 
 /* figure（非表格）：1em 2.5rem（gh） */
 [data-lens='spare'] .mu-container figure:not(.mu-table),
 [data-lens='page'] .mu-container figure:not(.mu-table),
 .paper-projection .mu-container figure:not(.mu-table) {
-    margin: 1em 2.5rem;
+  margin: 1em 2.5rem;
 }
 
 /* —— 分页投影（M2）：缝 + 页码徽章，测量结果的绝对定位叠加 —— */
@@ -240,41 +254,41 @@
 [data-lens='spare'] .mu-editor,
 [data-lens='page'] .mu-editor,
 .paper-projection .mu-editor:not(.paper-projection-muya) {
-    position: relative;
-    /* 圈住堆叠上下文：纸姿态卡层 z:-1 沉到正文之下，但不跌出引擎背景。 */
-    isolation: isolate;
+  position: relative;
+  /* 圈住堆叠上下文：纸姿态卡层 z:-1 沉到正文之下，但不跌出引擎背景。 */
+  isolation: isolate;
 }
 
 .mu-paper-overlay {
-    position: absolute;
-    z-index: 10;
-    pointer-events: none;
+  position: absolute;
+  z-index: 10;
+  pointer-events: none;
 }
 
 /* 缝线：1px 虚线横贯纸面；穿缝（超整页块内）同款虚线，降不透明度示弱。 */
 .mu-paper-seam {
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 0;
-    border-top: 1px dashed var(--paper-border-color);
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed var(--paper-border-color);
 }
 
 .mu-paper-seam.crossed {
-    opacity: 0.55;
+  opacity: 0.55;
 }
 
 /* 页码徽章：页尾右缘，白底小字压在缝线上方。 */
 .mu-paper-page-num {
-    position: absolute;
-    right: 6px;
-    z-index: 1;
-    padding: 0 4px;
-    font-size: 10px;
-    line-height: 14px;
-    color: #9198a1;
-    background: #fff;
-    font-variant-numeric: tabular-nums;
+  position: absolute;
+  right: 6px;
+  z-index: 1;
+  padding: 0 4px;
+  font-size: 10px;
+  line-height: 14px;
+  color: #9198a1;
+  background: #fff;
+  font-variant-numeric: tabular-nums;
 }
 
 /* 已知留白（M2 视页数验收裁决）：内联 code 字号 gh 为 1em、muya 为 .85em，
@@ -285,19 +299,19 @@
 /* 卡层：z:-1 沉到正文之下（.mu-editor isolation:isolate 圈住堆叠上下文，
    卡画在引擎背景之上、内容之下）；每页一张白卡，白底/阴影自容器移交。 */
 .mu-paper-cards {
-    position: absolute;
-    z-index: -1;
-    pointer-events: none;
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
 }
 
 .mu-paper-card {
-    position: absolute;
-    left: 0;
-    right: 0;
-    background: #fff;
-    box-shadow:
-        0 1px 3px rgba(0, 0, 0, 0.16),
-        0 0 0 1px rgba(0, 0, 0, 0.06);
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: #fff;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.16),
+    0 0 0 1px rgba(0, 0, 0, 0.06);
 }
 
 /* 推挤类挂上时容器自身透明——白卡由卡层画（选择器须压过上方共享规则
@@ -306,8 +320,8 @@
    随之失去挂载点，规则留作回退路径存档。） */
 [data-lens='page'] .mu-container.mu-paper-pushed,
 .paper-projection .mu-container.mu-paper-pushed {
-    background: transparent !important;
-    box-shadow: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 /* —— 纸叶真分片投影（M4.3b，A″）：页卡常流堆叠 —— */
@@ -317,26 +331,34 @@
    差异——置于共享规则之后，同特异性 !important 由源序取胜：
    margin 换成页间灰隙、底 padding 从 100vh 打字余量换回纸面下边距。 */
 .paper-projection .mu-paper-page {
-    position: relative;
-    margin: 0 0 var(--paper-page-gap) !important;
-    padding: var(--paper-margin-top) var(--paper-margin-x) var(--paper-margin-bottom) !important;
-    /* 字体三元组须直设：font-family/line-height 在 muya 里挂在 .mu-editor
+  position: relative;
+  margin: 0 0 var(--paper-page-gap) !important;
+  padding: var(--paper-margin-top) var(--paper-margin-x) var(--paper-margin-bottom) !important;
+  /* 字体三元组须直设：font-family/line-height 在 muya 里挂在 .mu-editor
        上、块靠继承取值——块搬进卡后脱离 .mu-editor 血统，变量覆盖救不了
        直设属性（e2e 卡高断言抓到过：Open Sans/1.6 回潮，卡高出一截）。 */
-    font-family: 'Noto Music', 'Noto Sans Math', -apple-system, 'Segoe UI', Helvetica, Arial,
-        sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
-    font-size: var(--paper-font-size);
-    line-height: var(--paper-line-height);
+  font-family:
+    'Noto Music',
+    'Noto Sans Math',
+    -apple-system,
+    'Segoe UI',
+    Helvetica,
+    Arial,
+    sans-serif,
+    'Apple Color Emoji',
+    'Segoe UI Emoji';
+  font-size: var(--paper-font-size);
+  line-height: var(--paper-line-height);
 }
 
 .paper-projection .mu-paper-page .mu-paper-page-num {
-    top: 4px;
+  top: 4px;
 }
 
 /* 段落切分的裁剪窗：BFC——原块 margin 不外塌，由执行器以窗 margin-bottom
    补回自然间隙；高度由执行器按行界写入。 */
 .paper-projection .mu-paper-clip {
-    overflow: hidden;
+  overflow: hidden;
 }
 
 /* 续表外壳：执行器给克隆 figure 加 mu-paper-table-cont 类（e2e 验「续表

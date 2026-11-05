@@ -1,9 +1,5 @@
 import { onScopeDispose, watch, type WatchSource } from 'vue'
-import {
-  cutLinesFitting,
-  countFittingPrefix,
-  type LineCut,
-} from '@/vendor/md2slides/layout-core'
+import { cutLinesFitting, countFittingPrefix, type LineCut } from '@/vendor/md2slides/layout-core'
 
 /**
  * 纸面叶（paper）分页测量 —— 视图模型 §5 / M2。
@@ -114,10 +110,7 @@ const HEADING_RE = /^h[1-6]$/
  * keep-together 贪心分页（纯函数，块序按文档序）。
  * `blocks` 的 top/bottom 以内容盒顶为 0；返回的 y 同坐标系。
  */
-export const paginateBlocks = (
-  blocks: PaperBlockBox[],
-  pageContentHeight: number
-): PaperLayout => {
+export const paginateBlocks = (blocks: PaperBlockBox[], pageContentHeight: number): PaperLayout => {
   const seams: PaperSeam[] = []
   // 页首块簿记：pageStarts[k] = 第 k 页首块的块序（纸姿态推挤的对齐目标）。
   // 每道缝开一个新页：keep-together/强制/标题回避/间隙跨界的缝开在当前块，
@@ -230,22 +223,38 @@ export const paginateBlocks = (
 }
 
 // —— v2：行级拟合引擎（M4.3a 纯层，view-model §5 切页策略分级 / 裁决 A）——
-// 运行时仍在 v1（翻转时同拍切换：页叶缝升行级 + 打印链去块级 avoid，
-// 屏打两套切分语义不许分先后）。
+// 运行时已翻转（M4.3b 同拍切换）：页叶缝升行级 + 打印链去块级 avoid，屏打
+// 两套切分语义不许分先后。#7 扩展：代码块（行级）/列表/引用（子单元级）
+// 纳入同一引擎——打印侧本就原生切分这几类块，屏测此前 keep-together 反而
+// 破等价（大片空白的来源）。
 
 /** v2 块子结构：块内可切分信息（measureV2 填充；纯层单测给合成值）。 */
 export interface PaperBlockBoxV2 extends PaperBlockBox {
-  /** 段落行盒高序列（P；行盒间无 margin）。给了就走内核 cutLinesFitting。 */
+  /** 段落/代码块行盒高序列（P；行盒间无 margin）。给了就走内核 cutLinesFitting。 */
   lines?: number[]
   /** 表格：表头高（续表每页重复占一份）+ 各行高。 */
   table?: { headH: number; rowHeights: number[] }
+  /**
+   * 子单元高序列（列表 = li / 引用 = 直接子块）：仅单元界可切（镜像
+   * Chromium 块级碎片化里「兄弟边界任意可断」）；超页子单元降级并入其
+   * 内部文本行顶（边界②：镜像 Chromium 进子元素按行盒断开）。边界法
+   * 构造：首单元含块顶 padding、末单元含块底 padding，sum = 块高，缝 y
+   * = 块顶 + 前缀和，恰落切点顶。
+   */
+  kids?: number[]
+  /**
+   * 与 kids 平行的单元归属（子元素序；纯层单测合成数据可缺省 = 平铺
+   * 逐单元对应）。真分片执行器据此把单元区间还原成 DOM：整属的子元素
+   * 整个搬移，跨段（超页子单元）的做裁剪手术。
+   */
+  kidOwners?: number[]
 }
 
 export interface PaperSeamV2 {
   y: number
   crossed: boolean
   /** 缝落在块内部时的切点（纸叶真分片的渲染依据；页叶只用 y）。 */
-  split?: { block: number; kind: 'lines' | 'table-rows'; keep: number }
+  split?: { block: number; kind: 'lines' | 'table-rows' | 'kids'; keep: number }
 }
 
 export interface PaperLayoutV2 {
@@ -264,10 +273,17 @@ const sum = (xs: number[]): number => xs.reduce((a, c) => a + c, 0)
  *   - P（`lines` 给了）→ 内核 `cutLinesFitting`：fits / before（整段推下页）
  *     / at+keep（keep 行留本页，缝落行界 y = 块顶 + keep 行累计高；余行
  *     作为无缝续体开新页，local = 块高 − 已留高）；
+ *   - 代码块（`pre.mu-code-block`，measureV2 以行起点 caret 矩形产出
+ *     `lines`）→ 与段落同路：行界任意可切（Chromium 默认 orphans/widows=2
+ *     对块级 line box 生效，含 pre），穿缝退役为超行单元兜底；
  *   - TABLE（`table` 给了）→ 内核 `countFittingPrefix`：表头每页重复占一份
  *     （续表），行切可跨多页（每道续缝 split.keep 记累计行数）；单行高过
  *     「页高 − 表头」的表不切，整块走 v1 穿缝；
- *   - 其余块（标题/代码/引用…无子结构）照 v1：keep-together、超页穿缝。
+ *   - KIDS（`kids` 给了：列表 li / 引用子块）→ 仅单元界可切（Chromium
+ *     碎片化里兄弟边界任意可断、无 orphan/widow 约束）；超页子单元的
+ *     内部已并入行级切点（测量端边界②），故「超页单元整块穿缝」只剩
+ *     「单行 > 整页」的不可能分支；
+ *   - 其余块（标题/图…无子结构）照 v1：keep-together、超页穿缝。
  */
 export const paginateBlocksV2 = (
   blocks: PaperBlockBoxV2[],
@@ -357,8 +373,7 @@ export const paginateBlocksV2 = (
           const rest = b.lines.slice(cursor)
           if (sum(rest) <= pageContentHeight) break
           const cut2 = cutLinesFitting(rest, pageContentHeight, pageContentHeight)
-          const k2 =
-            cut2.kind === 'at' || cut2.kind === 'split-anyway' ? cut2.keep : rest.length
+          const k2 = cut2.kind === 'at' || cut2.kind === 'split-anyway' ? cut2.keep : rest.length
           cursor += k2
           if (cursor < b.lines.length) {
             pushSeam(b.top + sum(b.lines.slice(0, cursor)), false, {
@@ -429,10 +444,7 @@ export const paginateBlocksV2 = (
           let lastPageFirstRow = 0
           while (cursor < rowHeights.length) {
             lastPageFirstRow = cursor
-            const k2 = countFittingPrefix(
-              rowHeights.slice(cursor),
-              pageContentHeight - headH
-            )
+            const k2 = countFittingPrefix(rowHeights.slice(cursor), pageContentHeight - headH)
             cursor += k2
             if (cursor < rowHeights.length) {
               pushSeam(b.top + headH + sum(rowHeights.slice(0, cursor)), false, {
@@ -444,6 +456,74 @@ export const paginateBlocksV2 = (
           }
           // 连续流账目：跟在表格后的块从末段页的余量起（续表 = 表头 + 末页行）。
           local = headH + sum(rowHeights.slice(lastPageFirstRow))
+          firstOnPage = false
+        }
+      }
+      prevBottom = b.bottom
+      if (b.isPagebreak) pendingForcedBreak = true
+      else contentOnPage = true
+      continue
+    }
+
+    // —— 子单元切（列表 li / 引用子块：仅单元界可切，Chromium 兄弟边界镜像）——
+    if (b.kids && b.kids.length > 1 && room > 0) {
+      const heights = b.kids
+      const total = height
+      // 单元高过一整页 → 该单元不可表达（切了也只产废页），整块降级 v1 穿缝。
+      const unitTolerant = Math.max(...heights) <= pageContentHeight
+
+      if (!unitTolerant) {
+        for (
+          let boundary = pageContentHeight;
+          boundary < startLocal + height;
+          boundary += pageContentHeight
+        ) {
+          pushSeam(b.top + (boundary - startLocal), true)
+        }
+        const endLocal = startLocal + height
+        local = endLocal % pageContentHeight
+        firstOnPage = local === 0
+      } else {
+        let keep = countFittingPrefix(heights, room)
+        if (keep >= heights.length) {
+          // 全部单元放下本页。
+          local = startLocal + total
+          firstOnPage = false
+        } else if (!oversized && keep === 0) {
+          // 本页连首单元都容不下（块非超页）→ 整块推下页（v1 keep-together 同款）。
+          if (prevBottom !== null) pushSeam((prevBottom + b.top) / 2, false)
+          local = total
+          firstOnPage = false
+        } else {
+          if (keep === 0) {
+            // 超页块且本页 room 不足 → 先整块推下页，从新页起切。
+            if (prevBottom !== null) pushSeam((prevBottom + b.top) / 2, false)
+            keep = countFittingPrefix(heights, pageContentHeight)
+          }
+          let cursor = keep
+          if (cursor > 0) {
+            pushSeam(b.top + sum(heights.slice(0, cursor)), false, {
+              block: i,
+              kind: 'kids',
+              keep: cursor
+            })
+          }
+          // 余单元逐页续；unitTolerant 保证每页至少一单元。
+          let lastPageFirstUnit = 0
+          while (cursor < heights.length) {
+            lastPageFirstUnit = cursor
+            const k2 = countFittingPrefix(heights.slice(cursor), pageContentHeight)
+            cursor += k2
+            if (cursor < heights.length) {
+              pushSeam(b.top + sum(heights.slice(0, cursor)), false, {
+                block: i,
+                kind: 'kids',
+                keep: cursor
+              })
+            }
+          }
+          // 连续流账目：跟在块后的块从末段页的余量起（末段 = 末页单元和）。
+          local = sum(heights.slice(lastPageFirstUnit))
           firstOnPage = false
         }
       }
@@ -590,10 +670,147 @@ const measureLineHeights = (el: HTMLElement): number[] => {
 }
 
 /**
+ * 子单元高序列 + 归属（边界法）：cuts = 各可切点（视口坐标 + 归属子元素
+ * 序），首单元从块顶起（含块顶 padding/边框）、末单元到块底（含块底
+ * padding/边框），单元间 margin 塌陷间隙并入前一单元——sum = 块高，缝 y
+ * = 块顶 + 前缀和恰落切点顶（= 打印碎片化的新页起点，页首 margin 截断语
+ * 义天然一致）。owners 与 heights 平行：单元 i 的内容属于子元素
+ * owners[i]（0 = 首子元素）——整块搬移执行器据此把单元区间还原成 DOM。
+ *
+ * 首单元自身的顶不是切点（切它 = 块前换页，Chromium 碎片化无此边界）：
+ * 若首单元顶与块顶重合（无 padding）则被块顶过滤掉、剩余首点即真切点；
+ * 否则剩余首点 = 首单元内容顶（伪切点），弃之。
+ */
+const unitSpansFromTops = (
+  blockTop: number,
+  blockBottom: number,
+  cuts: Array<{ top: number; owner: number }>
+): { heights: number[]; owners: number[] } => {
+  const sorted = [...cuts].sort((a, b) => a.top - b.top)
+  const firstRemoved = sorted.length > 0 && sorted[0]!.top <= blockTop + 0.5
+  const deduped: Array<{ top: number; owner: number }> = []
+  for (const c of sorted) {
+    if (c.top <= blockTop + 0.5 || c.top >= blockBottom - 0.5) continue
+    if (!deduped.length || c.top - deduped[deduped.length - 1]!.top > 0.5) deduped.push(c)
+  }
+  const cutPoints = firstRemoved ? deduped : deduped.slice(1)
+  const points = [blockTop, ...cutPoints.map((c) => c.top), blockBottom]
+  const heights: number[] = []
+  const owners: number[] = []
+  for (let i = 0; i + 1 < points.length; i++) {
+    const h = points[i + 1]! - points[i]!
+    if (h > 0) {
+      heights.push(h)
+      owners.push(i === 0 ? 0 : cutPoints[i - 1]!.owner)
+    }
+  }
+  return { heights, owners }
+}
+
+/**
+ * 代码块行带（#7）：`pre.mu-code-block` 内容 span 的文本节点 range 矩形定
+ * 行界。
+ *
+ * 为什么不用行起点 caret 矩形：Chromium 对贴着 '\n' 的折叠位置常返回空矩
+ * 形（换行后的位置「无处可坐」，muya #5114 同源）。实证（e2e 探针）：非折
+ * 叠 range 矩形稳定——每个文本节点的 contents 矩形落在它所在行：token 文
+ * 本节点 = 单行片段；'\n' 节点 = 它终结的那一行（空行亦有行盒）；未高亮
+ * 整段单文本节点 = 每行一个矩形。同顶矩形（同行多 token）由去重合并。
+ * pre 上下 padding / 边框并入首末单元（unitHeightsFromTops 边界法）。
+ *
+ * 只走内容 span 子树（copy/run 按钮挂在 code.mu-code 上、absolute 定位不
+ * 入流；trailing-break 的 <br> 无文本节点，天然不入行带）。
+ */
+const measureCodeLineBands = (pre: HTMLElement): number[] => {
+  // muya 代码块结构：pre.mu-code-block > code.mu-code > span.mu-codeblock-content
+  // （Content 基类 tagName = span，不是嵌套 code）。
+  const content = pre.querySelector<HTMLElement>(':scope > code.mu-code > .mu-codeblock-content')
+  if (!content) return []
+  const doc = pre.ownerDocument
+  const tops: number[] = []
+  const walker = doc.createTreeWalker(content, NodeFilter.SHOW_TEXT)
+  let node = walker.nextNode()
+  while (node) {
+    const text = node as Text
+    if (text.nodeValue && text.nodeValue.length > 0) {
+      const r = doc.createRange()
+      r.selectNodeContents(text)
+      for (const rect of r.getClientRects()) {
+        if (rect.height > 0) tops.push(rect.top)
+      }
+    }
+    node = walker.nextNode()
+  }
+  if (tops.length < 2) return []
+  const preRect = pre.getBoundingClientRect()
+  return unitSpansFromTops(
+    preRect.top,
+    preRect.bottom,
+    tops.map((top) => ({ top, owner: 0 }))
+  ).heights
+}
+
+/**
+ * 块内文本行顶序列（视口坐标，未去重）：与 measureLineHeights 同源的
+ * Range 行盒走法，但只收 top——供超页子单元（#7 边界②）的 intra-kid 行
+ * 级切点并入块级 cut 列表（同顶同行由 unitSpansFromTops 去重兜底）。
+ */
+const collectTextLineTops = (el: HTMLElement): number[] => {
+  const doc = el.ownerDocument
+  const tops: number[] = []
+  const walker = doc.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+  let node = walker.nextNode()
+  while (node) {
+    const text = node as Text
+    if (text.nodeValue && text.nodeValue.trim()) {
+      const r = doc.createRange()
+      r.selectNodeContents(text)
+      for (const rect of r.getClientRects()) {
+        if (rect.height > 0) tops.push(rect.top)
+      }
+    }
+    node = walker.nextNode()
+  }
+  return tops
+}
+
+/**
+ * 子元素切点（#7 + 边界②）：各子元素顶（owner = 子元素序）＋超页子元素
+ * （高 > 页内容高）的内部文本行顶。后者是超页 li / 超页引用子块的降级
+ * 兜底——兄弟界表达不了它的碎片化，整块走 v1 穿缝会与打印侧（Chromium
+ * 进子元素按行盒断开）分叉；并入行级切点后单元粒度细化到行，「超页单元
+ * 整块穿缝」退役为「单行 > 整页」的不可能分支。
+ */
+const kidCutPoints = (
+  block: HTMLElement,
+  isList: boolean,
+  pageContentHeight: number
+): Array<{ top: number; owner: number }> => {
+  const kids = Array.from(block.children).filter((el) =>
+    isList ? el.tagName === 'LI' : el instanceof HTMLElement
+  ) as HTMLElement[]
+  const cuts: Array<{ top: number; owner: number }> = []
+  kids.forEach((kid, i) => {
+    const kr = kid.getBoundingClientRect()
+    cuts.push({ top: kr.top, owner: i })
+    if (kr.height > pageContentHeight) {
+      for (const top of collectTextLineTops(kid)) cuts.push({ top, owner: i })
+    }
+  })
+  return cuts
+}
+
+/**
  * v2 测量（M4.3b 提交 1）：v1 步进 + 块内子结构——
  * - P：Range 行盒序列（≥ 2 行才带 lines——单行段落没有可切点，保持 keep-together）；
+ * - 代码块（pre.mu-code-block，#7）：行起点 caret 矩形行带（≥ 2 行才带
+ *   lines；空行/末行换行由 caret 语义与去重兜底）；
  * - 表格（figure.mu-table > table）：GFM 首行 = 表头（headH，续表每页重复），
- *   余行为行切单位。
+ *   余行为行切单位；
+ * - 列表（ul/ol）：li 顶为切点 → kids（≥ 2 个 li 才有切点；单个超页 li
+ *   也由其内部行顶给出切点——边界②）；
+ * - 引用（blockquote.mu-block-quote）：直接子块顶为切点 → kids（≥ 2 个
+ *   子块；超页子块同上并入行级切点）。
  */
 export const measurePaperBlocksV2 = (
   container: HTMLElement,
@@ -621,6 +838,25 @@ export const measurePaperBlocksV2 = (
     if (child.tagName === 'P') {
       const lines = measureLineHeights(child)
       if (lines.length > 1) box.lines = lines
+    } else if (child.tagName === 'PRE' && child.classList.contains('mu-code-block')) {
+      const lines = measureCodeLineBands(child)
+      if (lines.length > 1) box.lines = lines
+    } else if (child.tagName === 'UL' || child.tagName === 'OL') {
+      // li 顶为切点（li0 顶由 unitSpansFromTops 的首切点规则剔除）；超页
+      // li 并入其内部文本行顶（边界②：镜像 Chromium 进 li 按行盒断开）。
+      const cuts = kidCutPoints(child, true, pageContentHeight)
+      if (cuts.length > 1) {
+        const { heights, owners } = unitSpansFromTops(r.top, r.bottom, cuts)
+        box.kids = heights
+        box.kidOwners = owners
+      }
+    } else if (child.tagName === 'BLOCKQUOTE') {
+      const cuts = kidCutPoints(child, false, pageContentHeight)
+      if (cuts.length > 1) {
+        const { heights, owners } = unitSpansFromTops(r.top, r.bottom, cuts)
+        box.kids = heights
+        box.kidOwners = owners
+      }
     } else if (child.tagName === 'FIGURE' && child.classList.contains('mu-table')) {
       const table = child.querySelector(':scope > table')
       const rows = table
@@ -628,7 +864,7 @@ export const measurePaperBlocksV2 = (
         : []
       if (rows.length > 1) {
         const headH = rows[0]!.getBoundingClientRect().height
-        const rowHeights = rows.slice(1).map(tr => tr.getBoundingClientRect().height)
+        const rowHeights = rows.slice(1).map((tr) => tr.getBoundingClientRect().height)
         box.table = { headH, rowHeights }
       }
     }
@@ -690,7 +926,11 @@ export const usePaperPagination = (options: {
 
   /** 渲染缝/页码叠加（v1 与 v2 布局同形：seams/pageCount/lastBadgeY；
    *  v2 行级缝带 split——e2e 判别器读 data-split）。 */
-  const render = (layout: PaperLayoutV2, measure: PaperBlocksMeasurementV2, container: HTMLElement): void => {
+  const render = (
+    layout: PaperLayoutV2,
+    measure: PaperBlocksMeasurementV2,
+    container: HTMLElement
+  ): void => {
     if (!overlay) return
     const host = overlay
     host.dataset.pageCount = String(layout.pageCount)
@@ -774,7 +1014,8 @@ export const usePaperPagination = (options: {
     mutationObserver = new MutationObserver(schedule)
     // 观察容器（块增删/文本变化都会体现在它的子树里）。
     const container = root.querySelector<HTMLElement>(':scope > .mu-container')
-    if (container) mutationObserver.observe(container, { childList: true, subtree: true, characterData: true })
+    if (container)
+      mutationObserver.observe(container, { childList: true, subtree: true, characterData: true })
     resizeObserver = new ResizeObserver(schedule)
     resizeObserver.observe(container ?? root)
 

@@ -11,7 +11,9 @@ import {
 
 // `@/util/pdf` 在加载时读 `window.path`（preload 桥），vitest 环境需先补桩。
 vi.hoisted(() => {
-  const w = globalThis as unknown as { window?: { path?: { sep: string; join: (...p: string[]) => string } } }
+  const w = globalThis as unknown as {
+    window?: { path?: { sep: string; join: (...p: string[]) => string } }
+  }
   w.window ??= {}
   w.window.path ??= { sep: '/', join: (...p: string[]) => p.join('/') }
 })
@@ -93,10 +95,7 @@ describe('paginateBlocks (keep-together greedy)', () => {
     // H=100；前块底 90、超整页块顶 100（间隙 10 到达页界）→ 先推（缝 95），
     // 再从新页 0 起穿缝：100..450 内缝 100/200/300/400？——注意推下后块
     // 高 350，缝在 100、200、300。
-    const r = paginateBlocks(
-      [block('p', 0, 60), block('p', 70, 90), block('pre', 100, 450)],
-      100
-    )
+    const r = paginateBlocks([block('p', 0, 60), block('p', 70, 90), block('pre', 100, 450)], 100)
     expect(r.seams).toEqual([
       { y: 95, crossed: false },
       { y: 200, crossed: true },
@@ -109,10 +108,7 @@ describe('paginateBlocks (keep-together greedy)', () => {
   it('pushed block starts its page with truncated gap (fit = height only)', () => {
     // H=100；块2 被推（顶 90+高 15 → 底 105 越页）；块3 顶 125：新页内
     // 起点 = 15（块2 高），+10 间隙 = 25，底 45 ≤ 100 → 同页。
-    const r = paginateBlocks(
-      [block('p', 0, 80), block('p', 90, 105), block('p', 125, 145)],
-      100
-    )
+    const r = paginateBlocks([block('p', 0, 80), block('p', 90, 105), block('p', 125, 145)], 100)
     expect(r.seams).toEqual([{ y: 85, crossed: false }])
     expect(r.pageCount).toBe(2)
   })
@@ -161,8 +157,16 @@ describe('paginateBlocks pageStarts (push targets)', () => {
 
 // —— v2 行级拟合（M4.3a：段落切行 widow/orphan、表格行切+续表表头）——
 describe('paginateBlocksV2 (line-level fragmentation)', () => {
-  const v2 = (tag: string, top: number, bottom: number, extra: Partial<PaperBlockBoxV2> = {}): PaperBlockBoxV2 => ({
-    tag, top, bottom, ...extra
+  const v2 = (
+    tag: string,
+    top: number,
+    bottom: number,
+    extra: Partial<PaperBlockBoxV2> = {}
+  ): PaperBlockBoxV2 => ({
+    tag,
+    top,
+    bottom,
+    ...extra
   })
 
   it('无子结构块照 v1 keep-together', () => {
@@ -197,10 +201,7 @@ describe('paginateBlocksV2 (line-level fragmentation)', () => {
   })
 
   it('3 行段内切必违约 → 整段推下页（缝落块间）', () => {
-    const r = paginateBlocksV2(
-      [v2('p', 0, 150), v2('p', 160, 220, { lines: [20, 20, 20] })],
-      200
-    )
+    const r = paginateBlocksV2([v2('p', 0, 150), v2('p', 160, 220, { lines: [20, 20, 20] })], 200)
     expect(r.seams).toEqual([{ y: 155, crossed: false, split: undefined }])
     expect(r.pageCount).toBe(2)
   })
@@ -249,10 +250,7 @@ describe('paginateBlocksV2 (line-level fragmentation)', () => {
 
   it('本页容不下表头+一行（表非超页）→ 整表推下页', () => {
     const r = paginateBlocksV2(
-      [
-        v2('p', 0, 160),
-        v2('table', 170, 340, { table: { headH: 20, rowHeights: [50, 50, 50] } })
-      ],
+      [v2('p', 0, 160), v2('table', 170, 340, { table: { headH: 20, rowHeights: [50, 50, 50] } })],
       200
     )
     expect(r.seams).toEqual([{ y: 165, crossed: false, split: undefined }])
@@ -265,6 +263,67 @@ describe('paginateBlocksV2 (line-level fragmentation)', () => {
       200
     )
     expect(r.seams).toEqual([{ y: 200, crossed: true, split: undefined }])
+    expect(r.pageCount).toBe(2)
+  })
+
+  // —— 子单元切（#7：列表 li / 引用子块，仅单元界可切）——
+  it('列表放得下不切；装不下在 li 界切（缝落 li 顶，split.keep 记 li 数）', () => {
+    // H=200；ul 70..180（高 110）≈ kids 5×… 首末含 ul 上下 padding：
+    // [30,20,20,20,20]（sum 110）。room = 130 → 全放下。
+    const kids = [30, 20, 20, 20, 20]
+    const r = paginateBlocksV2([v2('p', 0, 60), v2('ul', 70, 180, { kids })], 200)
+    expect(r.seams).toEqual([])
+    expect(r.pageCount).toBe(1)
+
+    // 装不下：前块占 150，room = 40 → keep 1（30 ≤ 40，+20=50 > 40）。
+    const r2 = paginateBlocksV2([v2('p', 0, 150), v2('ul', 160, 270, { kids })], 200)
+    expect(r2.seams).toEqual([
+      { y: 190, crossed: false, split: { block: 1, kind: 'kids', keep: 1 } }
+    ])
+    expect(r2.pageCount).toBe(2)
+    // 后续块从末段余量起（tail = 4×20 = 80，+10 间隙 +40 块高 = 130 ≤ 200）。
+    const r3 = paginateBlocksV2(
+      [v2('p', 0, 150), v2('ul', 160, 270, { kids }), v2('p', 280, 320)],
+      200
+    )
+    expect(r3.seams).toEqual([
+      { y: 190, crossed: false, split: { block: 1, kind: 'kids', keep: 1 } }
+    ])
+    expect(r3.pageCount).toBe(2)
+  })
+
+  it('本页连首单元都容不下（块非超页）→ 整块推下页（v1 keep-together 同款）', () => {
+    const r = paginateBlocksV2([v2('p', 0, 160), v2('ul', 170, 340, { kids: [90, 40, 40] })], 200)
+    expect(r.seams).toEqual([{ y: 165, crossed: false, split: undefined }])
+    expect(r.pageCount).toBe(2)
+  })
+
+  it('超页列表跨多页（每道续缝记累计 li 数）', () => {
+    // H=200；ul 0..500（kids 5×100）→ 首页 2 单元（200）→ 逐页 2、末页 1：
+    // 缝 200/400。
+    const r = paginateBlocksV2([v2('ul', 0, 500, { kids: [100, 100, 100, 100, 100] })], 200)
+    expect(r.seams).toEqual([
+      { y: 200, crossed: false, split: { block: 0, kind: 'kids', keep: 2 } },
+      { y: 400, crossed: false, split: { block: 0, kind: 'kids', keep: 4 } }
+    ])
+    expect(r.pageCount).toBe(3)
+  })
+
+  it('超页单元（单个 li 高过一整页）→ 整块降级穿缝（v1 语义）', () => {
+    const r = paginateBlocksV2([v2('ul', 0, 290, { kids: [250, 40] })], 200)
+    expect(r.seams).toEqual([{ y: 200, crossed: true, split: undefined }])
+    expect(r.pageCount).toBe(2)
+  })
+
+  it('代码块行带与段落同路：行界切（split.kind = lines）', () => {
+    // H=200；pre 110..222（高 112）行带含上下 padding（边界法）：
+    // [26,20,20,20,26]。前块占 100 → startLocal 110、room 90：
+    // maxFit 4、widows 收口 keep 3 → 缝 y = 110 + 66 = 176。
+    const lines = [26, 20, 20, 20, 26]
+    const r = paginateBlocksV2([v2('p', 0, 100), v2('pre', 110, 222, { lines })], 200)
+    expect(r.seams).toEqual([
+      { y: 176, crossed: false, split: { block: 1, kind: 'lines', keep: 3 } }
+    ])
     expect(r.pageCount).toBe(2)
   })
 })
@@ -280,7 +339,13 @@ describe('print chain keeps blocks together (view-model §5 hard acceptance)', (
   // 重 import 链（@/util/pdf → @muyajs/core 构建产物），vitest 下数秒级。
   it('printable branch drops the block-level avoid (v2 line-level flip)', async() => {
     const { getCssForOptions } = await import('@/util/pdf')
-    const css = await getCssForOptions({ type: 'pdf', pageMarginTop: 20, pageMarginRight: 15, pageMarginBottom: 20, pageMarginLeft: 15 })
+    const css = await getCssForOptions({
+      type: 'pdf',
+      pageMarginTop: 20,
+      pageMarginRight: 15,
+      pageMarginBottom: 20,
+      pageMarginLeft: 15
+    })
     expect(css).not.toContain('.markdown-body>*{break-inside:avoid;}')
     // 标题仍与后随内容同页（屏测标题回避前瞻同款）。
     expect(css).toContain('h1,h2,h3,h4,h5,h6{break-after:avoid;break-inside:avoid;}')
@@ -288,8 +353,16 @@ describe('print chain keeps blocks together (view-model §5 hard acceptance)', (
 
   it('printable branch styles the pagebreak marker as a forced page break', async() => {
     const { getCssForOptions } = await import('@/util/pdf')
-    const css = await getCssForOptions({ type: 'pdf', pageMarginTop: 20, pageMarginRight: 15, pageMarginBottom: 20, pageMarginLeft: 15 })
-    expect(css).toContain('.markdown-body .mt-pagebreak{height:0;margin:0;padding:0;border:0;break-after:page;}')
+    const css = await getCssForOptions({
+      type: 'pdf',
+      pageMarginTop: 20,
+      pageMarginRight: 15,
+      pageMarginBottom: 20,
+      pageMarginLeft: 15
+    })
+    expect(css).toContain(
+      '.markdown-body .mt-pagebreak{height:0;margin:0;padding:0;border:0;break-after:page;}'
+    )
   }, 30_000)
 
   it('styledHtml branch does not paginate', async() => {
@@ -356,28 +429,49 @@ describe('paper geometry from frontmatter (view-model §5 / M3)', () => {
 
   it('defaults to A4 without/unknown paper declaration', () => {
     expect(parsePaperGeometry('')).toEqual({ pageWidthMm: 210, pageHeightMm: 297 })
-    expect(parsePaperGeometry('---\ntitle: x\n---\nbody')).toEqual({ pageWidthMm: 210, pageHeightMm: 297 })
-    expect(parsePaperGeometry('---\npaper: a3\n---\nbody')).toEqual({ pageWidthMm: 210, pageHeightMm: 297 })
+    expect(parsePaperGeometry('---\ntitle: x\n---\nbody')).toEqual({
+      pageWidthMm: 210,
+      pageHeightMm: 297
+    })
+    expect(parsePaperGeometry('---\npaper: a3\n---\nbody')).toEqual({
+      pageWidthMm: 210,
+      pageHeightMm: 297
+    })
   })
 
   it('parses paper: letter (case-insensitive) and keeps a4 explicit', () => {
-    expect(parsePaperGeometry('---\npaper: letter\n---\nbody')).toEqual({ pageWidthMm: 215.9, pageHeightMm: 279.4 })
-    expect(parsePaperGeometry('---\npaper: "Letter"\n---\nbody')).toEqual({ pageWidthMm: 215.9, pageHeightMm: 279.4 })
-    expect(parsePaperGeometry('---\npaper: A4\n---\nbody')).toEqual({ pageWidthMm: 210, pageHeightMm: 297 })
+    expect(parsePaperGeometry('---\npaper: letter\n---\nbody')).toEqual({
+      pageWidthMm: 215.9,
+      pageHeightMm: 279.4
+    })
+    expect(parsePaperGeometry('---\npaper: "Letter"\n---\nbody')).toEqual({
+      pageWidthMm: 215.9,
+      pageHeightMm: 279.4
+    })
+    expect(parsePaperGeometry('---\npaper: A4\n---\nbody')).toEqual({
+      pageWidthMm: 210,
+      pageHeightMm: 297
+    })
   })
 
   it('insertPagebreakMarkers swaps standalone comment lines only', async() => {
     const { insertPagebreakMarkers } = await import('@/util/exportHtml')
-    expect(insertPagebreakMarkers('A\n\n<!-- pagebreak -->\n\nB'))
-      .toBe('A\n\n<div class="mt-pagebreak"></div>\n\nB')
+    expect(insertPagebreakMarkers('A\n\n<!-- pagebreak -->\n\nB')).toBe(
+      'A\n\n<div class="mt-pagebreak"></div>\n\nB'
+    )
     // 缩进与大小写宽容；行内注释保持惰性。
-    expect(insertPagebreakMarkers('A\n\n   <!-- PageBreak -->\n\nB'))
-      .toBe('A\n\n<div class="mt-pagebreak"></div>\n\nB')
-    expect(insertPagebreakMarkers('text with <!-- pagebreak --> inside'))
-      .toBe('text with <!-- pagebreak --> inside')
+    expect(insertPagebreakMarkers('A\n\n   <!-- PageBreak -->\n\nB')).toBe(
+      'A\n\n<div class="mt-pagebreak"></div>\n\nB'
+    )
+    expect(insertPagebreakMarkers('text with <!-- pagebreak --> inside')).toBe(
+      'text with <!-- pagebreak --> inside'
+    )
     // 多处标记全部替换（/g——漏掉会变成"只有第一个分页符生效"）。
-    expect(insertPagebreakMarkers('A\n\n<!-- pagebreak -->\n\nB\n\n<!-- pagebreak -->\n\nC').match(/mt-pagebreak/g))
-      .toHaveLength(2)
+    expect(
+      insertPagebreakMarkers('A\n\n<!-- pagebreak -->\n\nB\n\n<!-- pagebreak -->\n\nC').match(
+        /mt-pagebreak/g
+      )
+    ).toHaveLength(2)
   }, 30_000)
 })
 

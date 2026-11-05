@@ -105,9 +105,7 @@ test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages
   // 2026-11-05 刻度裁决：原「纸」（物理纸/真分片）改称「页」，原「页」
   // （逻辑页/活引擎缝）改称「备」并隐藏。因此可见页叶的计数一律在
   // .mu-paper-deck 上；.mu-paper-overlay 只属于已隐藏的「备」叶。
-  const runAcceptance = async(
-    doc: string
-  ): Promise<{ screenCount: number; pdfCount: number }> => {
+  const runAcceptance = async(doc: string): Promise<{ screenCount: number; pdfCount: number }> => {
     const launched = await launchWithMarkdown(doc)
     const { app, page } = launched
     try {
@@ -167,7 +165,7 @@ test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages
     const { app, page } = await launchWithMarkdown(DOC)
     try {
       await waitForMenuReady(app)
-      const labels = (await page.locator('.view-switcher .leaf-btn').allInnerTexts()).map(s =>
+      const labels = (await page.locator('.view-switcher .leaf-btn').allInnerTexts()).map((s) =>
         s.trim()
       )
       expect(labels).not.toContain('备')
@@ -236,6 +234,216 @@ test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages
     }
   })
 
+  test('code blocks, lists and quotes fragment alike on screen and in print (#7 行级/子单元级)', async() => {
+    test.setTimeout(150_000)
+    // #7：长代码块/长列表/引用在屏测（v2：pre 行级 lines、ul/ol li 级 kids、
+    // blockquote 子块级 kids）与 printToPDF（Chromium 原生碎片化——打印侧
+    // 无 break-inside:avoid，本就按行/li 切）必须同页数；且真分片要真的切开
+    // （pre 克隆 ≥ 2、ul 外壳 ≥ 2）——判别 keep-together 时代「整块推下页
+    // 留大片空白」的回归。
+    const codeFence = [
+      '```js',
+      ...Array.from(
+        { length: 60 },
+        (_, i) => `const v${String(i + 1).padStart(2, '0')} = ${i + 1};`
+      ),
+      '```'
+    ].join('\n')
+    const list = Array.from(
+      { length: 40 },
+      (_, i) => `- list item ${String(i + 1).padStart(2, '0')} of the kid-level acceptance`
+    ).join('\n')
+    const quote = Array.from(
+      { length: 10 },
+      (_, i) => `> quoted paragraph ${String(i + 1).padStart(2, '0')} of the kid-level acceptance.`
+    ).join('\n>\n')
+    const mixedDoc = [
+      ...Array.from({ length: 20 }, (_, i) => PARA(i + 1)),
+      codeFence,
+      ...Array.from({ length: 8 }, (_, i) => PARA(i + 21)),
+      list,
+      quote,
+      ...Array.from({ length: 8 }, (_, i) => PARA(i + 29))
+    ].join('\n\n')
+
+    const launched = await launchWithMarkdown(mixedDoc)
+    const { app, page } = launched
+    try {
+      await waitForMenuReady(app)
+      const leafBtn = page.locator('.view-switcher .leaf-btn', { hasText: '页' })
+      const flowBtn = page.locator('.view-switcher .leaf-btn', { hasText: '文' })
+      await leafBtn.waitFor({ state: 'visible', timeout: 15000 })
+      await leafBtn.click()
+      await flowBtn.click()
+
+      const deck = page.locator('.mu-paper-deck[data-page-count]')
+      await deck.waitFor({ state: 'visible', timeout: 15000 })
+      await page.waitForTimeout(700)
+      const screenCount = Number(await deck.getAttribute('data-page-count'))
+
+      // 判别器：代码块被行级切开 → deck 里出现克隆 pre（头窗原件 + 续窗
+      // 克隆）；列表被 li 级切开 → 出现续段 ul 外壳。
+      const preCount = await page.locator('.mu-paper-deck pre.mu-code-block').count()
+      const ulCount = await page.locator('.mu-paper-deck ul').count()
+      expect(
+        preCount,
+        'the code block should be line-fragmented (cloned pre windows)'
+      ).toBeGreaterThan(1)
+      expect(ulCount, 'the list should be kid-fragmented (continuation shells)').toBeGreaterThan(1)
+      const cardCount = await page.locator('.mu-paper-page').count()
+      expect(cardCount, 'true-fragment page cards should match the page count').toBe(screenCount)
+
+      const outPath = path.join(
+        fs.mkdtempSync(path.join(os.tmpdir(), 'mt-paper-mixed-')),
+        'acceptance.pdf'
+      )
+      await stubSaveDialog(app, outPath)
+      await sendIpcToRenderer(app, 'mt::show-export-dialog', 'pdf')
+      const confirm = page.locator('.print-settings-dialog .button-primary')
+      await confirm.waitFor({ state: 'visible', timeout: 10000 })
+      await confirm.click()
+      const pdf = await pollForPdfFile(outPath)
+      const pdfCount = countPdfPages(pdf)
+
+      expect(screenCount, 'mixed doc should paginate to several pages').toBeGreaterThan(3)
+      expect(screenCount, 'screen pages == printToPDF pages (code/list/quote both sides)').toBe(
+        pdfCount
+      )
+    } finally {
+      await restoreSaveDialog(app)
+      await app.close()
+    }
+  })
+
+  test('a single logical code line wrapping over one page fragments at visual line boundaries (#7 边界①判别)', async() => {
+    test.setTimeout(150_000)
+    // #7 已知边界①的实证：pre-wrap 下一条**逻辑行**折成 55+ 视觉行（超过
+    // 一整页）。屏测若真是视觉行级（文本节点 range 矩形按视觉行产 top），
+    // 该行会被行界切开 → deck 出现克隆 pre；若退化为逻辑行级（整行一个
+    // 单元 > 页高 → v1 穿缝），无克隆、页数也可能与打印侧（Chromium 在
+    // 行盒间断开）分叉。断言两侧页数相等 + 克隆存在，即钉死边界①已闭合。
+    const longLine = `const wrapped = ${Array.from(
+      { length: 420 },
+      (_, i) => `'tok${String(i).padStart(3, '0')} '`
+    ).join('+')}`
+    const wrapDoc = [
+      ...Array.from({ length: 5 }, (_, i) => PARA(i + 1)),
+      ['```js', longLine, '```'].join('\n'),
+      ...Array.from({ length: 3 }, (_, i) => PARA(i + 6))
+    ].join('\n\n')
+
+    const launched = await launchWithMarkdown(wrapDoc)
+    const { app, page } = launched
+    try {
+      await waitForMenuReady(app)
+      const leafBtn = page.locator('.view-switcher .leaf-btn', { hasText: '页' })
+      const flowBtn = page.locator('.view-switcher .leaf-btn', { hasText: '文' })
+      await leafBtn.waitFor({ state: 'visible', timeout: 15000 })
+      await leafBtn.click()
+      await flowBtn.click()
+
+      const deck = page.locator('.mu-paper-deck[data-page-count]')
+      await deck.waitFor({ state: 'visible', timeout: 15000 })
+      await page.waitForTimeout(700)
+      const screenCount = Number(await deck.getAttribute('data-page-count'))
+
+      // 判别器：视觉行级切分 → 单逻辑行的 pre 也被切开（克隆续窗）。
+      const preCount = await page.locator('.mu-paper-deck pre.mu-code-block').count()
+      expect(
+        preCount,
+        'the wrapped single logical line should be visual-line fragmented (cloned pre windows)'
+      ).toBeGreaterThan(1)
+
+      const outPath = path.join(
+        fs.mkdtempSync(path.join(os.tmpdir(), 'mt-paper-wrap-')),
+        'acceptance.pdf'
+      )
+      await stubSaveDialog(app, outPath)
+      await sendIpcToRenderer(app, 'mt::show-export-dialog', 'pdf')
+      const confirm = page.locator('.print-settings-dialog .button-primary')
+      await confirm.waitFor({ state: 'visible', timeout: 10000 })
+      await confirm.click()
+      const pdf = await pollForPdfFile(outPath)
+      const pdfCount = countPdfPages(pdf)
+
+      expect(screenCount, 'wrapped doc should span at least two pages').toBeGreaterThan(1)
+      expect(screenCount, 'screen pages == printToPDF pages (visual-line both sides)').toBe(
+        pdfCount
+      )
+    } finally {
+      await restoreSaveDialog(app)
+      await app.close()
+    }
+  })
+
+  test('an oversized list item and quote child fragment inside the kid (#7 边界②判别)', async() => {
+    test.setTimeout(150_000)
+    // #7 已知边界②的实证：单个 li / 单个引用子块高过一整页（≈80 视觉行）。
+    // 兄弟边界表达不了它的碎片化——v1 语义整块穿缝（无克隆、无 data-split）；
+    // 边界②修复后缝落进子元素内部的行界。判别器：deck 出现
+    // .mu-paper-kids-part 跨段克隆（截高 + translateY 的 li/引用子块续段），
+    // 且屏显页数 = printToPDF 页数（Chromium 进子元素按行盒断开）。
+    const bigItem = `- ${Array.from(
+      { length: 150 },
+      (_, i) => `item line ${String(i + 1).padStart(2, '0')} of the oversized single list entry`
+    ).join(' ')}`
+    const bigQuote = Array.from(
+      { length: 110 },
+      (_, i) => `quote line ${String(i + 1).padStart(2, '0')} of the oversized quoted passage`
+    ).join(' ')
+    const oversizedDoc = [
+      ...Array.from({ length: 5 }, (_, i) => PARA(i + 1)),
+      [bigItem, '- tail item after the oversized entry'].join('\n'),
+      ...Array.from({ length: 3 }, (_, i) => PARA(i + 6)),
+      ['> ' + bigQuote, '>', '> short quoted tail'].join('\n'),
+      ...Array.from({ length: 2 }, (_, i) => PARA(i + 9))
+    ].join('\n\n')
+
+    const launched = await launchWithMarkdown(oversizedDoc)
+    const { app, page } = launched
+    try {
+      await waitForMenuReady(app)
+      const leafBtn = page.locator('.view-switcher .leaf-btn', { hasText: '页' })
+      const flowBtn = page.locator('.view-switcher .leaf-btn', { hasText: '文' })
+      await leafBtn.waitFor({ state: 'visible', timeout: 15000 })
+      await leafBtn.click()
+      await flowBtn.click()
+
+      const deck = page.locator('.mu-paper-deck[data-page-count]')
+      await deck.waitFor({ state: 'visible', timeout: 15000 })
+      await page.waitForTimeout(700)
+      const screenCount = Number(await deck.getAttribute('data-page-count'))
+
+      // 判别器：超页子元素的跨段克隆（li 续段 + 引用子块续段）。
+      const partCount = await page.locator('.mu-paper-deck .mu-paper-kids-part').count()
+      expect(
+        partCount,
+        'oversized li / quote child should be intra-kid fragmented (clipped continuation clones)'
+      ).toBeGreaterThanOrEqual(2)
+
+      const outPath = path.join(
+        fs.mkdtempSync(path.join(os.tmpdir(), 'mt-paper-oversized-')),
+        'acceptance.pdf'
+      )
+      await stubSaveDialog(app, outPath)
+      await sendIpcToRenderer(app, 'mt::show-export-dialog', 'pdf')
+      const confirm = page.locator('.print-settings-dialog .button-primary')
+      await confirm.waitFor({ state: 'visible', timeout: 10000 })
+      await confirm.click()
+      const pdf = await pollForPdfFile(outPath)
+      const pdfCount = countPdfPages(pdf)
+
+      expect(screenCount, 'oversized kids doc should span several pages').toBeGreaterThan(3)
+      expect(
+        screenCount,
+        'screen pages == printToPDF pages (intra-kid line-level both sides)'
+      ).toBe(pdfCount)
+    } finally {
+      await restoreSaveDialog(app)
+      await app.close()
+    }
+  })
+
   test('a pagebreak marker forces the same page on screen and in print', async() => {
     test.setTimeout(150_000)
     // 10 段 + 分页符 + 10 段 + 分页符 + 30 段：强制缝把文档切成 4 页
@@ -257,8 +465,7 @@ test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages
     // 55 段 + paper: letter：letter 内容高 ~905px → 26 段/页 = 3 页；若打印
     // 侧没跟上 letter（误用 A4 默认 972px → 28 段/页 = 2 页），等式即破。
     const letterDoc =
-      '---\npaper: letter\n---\n\n' +
-      Array.from({ length: 55 }, (_, i) => PARA(i + 1)).join('\n\n')
+      '---\npaper: letter\n---\n\n' + Array.from({ length: 55 }, (_, i) => PARA(i + 1)).join('\n\n')
     const { screenCount, pdfCount } = await runAcceptance(letterDoc)
     expect(screenCount).toBe(3)
     expect(screenCount).toBe(pdfCount)
@@ -314,10 +521,10 @@ test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages
       const geo = await page.evaluate(() => {
         const MM = 96 / 25.4
         const cards = [...document.querySelectorAll('.mu-paper-page')] as HTMLElement[]
-        const tops = cards.map(c => c.getBoundingClientRect().top)
-        const heights = cards.map(c => c.getBoundingClientRect().height)
-        const firstChildTop = cards.map(c => {
-          const kid = [...c.children].find(el => !el.classList.contains('mu-paper-page-num'))
+        const tops = cards.map((c) => c.getBoundingClientRect().top)
+        const heights = cards.map((c) => c.getBoundingClientRect().height)
+        const firstChildTop = cards.map((c) => {
+          const kid = [...c.children].find((el) => !el.classList.contains('mu-paper-page-num'))
           return kid ? kid.getBoundingClientRect().top : -1
         })
         const view = document.querySelector('.paper-projection-view') as HTMLElement
@@ -343,7 +550,9 @@ test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages
         'deck must start at the scroll view content top (no hidden-host blank above)'
       ).toBeLessThan(2)
       expect(geo.tops).toHaveLength(pageCount)
-      expect(Math.abs(geo.tops[1]! - geo.tops[0]! - (geo.heights[0]! + 8 * (96 / 25.4)))).toBeLessThan(2)
+      expect(
+        Math.abs(geo.tops[1]! - geo.tops[0]! - (geo.heights[0]! + 8 * (96 / 25.4)))
+      ).toBeLessThan(2)
       expect(Math.abs(geo.heights[0]! - geo.pageHeightPx)).toBeLessThan(2)
       // 卡内容顶 = 卡顶 + 20mm 上边距；首子块结构性地贴在那里。
       const contentTop0 = geo.tops[0]! + 20 * (96 / 25.4)

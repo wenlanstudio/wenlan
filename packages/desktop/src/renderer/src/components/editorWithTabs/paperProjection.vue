@@ -16,8 +16,10 @@
  * paperProjection — 纸叶真分片投影（视图模型 §5 / M4.3b，A″ 裁决）。
  *
  * 只读 muya 第二实例 + 行级拟合（util/paperPagination paginateBlocksV2）+
- * 分片执行器：段落裁剪窗对（头窗 = 原块截 keep 行；尾窗 = 克隆块上移）、
- * 表格行手术（续表 = 克隆外壳 + GFM 表头 + 移入的行）、其余整块搬移进页卡。
+ * 分片执行器：段落/代码块裁剪窗对（头窗 = 原块截 keep 行；尾窗 = 克隆块
+ * 上移）、表格行手术（续表 = 克隆外壳 + GFM 表头 + 移入的行）、子单元手术
+ * （列表/引用：原块留首页单元，续段 = 克隆外壳 + 移入单元，OL 续号）、
+ * 其余整块搬移进页卡。
  *
  * 为什么敢拆 DOM：调研结论（§5 M4.3b）——真分片只能活在只读面。本组件的
  * muya 实例不接 json-change、不进保存/undo 管线，无插入锚点与 op path 之忧；
@@ -85,7 +87,7 @@ const fragmentLines = (
     lineStarts.push(acc)
     acc += h
   }
-  const segs = [0, ...seams.map(s => s.split!.keep), b.lines!.length]
+  const segs = [0, ...seams.map((s) => s.split!.keep), b.lines!.length]
   const cs = getComputedStyle(b.el!)
   const mt = (Number.parseFloat(cs.marginTop) || 0) * zoom
   const mb = (Number.parseFloat(cs.marginBottom) || 0) * zoom
@@ -130,7 +132,7 @@ const fragmentTable = (
     cards[pageIndexOf(boundaries, b.top)]!.appendChild(figure)
     return
   }
-  const segs = [0, ...seams.map(s => s.split!.keep), b.table.rowHeights.length]
+  const segs = [0, ...seams.map((s) => s.split!.keep), b.table.rowHeights.length]
   for (const tr of rows.slice(1 + segs[1]!)) tr.remove()
   cards[pageIndexOf(boundaries, b.top)]!.appendChild(figure)
   for (let s = 1; s < segs.length - 1; s++) {
@@ -142,6 +144,104 @@ const fragmentTable = (
     for (const tr of rows.slice(1 + segs[s]!, 1 + segs[s + 1]!)) contTable.appendChild(tr)
     contFig.appendChild(contTable)
     page.appendChild(contFig)
+  }
+}
+
+/**
+ * 子单元手术（#7：列表 li / 引用子块；#7 边界②：跨段子元素）：单元区间
+ * → DOM 归属还原（kids + kidOwners）。整属本段的子元素照旧搬移——原块留
+ * 首页段（其余摘除）、续段 = 克隆外壳（保留 class/attrs/样式）+ 移入的
+ * 子元素；OL 续段按「首页起点 + 段内首个完整 li 序」改 start（Chromium 碎
+ * 片化里同一个 <ol> 跨页连号，克隆出的新 <ol> 会从 1 重计，须显式续号）。
+ * 跨段的子元素（超页 li / 超页引用子块——缝落进它内部）做裁剪手术：原块
+ * 内截高（overflow hidden）；续段克隆该子元素、translateY 上移段前已耗量
+ * + 截高。li 的续段克隆不重显 marker（Chromium 碎片化 marker 只随首段）。
+ */
+const fragmentKids = (
+  b: PaperBlockBoxV2,
+  seams: PaperSeamV2[],
+  cards: HTMLElement[],
+  boundaries: number[]
+): void => {
+  const el = b.el as HTMLElement
+  const childEls = Array.from(el.children).filter((kid) =>
+    el.tagName === 'UL' || el.tagName === 'OL' ? kid.tagName === 'LI' : kid instanceof HTMLElement
+  ) as HTMLElement[]
+  if (!b.kids || !b.kids.length || !childEls.length) {
+    cards[pageIndexOf(boundaries, b.top)]!.appendChild(el)
+    return
+  }
+  const kids = b.kids
+  // 归属缺省（纯层合成数据）= 平铺逐单元对应；越界归属夹回。
+  const owners = kids.map((_, i) => Math.min(b.kidOwners?.[i] ?? i, childEls.length - 1))
+  // 单元前缀和 + 各子元素的单元区间 [unitStart, unitEnd)（单元按序连续
+  // 归属同一子元素——切点按视口坐标排序保证）。
+  const prefix: number[] = [0]
+  for (const h of kids) prefix.push(prefix[prefix.length - 1]! + h)
+  const spans: Array<[number, number] | undefined> = new Array(childEls.length).fill(undefined)
+  for (let u = 0; u < kids.length; u++) {
+    const o = owners[u]!
+    const span = spans[o]
+    if (span) span[1] = u + 1
+    else spans[o] = [u, u + 1]
+  }
+  const segs = [0, ...seams.map((s) => s.split!.keep), kids.length]
+  const baseStart = Number.parseInt(el.getAttribute('start') ?? '1', 10) || 1
+
+  // 段 0：原块留段内单元——整属的留原处，跨段的截高，其余摘除。
+  for (let o = 0; o < childEls.length; o++) {
+    const span = spans[o]
+    if (!span) continue
+    const [us, ue] = span
+    const kid = childEls[o]!
+    if (ue <= segs[1]!) continue // 整属段 0：留原处
+    if (us < segs[1]!) {
+      kid.style.height = `${prefix[segs[1]!]! - prefix[us]!}px`
+      kid.style.overflow = 'hidden'
+    } else {
+      kid.remove()
+    }
+  }
+  cards[pageIndexOf(boundaries, b.top)]!.appendChild(el)
+
+  // 段 1..n：续段外壳。整属子元素移入（再延伸到后段的截高）；跨段起头
+  // 的克隆（translateY 上移段前已耗量 + 截高 + 隐藏 marker）。
+  for (let s = 1; s < segs.length - 1; s++) {
+    const page = cards[pageIndexOf(boundaries, seams[s - 1]!.y)]!
+    const shell = el.cloneNode(false) as HTMLElement
+    shell.classList.add('mu-paper-kids-cont')
+    // OL 续号：段内首个完整 li 的序（若段首个是跨段克隆，其后首个完整
+    // li = 跨段子元素 + 1；纯克隆段无可见序，取值不影响显示）。
+    let numberedIdx: number | null = null
+    for (let o = 0; o < childEls.length; o++) {
+      const span = spans[o]
+      if (!span) continue
+      const [us, ue] = span
+      if (ue <= segs[s]! || us >= segs[s + 1]!) continue // 与本段无交集
+      const kid = childEls[o]!
+      if (us >= segs[s]!) {
+        if (numberedIdx === null) numberedIdx = o
+        if (ue > segs[s + 1]!) {
+          kid.style.height = `${prefix[segs[s + 1]!]! - prefix[us]!}px`
+          kid.style.overflow = 'hidden'
+        }
+        shell.appendChild(kid)
+      } else {
+        if (numberedIdx === null) numberedIdx = o + 1
+        const clone = kid.cloneNode(true) as HTMLElement
+        clone.classList.add('mu-paper-kids-part')
+        clone.style.transform = `translateY(${-(prefix[segs[s]!]! - prefix[us]!)}px)`
+        clone.style.height = `${prefix[Math.min(ue, segs[s + 1]!)!]! - prefix[segs[s]!]!}px`
+        clone.style.overflow = 'hidden'
+        // Chromium 碎片化里 li 的 marker 只随首段；续段克隆不得重显。
+        if (el.tagName === 'UL' || el.tagName === 'OL') clone.style.listStyle = 'none'
+        shell.appendChild(clone)
+      }
+    }
+    if (el.tagName === 'OL') {
+      shell.setAttribute('start', String(baseStart + (numberedIdx ?? 0)))
+    }
+    page.appendChild(shell)
   }
 }
 
@@ -171,7 +271,7 @@ const fragment = (): void => {
   // 0 块早退**——空文档（新文件/加载失败的 tab）必须照常出一张空白 A4 卡，
   // 否则纸叶全屏就是整屏空白（其它叶空文档都有可见面，Word 空白页同义）。
   const layout = paginateBlocksV2(m.blocks, m.pageContentHeight)
-  const boundaries = [0, ...layout.seams.map(s => s.y)]
+  const boundaries = [0, ...layout.seams.map((s) => s.y)]
   const zoom = Number.parseFloat(getComputedStyle(container).zoom || '1') || 1
 
   deckEl.replaceChildren()
@@ -195,11 +295,13 @@ const fragment = (): void => {
     const b = m.blocks[i]!
     const el = b.el
     if (!el) continue
-    const seams = layout.seams.filter(s => s.split?.block === i)
+    const seams = layout.seams.filter((s) => s.split?.block === i)
     if (!seams.length) {
       cards[pageIndexOf(boundaries, b.top)]!.appendChild(el)
-    } else if (b.table && seams.some(s => s.split!.kind === 'table-rows')) {
+    } else if (b.table && seams.some((s) => s.split!.kind === 'table-rows')) {
       fragmentTable(b, seams, cards, boundaries)
+    } else if (b.kids && seams.some((s) => s.split!.kind === 'kids')) {
+      fragmentKids(b, seams, cards, boundaries)
     } else if (b.lines) {
       fragmentLines(b, seams, cards, boundaries, zoom)
     } else {
