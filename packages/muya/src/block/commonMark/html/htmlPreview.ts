@@ -14,6 +14,26 @@ const debug = logger('htmlPreview:');
 // than child nodes, so an empty tag body must not be treated as an empty block.
 const SELF_CONTAINED_MEDIA = new Set(['video', 'audio']);
 
+// Rendered HTML keeps its native controls (#5): <summary> toggles its
+// <details>, links are handled by linkMouseEvents, media/form controls must
+// stay usable. Any other click lands on rendered content and opens the block
+// source for editing.
+const NATIVE_INTERACTIVE_SELECTOR = [
+    'a[href]',
+    'button',
+    'input',
+    'select',
+    'textarea',
+    'label',
+    'option',
+    'video',
+    'audio',
+    'iframe',
+    'embed',
+    'object',
+    'area',
+].join(',');
+
 // A single element with an empty body (`<div></div>`), except self-contained
 // media elements whose content lives in attributes (`<video src=...></video>`).
 export function isEmptyHtmlBlock(html: string): boolean {
@@ -25,27 +45,61 @@ export function isEmptyHtmlBlock(html: string): boolean {
 class HTMLPreview extends Parent {
     private _html: string;
 
-    // 点击块级徽标 → 激活 html-block 的源码编辑。html-preview 是
-    // contenteditable=false 附件，点击默认不会把焦点送进 html-container；
-    // 块级徽标不依附段落、没有行内徽标那样的选中 / 删除路径，点击激活是它
-    // 唯一的编辑入口（§4.6）。监听绑在 domNode 上——update() 每次重建
-    // innerHTML，绑在徽标元素上会随重建丢失。
-    private _handleBadgeClick = (event: MouseEvent) => {
-        const target = event.target as HTMLElement | null;
-        if (!target?.closest('.mu-mdcols-marker'))
-            return;
+    // html-preview 是 contenteditable=false 附件，点击默认不会把焦点送进
+    // html-container。块级徽标（§4.6）与渲染内容都靠这里的委托点击进入源码
+    // 编辑；监听绑在 domNode 上——update() 每次重建 innerHTML，绑在子元素上
+    // 会随重建丢失。
+    private _isNativeInteractive(target: Element): boolean {
+        // <summary> 是 <details> 的块级开关：点它（或点折叠态整个块，此时只有
+        // summary 可见）必须保留原生展开 / 折叠。展开后点击露出的正文，target
+        // 是 <details> 本身，会落到下面的源码编辑分支。
+        if (target.closest('summary'))
+            return true;
 
+        const details = target.closest('details');
+        if (details && !details.hasAttribute('open'))
+            return true;
+
+        // closest() 会一路走到编辑器根（contenteditable=true 的容器），所以
+        // 只认预览子树内的原生控件。
+        const interactive = target.closest(NATIVE_INTERACTIVE_SELECTOR);
+        return !!interactive && !!this.domNode?.contains(interactive);
+    }
+
+    private _activateSourceEditor(): boolean {
         const htmlBlock = this.parent;
         if (!htmlBlock)
-            return;
+            return false;
 
         htmlBlock.active = true;
         const content = htmlBlock.firstContentInDescendant();
         if (content) {
-            // 光标落在注释原文末尾——`begin 30:70` 的占比就在那里改。
+            // 预览 DOM 与源码文本之间没有位置映射，做不到点哪落哪；统一落在
+            // 源码末尾，整个 <details>…</details> 都在这个可编辑块里。
             content.setCursor(content.text.length, content.text.length, true);
             content.domNode?.focus();
         }
+        return true;
+    }
+
+    private _handlePreviewClick = (event: MouseEvent) => {
+        // 只读投影（栏 / 页 / 览 / 示）复用同一套预览渲染，不能进编辑。
+        if (this.muya.options.readOnly)
+            return;
+
+        const target = event.target as HTMLElement | null;
+        if (!target)
+            return;
+
+        // 徽标是纯编辑 affordance，没有原生行为，永远进源码。
+        const isBadge = !!target.closest('.mu-mdcols-marker');
+        if (!isBadge && this._isNativeInteractive(target))
+            return;
+
+        if (!this._activateSourceEditor())
+            return;
+
+        event.preventDefault();
     };
 
     static override blockName = 'html-preview';
@@ -71,7 +125,7 @@ class HTMLPreview extends Parent {
             contenteditable: 'false',
         };
         this.createDomNode();
-        this.domNode!.addEventListener('click', this._handleBadgeClick);
+        this.domNode!.addEventListener('click', this._handlePreviewClick);
         this.update();
     }
 
