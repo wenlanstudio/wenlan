@@ -1,5 +1,6 @@
 <template>
   <div
+    ref="wrapperRef"
     class="editor-wrapper"
     :class="[{ typewriter: typewriter, focus: focus, source: sourceCode, 'viewer-open': viewerOpen }]"
     :dir="textDirection"
@@ -259,6 +260,11 @@ const tableChecker = reactive({
 
 // Template refs
 const editorRef = ref<HTMLDivElement | null>(null)
+// `.editor-wrapper` 的高度就是编辑滚动视口的高度（底部工具窗口展开时它会真实
+// 收缩）。实测后写成 CSS 变量，供 .mu-container 的尾部留白与打字机居中位消费；
+// 观察父级而不是滚动容器自身，避免「留白 → 内容盒变化 → 再观测」的回环。
+const wrapperRef = ref<HTMLDivElement | null>(null)
+let viewportObserver: ResizeObserver | null = null
 const mediaViewer = ref<InstanceType<typeof MediaViewer> | null>(null)
 const viewerOpen = ref(false)
 const rowInput = ref<InputNumberInstance | null>(null)
@@ -1845,6 +1851,23 @@ const handleCodeRunRequest = (event: Event): void => {
 
 onMounted(() => {
   printer = new Printer()
+
+  // issue #2：把「真实可用的编辑视口高度」发布成 CSS 变量。面板展开/拖拽时
+  // .editor-wrapper 会跟着 .workspace 收缩，留白与打字机居中位随之收敛，不再
+  // 按 100vh 把内容铺到面板背后。
+  const wrapper = wrapperRef.value
+  if (wrapper) {
+    const publishViewportHeight = (): void => {
+      wrapper.style.setProperty(
+        '--editorViewportHeight',
+        `${Math.round(wrapper.getBoundingClientRect().height)}px`
+      )
+    }
+    viewportObserver = new ResizeObserver(publishViewportHeight)
+    viewportObserver.observe(wrapper)
+    publishViewportHeight()
+  }
+
   const ele = editorRef.value
   if (!ele) return
 
@@ -2231,6 +2254,8 @@ onBeforeUnmount(() => {
   }
 
   resizeObserverForEditor.disconnect()
+  viewportObserver?.disconnect()
+  viewportObserver = null
 
   if (editor.value) {
     editor.value.destroy()
@@ -2299,9 +2324,13 @@ onBeforeUnmount(() => {
   overflow-anchor: none !important;
 }
 
+/* 尾部留白按「当前编辑视口」给，不按整窗：底部工具窗口展开时
+   --editorViewportHeight 由本组件的 ResizeObserver 实测后更新，留白随之收缩，
+   文档不会再有一整屏的内容铺在面板背后（issue #2）。只读投影没有这个变量，
+   回退到 app.vue 实测的 --workspaceHeight；独立窗口再回退 100vh。 */
 .editor-component .mu-container {
   padding-top: 20px;
-  padding-bottom: 100vh;
+  padding-bottom: var(--editorViewportHeight, var(--workspaceHeight, 100vh));
   zoom: var(--editor-zoom, 1);
 }
 
@@ -2314,9 +2343,11 @@ onBeforeUnmount(() => {
   display: none;
 }
 
+/* 打字机居中位同理：50vh 会把光标推到面板背后（面板越高越明显）。用实测视口
+   的一半，max(0px, …) 防止面板拖到最大时算出负 padding。 */
 .typewriter .editor-component {
-  padding-top: calc(50vh - 136px);
-  padding-bottom: calc(50vh - 54px);
+  padding-top: max(0px, calc(var(--editorViewportHeight, var(--workspaceHeight, 100vh)) * 0.5 - 136px));
+  padding-bottom: max(0px, calc(var(--editorViewportHeight, var(--workspaceHeight, 100vh)) * 0.5 - 54px));
 }
 
 </style>

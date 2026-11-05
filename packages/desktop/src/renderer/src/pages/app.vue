@@ -1,8 +1,22 @@
 <template>
-  <div class="editor-container">
-    <!-- 工作区（JetBrains 三段式）：左右侧栏 + 编辑器列占满状态栏以上的空间。
-         右侧栏后续接入，届时与 side-bar 对称，编辑器列宽度由 flex 自适应。 -->
-    <div class="workspace">
+  <div
+    ref="containerEl"
+    class="editor-container"
+    :style="{
+      '--workspaceHeight': `${workspaceHeight}px`,
+      '--bottomPanelHeight': `${bottomPanelHeight}px`
+    }"
+  >
+    <!-- 工作区（JetBrains 三段式）：左右侧栏 + 编辑器列占满「状态栏与底部工具
+         窗口以上」的空间。它本身是 .editor-container 的 flex:1 子项，底部面板
+         变高它就等量变矮；三列都是它的子项、靠 align-items:stretch 取同一高度，
+         右侧栏后续接入时与 side-bar 对称即可，不必再算一次高度。
+         高度不在这里用 100vh 减常量重算，而是由 ResizeObserver 实测后写进
+         CSS 变量（见脚本），所有子区域统一消费同一个真值。 -->
+    <div
+      ref="workspaceEl"
+      class="workspace"
+    >
       <side-bar
         v-if="init"
         :hidden="presentImmersive"
@@ -37,8 +51,9 @@
         <import-modal />
       </div>
     </div>
-    <!-- 底部工具窗口（JetBrains 式）：横跨整个窗口宽度——左侧栏只占它上方的
-         区域，展开面板不压缩它、也不被它压缩。组件常驻（不随视图切换卸载，
+    <!-- 底部工具窗口（JetBrains 式）：横跨整个窗口宽度，是 .editor-container
+         的 flex:none 兄弟项而非浮层。它占多少高度，.workspace（及其三列）就
+         少多少高度；不是把等高的内容区盖住。组件常驻（不随视图切换卸载，
          引擎事件订阅/输出缓存不丢）；body 由 execPanel 按 isCodeRunSurface
          + open 控制，只在「文」独占、面板展开时出现。 -->
     <exec-panel
@@ -77,6 +92,7 @@ import { useProjectStore } from '@/store/project'
 import { useAutoUpdatesStore } from '@/store/autoUpdates'
 import { useNotificationStore } from '@/store/notification'
 import { useEditorViewStore } from '@/store/editorView'
+import { useExecPanelStore } from '@/store/execPanel'
 
 const mainStore = useMainStore()
 const editorStore = useEditorStore()
@@ -88,8 +104,35 @@ const autoUpdateStore = useAutoUpdatesStore()
 const commandCenterStore = useCommandCenterStore()
 const notificationStore = useNotificationStore()
 const editorViewStore = useEditorViewStore()
+const execPanelStore = useExecPanelStore()
 
 const timer = ref<ReturnType<typeof setTimeout> | null>(null)
+
+// —— 布局高度的唯一真值（issue #2）——
+// 旧代码在内容层按 100vh / 50vh / calc(100vh - 状态栏) 算高度：那是「整窗」，
+// 不是「底部工具窗口以上的可用区」。面板一展开，内容层仍按整窗铺开，下半截只能
+// 被面板盖住或被 overflow 裁掉，滚动留白、打字机居中位也跟着错位。
+//
+// 这里不重算常量，而是实测 .workspace 与 .exec-panel 的真实尺寸，写进两个 CSS
+// 变量。面板开关 / 拖拽调高 / 双击最大化 / 窗口缩放 / 将来新增第三列都自动反映，
+// 任何子区域只需要 var(--workspaceHeight) 或百分比高度即可，不再各自减一遍 chrome。
+const containerEl = ref<HTMLElement | null>(null)
+const workspaceEl = ref<HTMLElement | null>(null)
+const workspaceHeight = ref(0)
+const bottomPanelHeight = ref(0)
+let layoutObserver: ResizeObserver | null = null
+
+const measureLayout = (): void => {
+  const container = containerEl.value
+  const workspace = workspaceEl.value
+  if (!container || !workspace) return
+  const ws = Math.round(workspace.getBoundingClientRect().height)
+  const panel = container.querySelector<HTMLElement>('.exec-panel')
+  const ph = Math.round(panel ? panel.getBoundingClientRect().height : 0)
+  // 值没变就不写回，避免 ResizeObserver → Vue patch → 再次观测的空转。
+  if (workspaceHeight.value !== ws) workspaceHeight.value = ws
+  if (bottomPanelHeight.value !== ph) bottomPanelHeight.value = ph
+}
 
 const { windowActive, platform, init } = storeToRefs(mainStore)
 const { theme, customCss, textDirection, zoom, editorLineWidth } = storeToRefs(preferencesStore)
@@ -258,8 +301,26 @@ onMounted(async () => {
   })
 })
 
+onMounted(() => {
+  nextTick(() => {
+    measureLayout()
+    layoutObserver = new ResizeObserver(measureLayout)
+    if (workspaceEl.value) layoutObserver.observe(workspaceEl.value)
+  })
+})
+
+// 面板 body 由 v-if 挂载/卸载，且高度来自 store 的内联 px：仅靠 workspace 的
+// ResizeObserver 在「开关切换但高度恰好相同」的边角情况下可能漏一次。把三个真实
+// 输入也挂上，保证 CSS 变量与 DOM 状态始终一致。
+watch(
+  () => [execPanelStore.open, execPanelStore.height, editorViewStore.isCodeRunSurface],
+  () => nextTick(measureLayout)
+)
+
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onImmersiveKeydown)
+  layoutObserver?.disconnect()
+  layoutObserver = null
 })
 </script>
 
@@ -283,11 +344,20 @@ onBeforeUnmount(() => {
 }
 
 /* 工作区 = 左右侧栏 + 编辑器列（JetBrains 三段式）。右侧栏接入时与 side-bar
-   对称即可，编辑器列宽度交给 flex，不再用 calc(100vw - sidebarWidth) 硬算。 */
+   对称即可：宽度交给 flex（不再用 calc(100vw - sidebarWidth) 硬算），高度由
+   align-items:stretch 自动跟 .workspace 一致。它是 .editor-container 的 flex:1
+   子项，底部工具窗口（flex:none）占多少它就少多少——三列共享这个真值，谁都不
+   按 100vh 自称满高。 */
 .workspace {
   display: flex;
   flex-direction: row;
+  align-items: stretch;
   flex: 1;
+  min-height: 0;
+}
+
+/* 任何直接子列都不得用 min-height:auto 顶破这个收缩链（第三列同理）。 */
+.workspace > * {
   min-height: 0;
 }
 

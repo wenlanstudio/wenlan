@@ -471,8 +471,8 @@ onMounted(() => {
 
 // —— 面板高度：顶边拖拽 + 双击最大化（JetBrains 式底部工具窗口）——
 // 高度存 store（renderer localStorage，与侧栏宽度同一套惯例），拖动时每帧只改
-// 内存、松手才落盘。上限按「编辑列高度的 80%」现算，不写死 vh：窗口变矮后
-// 旧的像素高度会挤掉整个编辑区。
+// 内存、松手才落盘。上限按实测的「工作区 + 面板」总量减去标题栏与编辑区保底
+// 现算，不写死 vh：窗口变矮后旧的像素高度会挤掉整个编辑区。
 const panelEl = ref<HTMLDivElement | null>(null)
 const dragging = ref(false)
 /** 双击最大化前的还原高度（没最大化过就是默认值）。 */
@@ -480,24 +480,25 @@ let restoreHeight: number | null = null
 /** 拖动中挂到 window 上的清理函数：组件在拖动途中被卸载也能摘干净。 */
 let stopDrag: (() => void) | null = null
 
-/** 拖动时给编辑区留的最小高度：再小就没法写东西了。 */
+/** 拖动时给编辑区留的最小高度（不含标题栏）：再小就没法写东西了。 */
 const MIN_EDITOR_HEIGHT = 200
-/** 状态栏高度缓存（CSS 变量不随主题变，读一次就够，避免拖动时逐帧取值）。 */
-let statusBarPx = 0
-const statusBarHeight = (): number => {
-  if (statusBarPx === 0) {
-    const raw = getComputedStyle(document.documentElement).getPropertyValue('--statusBarHeight')
-    statusBarPx = Number.parseFloat(raw) || 26
-  }
-  return statusBarPx
-}
 
 const maxHeight = (): number => {
-  // 面板现在挂在 app.vue 的全宽层（父级 = .editor-container），上限按「容器高
-  // − 状态栏 − 编辑区保底」算。别用「当前剩余空间」：它随面板自身变高而变小，
-  // 往上拖会自己把自己夹回去（拖动回环）。
-  const total = panelEl.value?.parentElement?.clientHeight ?? window.innerHeight
-  return Math.max(PANEL_MIN_HEIGHT, total - statusBarHeight() - MIN_EDITOR_HEIGHT)
+  // 面板与 .workspace 是同一条 flex column 上的兄弟，二者高度之和是常数
+  //（状态栏另占 flex:none）。用实测值而不是 `100vh - 常量` 反推：标题栏在放映
+  // 沉浸态会隐藏、状态栏高度随主题可能变，任何写死的 chrome 高度都会漂移。
+  // 同时别用「当前剩余空间」——它随面板自身变高而变小，往上拖会把自己夹回去。
+  const container = panelEl.value?.parentElement as HTMLElement | null
+  if (!container) return PANEL_MIN_HEIGHT
+  const workspace = container.querySelector<HTMLElement>('.workspace')
+  const titleBar = container.querySelector<HTMLElement>('.title-bar')
+  const titleBarPx = titleBar && getComputedStyle(titleBar).display !== 'none'
+    ? titleBar.getBoundingClientRect().height
+    : 0
+  const available =
+    (workspace?.getBoundingClientRect().height ?? 0) +
+    (panelEl.value?.getBoundingClientRect().height ?? 0)
+  return Math.max(PANEL_MIN_HEIGHT, Math.round(available - titleBarPx - MIN_EDITOR_HEIGHT))
 }
 
 const clampHeight = (px: number): number =>

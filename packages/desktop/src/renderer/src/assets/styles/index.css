@@ -5,6 +5,11 @@
      剩余空间的容器都扣它，别再用裸 100vh —— 那样会溢出 26px 盖住状态栏。 */
   --statusBarHeight: 26px;
   --editorAreaWidth: 750px;
+  /* 布局高度的实测值由 app.vue 覆盖（ResizeObserver 量 .workspace / .exec-panel）。
+     这里只给独立窗口与首帧的兜底：不要用 100vh 去反推工作区高度，底部工具窗口
+     展开时那是错的。内容区一律消费这两个变量或父链的 100%，别再各自减常量。 */
+  --workspaceHeight: 100vh;
+  --bottomPanelHeight: 0px;
 
   /*editor*/
   /*Theme color cluster*/

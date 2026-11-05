@@ -524,8 +524,12 @@ onBeforeUnmount(() => {
 
 <style>
 .source-code {
-  /* 视口扣除应用内标题栏与底部状态栏，剩下的才是编辑列可用高度。 */
-  height: calc(100vh - var(--titleBarHeight) - var(--statusBarHeight));
+  /* 父链 .pane-left → .container → .editor-with-tabs → .editor-middle →
+     .workspace 已全部随底部工具窗口真实收缩，直接取父高即可（issue #2）。
+     旧的 calc(100vh - titleBar - statusBar) 是「整窗」口径：面板展开后源码区
+     仍铺满整屏、下半截被面板盖住/裁掉，且每多一种窗口 chrome 就要再减一次。 */
+  height: 100%;
+  min-height: 0;
   box-sizing: border-box;
   overflow: auto;
 }

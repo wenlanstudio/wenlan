@@ -73,8 +73,11 @@
     max-width: none !important;
     min-height: var(--paper-page-height) !important;
     margin: 0 auto !important;
-    /* 底 padding 保打字滚动舒适（沿 editor.vue 的 100vh 约定） */
-    padding: var(--paper-margin-top) var(--paper-margin-x) 100vh var(--paper-margin-x) !important;
+    /* 底 padding 保打字滚动舒适：跟随实测编辑视口（活引擎）/ 工作区（只读
+       投影），不是整窗 100vh —— 底部工具窗口展开时那半屏是面板的地盘。 */
+    padding: var(--paper-margin-top) var(--paper-margin-x)
+        var(--editorViewportHeight, var(--workspaceHeight, 100vh))
+        var(--paper-margin-x) !important;
 
     color: var(--paper-text-color);
     background: #fff !important;

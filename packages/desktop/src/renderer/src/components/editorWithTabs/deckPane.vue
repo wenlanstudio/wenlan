@@ -669,7 +669,8 @@ onBeforeUnmount(() => {
 
 .error-detail {
   max-width: 720px;
-  max-height: 40vh;
+  /* 按工作区实测高度而不是整窗：面板展开时错误框也不该长到面板背后。 */
+  max-height: calc(var(--workspaceHeight, 100vh) * 0.4);
   overflow: auto;
   margin: 0;
   padding: 12px 16px;
