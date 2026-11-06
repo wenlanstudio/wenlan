@@ -67,10 +67,13 @@
 
 > 来自 wenlanstudio/wenlan 的开放 issue（2026-11-07 更新，6 条）。全文与评论见 `D:\md-ecosystem\issues-2026-11-06.md`。#13/#14/#15/#17 已实现并关闭（`babffa04` 已推送）。
 
-### 视图切换丢内容排查（2026-11-07，用户报告的最高优先级）
+### 视图切换丢内容排查（2026-11-07，用户报告的最高优先级；用户更正：丢失发生在修改正文过程中）
 
-- 已修：文档首块是 `---` 水平线的讲义（空行开头挡住 fm 锚定，首载为正文），切一次源码/存盘后，直到下一个 `---` 的内容被吞成 frontmatter。序列化器现把首块 `---` 规则改写为 `***`（`stateToMarkdown` + `leadingThematicBreak.spec`）。303 份真实讲义扫描（parse→serialize→parse 定点）：唯一结构性丢失类，其余 152→12 份差异均为良性重排（列表缩进归一、表格对齐、loose 标志翻转）
+- 已修一：文档首块是 `---` 水平线的讲义（空行开头挡住 fm 锚定，首载为正文），切一次源码/存盘后，直到下一个 `---` 的内容被吞成 frontmatter。序列化器现把首块 `---` 规则改写为 `***`（`stateToMarkdown` + `leadingThematicBreak.spec`）。303 份真实讲义扫描（parse→serialize→parse 定点）：唯一结构性丢失类，其余 152→12 份差异均为良性重排（列表缩进归一、表格对齐、loose 标志翻转）
+- 已修二（`77e2b777`，用户报告的正主）：**「本」视图是编辑器组件的兄弟 v-if 分支**——切「本」时引擎连总线监听一起卸载，退出时 sourceCode 的 `file-changed` emit 落在总线上没有活着的监听者，源码光标丢失；重挂载走「新开标签页」路径落文档首块。frontmatter 文档里用户继续打字把 fm 打成非法 YAML，整块塌缩成正文（e2e 现场：`---` 变水平线、键入文字粘进 title 行）。修复 = sourceCode 卸载时直写 store 持久化 `tab.muyaIndexCursor` + editor.vue 挂载后消费一次性令牌放回光标。配套 e2e `editing-content-preservation.spec.ts`（3 份真实讲义 × CDP 真实 IME/粘贴/代码块输入/围栏转换/快速连打；ByteFlow、Python基础全过）
+- **遗留三（未修，现场已捕获，待专项）**：00-SQL引擎.md 上引用段落里 End+Enter×2+```js 转换+立即续打 → 键入文本错位重排（`og("after-convert")console.l`）、语言标记被污染（`n4js`）、引用正文截断。muya 引擎隔离复现（同款文档头+同款按键序列）不触发——需要桌面上下文（前序编辑历史）或转换与输入的 op 竞态，深挖待专项
 - 新增 desktop e2e `view-switch-content-preservation.spec.ts`：4 份真实讲义 × 叶切换（栏/页/览/示）+ 文↔本 + 人工编辑，全文逐字节比对，4/4 过
+- 旧 TODO「重大bug 渲染切源码丢数据」原 repro 已核实不复现，销案
 - 运维坑（已知坑的变体）：跑过 `pnpm dev` 后 `out/main` 是 dev 模式产物，之后所有 desktop e2e 起不来（Invalid URL）——e2e 前必须 `NODE_ENV=production pnpm run build:unpack` 重建
 
 ### Bug 性质（先修）
