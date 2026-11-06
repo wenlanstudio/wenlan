@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // gen-md-icon.mjs — 由 build/icons/md.svg 生成本套 Markdown 文档图标：
 //   build/icons/md.ico（多尺寸，PNG 内嵌）+ md.icns（PNG 内嵌）+ {16..512}x*/
-//   md.png。≤64px 用描边加粗（篆文笔画细，小尺寸糊成一团——Chromium/sharp
-//   栅格化下的可辨识兜底；等价于 f96cf332 时代的「加粗简化笔画版」）。
+//   md.png。字形 = static/icon.png（安装包图标）的反色，几何 1:1 对齐（见 md.svg
+//   的 desc）；所有尺寸同一路径、**不加描边**（加粗会把交叉负空间填死，见下）。
 //
 // 用法：node tools/icon/gen-md-icon.mjs（在 packages/desktop 下跑；sharp 取
 // 根 node_modules）。改 md.svg 后重跑即可，无需其它接线——electron-builder
@@ -17,31 +17,23 @@ const iconsDir = resolve(here, '../../build/icons')
 
 const SVG = await readFile(join(iconsDir, 'md.svg'), 'utf8')
 
-// —— 小尺寸加粗：stroke 宽为字形局部坐标（0..961 高）单位——
-// 渲染像素 = w * 0.7699 * (size/1024)；32px 下 w=64 → ~1.5px 描边。
-const strokeFor = (size) => {
-  if (size <= 32) return 64
-  if (size <= 48) return 44
-  if (size <= 64) return 26
-  return 0
-}
-
-const svgAt = (size) => {
-  const w = strokeFor(size)
-  return SVG.replace(
-    /<svg ([^>]*?)width="\d+" height="\d+"/,
-    `<svg $1width="${size}" height="${size}"`
-  ).replace(
-    /<g (transform=[^>]*?fill="#1A1A1C")/,
-    `<g $1${w ? ` stroke="#1A1A1C" stroke-width="${w}" stroke-linejoin="round"` : ''}`
-  )
-}
+// —— 尺寸：一律不加粗 ——
+// 历史教训（#10 二次修订）：早期给 ≤32px 加 stroke（64 局部单位 ≈1.5px@32px）想让
+// 细笔画在小尺寸更实，结果把交叉处的负空间填死——16px 变成黑团、32px 看着像「人」
+// 字。安装包图标（static/icon.png）用同一条路径、从不加粗，16/24/32 反而都认得出。
+// 字形主干约 32px@1024，缩到 16px 出现亚像素灰是必然（亮底暗线还会视觉变细）；
+// 要救只能整幅放大字形，别再动描边。
+const svgAt = (size) =>
+  SVG.replace(/<svg ([^>]*?)width="\d+" height="\d+"/, `<svg $1width="${size}" height="${size}"`)
 
 const SIZES = [16, 24, 32, 48, 64, 128, 256, 512]
 const pngs = new Map()
 for (const size of SIZES) {
-  const buf = await sharp(Buffer.from(svgAt(size)), { density: 300 }).png().toBuffer()
-  pngs.set(size, buf)
+  // density 只做超采样：SVG 按 300dpi 栅格化成 ~4.2× 大图，再降采样到精确像素
+  // 尺寸。少了 resize 这一步，hicolor 目录名 / ICO / ICNS 的标称尺寸与实际
+  // 像素不符（16x16 里塞 67×67），Windows/macOS 取图标会挑错槽位或模糊。
+  const hi = await sharp(Buffer.from(svgAt(size)), { density: 300 }).png().toBuffer()
+  pngs.set(size, await sharp(hi).resize(size, size, { kernel: 'lanczos3' }).png().toBuffer())
 }
 
 // —— 各档 hicolor PNG ——
