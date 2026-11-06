@@ -21,16 +21,14 @@
       :style="layerStyle"
       :data-block-id="editState.blockId"
       :data-fragment-id="editState.fragmentId"
+      @keydown.capture="handleEditKeydown"
+      @compositionstart.capture="composing = true"
+      @compositionend.capture="composing = false"
     >
-      <textarea
-        ref="draftInput"
-        v-model="draft"
-        class="mu-paper-edit-input"
-        spellcheck="false"
-        @compositionstart="composing = true"
-        @compositionend="composing = false"
-        @input="setDraft(draft)"
-        @keydown.stop="handleEditKeydown"
+      <block-editor
+        :key="editState.blockId"
+        ref="blockEditor"
+        :markdown="editState.draft"
       />
       <div class="mu-paper-edit-hint">
         Ctrl+Enter 提交 · Esc 放弃
@@ -93,10 +91,10 @@ import {
   cancelEdit,
   commitEdit,
   getEditSession,
-  setDraft,
   subscribeEditSession,
   type EditSessionState
 } from '@/sync/editSession'
+import BlockEditor from './blockEditor.vue'
 
 const props = defineProps<{
   markdown: string
@@ -124,9 +122,8 @@ let unsubscribeDocChanged: (() => void) | undefined
 // the deck is frozen — no re-measure, no re-fragment, no repaint — and only the
 // last committed Revision is visible everywhere else.
 const root = ref<HTMLDivElement | null>(null)
-const draftInput = ref<HTMLTextAreaElement | null>(null)
+const blockEditor = ref<InstanceType<typeof BlockEditor> | null>(null)
 const editState = ref<EditSessionState>(getEditSession())
-const draft = ref('')
 const composing = ref(false)
 const layerStyle = ref<Record<string, string>>({})
 let unsubscribeEdit: (() => void) | undefined
@@ -149,21 +146,27 @@ const handleDeckClick = (event: MouseEvent): void => {
     minHeight: `${Math.max(rect.height, 96)}px`
   }
   if (activateEdit(blockId, fragmentId ?? '', fragmentRange ?? '')) {
-    void nextTick(() => draftInput.value?.focus())
+    void nextTick(() => blockEditor.value?.focus())
   }
 }
 
 const handleEditKeydown = (event: KeyboardEvent): void => {
-  // IME owns Escape/Enter while composing; a composition is one atomic undo
-  // boundary because the whole draft commits as a single transaction.
+  // Capture on the layer: the Muya child owns ordinary keystrokes, but commit
+  // and cancel belong to the edit session. IME keeps Escape/Enter while
+  // composing; the whole draft is one transaction = one undo boundary.
   if (composing.value || event.isComposing) return
+  const isCommit = event.key === 'Enter' && (event.ctrlKey || event.metaKey)
+  if (event.key !== 'Escape' && !isCommit) return
+  event.preventDefault()
+  event.stopPropagation()
+
   if (event.key === 'Escape') {
-    event.preventDefault()
     cancelEdit('user')
-  } else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-    event.preventDefault()
-    commitEdit()
+    return
   }
+  const draft = blockEditor.value?.getMarkdown()
+  if (draft && draft.trim().length > 0) commitEdit(draft)
+  else cancelEdit('user')
 }
 
 const sum = (xs: number[]): number => xs.reduce((a, c) => a + c, 0)
@@ -549,7 +552,7 @@ onMounted(() => {
   unsubscribeEdit = subscribeEditSession((next) => {
     const wasActive = editState.value.active
     editState.value = next
-    if (next.active && !wasActive) draft.value = next.draft
+    if (next.active && !wasActive) void nextTick(() => blockEditor.value?.focus())
     if (wasActive && !next.active && pendingRebuild) {
       pendingRebuild = false
       rebuild()
@@ -599,29 +602,29 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
+/* 所见即所得：浮层只留一层极淡的激活轮廓，内容与纸面同底色同字体，
+   用户看到的是排版后的文字，不是 Markdown 源码框。 */
 .mu-paper-edit-layer {
   position: absolute;
   z-index: 20;
   box-sizing: border-box;
-  padding: 6px;
-  border: 2px solid #d8a72a;
-  border-radius: 4px;
+  max-height: 70vh;
+  overflow: auto;
+  padding: 2px 4px;
+  border: 1px solid rgb(216 167 42 / 55%);
+  border-radius: 2px;
   background: var(--editorBgColor, #fdfaf3);
-  box-shadow: 0 6px 24px rgb(0 0 0 / 18%);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 8%);
 }
 
-.mu-paper-edit-input {
-  display: block;
-  width: 100%;
-  min-height: 84px;
-  padding: 4px;
-  border: none;
-  outline: none;
-  resize: vertical;
+.mu-paper-edit-layer :deep(.mu-editor),
+.mu-paper-edit-layer :deep(.mu-container) {
+  max-width: none;
+  min-height: auto;
+  margin: 0;
+  padding: 0;
   background: transparent;
-  color: var(--editorColor, #1a1a1c);
-  font: inherit;
-  line-height: 1.6;
+  outline: none;
 }
 
 .mu-paper-edit-hint {

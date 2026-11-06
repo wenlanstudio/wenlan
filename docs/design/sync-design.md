@@ -393,13 +393,15 @@ data-fragment-range`；反查用 `querySelectorAll`，**不假设唯一命中**�
 - **M2 文/页最小闭环（已落地）**：先普通段落，验证 IME、commit/cancel、undo、
   外部重载，再扩展页内的代码块、列表和表格分片；此处只处理内容分片，不接入
   码/表/图块级编辑控件。
-  - 编辑面（D6）：`paperProjection.vue` 的页卡/续体点击
-    `[data-block-id]` / `[data-fragment-id]` → **只取位置**；`sync/editSession.ts`
-    在稳定编辑层打开**完整规范块**的 markdown 草稿（textarea，不在裁剪 /
-    translateY / overflow:hidden 的克隆上编辑）。`Ctrl+Enter` 提交、`Esc`
-    放弃；Enter 保留块内换行语义；IME composition 期间交还按键，整个草稿
-    作为**一个事务 / 一个撤销边界**。激活期该投影冻结重排、deck 停止接收点击，
-    编辑块可暂时溢出页框；其它投影停留在最后已提交 Revision。
+  - 编辑面（D6，所见即所得）：`paperProjection.vue` 的页卡/续体点击
+    `[data-block-id]` / `[data-fragment-id]` → **只取位置**；稳定编辑层
+    `blockEditor.vue` 是一个**只装完整规范块的可写 Muya 小实例**，与文视图
+    共用同一引擎、同一 contenteditable / IME / 行内渲染，用户看到的是排版后的
+    文字而非 Markdown 源码框（早期实现的 textarea 已替换）。Markdown 只在提交
+    时由 `getMarkdown()` 取回。浮层容器在 capture 阶段接管 `Ctrl+Enter` 提交 /
+    `Esc` 放弃，IME composition 期间交还按键，整个草稿作为**一个事务 / 一个
+    撤销边界**。激活期该投影冻结重排、deck 停止接收点击，编辑块可暂时溢出页框；
+    其它投影停留在最后已提交 Revision。
   - 写回（D2）：`Muya.getBlockMarkdown(index)` 取草稿，
     `Muya.replaceBlockMarkdown(index, draft, meta)` 用引擎自身解析器把草稿
     解析成规范块数组、替换目标块、序列化整篇后走现有 `replaceContent`
@@ -412,17 +414,21 @@ data-fragment-range`；反查用 `querySelectorAll`，**不假设唯一命中**�
     `notifyDocumentSwitch()`。rebase / 保留草稿留后续。
   - 验收：muya 单测 `replaceBlockMarkdown.spec.ts`（6 例：单块替换、块型变化、
     多块草稿、no-op、meta 透传、一步 undo / 分步边界）；desktop 单测
-    `editSession.spec.ts`（8 例）；e2e `sync-m2-page-edit.spec.ts`（7 例：
-    点击激活、Ctrl+Enter 含中文 IME 文本、undo、Esc 零事务、纯刷新零事务、
-    跨页续体定位同一规范块、外部重载取消草稿）。既有回归 45/45（含 N3 10 例、
-    M0 6 例、M1 6 例、parity 8 例）、desktop 单测 1279、typecheck、全量 lint
-    0 error、生产构建全绿。
+    `editSession.spec.ts`（9 例，含富文本草稿提交时取回）；e2e
+    `sync-m2-page-edit.spec.ts`（8 例：点击激活、Ctrl+Enter 含中文 IME 文本、
+    undo、Esc 零事务、纯刷新零事务、**富文本形态（h1 渲染块 / 无 textarea /
+    直接输入）**、跨页续体定位同一规范块、外部重载取消草稿）。既有回归 45/45
+    （含 N3 10 例、M0 6 例、M1 6 例、parity 8 例）、desktop 全套单测、
+    typecheck、全量 lint 0 error、生产构建全绿。
   - **已知边界**：① 只做**页叶**；览/示 iframe 内的编辑意图与协议握手归 M5；
-    ② 草稿是规范块 markdown 文本，未接码/表/图 `ui/*` 浮层（M3）；
+    ② 草稿在单块 Muya 实例内以富文本存在，提交时序列化回 markdown；码/表/图
+    `ui/*` 浮层仍未接（M3，可复用同一编辑层宿主）；
     ③ 激活期冲突一律取消草稿，未实现 rebase / 保留草稿；
     ④ 提交后投影仍走 `props.markdown` 全量 `setContent` + 250ms 防抖重建
     （M4 增量布局另立），N2 的 P95 尚未做基准；
-    ⑤ 空草稿被拒绝（不提供块删除），草稿一次解析可展开成多块。
+    ⑤ 空草稿被拒绝（不提供块删除），草稿一次解析可展开成多块；
+    ⑥ 编辑态仍显示 Muya 的内联标记（如 `# `，与文视图一致），且是**单块激活**
+    而非整页连续编辑 / 随打随分页——后者要解禁 D6 的冻结重排并重做分页基座。
 - **M3 本视图与码/表/图块级编辑器接入**：统一事务、历史和保存状态；本接入
   Markdown 原文编辑，码/表/图复用 Muya `ui/*` 交互并接入事务适配器。
 - **M4 几何缓存与增量布局**：先完成增量 blockStateHash 技术验证与基准，再引入

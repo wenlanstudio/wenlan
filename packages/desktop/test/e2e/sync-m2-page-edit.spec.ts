@@ -55,7 +55,9 @@ const enterPaperFullscreen = async(page: Page): Promise<void> => {
 }
 
 const editorLayer = (page: Page) => page.locator('.mu-paper-edit-layer')
-const draftInput = (page: Page) => page.locator('.mu-paper-edit-layer textarea')
+/** The edit layer is a writable Muya instance, not a markdown textarea. */
+const draftInput = (page: Page) =>
+  page.locator('.mu-paper-edit-layer .mu-editor[contenteditable="true"]')
 
 /** Wait until the projection has consumed the current doc-changed Revision. */
 const waitForProjectionRevision = async(page: Page): Promise<void> => {
@@ -119,7 +121,8 @@ test.describe('M2 page-leaf single-block editing', () => {
 
     await editorLayer(page).waitFor({ state: 'visible', timeout: 5000 })
     expect(await editorLayer(page).getAttribute('data-block-id')).toBe(blockId)
-    expect(await draftInput(page).inputValue()).toContain('First paragraph.')
+    expect(await draftInput(page).innerText()).toContain('First paragraph.')
+    expect(await editorLayer(page).locator('textarea').count()).toBe(0)
     expect(await page.locator('.mu-paper-deck.is-editing').count()).toBe(1)
     const session = await editSnapshot(page)
     expect(session.state.active).toBe(true)
@@ -128,10 +131,11 @@ test.describe('M2 page-leaf single-block editing', () => {
 
   test('Ctrl+Enter commits one projection transaction (IME text included)', async() => {
     const before = await snapshot(page)
-    const input = draftInput(page)
-    await input.fill('First paragraph. 中文输入')
+    await draftInput(page).click()
+    await page.keyboard.press('End')
+    await page.keyboard.insertText(' 中文输入')
     // A single composition + commit must remain ONE undo boundary.
-    await input.press('Control+Enter')
+    await page.keyboard.press('Control+Enter')
 
     await expect.poll(() => snapshot(page).then(s => s.revision)).toBeGreaterThan(before.revision)
     const log = await origins(page)
@@ -163,8 +167,9 @@ test.describe('M2 page-leaf single-block editing', () => {
     const before = await snapshot(page)
     await page.locator('.mu-paper-deck [data-block-id]').first().click()
     await editorLayer(page).waitFor({ state: 'visible', timeout: 5000 })
-    await draftInput(page).fill('DISCARD ME')
-    await draftInput(page).press('Escape')
+    await draftInput(page).click()
+    await page.keyboard.insertText(' DISCARD ME')
+    await page.keyboard.press('Escape')
 
     await editorLayer(page).waitFor({ state: 'detached', timeout: 5000 })
     expect((await snapshot(page)).revision).toBe(before.revision)
@@ -179,6 +184,38 @@ test.describe('M2 page-leaf single-block editing', () => {
     await page.waitForTimeout(400)
     expect((await snapshot(page)).revision).toBe(before.revision)
   })
+})
+
+test('the edit layer renders rich text, not markdown source', async() => {
+  test.setTimeout(120_000)
+  const launched = await launchWithMarkdown('# Heading one\n\nBody text.\n')
+  try {
+    const { app, page } = launched
+    await waitForMenuReady(app)
+    await enterPaperFullscreen(page)
+
+    await page.locator('.mu-paper-deck [data-block-id]').first().click()
+    await editorLayer(page).waitFor({ state: 'visible', timeout: 5000 })
+
+    const layer = editorLayer(page)
+    expect(await layer.locator('.mu-editor[contenteditable="true"]').count()).toBe(1)
+    expect(await layer.locator('textarea').count()).toBe(0)
+    // A heading becomes a rendered h1 block, exactly as in the WYSIWYG flow leaf.
+    expect(await layer.locator('h1.mu-atx-heading').count()).toBeGreaterThan(0)
+    expect(await layer.innerText()).toContain('Heading one')
+
+    // Typing lands directly in the rendered engine — no source textarea.
+    // Muya shows its own inline markers in edit mode (same as the flow leaf),
+    // so assert that the input reached the contenteditable, not its exact block.
+    await draftInput(page).click()
+    await page.keyboard.press('End')
+    await page.keyboard.insertText('!')
+    expect(await draftInput(page).innerText()).toContain('!')
+    await page.keyboard.press('Escape')
+    await editorLayer(page).waitFor({ state: 'detached', timeout: 5000 })
+  } finally {
+    await launched.app.close()
+  }
 })
 
 test('a continuation fragment resolves the same canonical block', async() => {
@@ -205,7 +242,7 @@ test('a continuation fragment resolves the same canonical block', async() => {
     await editorLayer(launched.page).waitFor({ state: 'visible', timeout: 5000 })
     expect(await editorLayer(launched.page).getAttribute('data-block-id')).toBe(blockId)
     // The draft is the whole block, not the clipped continuation.
-    const value = await draftInput(launched.page).inputValue()
+    const value = await draftInput(launched.page).innerText()
     expect(value).toContain('Line 01')
     expect(value).toContain('Line 60')
   } finally {
@@ -225,7 +262,8 @@ test('an external reload cancels an open draft instead of writing an old version
 
     await page.locator('.mu-paper-deck [data-block-id]').first().click()
     await editorLayer(page).waitFor({ state: 'visible', timeout: 5000 })
-    await draftInput(page).fill('Stale draft')
+    await draftInput(page).click()
+    await page.keyboard.insertText(' Stale draft')
     const before = await snapshot(page)
 
     await reportExternalChange(app, filePath, 'Reloaded on disk.\n')

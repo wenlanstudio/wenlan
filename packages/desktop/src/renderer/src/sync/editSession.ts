@@ -146,15 +146,20 @@ export const activateEdit = (
   return true
 }
 
-/** Commit the draft as ONE external transaction (origin: projection). */
-export const commitEdit = (): boolean => {
+/**
+ * Commit the draft as ONE external transaction (origin: projection).
+ * An optional draft lets a rich-text editor hand back its serialization at
+ * commit time instead of mirroring every keystroke into the session state.
+ */
+export const commitEdit = (draft?: string): boolean => {
   if (!assertFresh()) return false
   if (!writer) {
     cancelEdit('writer')
     return false
   }
+  if (draft !== undefined) setDraft(draft)
 
-  const { index, draft } = state
+  const { index, draft: committedDraft } = state
   // Deactivate BEFORE applying: our own doc-changed must not look like a
   // concurrent revision that invalidates the baseline.
   state.active = false
@@ -164,7 +169,7 @@ export const commitEdit = (): boolean => {
   transactionHub.submitExternal({
     origin: 'projection',
     apply: txnId => {
-      activeWriter.replaceBlockMarkdown(index, draft, changeMetaFor(txnId, 'projection'))
+      activeWriter.replaceBlockMarkdown(index, committedDraft, changeMetaFor(txnId, 'projection'))
     }
   })
 

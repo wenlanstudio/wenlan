@@ -77,6 +77,16 @@ describe('projection edit session — sync-design D6 / M2', () => {
     expect(getEditSessionDiagnostics().commits).toBeGreaterThan(0)
   })
 
+  it('accepts a rich-text draft supplied only at commit time', () => {
+    activateEdit(firstId(), '', '')
+    // A Muya block editor keeps the draft inside its own engine; the session
+    // only sees the serialization when the user commits.
+    expect(commitEdit('alpha from rich text')).toBe(true)
+    expect(writer.calls).toHaveLength(1)
+    expect(writer.calls[0].draft).toBe('alpha from rich text')
+    expect(transactionHub.getLog().at(-1)?.origin).toBe('projection')
+  })
+
   it('drops identity/no-op commits instead of writing fake history', () => {
     const noopWriter: CanonicalBlockWriter = {
       getBlockMarkdown: () => 'alpha',
