@@ -4,11 +4,12 @@
 > 「编辑如何汇聚、投影如何发散」，视图模型管「叶子如何组织、状态如何持久化」。
 > 冲突时以本文为准并同步修订 view-model.md（沿用其立法惯例）。
 >
-> 状态：**设计基线 + M0 / M1 已落地**（2026-11-06；M0 `feat/sync-m0-txn-adapter`、
-> M1 `feat/sync-m1-identity-projection`，后者基于前者）。
+> 状态：**设计基线 + M0 / M1 / M2 已落地**（2026-11-06；分支链
+> `feat/sync-m0-txn-adapter` → `feat/sync-m1-identity-projection` →
+> `fix/source-mode-parity-and-lint` → `feat/sync-m2-page-edit`）。
 > N1 的九个可编辑表面、D2 的双向事务入口、D4/D7/D8 的页/览几何分治已拍板；
 > D1–D8 作为后续里程碑的实施约束。M0 统一写路径与 Revision；M1 补块身份重锚、
-> 版本化投影与分片/滚动锚，**仍未接入九个编辑表面**；M2–M5 仍是设计约束。
+> 版本化投影与分片/滚动锚；M2 打通**页叶单块编辑**闭环；M3–M5 仍是设计约束。
 
 ## 1. 需求（从 #3 与多轮讨论蒸馏）
 
@@ -389,9 +390,39 @@ data-fragment-range`；反查用 `querySelectorAll`，**不假设唯一命中**�
     新 id，滚动锚会退回文本桥——这是「宁可重建不写错块」的代价；③ M1 每次事务
     对全量 TState 做哈希，O(n)，`lastReanchorMs` 已埋点供 M4 的增量 Merkle 基准
     替换；④ 览/示 iframe 的 ready 回带版本与严格拒收仍属 M5。
-- **M2 文/页最小闭环**：先普通段落，验证 IME、commit/cancel、undo、外部重载，
-  再扩展页内的代码块、列表和表格分片；此处只处理内容分片，不接入码/表/图
-  块级编辑控件。
+- **M2 文/页最小闭环（已落地）**：先普通段落，验证 IME、commit/cancel、undo、
+  外部重载，再扩展页内的代码块、列表和表格分片；此处只处理内容分片，不接入
+  码/表/图块级编辑控件。
+  - 编辑面（D6）：`paperProjection.vue` 的页卡/续体点击
+    `[data-block-id]` / `[data-fragment-id]` → **只取位置**；`sync/editSession.ts`
+    在稳定编辑层打开**完整规范块**的 markdown 草稿（textarea，不在裁剪 /
+    translateY / overflow:hidden 的克隆上编辑）。`Ctrl+Enter` 提交、`Esc`
+    放弃；Enter 保留块内换行语义；IME composition 期间交还按键，整个草稿
+    作为**一个事务 / 一个撤销边界**。激活期该投影冻结重排、deck 停止接收点击，
+    编辑块可暂时溢出页框；其它投影停留在最后已提交 Revision。
+  - 写回（D2）：`Muya.getBlockMarkdown(index)` 取草稿，
+    `Muya.replaceBlockMarkdown(index, draft, meta)` 用引擎自身解析器把草稿
+    解析成规范块数组、替换目标块、序列化整篇后走现有 `replaceContent`
+    （单步可逆 rebuild 边界、只产生变化块的 op）。编辑会话经
+    `hub.submitExternal({origin:'projection'})` 提交，`txnId` 由
+    `changeMetaFor` 透传，引擎通知只作确认。
+  - 一致性（D6）：激活时记 `(docSessionId, blockId, baseRevision)`；
+    undo / 外部重载 / 并发提交 / 文档切换 / 块 id 失效时**明确取消草稿并提示**，
+    不静默覆盖、不写入旧版本。`switchDocument` 无广播，由 editor.vue 显式
+    `notifyDocumentSwitch()`。rebase / 保留草稿留后续。
+  - 验收：muya 单测 `replaceBlockMarkdown.spec.ts`（6 例：单块替换、块型变化、
+    多块草稿、no-op、meta 透传、一步 undo / 分步边界）；desktop 单测
+    `editSession.spec.ts`（8 例）；e2e `sync-m2-page-edit.spec.ts`（7 例：
+    点击激活、Ctrl+Enter 含中文 IME 文本、undo、Esc 零事务、纯刷新零事务、
+    跨页续体定位同一规范块、外部重载取消草稿）。既有回归 45/45（含 N3 10 例、
+    M0 6 例、M1 6 例、parity 8 例）、desktop 单测 1279、typecheck、全量 lint
+    0 error、生产构建全绿。
+  - **已知边界**：① 只做**页叶**；览/示 iframe 内的编辑意图与协议握手归 M5；
+    ② 草稿是规范块 markdown 文本，未接码/表/图 `ui/*` 浮层（M3）；
+    ③ 激活期冲突一律取消草稿，未实现 rebase / 保留草稿；
+    ④ 提交后投影仍走 `props.markdown` 全量 `setContent` + 250ms 防抖重建
+    （M4 增量布局另立），N2 的 P95 尚未做基准；
+    ⑤ 空草稿被拒绝（不提供块删除），草稿一次解析可展开成多块。
 - **M3 本视图与码/表/图块级编辑器接入**：统一事务、历史和保存状态；本接入
   Markdown 原文编辑，码/表/图复用 Muya `ui/*` 交互并接入事务适配器。
 - **M4 几何缓存与增量布局**：先完成增量 blockStateHash 技术验证与基准，再引入
@@ -401,18 +432,19 @@ data-fragment-range`；反查用 `querySelectorAll`，**不假设唯一命中**�
 
 ## 10. 与现状的映射（落地时的心里有数，不是设计约束）
 
-| 现状                                                 | 去向                                                                                            |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `paginateBlocksV2` + PaperBlockBoxV2                 | 页策略保留；固有测量与上下文布局拆分                                                            |
-| paperProjection 手术（裁剪窗对/续表）                | 保留手术；补 block/fragment 锚，编辑不直接落在裁剪克隆                                          |
-| 第二只读 muya 实例（leafProjection）                 | 作为测量/渲染宿主；更新携带 Revision                                                            |
-| Muya ot-json1 + History                              | 直接复用为事务载荷和可逆历史，外层补统一 Txn 信封                                               |
-| 本视图 replaceContent 交接                           | 升级为带源码草稿和 Revision 的连续编辑协议                                                      |
-| deckPane iframe + sendBuild                          | 首阶段保留；内部自治布局；协议加样式/资源版本与编辑意图                                         |
-| bus 增量事件、chokidar 树推送                        | 文件级机制不动；补自己保存回声抑制                                                              |
-| md2slides 引擎（Typora 共用）                        | 策略库化，双宿主共享                                                                            |
-| `editor.vue` 丢弃 op/source 的 `json-change` handler | **M0 已改**：`hub.ingest()` 同 tick 封装 + `doc-changed` 单一广播；保存管线改订阅 `doc-changed` |
-| 投影靠 `children` 下标 + 文本桥                      | **M1 已改**：`blockIds` / `data-block-id` / `data-fragment-id` + 版本戳；锚定按身份优先         |
+| 现状                                                 | 去向                                                                                                  |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `paginateBlocksV2` + PaperBlockBoxV2                 | 页策略保留；固有测量与上下文布局拆分                                                                  |
+| paperProjection 手术（裁剪窗对/续表）                | 保留手术；补 block/fragment 锚，编辑不直接落在裁剪克隆                                                |
+| 第二只读 muya 实例（leafProjection）                 | 作为测量/渲染宿主；更新携带 Revision                                                                  |
+| Muya ot-json1 + History                              | 直接复用为事务载荷和可逆历史，外层补统一 Txn 信封                                                     |
+| 本视图 replaceContent 交接                           | 升级为带源码草稿和 Revision 的连续编辑协议                                                            |
+| deckPane iframe + sendBuild                          | 首阶段保留；内部自治布局；协议加样式/资源版本与编辑意图                                               |
+| bus 增量事件、chokidar 树推送                        | 文件级机制不动；补自己保存回声抑制                                                                    |
+| md2slides 引擎（Typora 共用）                        | 策略库化，双宿主共享                                                                                  |
+| `editor.vue` 丢弃 op/source 的 `json-change` handler | **M0 已改**：`hub.ingest()` 同 tick 封装 + `doc-changed` 单一广播；保存管线改订阅 `doc-changed`       |
+| 投影靠 `children` 下标 + 文本桥                      | **M1 已改**：`blockIds` / `data-block-id` / `data-fragment-id` + 版本戳；锚定按身份优先               |
+| 页叶真分片只读投影                                   | **M2 已改**：保留只读渲染实现，另加稳定编辑层；点击 fragment 只定位，草稿写回完整规范块并进统一事务流 |
 
 ## 11. 与 view-model.md 的同步项（M0 / M1 已修订）
 
@@ -427,7 +459,8 @@ M0 / M1 分支已按此修订 §2 / §3 / §6**）：
 - 「示」的 Esc、步进与编辑态优先级以 D6 为准。
 
 **边界提醒**：文档写的是目标语义，不等于代码已到位。M0 统一了写路径与
-Revision，M1 完成块身份重锚、版本化投影与块/分片/滚动锚；页/览/示的
-fragment **编辑**闭环仍属 M2/M5，iframe 协议握手属 M5。当前只读投影是渲染
-实现（A″ 裁决保留），不是设计上的不可编辑；投影的 `data-block-id` 目前只用于
-定位与锚定，尚未承载写请求。
+Revision，M1 完成块身份重锚、版本化投影与块/分片/滚动锚，M2 打通**页叶**
+的 fragment 编辑闭环（稳定编辑层 + 完整规范块写回）。览/示 iframe 内的编辑
+意图、协议握手与码/表/图块级控件仍属 M3/M5。页叶的投影 DOM 本身依旧只读
+（A″ 裁决保留），可编辑的是覆盖其上的稳定编辑层；`data-block-id` 既用于
+定位与锚定，也承载 M2 的写请求，但**提交目标始终是规范块而非克隆**。

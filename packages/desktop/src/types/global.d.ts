@@ -273,6 +273,7 @@ declare global {
         blockIds: string[]
       }
       getProjection(): unknown
+      getEditSession(): unknown
     }
     marktext?: {
       env?: { windowId: number; [key: string]: unknown }

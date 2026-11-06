@@ -409,6 +409,7 @@ export interface SyncDebugSurface {
   isStale(revision: number): boolean
   getIdentity(): IdentitySnapshot
   getProjection(): unknown
+  getEditSession(): unknown
 }
 
 /**
@@ -418,7 +419,8 @@ export interface SyncDebugSurface {
  */
 export function installSyncDebugSurface(
   hub: TransactionHub,
-  getProjectionDiagnostics: () => unknown = () => null
+  getProjectionDiagnostics: () => unknown = () => null,
+  getEditSessionSnapshot: () => unknown = () => null
 ): void {
   const surface: SyncDebugSurface = Object.freeze({
     getSnapshot: () => hub.getSnapshot(),
@@ -428,7 +430,8 @@ export function installSyncDebugSurface(
       ...hub.blocks.getDiagnostics(),
       blockIds: [...hub.blocks.getIds()]
     }),
-    getProjection: getProjectionDiagnostics
+    getProjection: getProjectionDiagnostics,
+    getEditSession: getEditSessionSnapshot
   })
   Object.defineProperty(window, '__wenlanSync', {
     configurable: true,

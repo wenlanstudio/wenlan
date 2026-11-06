@@ -368,6 +368,50 @@ export class Muya {
         return true;
     }
 
+    /**
+     * Serialize ONE canonical top-level block back to markdown. The M2
+     * projection editor uses this as the draft shown in its stable edit layer:
+     * the user always edits the complete block, never a clipped fragment.
+     */
+    getBlockMarkdown(index: number): string | null {
+        const block = this.getState()[index];
+        if (!block)
+            return null;
+        return this.editor.jsonState.getMarkdownFromState([block]);
+    }
+
+    /**
+     * Replace ONE canonical top-level block with a markdown draft as a SINGLE
+     * undo boundary (sync-design D6 / M2). The draft is parsed by the engine's
+     * own markdown parser, so a paragraph can become a heading, a list, a table
+     * or several blocks without the host inventing a second operation format.
+     *
+     * The projection editor uses this to write back the COMPLETE canonical block
+     * it activated — never a clipped/translated fragment. `meta` is forwarded to
+     * `json-change` so the host adapter can confirm the external apply by txnId.
+     *
+     * @returns `false` for an invalid index, an empty draft, or an unchanged document.
+     */
+    replaceBlockMarkdown(index: number, draft: string, meta?: IChangeMeta): boolean {
+        const states = this.getState();
+        if (index < 0 || index >= states.length || draft.trim().length === 0)
+            return false;
+
+        const replacement = this.editor.jsonState.markdownToState(draft);
+        // An empty draft would silently delete the block; block deletion is not
+        // part of the M2 edit protocol.
+        if (replacement.length === 0)
+            return false;
+
+        const next = [
+            ...states.slice(0, index),
+            ...replacement,
+            ...states.slice(index + 1),
+        ];
+        const markdown = this.editor.jsonState.getMarkdownFromState(next);
+        return this.replaceContent(markdown, undefined, meta);
+    }
+
     setOptions(options: Partial<IMuyaOptions>, forceRender = false) {
         Object.assign(this.options, options);
 

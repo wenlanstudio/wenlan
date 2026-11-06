@@ -1,5 +1,8 @@
 <template>
-  <div class="paper-projection paper-projection-view">
+  <div
+    ref="root"
+    class="paper-projection paper-projection-view"
+  >
     <div
       ref="host"
       class="paper-projection-muya"
@@ -7,7 +10,38 @@
     <div
       ref="deck"
       class="mu-paper-deck"
+      :class="{ 'is-editing': editState.active }"
+      @click="handleDeckClick"
     />
+    <!-- M2 稳定编辑层：投影节点只负责定位，草稿始终属于完整规范块；绝不直接
+         编辑带裁剪 / translateY / overflow:hidden 的续体克隆。 -->
+    <div
+      v-if="editState.active"
+      class="mu-paper-edit-layer"
+      :style="layerStyle"
+      :data-block-id="editState.blockId"
+      :data-fragment-id="editState.fragmentId"
+    >
+      <textarea
+        ref="draftInput"
+        v-model="draft"
+        class="mu-paper-edit-input"
+        spellcheck="false"
+        @compositionstart="composing = true"
+        @compositionend="composing = false"
+        @input="setDraft(draft)"
+        @keydown.stop="handleEditKeydown"
+      />
+      <div class="mu-paper-edit-hint">
+        Ctrl+Enter 提交 · Esc 放弃
+      </div>
+    </div>
+    <div
+      v-if="editState.notice"
+      class="mu-paper-edit-notice"
+    >
+      {{ editState.notice }}
+    </div>
   </div>
 </template>
 
@@ -28,7 +62,7 @@
  * muya 宿主 visibility:hidden（保布局——量测需要真实几何）而非 display:none；
  * 被搬出的块成为 deck（可见子树）的子节点，正常渲染。
  */
-import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Muya, type IMuyaOptions } from '@muyajs/core'
 import { usePreferencesStore } from '@/store/preferences'
@@ -54,6 +88,15 @@ import {
   type ProjectionRequest
 } from '@/sync/projectionVersion'
 import { fragmentIdOf, markFragment } from '@/sync/fragmentAnchor'
+import {
+  activateEdit,
+  cancelEdit,
+  commitEdit,
+  getEditSession,
+  setDraft,
+  subscribeEditSession,
+  type EditSessionState
+} from '@/sync/editSession'
 
 const props = defineProps<{
   markdown: string
@@ -76,6 +119,52 @@ let latestBlockIds: readonly string[] = []
 let layoutRevision = 0
 let projectionRevision = 0
 let unsubscribeDocChanged: (() => void) | undefined
+
+// M2: a single-block edit session overlays the projection. While it is active
+// the deck is frozen — no re-measure, no re-fragment, no repaint — and only the
+// last committed Revision is visible everywhere else.
+const root = ref<HTMLDivElement | null>(null)
+const draftInput = ref<HTMLTextAreaElement | null>(null)
+const editState = ref<EditSessionState>(getEditSession())
+const draft = ref('')
+const composing = ref(false)
+const layerStyle = ref<Record<string, string>>({})
+let unsubscribeEdit: (() => void) | undefined
+let pendingRebuild = false
+
+const handleDeckClick = (event: MouseEvent): void => {
+  if (editState.value.active || !root.value) return
+  const target = (event.target as Element | null)?.closest<HTMLElement>('[data-block-id]')
+  const { blockId, fragmentId, fragmentRange } = target?.dataset ?? {}
+  if (!target || !blockId) return
+
+  // The clicked node may be a clipped continuation. It only supplies the
+  // position; activateEdit resolves the COMPLETE canonical block by id.
+  const rect = target.getBoundingClientRect()
+  const rootRect = root.value.getBoundingClientRect()
+  layerStyle.value = {
+    left: `${rect.left - rootRect.left + root.value.scrollLeft}px`,
+    top: `${rect.top - rootRect.top + root.value.scrollTop}px`,
+    width: `${Math.max(rect.width, 320)}px`,
+    minHeight: `${Math.max(rect.height, 96)}px`
+  }
+  if (activateEdit(blockId, fragmentId ?? '', fragmentRange ?? '')) {
+    void nextTick(() => draftInput.value?.focus())
+  }
+}
+
+const handleEditKeydown = (event: KeyboardEvent): void => {
+  // IME owns Escape/Enter while composing; a composition is one atomic undo
+  // boundary because the whole draft commits as a single transaction.
+  if (composing.value || event.isComposing) return
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    cancelEdit('user')
+  } else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+    event.preventDefault()
+    commitEdit()
+  }
+}
 
 const sum = (xs: number[]): number => xs.reduce((a, c) => a + c, 0)
 
@@ -406,6 +495,12 @@ const fragment = (request: ProjectionRequest): void => {
 let rebuildGen = 0
 
 const rebuild = (): void => {
+  // D6: freeze this projection while its single block editor is active. Other
+  // projections keep showing the last committed Revision.
+  if (editState.value.active) {
+    pendingRebuild = true
+    return
+  }
   const gen = ++rebuildGen
   const muyaInst = muya.value
   if (!muyaInst) return
@@ -451,6 +546,15 @@ onMounted(() => {
   unsubscribeDocChanged = transactionHub.subscribe((event) => {
     latestBlockIds = event.blockIds
   })
+  unsubscribeEdit = subscribeEditSession((next) => {
+    const wasActive = editState.value.active
+    editState.value = next
+    if (next.active && !wasActive) draft.value = next.draft
+    if (wasActive && !next.active && pendingRebuild) {
+      pendingRebuild = false
+      rebuild()
+    }
+  })
   rebuild()
   void document.fonts?.ready.then(rebuild)
 })
@@ -459,6 +563,9 @@ onBeforeUnmount(() => {
   window.clearTimeout(applyTimer)
   unsubscribeDocChanged?.()
   unsubscribeDocChanged = undefined
+  unsubscribeEdit?.()
+  unsubscribeEdit = undefined
+  if (editState.value.active) cancelEdit('user')
   muya.value?.destroy()
   muya.value = null
 })
@@ -485,5 +592,54 @@ onBeforeUnmount(() => {
 .mu-paper-deck {
   width: var(--paper-page-width, 210mm);
   margin: 0 auto;
+}
+
+/* M2：激活单块编辑时，投影面冻结且不再接受点击（全局至多一个活编辑面）。 */
+.mu-paper-deck.is-editing {
+  pointer-events: none;
+}
+
+.mu-paper-edit-layer {
+  position: absolute;
+  z-index: 20;
+  box-sizing: border-box;
+  padding: 6px;
+  border: 2px solid #d8a72a;
+  border-radius: 4px;
+  background: var(--editorBgColor, #fdfaf3);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 18%);
+}
+
+.mu-paper-edit-input {
+  display: block;
+  width: 100%;
+  min-height: 84px;
+  padding: 4px;
+  border: none;
+  outline: none;
+  resize: vertical;
+  background: transparent;
+  color: var(--editorColor, #1a1a1c);
+  font: inherit;
+  line-height: 1.6;
+}
+
+.mu-paper-edit-hint {
+  margin-top: 4px;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.mu-paper-edit-notice {
+  position: absolute;
+  z-index: 21;
+  top: 8px;
+  left: 50%;
+  padding: 6px 12px;
+  transform: translateX(-50%);
+  border-radius: 4px;
+  background: #fff4d6;
+  color: #6b4b00;
+  font-size: 12px;
 }
 </style>

@@ -127,6 +127,12 @@ import {
 } from '@/sync/transactionHub'
 import { applyBlockIds } from '@/sync/blockIdentity'
 import { getProjectionDiagnostics } from '@/sync/projectionVersion'
+import {
+  getEditSession,
+  getEditSessionDiagnostics,
+  notifyDocumentSwitch,
+  setCanonicalWriter
+} from '@/sync/editSession'
 import { useProjectStore } from '@/store/project'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
@@ -1606,6 +1612,7 @@ const setMarkdownToEditor = (payload: unknown) => {
     // A whole-tree swap is a document-session boundary, not an edit (sync-design
     // D1/D2): no transaction, and the Revision chain starts over for this file.
     transactionHub.switchDocument(id)
+    notifyDocumentSwitch()
     // `setContent` resets the document and clears the undo history; only set a
     // cursor afterwards (a freshly-opened file has no history to restore).
     editor.value.setContent(newMarkdown ?? '')
@@ -1740,6 +1747,7 @@ const handleFileChange = (payload: unknown) => {
       // Tab switch / programmatic swap rebuilds the whole tree: new document
       // session, no edit transaction. Same-doc remounts keep the Revision chain.
       transactionHub.switchDocument(id)
+      notifyDocumentSwitch()
       editor.value.setContent(newMarkdown)
       // Whole-tree swap: re-anchor against the NEW canonical states even though
       // setContent emits no json-change (D1 covers every rebuild, not just edits).
@@ -1906,7 +1914,11 @@ const handleCodeRunRequest = (event: Event): void => {
 }
 
 onMounted(() => {
-  installSyncDebugSurface(transactionHub, getProjectionDiagnostics)
+  installSyncDebugSurface(
+    transactionHub,
+    getProjectionDiagnostics,
+    () => ({ state: getEditSession(), diagnostics: getEditSessionDiagnostics() })
+  )
   printer = new Printer()
 
   // issue #2：把「真实可用的编辑视口高度」发布成 CSS 变量。面板展开/拖拽时
@@ -2007,6 +2019,8 @@ onMounted(() => {
   // the document tree and instantiates the registered UI plugins).
   muya.init({ focus: editorStore.TAKE_OPEN_INTENT(currentFile.value?.pathname) !== false })
   editor.value = muya
+  // M2: the live engine is the only canonical writer for projection drafts.
+  setCanonicalWriter(muya)
   // M1: the first document (and every view remount) needs an identity pass even
   // though loading it produced no transaction.
   transactionHub.setBlockStateProvider(() => editor.value?.getState() ?? [])
@@ -2285,6 +2299,7 @@ onBeforeUnmount(() => {
     blockIdRaf = 0
   }
   transactionHub.setBlockStateProvider(null)
+  setCanonicalWriter(null)
   document.removeEventListener(CODE_RUN_EVENT, handleCodeRunRequest)
   // 切到 code/source 或占位视图时本组件经 `v-if` 销毁，下面的 destroy() 会连
   // muya 实例与 undo 栈一起丢掉（page ↔ columns 已共用同一实例，不再销毁）。

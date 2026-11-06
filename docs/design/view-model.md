@@ -71,10 +71,11 @@ printToPDF 页数）对两叶同时成立**（推挤不改块高，页数相同�
 - **五叶可见平铺**在切换器上（刻度「文 栏│页 览 示」，分隔线提示二组），第六叶 `spare`（备）由 `HIDDEN_LEAVES` 雪藏——`toggleLeaf` 拒选、持久化净化回 `flow`，不会出现「选中了看不见的叶」；栏格随文档有无 `begin` 标记显隐；
 - **编辑面不变量：同一时刻至多一个活编辑面**（sync-design N1/D6）——可编辑性
   是编辑面位置属性，不押在叶子上。九个可编辑表面 = 六视图叶（本/文/栏/页/览/示）
-  - 三块级编辑器（码/表/图，复用 Muya `ui/*`，**不是新叶**）。当前实现仍只有
-    左 pane/全屏的 muya 活引擎可写，右 pane 与纸叶是只读投影；M2/M5 会把
-    页/览/示的 fragment 点击接到稳定编辑层的完整规范块，届时
-    **投影只读 ≠ 不可编辑**。
+  - 三块级编辑器（码/表/图，复用 Muya `ui/*`，**不是新叶**）。当前可写面 =
+    左 pane/全屏的 muya 活引擎 + **页叶稳定编辑层**（M2：fragment 点击只定位，
+    草稿写回完整规范块）；右 pane 的文支投影与览/示 iframe 仍是只读渲染，
+    览/示编辑归 M5。**投影只读 ≠ 不可编辑**：A″ 的真分片渲染保留，可编辑的
+    是覆盖其上的稳定编辑层。
     **A″ 裁决 / M4.3b 的渲染实现保留**：全屏纸叶可见面 = 真分片投影
     （paperProjection），活引擎以 display:none 留任「隐藏服务后端」——bus
     导出/TOC 依赖 editor.vue 挂载，收起不占位（导出走序列化，不需要布局）；
@@ -88,6 +89,10 @@ printToPDF 页数）对两叶同时成立**（推挤不改块高，页数相同�
   `data-block-id / data-fragment-id / data-fragment-range`，滚动与光标按
   `fragmentId → blockId → 下标 → 文本桥` 恢复；投影结果带
   doc/layout/projection 三级 Revision，过期异步结果直接丢弃；
+- **页叶编辑面**（sync-design D6/M2 已落地）：页卡与跨页续体可点击，但投影
+  DOM 仍只读；稳定编辑层覆盖其上、编辑**完整规范块**（不碰裁剪克隆），
+  `Ctrl+Enter` 提交 / `Esc` 放弃，写回同一事务流与 undo；激活期冻结该投影
+  重排、至多一个活编辑面。览/示的可编辑闭环归 M5；
 - **配置选择式**：点一下选中、再点一下取消，搭配由用户自定，**至多两叶**：
   - 1 叶 → 该视图全屏；
   - 2 叶 → 分屏，左右按按钮序（flow < column < spare < page < slide <
@@ -242,6 +247,7 @@ printToPDF 页数）对两叶同时成立**（推挤不改块高，页数相同�
 | 分屏壳 / 分割条 / pane 接线             | `components/editorWithTabs/index.vue`                                                                                                                                                                                                                                                          |
 | 统一事务流 / Revision / doc-changed     | `renderer/src/sync/transactionHub.ts`（M0：Txn 信封、外源串行队列、txnId 去重、保存回声抑制、`window.__wenlanSync` 只读诊断面）；引擎侧 `@muyajs/core` 的 `IChangeMeta` 透传；接线见 `editor.vue` / `store/editor.ts`                                                                          |
 | 身份重锚 / 版本化投影 / 分片锚（M1）    | `renderer/src/sync/` 下 `blockIdentity.ts` / `stableHash.ts` / `projectionVersion.ts` / `fragmentAnchor.ts`；投影 DOM 挂 `data-block-id` / `data-fragment-id` / 三级 Revision；`util/viewScrollSync.ts` 按身份恢复滚动与光标                                                                   |
+| 页叶单块编辑 / 草稿会话（M2）           | `renderer/src/sync/editSession.ts` + `paperProjection.vue` 稳定编辑层；引擎侧 `Muya.getBlockMarkdown` / `replaceBlockMarkdown`；点击 fragment 只定位，Ctrl+Enter 提交、Esc 放弃，走 `origin:'projection'` 事务                                                                                 |
 | 展示组两叶的投影面（放映 / 页览）       | `components/editorWithTabs/deckPane.vue`（leaf × view/panel 两维变体；服务引用计数）                                                                                                                                                                                                           |
 | 文支叶的只读投影（栏/页）               | `components/editorWithTabs/leafProjection.vue`（muya 只读第二实例，lens 决定姿态）                                                                                                                                                                                                             |
 | 纸叶真分片投影（A″）                    | `components/editorWithTabs/paperProjection.vue`（只读实例 + 分片执行器：裁剪窗对/表格行手术/整块搬移；全屏态活引擎 display:none 留任隐藏服务后端，见 §2）                                                                                                                                      |
