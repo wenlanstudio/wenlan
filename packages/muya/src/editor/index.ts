@@ -4,7 +4,7 @@ import type Format from '../block/base/format';
 import type Parent from '../block/base/parent';
 import type { Muya } from '../muya';
 import type { IHistorySelection } from '../selection/types';
-import type { TState } from '../state/types';
+import type { IChangeMeta, TState } from '../state/types';
 import type { Nullable } from '../types';
 import * as otText from 'ot-text-unicode';
 import { fromEvent, merge } from 'rxjs';
@@ -481,7 +481,7 @@ export class Editor {
         firstLeafBlock.setCursor(0, 0, needUpdated);
     }
 
-    updateContents(operations: JSONOp, selection: Nullable<IHistorySelection>, source: string) {
+    updateContents(operations: JSONOp, selection: Nullable<IHistorySelection>, source: string, meta?: IChangeMeta) {
         const muya = this._muya;
         // Read-only backstop: a user-sourced op (undo/redo apply) must not
         // mutate a locked document. `api`-sourced replacements (setContent on
@@ -492,7 +492,7 @@ export class Editor {
         // ot-json1 no-op (`null`) is forwarded to dispatch — JSONState
         // short-circuits internally so listeners still see a json-change
         // event for the no-op.
-        this.jsonState.dispatch(operations, source);
+        this.jsonState.dispatch(operations, source, meta);
 
         // Codes bellow are copy from `ot-json1.apply` and modified.
         if (operations === null)
@@ -573,12 +573,12 @@ export class Editor {
      * shapes the incremental pick/drop walker cannot apply without desyncing the
      * DOM from the json state.
      */
-    rebuildContents(operations: JSONOp, selection: Nullable<IHistorySelection>, source: string) {
+    rebuildContents(operations: JSONOp, selection: Nullable<IHistorySelection>, source: string, meta?: IChangeMeta) {
         // Same read-only backstop as `updateContents`; see the note there.
         if (this._muya.options.readOnly && source === 'user')
             return;
 
-        this.jsonState.dispatch(operations, source);
+        this.jsonState.dispatch(operations, source, meta);
 
         const state = this.jsonState.getState();
         this.scrollPage!.updateState(state);

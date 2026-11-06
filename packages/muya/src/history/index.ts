@@ -172,10 +172,12 @@ class History {
         this._lastRecorded = 0;
         this._ignoreChange = true;
         try {
+            // The host transaction adapter classifies this apply as an undo or
+            // redo transaction; the engine only forwards the label verbatim.
             if (rebuild)
-                this._muya.editor.rebuildContents(operation, selection, 'user');
+                this._muya.editor.rebuildContents(operation, selection, 'user', { origin: source });
             else
-                this._muya.editor.updateContents(operation, selection, 'user');
+                this._muya.editor.updateContents(operation, selection, 'user', { origin: source });
         }
         finally {
             this._ignoreChange = false;

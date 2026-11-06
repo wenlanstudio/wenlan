@@ -118,6 +118,13 @@ import { findActiveHeadingSlug, type HeadingPosition } from '@/util/findActiveHe
 import { addCommonStyle } from '@/util/theme'
 import { usePreferencesStore } from '@/store/preferences'
 import { useEditorStore } from '@/store/editor'
+import {
+  changeMetaFor,
+  installSyncDebugSurface,
+  transactionHub,
+  type DocChanged,
+  type JsonChange
+} from '@/sync/transactionHub'
 import { useProjectStore } from '@/store/project'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
@@ -148,6 +155,10 @@ const STANDAR_Y = 320
 // duplicate UI handlers. The per-plugin option closures (imageAction/jumpClick)
 // only read app-singleton Pinia stores, so capturing them once is correct.
 let muyaPluginsRegistered = false
+
+// The save pipeline is a doc-changed subscriber, so it must be torn down with
+// this component (source mode replaces editor.vue with CodeMirror).
+let unsubscribeDocChanged: (() => void) | undefined
 
 // The engine's `selection-change` / `json-change` payload. The consumed
 // `@muyajs/core` declaration does not re-export this shape, so describe the
@@ -1575,6 +1586,9 @@ interface FileLoadedPayload {
 const setMarkdownToEditor = (payload: unknown) => {
   const { id, markdown: newMarkdown, cursor: newCursor } = (payload ?? {}) as FileLoadedPayload
   if (editor.value) {
+    // A whole-tree swap is a document-session boundary, not an edit (sync-design
+    // D1/D2): no transaction, and the Revision chain starts over for this file.
+    transactionHub.switchDocument(id)
     // `setContent` resets the document and clears the undo history; only set a
     // cursor afterwards (a freshly-opened file has no history to restore).
     editor.value.setContent(newMarkdown ?? '')
@@ -1657,7 +1671,13 @@ const handleFileChange = (payload: unknown) => {
       // document is unchanged this is a no-op (returns false) and the existing
       // history/content already match — either way the caret still needs
       // remapping below.
-      editor.value.replaceContent(newMarkdown, preSourceModeSelection)
+      // M0: the external intent is queued first, then applied through Muya;
+      // its json-change is only a confirmation, matched by txnId (D2).
+      transactionHub.submitExternal({
+        origin: 'source',
+        apply: txnId =>
+          editor.value?.replaceContent(newMarkdown, preSourceModeSelection, changeMetaFor(txnId, 'source'))
+      })
       preSourceModeSelection = null
       editorStore.UPDATE_TOC(editor.value.getTOC())
       // Map the CodeMirror `{ line, ch }` cursor onto a block-key cursor so the
@@ -1677,10 +1697,18 @@ const handleFileChange = (payload: unknown) => {
       // `lastSavedHistoryId: 0`), so re-seed the save-tracking allocator BEFORE
       // applying: `replaceContent` fires a SYNCHRONOUS `json-change` that would
       // otherwise mark the tab dirty against the stale (pre-reload) baseline.
-      if (id) {
-        resetSyntheticHistory(id, newMarkdown)
-      }
-      editor.value.replaceContent(newMarkdown)
+      transactionHub.submitExternal({
+        origin: 'disk',
+        // Our own save produces a watcher event with the same text; the hub
+        // consumes that fingerprint instead of creating a disk transaction.
+        markdown: newMarkdown,
+        apply: txnId => {
+          if (id) {
+            resetSyntheticHistory(id, newMarkdown)
+          }
+          editor.value?.replaceContent(newMarkdown, undefined, changeMetaFor(txnId, 'disk'))
+        }
+      })
       editorStore.UPDATE_TOC(editor.value.getTOC())
       if (newCursor) {
         applyCursor(editor.value, newCursor)
@@ -1691,6 +1719,9 @@ const handleFileChange = (payload: unknown) => {
       // per-tab) afterwards — preserves undo/redo on in-session tab switch. The
       // `history` in the payload is the synthetic desktop-shaped history used
       // for save tracking, not the engine history.
+      // Tab switch / programmatic swap rebuilds the whole tree: new document
+      // session, no edit transaction. Same-doc remounts keep the Revision chain.
+      transactionHub.switchDocument(id)
       editor.value.setContent(newMarkdown)
       // Tab switch swaps content without firing `json-change`, so re-seed the
       // TOC (otherwise returning to an open tab keeps the other tab's TOC).
@@ -1854,6 +1885,7 @@ const handleCodeRunRequest = (event: Event): void => {
 }
 
 onMounted(() => {
+  installSyncDebugSurface(transactionHub)
   printer = new Printer()
 
   // issue #2：把「真实可用的编辑视口高度」发布成 CSS 变量。面板展开/拖拽时
@@ -2039,12 +2071,21 @@ onMounted(() => {
   bus.on('open-command-spellchecker-switch-language', openSpellcheckerLanguageCommand)
   bus.on('replace-misspelling', replaceMisspelling)
 
-  // The engine emits a low-level `json-change` ({ op, source, prevDoc, doc })
-  // on every document mutation; the desktop's content-change pipeline wants the
-  // derived document snapshot (markdown / word count / cursor / history / TOC /
-  // block AST), so we compute it here — mirroring the legacy engine's
-  // `dispatchChange` payload.
-  editor.value.on('json-change', () => {
+  // M0 (sync-design D2): `json-change` is the only engine notification. Muya
+  // has ALREADY applied self-sourced edits, so the hub wraps them into a Txn in
+  // this same tick; external applies carry a txnId and are only confirmations.
+  // Nothing on this path calls apply again.
+  editor.value.on('json-change', (payload: unknown) => {
+    transactionHub.ingest(payload as JsonChange)
+  })
+
+  // Both entrances converge on ONE doc-changed broadcast. The desktop's
+  // content-change pipeline wants the derived document snapshot (markdown /
+  // word count / cursor / history / TOC / block AST), so we compute it here —
+  // mirroring the legacy engine's `dispatchChange` payload.
+  unsubscribeDocChanged = transactionHub.subscribe((event: DocChanged) => {
+    // Future projections subscribe to this bus event; they never write back.
+    bus.emit('doc-changed', event)
     // There is a chance that this event is fired AFTER the tab is switched. If we purely rely on this.currentFile later on
     // it can be invalid updates. Hence, we need the id to identify changes as part of each tab
     if (!currentFile.value || !editor.value) return
@@ -2210,6 +2251,8 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  unsubscribeDocChanged?.()
+  unsubscribeDocChanged = undefined
   document.removeEventListener(CODE_RUN_EVENT, handleCodeRunRequest)
   // 切到 code/source 或占位视图时本组件经 `v-if` 销毁，下面的 destroy() 会连
   // muya 实例与 undo 栈一起丢掉（page ↔ columns 已共用同一实例，不再销毁）。

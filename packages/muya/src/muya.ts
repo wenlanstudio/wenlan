@@ -8,7 +8,7 @@ import type { IReplaceOption, ISearchOption } from './search/types';
 import type { IIndexCursor } from './selection/offsetCursor';
 import type { IHistorySelection, IPublicCursorInput } from './selection/types';
 import type { ITocItem } from './state/getTOC';
-import type { IBulletListState, IOrderListState, ITableState, ITaskListState, TState } from './state/types';
+import type { IBulletListState, IChangeMeta, IOrderListState, ITableState, ITaskListState, TState } from './state/types';
 import type { IMuyaOptions, Nullable } from './types';
 import Format from './block/base/format';
 import { canTurnInto, insertBlockBelowByLabel, insertFrontMatterAtStart, replaceBlockByLabel } from './block/blockTransforms';
@@ -341,9 +341,13 @@ export class Muya {
      * back the caret captured when the user switched INTO source mode. Omitted,
      * it falls back to the current live selection.
      *
+     * `meta` carries the host adapter's transaction attribution onto the
+     * resulting `json-change`, so the external apply can be confirmed by txnId
+     * instead of allocating a second transaction (sync-design D2).
+     *
      * @returns `true` if a boundary was recorded, `false` if nothing changed.
      */
-    replaceContent(content: TState[] | string, recordSelection?: Nullable<IHistorySelection>): boolean {
+    replaceContent(content: TState[] | string, recordSelection?: Nullable<IHistorySelection>, meta?: IChangeMeta): boolean {
         const { jsonState, history } = this.editor;
         const { op, prevState } = jsonState.buildReplaceOp(content);
 
@@ -358,7 +362,7 @@ export class Muya {
         // so suppress History's own recording of it to avoid a duplicate entry.
         history.recordRebuild(op, prevState, boundarySelection);
         history.suppressRecording(() => {
-            this.editor.rebuildContents(op, selection, 'api');
+            this.editor.rebuildContents(op, selection, 'api', meta);
         });
 
         return true;

@@ -22,6 +22,7 @@ import { useLayoutStore } from './layout'
 import { useMainStore } from '.'
 import { t } from '../i18n'
 import { debouncedSendBufferedState, sendBufferedState } from './bufferedState'
+import { transactionHub } from '../sync/transactionHub'
 import type {
   IFileState,
   FileNotification,
@@ -637,6 +638,9 @@ export const useEditorStore = defineStore('editor', {
       window.electron.ipcRenderer.on('mt::tab-saved', (_, tabId) => {
         const tab = this.tabs.find((f) => f.id === tabId)
         if (tab) {
+          // The watcher will report our own write back to us; the hub consumes
+          // this fingerprint so it cannot become a disk edit transaction (§6).
+          transactionHub.noteSaved(tab.markdown)
           const lastEditIndex = tab.history.lastEditIndex
           if (
             typeof lastEditIndex === 'number' &&

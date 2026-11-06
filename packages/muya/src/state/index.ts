@@ -1,7 +1,7 @@
 import type { Doc, JSONOp, JSONOpList, Path } from 'ot-json1';
 import type { Muya } from '../muya';
 import type { TDiff } from '../utils';
-import type { TState } from './types';
+import type { IChangeMeta, TState } from './types';
 import * as json1 from 'ot-json1';
 import { deepClone } from '../utils';
 import logger from '../utils/logger';
@@ -221,7 +221,7 @@ class JSONState {
         this._emitStateChange();
     }
 
-    dispatch(op: JSONOp, source = 'user' /* user, api */) {
+    dispatch(op: JSONOp, source = 'user' /* user, api */, meta?: IChangeMeta) {
         const prevDoc = this.getState();
         this._apply(op);
         // TODO: remove doc in future
@@ -232,6 +232,8 @@ class JSONState {
             source,
             prevDoc,
             doc,
+            ...(meta?.txnId ? { txnId: meta.txnId } : {}),
+            ...(meta?.origin ? { origin: meta.origin } : {}),
         });
     }
 

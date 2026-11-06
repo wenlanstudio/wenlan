@@ -318,3 +318,15 @@ export interface ITurnoverOptions {
     linkReferenceStyle: 'full';
     blankReplacement: (content: unknown, node: unknown, options: unknown) => string;
 }
+
+/**
+ * Opaque transaction attribution attached to a `json-change` by the host
+ * adapter (sync-design D2). The engine forwards both fields verbatim and never
+ * interprets them: `txnId` lets the adapter pair an EXTERNAL apply with the
+ * transaction it queued beforehand, while `origin` names the surface that
+ * produced the change (the adapter owns the origin vocabulary).
+ */
+export interface IChangeMeta {
+    txnId?: string;
+    origin?: string;
+}

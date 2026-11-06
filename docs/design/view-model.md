@@ -1,6 +1,8 @@
 # 视图模型：二组 × 六叶选择
 
 > 本文是视图系统的唯一设计依据；代码与本文不一致时，先改本文。
+> **编辑面、事务与投影语义以 `sync-design.md`（v2.2 基线）为准**；本文只管
+> 叶的组织、选择状态与持久化，冲突时改本文。
 > 术语：六叶 = flow / column / spare / page / slide / present；
 > `spare` = 雪藏的备用逻辑页（旧 key `page`），`page` = 正式的物理纸页面
 > （旧 key `paper`）。2026-11-05 二次调整后，key 与 UI 名已对齐。
@@ -67,12 +69,20 @@ printToPDF 页数）对两叶同时成立**（推挤不改块高，页数相同�
 ## 2. 选择模型
 
 - **五叶可见平铺**在切换器上（刻度「文 栏│页 览 示」，分隔线提示二组），第六叶 `spare`（备）由 `HIDDEN_LEAVES` 雪藏——`toggleLeaf` 拒选、持久化净化回 `flow`，不会出现「选中了看不见的叶」；栏格随文档有无 `begin` 标记显隐；
-- **编辑面不变量：同一时刻至多一个活编辑面**——左 pane/全屏 = muya 活引擎（唯一可编辑面）；右 pane 一律只读投影（leafProjection 只读第二实例）。
-  **例外（A″ 裁决 / M4.3b）：全屏纸叶的可见面 = 只读真分片投影**
-  （paperProjection），活引擎以 display:none 留任「隐藏服务后端」——bus
-  导出/TOC 依赖 editor.vue 挂载，收起不占位（导出走序列化，不需要布局）；
-  **原「纸叶分屏焦点编辑」预留随之作废**（真分片 + 卡内编辑不可兼得，
-  见 §5 M4.3b 调研结论）；
+- **编辑面不变量：同一时刻至多一个活编辑面**（sync-design N1/D6）——可编辑性
+  是编辑面位置属性，不押在叶子上。九个可编辑表面 = 六视图叶（本/文/栏/页/览/示）
+  - 三块级编辑器（码/表/图，复用 Muya `ui/*`，**不是新叶**）。当前实现仍只有
+    左 pane/全屏的 muya 活引擎可写，右 pane 与纸叶是只读投影；M2/M5 会把
+    页/览/示的 fragment 点击接到稳定编辑层的完整规范块，届时
+    **投影只读 ≠ 不可编辑**。
+    **A″ 裁决 / M4.3b 的渲染实现保留**：全屏纸叶可见面 = 真分片投影
+    （paperProjection），活引擎以 display:none 留任「隐藏服务后端」——bus
+    导出/TOC 依赖 editor.vue 挂载，收起不占位（导出走序列化，不需要布局）；
+    **原「纸叶分屏焦点编辑」预留随之作废**（真分片 + 卡内编辑不可兼得，
+    见 §5 M4.3b 调研结论）；
+- **事务不变量**（sync-design D2/M0 已落地）：九个表面的写汇入同一事务流
+  （`sync/transactionHub.ts`），共享 docRevision、undo/redo 与 dirty/save；
+  投影刷新自身不产生事务，外源 apply 按 txnId 只确认一次；
 - **配置选择式**：点一下选中、再点一下取消，搭配由用户自定，**至多两叶**：
   - 1 叶 → 该视图全屏；
   - 2 叶 → 分屏，左右按按钮序（flow < column < spare < page < slide <
@@ -94,8 +104,12 @@ printToPDF 页数）对两叶同时成立**（推挤不改块高，页数相同�
 - 中间**分割条可拖**，比例记住（0.2–0.8）；**分屏时页宽滑块失效收起**
   （宽度控制被分割条吸收）；
 - 单视图滑块回归：文/表/图 = 内容列宽（页宽滑块）；present 无；览 = 页缩放（声明未接线）；备/页 = 页缩放（版式基钉死纸面宽度，同族待接线，见 §5）；
-- (览, 示) 两叶皆只读 = 预演/导航模式（PPT 缩略图 + 大页的姿态）；
+- (览, 示) 是**同一投影的两种姿态**（预演/导航 + 全屏放映，sync-design D8）；
+  iframe 内自主测量、分页与 fit，但**可产生编辑意图**并汇入同一事务流（M5）；
+  当前实现仍只读，待协议握手与稳定编辑层落地；
 - 键盘归属：分屏时编辑器保焦点；deck 只吃鼠标/触屏；deck 聚焦时 Esc 关自己。
+  **示中编辑时 Esc 先取消当前块编辑，无活编辑面时 Esc 才退出放映**；编辑态中
+  步进/翻页键让位于文本输入（D6）。
 
 ## 4. 览叶（slide）
 
@@ -221,6 +235,7 @@ printToPDF 页数）对两叶同时成立**（推挤不改块高，页数相同�
 | 选择状态 / 派生面 / 迁移                | `store/editorView.ts`（leafSelection ≤2 + topView 互斥 + rightRatio；`leafSchema: 2` 起旧 page→flow、旧 paper→page，新 page = 物理纸页叶）                                                                                                                                                     |
 | 切换器（五叶可见 + 一叶雪藏）+ 滑块联动 | `components/viewSwitcher/`                                                                                                                                                                                                                                                                     |
 | 分屏壳 / 分割条 / pane 接线             | `components/editorWithTabs/index.vue`                                                                                                                                                                                                                                                          |
+| 统一事务流 / Revision / doc-changed     | `renderer/src/sync/transactionHub.ts`（M0：Txn 信封、外源串行队列、txnId 去重、保存回声抑制、`window.__wenlanSync` 只读诊断面）；引擎侧 `@muyajs/core` 的 `IChangeMeta` 透传；接线见 `editor.vue` / `store/editor.ts`                                                                          |
 | 展示组两叶的投影面（放映 / 页览）       | `components/editorWithTabs/deckPane.vue`（leaf × view/panel 两维变体；服务引用计数）                                                                                                                                                                                                           |
 | 文支叶的只读投影（栏/页）               | `components/editorWithTabs/leafProjection.vue`（muya 只读第二实例，lens 决定姿态）                                                                                                                                                                                                             |
 | 纸叶真分片投影（A″）                    | `components/editorWithTabs/paperProjection.vue`（只读实例 + 分片执行器：裁剪窗对/表格行手术/整块搬移；全屏态活引擎 display:none 留任隐藏服务后端，见 §2）                                                                                                                                      |

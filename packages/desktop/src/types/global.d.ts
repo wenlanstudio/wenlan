@@ -250,6 +250,22 @@ declare global {
     rgPath: string
     // Set by the legacy editor store at runtime; consumed by muya internals.
     DIRNAME: string
+    // Read-only transaction diagnostics (sync-design M0). Installed by
+    // renderer/src/sync/transactionHub.ts for e2e assertions and debugging.
+    __wenlanSync?: {
+      getSnapshot(): {
+        docSessionId: string
+        revision: number
+        broadcastCount: number
+        suppressedEchoes: number
+        failedApplies: number
+        origins: string[]
+        pendingTxnId: string | null
+        queueLength: number
+      }
+      getLog(): readonly unknown[]
+      isStale(revision: number): boolean
+    }
     marktext?: {
       env?: { windowId: number; [key: string]: unknown }
       initialState?: {

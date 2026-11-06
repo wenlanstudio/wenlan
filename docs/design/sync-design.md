@@ -4,8 +4,10 @@
 > 「编辑如何汇聚、投影如何发散」，视图模型管「叶子如何组织、状态如何持久化」。
 > 冲突时以本文为准并同步修订 view-model.md（沿用其立法惯例）。
 >
-> 状态：**设计基线**。N1 的九个可编辑表面、D2 的双向事务入口、D4/D7/D8 的
-> 页/览几何分治已拍板；D1–D8 作为后续里程碑的实施约束。
+> 状态：**设计基线 + M0 已落地**（2026-11-06，分支 `feat/sync-m0-txn-adapter`）。
+> N1 的九个可编辑表面、D2 的双向事务入口、D4/D7/D8 的页/览几何分治已拍板；
+> D1–D8 作为后续里程碑的实施约束。M0 只统一写路径与 Revision，**不改任何投影
+> 与编辑表面**；M1–M5 仍是设计约束。
 
 ## 1. 需求（从 #3 与多轮讨论蒸馏）
 
@@ -326,9 +328,28 @@ Muya 自源：用户输入 → Muya apply → json-change ─┐
 
 ## 9. 推荐里程碑
 
-- **M0 事务适配层**：包装现有 json-change/ot-json1，落实自源 apply 后同 tick
-  封装、外源先排队后应用、txnId 去重，统一 Revision、origin、selection、
-  undo/redo、dirty/save；不新造编辑引擎。
+- **M0 事务适配层（已落地）**：包装现有 json-change/ot-json1，落实自源 apply
+  后同 tick 封装、外源先排队后应用、txnId 去重，统一 Revision、origin、
+  selection、undo/redo、dirty/save；不新造编辑引擎。
+  - 实现：`packages/desktop/src/renderer/src/sync/transactionHub.ts`（Txn 信封、
+    docSessionId/docRevision、`doc-changed` 单次广播、外源串行队列、identity/no-op
+    抑制、保存指纹回声抑制、`isStale` 过期版本判定、事务日志与只读诊断面）；
+    引擎侧 `packages/muya/src/state/types.ts` 的 `IChangeMeta` 经
+    `dispatch → updateContents/rebuildContents → replaceContent/History` 原样透传；
+    桌面接线在 `editor.vue`（json-change → ingest、保存管线 → doc-changed、
+    源码交接/磁盘重载 → 外源队列、整树重建 → switchDocument）与 `store/editor.ts`
+    （保存成功登记文件指纹）。
+  - 验收：单测 `syncTransactionHub.spec.ts`（12 例）与 muya `changeMeta.spec.ts`
+    （4 例），e2e `sync-m0-transaction.spec.ts`（自源键入、外部磁盘重载、undo
+    的 origin 与单次广播、Revision 链、过期版本判定）。
+  - **实测边界（2026-11-06）**：`index.vue` 在源码模式下以 `v-if` 卸载
+    `editor.vue`，切回时按 `props.markdown` 重建 Muya 实例，因此
+    `replaceContent` 的源码交接分支在当前 UI 结构下不会触发；外源队列由
+    **外部磁盘重载**路径验收，源码草稿的连续编辑协议仍归 M3（§10 映射项）。
+    e2e 相应地断言「源码往返不得凭空产生 source 事务」。
+    另：`parity-source-undo-saved.spec.ts` 的 PG2/PG14 共 4 例在 develop 基线
+    上同样失败（A/B 实测，与 M0 无关），属既有红灯，需另立问题跟踪。
+  - M0 未覆盖：块身份重锚、版本化投影、九个表面编辑、几何缓存、览/示协议握手。
 - **M1 身份与版本化投影**：完成所有整树重建的重锚、版本化投影、滚动/光标锚定。
 - **M2 文/页最小闭环**：先普通段落，验证 IME、commit/cancel、undo、外部重载，
   再扩展页内的代码块、列表和表格分片；此处只处理内容分片，不接入码/表/图
@@ -342,20 +363,22 @@ Muya 自源：用户输入 → Muya apply → json-change ─┐
 
 ## 10. 与现状的映射（落地时的心里有数，不是设计约束）
 
-| 现状                                  | 去向                                                    |
-| ------------------------------------- | ------------------------------------------------------- |
-| `paginateBlocksV2` + PaperBlockBoxV2  | 页策略保留；固有测量与上下文布局拆分                    |
-| paperProjection 手术（裁剪窗对/续表） | 保留手术；补 block/fragment 锚，编辑不直接落在裁剪克隆  |
-| 第二只读 muya 实例（leafProjection）  | 作为测量/渲染宿主；更新携带 Revision                    |
-| Muya ot-json1 + History               | 直接复用为事务载荷和可逆历史，外层补统一 Txn 信封       |
-| 本视图 replaceContent 交接            | 升级为带源码草稿和 Revision 的连续编辑协议              |
-| deckPane iframe + sendBuild           | 首阶段保留；内部自治布局；协议加样式/资源版本与编辑意图 |
-| bus 增量事件、chokidar 树推送         | 文件级机制不动；补自己保存回声抑制                      |
-| md2slides 引擎（Typora 共用）         | 策略库化，双宿主共享                                    |
+| 现状                                                 | 去向                                                                                            |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `paginateBlocksV2` + PaperBlockBoxV2                 | 页策略保留；固有测量与上下文布局拆分                                                            |
+| paperProjection 手术（裁剪窗对/续表）                | 保留手术；补 block/fragment 锚，编辑不直接落在裁剪克隆                                          |
+| 第二只读 muya 实例（leafProjection）                 | 作为测量/渲染宿主；更新携带 Revision                                                            |
+| Muya ot-json1 + History                              | 直接复用为事务载荷和可逆历史，外层补统一 Txn 信封                                               |
+| 本视图 replaceContent 交接                           | 升级为带源码草稿和 Revision 的连续编辑协议                                                      |
+| deckPane iframe + sendBuild                          | 首阶段保留；内部自治布局；协议加样式/资源版本与编辑意图                                         |
+| bus 增量事件、chokidar 树推送                        | 文件级机制不动；补自己保存回声抑制                                                              |
+| md2slides 引擎（Typora 共用）                        | 策略库化，双宿主共享                                                                            |
+| `editor.vue` 丢弃 op/source 的 `json-change` handler | **M0 已改**：`hub.ingest()` 同 tick 封装 + `doc-changed` 单一广播；保存管线改订阅 `doc-changed` |
 
-## 11. 与 view-model.md 的待同步项
+## 11. 与 view-model.md 的同步项（M0 已修订）
 
-本文 N1 拍板后，view-model.md 中以下历史约束需要另行同步修订：
+本文 N1 拍板后，view-model.md 中以下历史约束需要同步修订（**2026-11-06 M0
+分支已按此修订 §2 / §3 / §6**）：
 
 - 「右 pane 一律只读投影」改为「同一时刻至多一个活编辑面」；
 - 页叶「只读真分片投影」保留其渲染实现，但不再等于不可编辑；
@@ -363,3 +386,8 @@ Muya 自源：用户输入 → Muya apply → json-change ─┐
 - 本视图叶与码/表/图块级编辑器统一纳入文档事务、undo/redo 和 dirty/save
   语义；码/表/图不得被建模成新视图叶；
 - 「示」的 Esc、步进与编辑态优先级以 D6 为准。
+
+**边界提醒**：文档写的是目标语义，不等于代码已到位。M0 只统一了写路径与
+Revision；页/览/示的 fragment 编辑闭环、块身份重锚与 iframe 协议握手仍是
+M1/M2/M5 的工作。当前只读投影是渲染实现（A″ 裁决保留），不是设计上的
+不可编辑。

@@ -37,7 +37,8 @@
         />
         <!-- 透镜宿主：WYSIWYG 引擎在 flow/column/page/table 透镜间常驻，
              切换只翻转 `data-lens` 而不重绘（TODO1 #21、#26）。分屏时活引擎占
-             左 pane（唯一编辑面，编辑面不变量 §2）。纸叶是只读投影（A″），
+             左 pane（当前唯一活编辑面；编辑面不变量见 view-model §2、
+             编辑意图协议见 sync-design D6）。纸叶是只读投影（A″），
              不进活引擎。 -->
         <div
           v-else-if="editorLens"
@@ -108,7 +109,8 @@
       />
       <!-- 右 pane：示支叶（slide 列表 / present 放映）、页叶真分片投影
            （paperProjection，A″ 只读；旧称纸叶）或文支投影（column 分栏 /
-           spare 逻辑页——右 pane 一律只读投影，编辑面不变量 §2）。key 按 leaf
+           spare 逻辑页——当前渲染一律为只读投影；编辑面不变量见 view-model
+           §2，M2/M5 的编辑意图协议见 sync-design D6/D8）。key 按 leaf
            分实例——同一 iframe 实例的 view 恒定（deck 侧 player/列表布局二选一），
            slide 与 present 各持一份；投影实例的 columnsLayout 建构期定死，
            column↔spare 切换按 key 重建。 -->
