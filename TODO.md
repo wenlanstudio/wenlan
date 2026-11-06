@@ -11,7 +11,7 @@
 - [ ] 优化：文档右下角菜单做成类似左上角汉堡菜单效果，默认隐藏，鼠标悬停在右下角时显示菜单；
 - [ ] Bug：文档被其他编辑器修改后发生变动，marktext会在底部状态栏提示要不要重新加载文件，会和现在的一些按钮重叠；
 
-- [ ] 重大bug，渲染切换到源码数据丢失
+- [x] 重大bug，渲染切换到源码数据丢失 —— 旧案已核实不复现（2026-11-07：原 repro 逐行 round-trip 无损，引擎 TS 重写时已修）。真正的丢内容根因在别处并以 A 类修复：见下「视图切换丢内容排查」
 
 ```text
 可分割核心
@@ -66,6 +66,12 @@
 ## Issue 待办
 
 > 来自 wenlanstudio/wenlan 的开放 issue（2026-11-07 更新，6 条）。全文与评论见 `D:\md-ecosystem\issues-2026-11-06.md`。#13/#14/#15/#17 已实现并关闭（`babffa04` 已推送）。
+
+### 视图切换丢内容排查（2026-11-07，用户报告的最高优先级）
+
+- 已修：文档首块是 `---` 水平线的讲义（空行开头挡住 fm 锚定，首载为正文），切一次源码/存盘后，直到下一个 `---` 的内容被吞成 frontmatter。序列化器现把首块 `---` 规则改写为 `***`（`stateToMarkdown` + `leadingThematicBreak.spec`）。303 份真实讲义扫描（parse→serialize→parse 定点）：唯一结构性丢失类，其余 152→12 份差异均为良性重排（列表缩进归一、表格对齐、loose 标志翻转）
+- 新增 desktop e2e `view-switch-content-preservation.spec.ts`：4 份真实讲义 × 叶切换（栏/页/览/示）+ 文↔本 + 人工编辑，全文逐字节比对，4/4 过
+- 运维坑（已知坑的变体）：跑过 `pnpm dev` 后 `out/main` 是 dev 模式产物，之后所有 desktop e2e 起不来（Invalid URL）——e2e 前必须 `NODE_ENV=production pnpm run build:unpack` 重建
 
 ### Bug 性质（先修）
 
