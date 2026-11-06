@@ -25,7 +25,9 @@ test.describe('forward Delete before a blockquote (#5423)', () => {
 
         await deleteAtEndOfA(page);
 
-        await expect.poll(() => getMarkdown(page)).toBe('aZp\n\n> q\n');
+        // #15: the pulled-out paragraph joins with a soft break, so `p` lands
+        // on its own line under `aZ` instead of gluing onto it.
+        await expect.poll(() => getMarkdown(page)).toBe('aZ\np\n\n> q\n');
         expect(errors).toEqual([]);
     });
 
@@ -35,7 +37,9 @@ test.describe('forward Delete before a blockquote (#5423)', () => {
 
         await deleteAtEndOfA(page);
 
-        await expect.poll(() => getMarkdown(page)).toBe('- aZp\n\n  > q\n');
+        // Same soft-break join; the continuation line carries the list item's
+        // content indent when serialized.
+        await expect.poll(() => getMarkdown(page)).toBe('- aZ\n  p\n\n  > q\n');
         expect(errors).toEqual([]);
     });
 });
