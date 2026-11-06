@@ -1586,7 +1586,14 @@ class Format extends Content {
 
         const paragraphBlock = nextBlock.parent!;
 
-        this.text = text + nextBlock.text;
+        // Delete across the blank line separating two paragraphs keeps the
+        // lines as a soft break (mirror of the Backspace merge, #15); gluing
+        // only when both sides have text keeps the empty-item merge (#1845)
+        // free of a leading/trailing `\n`.
+        const join = this.blockName === 'paragraph.content' && text !== '' && nextBlock.text !== ''
+            ? '\n'
+            : '';
+        this.text = text + join + nextBlock.text;
         this.setCursor(start.offset, end.offset, true);
 
         // Blocks after the merged paragraph in a list item (e.g. a nested

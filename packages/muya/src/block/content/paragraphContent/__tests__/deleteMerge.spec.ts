@@ -85,7 +85,7 @@ function blockText(state: ReturnType<Muya['getState']>, index: number): string {
 }
 
 describe('forward Delete at end-of-paragraph — merge with next block', () => {
-    it('appends `beta` onto the end of `alpha` into a single paragraph', async () => {
+    it('joins the next paragraph with a soft break, keeping each line intact (#15)', async () => {
         const muya = bootMuya('alpha\n\nbeta\n');
         const alpha = contentByText(muya, 'alpha');
 
@@ -95,7 +95,7 @@ describe('forward Delete at end-of-paragraph — merge with next block', () => {
         const state = muya.getState();
         expect(state.length).toBe(1);
         expect(state[0].name).toBe('paragraph');
-        expect(blockText(state, 0)).toBe('alphabeta');
+        expect(blockText(state, 0)).toBe('alpha\nbeta');
     });
 
     it('calls preventDefault so the native delete cannot drop the first appended char', () => {
@@ -114,7 +114,7 @@ describe('forward Delete at end-of-paragraph — merge with next block', () => {
         deleteAtEnd(muya, alpha);
 
         await flush();
-        const merged = contentByText(muya, 'alphabeta');
+        const merged = contentByText(muya, 'alpha\nbeta');
         const cursor = merged.getCursor();
         expect(cursor).not.toBeNull();
         expect(cursor!.start.offset).toBe(5);
@@ -184,7 +184,8 @@ describe('forward Delete merging the first paragraph of a blockquote (#5423)', (
         deleteAtEnd(muya, contentByText(muya, 'a'));
 
         muya.flush();
-        expect(muya.getMarkdown()).toBe('ap\n\n> q\n');
+        // The pulled-out `p` joins `a` as a soft break (#15), not a glue.
+        expect(muya.getMarkdown()).toBe('a\np\n\n> q\n');
     });
 
     it('keeps the rest of a blockquote nested in a list item quoted', () => {
@@ -193,7 +194,7 @@ describe('forward Delete merging the first paragraph of a blockquote (#5423)', (
         deleteAtEnd(muya, contentByText(muya, 'a'));
 
         muya.flush();
-        expect(muya.getMarkdown()).toBe('- ap\n\n  > q\n');
+        expect(muya.getMarkdown()).toBe('- a\n  p\n\n  > q\n');
     });
 });
 

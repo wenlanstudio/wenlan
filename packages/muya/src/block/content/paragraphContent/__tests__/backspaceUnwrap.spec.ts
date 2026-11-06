@@ -89,7 +89,7 @@ function blockText(state: ReturnType<Muya['getState']>, index: number): string {
 }
 
 describe('backspace at start-of-paragraph — merge with previous block', () => {
-    it('merges `beta` onto the end of `alpha` into a single paragraph', async () => {
+    it('joins two paragraphs with a soft break, keeping each line intact (#15)', async () => {
         const muya = bootMuya('alpha\n\nbeta\n');
         const beta = contentByText(muya, 'beta');
 
@@ -99,7 +99,9 @@ describe('backspace at start-of-paragraph — merge with previous block', () => 
         const state = muya.getState();
         expect(state.length).toBe(1);
         expect(state[0].name).toBe('paragraph');
-        expect(blockText(state, 0)).toBe('alphabeta');
+        // The blank line between the paragraphs is what the keystroke deletes;
+        // the words themselves stay on their own lines.
+        expect(blockText(state, 0)).toBe('alpha\nbeta');
     });
 
     it('lands the caret at the join point (end of the former first paragraph)', async () => {
@@ -113,11 +115,38 @@ describe('backspace at start-of-paragraph — merge with previous block', () => 
         // pre-merge state.
         await flush();
         // After the merge the active block is `alpha`'s content; the caret sits
-        // at offset 5 (the original `alpha` length), where the two joined.
-        const merged = contentByText(muya, 'alphabeta');
+        // at offset 6 (the original `alpha` length plus the soft break), where
+        // the two joined.
+        const merged = contentByText(muya, 'alpha\nbeta');
         const cursor = merged.getCursor();
         expect(cursor).not.toBeNull();
-        expect(cursor!.start.offset).toBe(5);
+        expect(cursor!.start.offset).toBe(6);
+    });
+
+    it('deletes an empty paragraph without leaving a stray soft break', async () => {
+        const muya = bootMuya('alpha\n\nbeta\n');
+        const beta = contentByText(muya, 'beta');
+        beta.text = '';
+
+        backspaceAtStart(muya, beta);
+
+        await flush();
+        const state = muya.getState();
+        expect(state.length).toBe(1);
+        expect(blockText(state, 0)).toBe('alpha');
+    });
+
+    it('glues onto a heading without inventing a soft break', async () => {
+        const muya = bootMuya('# Head\n\npara\n');
+        const para = contentByText(muya, 'para');
+
+        backspaceAtStart(muya, para);
+
+        await flush();
+        const state = muya.getState();
+        expect(state.length).toBe(1);
+        expect(state[0].name).toBe('atx-heading');
+        expect(blockText(state, 0)).toBe('# Headpara');
     });
 
     it('is a no-op for the first paragraph in the document (no previous block)', async () => {

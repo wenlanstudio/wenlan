@@ -135,8 +135,8 @@ describe('backspace at the start of a top-level footnote (#5343)', () => {
 
         pressAtStart(muya, contentByText(muya, 'more'), 'Backspace');
 
-        expect(flushState(muya)).toBe('p"x", footnote(p"notemore")');
-        expect(caretOf(muya)).toBe('notemore@4');
+        expect(flushState(muya)).toBe('p"x", footnote(p"note\nmore")');
+        expect(caretOf(muya)).toBe('note\nmore@5');
     });
 
     it('keeps Enter at the start of the footnote inside the footnote', () => {
@@ -192,7 +192,7 @@ describe('a footnote inside a list item or quote is edited as a footnote (#5340)
 describe('paragraphs directly in a list item or quote keep their handling', () => {
     it.each([
         ['- a\n\n  > q\n', 'q', 'Backspace', 'bullet-list(list-item(p"a", p"q"))'],
-        ['> - a\n>\n>   c\n', 'c', 'Backspace', 'block-quote(bullet-list(list-item(p"ac")))'],
+        ['> - a\n>\n>   c\n', 'c', 'Backspace', 'block-quote(bullet-list(list-item(p"a\nc")))'],
         ['> - a\n', 'a', 'Backspace', 'block-quote(p"a")'],
         ['- a\n  - b\n', 'b', 'Backspace', 'bullet-list(list-item(p"a", p"b"))'],
         ['- a\n  - b\n', 'b', 'Enter', 'bullet-list(list-item(p"a", bullet-list(list-item(p""), list-item(p"b"))))'],

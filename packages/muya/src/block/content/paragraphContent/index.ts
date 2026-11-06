@@ -672,8 +672,18 @@ class ParagraphContent extends Format {
             return;
 
         const { text: oldText } = previousContentBlock;
-        const offset = oldText.length;
-        previousContentBlock.text += this.text;
+        // Backspace across the blank line that separated two paragraphs deletes
+        // that separator, not the line break itself: the paragraphs join with a
+        // soft break so each line stays on its own line (#15). Gluing only when
+        // both sides have text — an empty paragraph being deleted must vanish
+        // without leaving a stray `\n` behind.
+        const join = previousContentBlock.blockName === 'paragraph.content'
+            && oldText !== ''
+            && this.text !== ''
+            ? '\n'
+            : '';
+        const offset = oldText.length + join.length;
+        previousContentBlock.text = oldText + join + this.text;
         this.parent!.remove();
         previousContentBlock.setCursor(offset, offset, true);
     }
