@@ -1981,6 +1981,20 @@ onMounted(() => {
     muya.setHistory(savedEngineHistory)
   }
 
+  // 视图切回（code/source → 文档）的光标交接：本组件经兄弟 v-if 替换重建，
+  // 源码模式退出时 bus 上的 file-changed 没有活着的监听者，源码光标唯一的
+  // 存活通道是 sourceCode 卸载时直写 store 的 tab.muyaIndexCursor。在这里
+  // 消费它，把光标放回源码光标处——否则新引擎默认落在文档首块，frontmatter
+  // 文档里用户继续打字会把 fm 打成非法 YAML，整块塌缩成正文（视图切换丢内
+  // 容的根因之一）。一次性令牌：消费即清。
+  const pendingIndexCursor = currentFile.value?.muyaIndexCursor
+  if (currentFile.value && isIndexCursor(pendingIndexCursor)) {
+    currentFile.value.muyaIndexCursor = null
+    muya.setCursorByOffset(pendingIndexCursor)
+    muya.domNode.focus()
+    muya.focus()
+  }
+
   const container = getScrollContainer()!
 
   // 监听必须挂在 document：`editorRef` 指向的节点会被视图重建换掉（曾出现

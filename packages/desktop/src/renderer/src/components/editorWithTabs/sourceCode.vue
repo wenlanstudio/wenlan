@@ -510,13 +510,17 @@ onBeforeUnmount(() => {
   lastSelectionKey = ''
   bus.off('scroll-to-header', handleScrollToHeader)
 
-  if (editor.value) {
+  if (editor.value && tabId.value) {
     const { cursor, markdown: newMarkdown } = getMarkdownAndCursor(editor.value)
-    bus.emit('file-changed', {
+    // 直写 store（prepareTabSwitch 同款），不能走 bus：本视图是 `.lens-host`
+    // 的兄弟 v-if 分支——退出时 editor.vue 已被卸载（其 file-changed 监听随
+    // 卸载注销）、重挂载又发生在本次 emit 之后，总线上的这次 emit 不会有
+    // 活着的监听者。光标唯一能活下来的通道是 tab 上持久化的 muyaIndexCursor，
+    // 由 editor.vue 挂载时消费（把光标放回源码光标处）。
+    editorStore.LISTEN_FOR_CONTENT_CHANGE({
       id: tabId.value,
       markdown: newMarkdown,
-      muyaIndexCursor: cursor,
-      renderCursor: true
+      muyaIndexCursor: cursor
     })
   }
 })
