@@ -65,7 +65,7 @@
 
 ## Issue 待办
 
-> 来自 wenlanstudio/wenlan 的开放 issue（2026-11-06 快照，10 条）。全文与评论见 `D:\md-ecosystem\issues-2026-11-06.md`。
+> 来自 wenlanstudio/wenlan 的开放 issue（2026-11-07 更新，6 条）。全文与评论见 `D:\md-ecosystem\issues-2026-11-06.md`。#13/#14/#15/#17 已实现并关闭（`babffa04` 已推送）。
 
 ### Bug 性质（先修）
 
