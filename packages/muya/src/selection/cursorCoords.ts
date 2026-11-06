@@ -23,6 +23,13 @@ export function getCursorCoords(preferEnd = false): DOMRect | null {
         }
     }
 
+    // A zero-size rect means the range's node has no layout box: detached
+    // after an inline re-render, hidden, or not yet laid out. Scrolling would
+    // read it as "caret at the viewport origin" and yank the viewport away
+    // from the block being edited (#14) — report "position unknown" instead.
+    if (rect && rect.width === 0 && rect.height === 0)
+        return null;
+
     return rect;
 }
 

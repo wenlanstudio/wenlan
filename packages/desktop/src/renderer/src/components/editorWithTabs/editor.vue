@@ -2140,7 +2140,14 @@ onMounted(() => {
 
   editor.value.on('selection-change', (changes: MuyaChange) => {
     const y = (changes.cursorCoords?.y ?? null) as number | null
-    if (y != null) {
+    // Only a caret that physically lives in THIS container may drive
+    // scroll-following: mid-re-render the native selection can still point at
+    // a detached node (rect all zeros), and with split panes the rect can
+    // belong to the other pane — either way scrolling would yank the viewport
+    // away from the block being edited (#14).
+    const selection = document.getSelection()
+    const caretInContainer = !!selection?.anchorNode && container.contains(selection.anchorNode)
+    if (y != null && caretInContainer) {
       // Before the scrolling below: a 0-duration `animatedScrollTo` assigns
       // `scrollTop` at once, moving the headings out from under `y`.
       updateActiveHeading(y)
