@@ -103,7 +103,12 @@
       "support": "Поддержать Wenlan",
       "license": "Лицензия",
       "about": "О программе",
-      "checkUpdates": "Проверить обновления"
+      "checkUpdates": "Проверить обновления",
+      "frontmatterDocs": "Frontmatter документа",
+      "frontmatterWenlan": "Вэньлань · Бумажный вид",
+      "frontmatterSlides": "Слайды · md2slides",
+      "frontmatterCodeRun": "Запуск кода · mdcode2run",
+      "frontmatterQuiz": "Викторина · classbuzz"
     },
     "marktext": {
       "title": "Wenlan",

@@ -103,7 +103,12 @@
       "support": "Wenlan'e Destek Ol",
       "license": "Lisans",
       "about": "Hakkında",
-      "checkUpdates": "Güncellemeleri Denetle"
+      "checkUpdates": "Güncellemeleri Denetle",
+      "frontmatterDocs": "Belge frontmatter'ı",
+      "frontmatterWenlan": "Wenlan · Kağıt görünümü",
+      "frontmatterSlides": "Slaytlar · md2slides",
+      "frontmatterCodeRun": "Kod çalıştırma · mdcode2run",
+      "frontmatterQuiz": "Yarışma · classbuzz"
     },
     "marktext": {
       "title": "Wenlan",

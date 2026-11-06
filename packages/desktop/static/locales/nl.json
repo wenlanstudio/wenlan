@@ -103,7 +103,12 @@
       "support": "Steun Wenlan",
       "license": "Licentie",
       "about": "Over",
-      "checkUpdates": "Controleer op updates"
+      "checkUpdates": "Controleer op updates",
+      "frontmatterDocs": "Document-frontmatter",
+      "frontmatterWenlan": "Wenlan · Papierweergave",
+      "frontmatterSlides": "Dia's · md2slides",
+      "frontmatterCodeRun": "Code-uitvoering · mdcode2run",
+      "frontmatterQuiz": "Quiz · classbuzz"
     },
     "marktext": {
       "title": "Wenlan",

@@ -103,7 +103,12 @@
       "support": "Soutenir Wenlan",
       "license": "Licence",
       "about": "À propos",
-      "checkUpdates": "Vérifier les mises à jour"
+      "checkUpdates": "Vérifier les mises à jour",
+      "frontmatterDocs": "Frontmatter du document",
+      "frontmatterWenlan": "Wenlan · Vue papier",
+      "frontmatterSlides": "Diapositives · md2slides",
+      "frontmatterCodeRun": "Exécution de code · mdcode2run",
+      "frontmatterQuiz": "Quiz · classbuzz"
     },
     "marktext": {
       "title": "Wenlan",

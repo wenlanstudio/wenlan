@@ -103,7 +103,12 @@
       "support": "支持文覽",
       "license": "授權條款",
       "about": "關於",
-      "checkUpdates": "檢查更新"
+      "checkUpdates": "檢查更新",
+      "frontmatterDocs": "文件設定（Frontmatter）",
+      "frontmatterWenlan": "文覽 · 紙面葉",
+      "frontmatterSlides": "放映 · md2slides",
+      "frontmatterCodeRun": "程式碼執行 · mdcode2run",
+      "frontmatterQuiz": "課堂競答 · classbuzz"
     },
     "marktext": {
       "title": "關於",

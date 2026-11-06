@@ -75,7 +75,6 @@ const icnsTypes = [
   ['ic08', 256],
   ['ic09', 512]
 ]
-const chunks = [Buffer.from('ICNS')]
 let total = 8
 const parts = []
 for (const [type, size] of icnsTypes) {

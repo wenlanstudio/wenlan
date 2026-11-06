@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-sources-hash="4e1bac99fcba430f">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>文档配置 · 文览帮助</title>
+<style>
+  :root {
+    --paper: #FDFAF3;
+    --ink: #1A1A1C;
+    --muted: #5F5E5A;
+    --line: #D9D5C9;
+    --panel: #F4F0E6;
+    --accent: #185FA5;
+    --code-bg: #F1EFE8;
+    --nav-active-bg: #FFFFFF;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    font-size: 14px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  .layout { display: flex; height: 100%; }
+  .sidebar {
+    width: 244px; flex: 0 0 244px;
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+  }
+  .brand { padding: 22px 20px 16px; border-bottom: 1px solid var(--line); }
+  .brand h1 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: .02em; }
+  .brand p { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+  .nav { padding: 12px 10px; }
+  .nav-item {
+    display: block; padding: 10px 12px; margin-bottom: 4px;
+    border-radius: 8px; text-decoration: none; color: var(--ink);
+    border: 1px solid transparent;
+  }
+  .nav-item:hover { background: rgba(24,95,165,.07); }
+  .nav-title { display: block; font-size: 13.5px; font-weight: 600; }
+  .nav-sub { display: block; font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .sidebar-footer { margin-top: auto; padding: 14px 20px; font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); }
+  .content { flex: 1; overflow-y: auto; padding: 34px 46px 80px; }
+  .doc { max-width: 920px; margin: 0 auto; display: none; }
+  .doc:target { display: block; }
+  body:not(:has(.doc:target)) #overview { display: block; }
+  body:has(#overview:target) .nav-item[data-id="overview"],
+  body:has(#wenlan:target) .nav-item[data-id="wenlan"],
+  body:has(#md2slides:target) .nav-item[data-id="md2slides"],
+  body:has(#mdcode2run:target) .nav-item[data-id="mdcode2run"],
+  body:has(#classbuzz:target) .nav-item[data-id="classbuzz"],
+  body:not(:has(.doc:target)) .nav-item[data-id="overview"] {
+    background: var(--nav-active-bg); border-color: var(--line);
+  }
+  body:has(#overview:target) .nav-item[data-id="overview"] .nav-title,
+  body:has(#wenlan:target) .nav-item[data-id="wenlan"] .nav-title,
+  body:has(#md2slides:target) .nav-item[data-id="md2slides"] .nav-title,
+  body:has(#mdcode2run:target) .nav-item[data-id="mdcode2run"] .nav-title,
+  body:has(#classbuzz:target) .nav-item[data-id="classbuzz"] .nav-title,
+  body:not(:has(.doc:target)) .nav-item[data-id="overview"] .nav-title { color: var(--accent); }
+  .source {
+    font-size: 12px; color: var(--muted); padding-bottom: 14px;
+    margin-bottom: 22px; border-bottom: 1px solid var(--line);
+  }
+  .source code { font-size: 11.5px; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+  h1, h2, h3, h4 { line-height: 1.35; font-weight: 600; }
+  h1 { font-size: 25px; margin: 0 0 18px; }
+  h2 { font-size: 19px; margin: 34px 0 12px; padding-bottom: 7px; border-bottom: 1px solid var(--line); }
+  h3 { font-size: 16px; margin: 24px 0 10px; }
+  h4 { font-size: 14px; margin: 18px 0 8px; }
+  p { margin: 10px 0; }
+  a { color: var(--accent); }
+  ul, ol { padding-left: 24px; margin: 10px 0; }
+  li { margin: 4px 0; }
+  blockquote {
+    margin: 14px 0; padding: 10px 16px; background: var(--panel);
+    border-left: 3px solid var(--line); color: var(--muted);
+  }
+  blockquote p { margin: 3px 0; }
+  code {
+    font-family: "Cascadia Code", Consolas, "SF Mono", monospace;
+    font-size: 12.5px; background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 14px 16px; overflow-x: auto; margin: 14px 0;
+  }
+  pre code { background: none; padding: 0; font-size: 12.5px; line-height: 1.6; }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0 20px; font-size: 13px; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 8px 11px; text-align: left; vertical-align: top; }
+  th { background: var(--panel); font-weight: 600; white-space: nowrap; }
+  tbody tr:nth-child(even) { background: rgba(0,0,0,.018); }
+  hr { border: none; border-top: 1px solid var(--line); margin: 26px 0; }
+  .doc > :first-child { margin-top: 0; }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper: #1E1E20; --ink: #EDEAE2; --muted: #A8A69F; --line: #3A3A3C; --panel: #27272A; --accent: #85B7EB; --code-bg: #2A2A2D; --nav-active-bg: #1A1A1C; }
+    .nav-item:hover { background: rgba(133,183,235,.09); }
+    tbody tr:nth-child(even) { background: rgba(255,255,255,.025); }
+  }
+  @media (max-width: 720px) {
+    .layout { flex-direction: column; }
+    .sidebar { width: 100%; flex: 0 0 auto; max-height: 190px; border-right: none; border-bottom: 1px solid var(--line); }
+    .content { padding: 24px 20px 60px; }
+  }
+</style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>文档配置</h1>
+        <p>Frontmatter · 离线帮助</p>
+      </div>
+      <nav class="nav">
+        <a href="#overview" data-id="overview" class="nav-item">
+          <span class="nav-title">总览</span>
+          <span class="nav-sub">四个组件的文档配置</span>
+        </a>
+        <a href="#wenlan" data-id="wenlan" class="nav-item">
+          <span class="nav-title">文览 · 纸面叶</span>
+          <span class="nav-sub">paper / paperTheme</span>
+        </a>
+        <a href="#md2slides" data-id="md2slides" class="nav-item">
+          <span class="nav-title">放映 · md2slides</span>
+          <span class="nav-sub">16 键：封面 / 分页 / 主题 / 放映</span>
+        </a>
+        <a href="#mdcode2run" data-id="mdcode2run" class="nav-item">
+          <span class="nav-title">代码运行 · mdcode2run</span>
+          <span class="nav-sub">code-exec 段 / 顶层旧写法</span>
+        </a>
+        <a href="#classbuzz" data-id="classbuzz" class="nav-item">
+          <span class="nav-title">课堂竞答 · classbuzz</span>
+          <span class="nav-sub">无 YAML frontmatter · 题注 + 房间</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">文览生态 · 四份文档分别由各项目维护</div>
+    </aside>
+    <main class="content">
+      <section class="doc" id="overview" data-index="0">
+        <div class="source">来源：<code>wenlan/packages/desktop/static/help/sources/overview.md</code> · 由各项目维护，经 <code>sync-help-docs.mjs</code> 同步</div>
+<p>文览生态由四个组件协作：<strong>文览（编辑器）</strong>、<strong>放映（md2slides）</strong>、<strong>代码运行（mdcode2run）</strong>、<strong>课堂竞答（classbuzz）</strong>。它们各自定义了「写在文档里、控制渲染或运行行为」的配置。左侧目录可切换到任意一个组件的完整清单。</p>
+<blockquote>
+<p>本文是面向查阅的入口。四份完整清单由各项目在自己的 <code>docs/FRONTMATTER.md</code> 维护，本帮助窗口内的内容是它们的离线快照。有功能变更时，各项目先更新自己的文档，再由 wenlan 同步。</p>
+</blockquote>
+<h2>四组件对比</h2>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>配置载体</th>
+<th>是否 YAML frontmatter</th>
+<th>用途</th>
+<th>核心键</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>文览 · 纸面叶</td>
+<td>文档顶部 <code>---</code> 围栏</td>
+<td>是（仅 2 键）</td>
+<td>纸型 / 纸面主题</td>
+<td><code>paper</code>、<code>paperTheme</code></td>
+</tr>
+<tr>
+<td>放映 · md2slides</td>
+<td>文档顶部 <code>---</code> 围栏</td>
+<td>是（16 键）</td>
+<td>封面、分页、主题、放映形态</td>
+<td><code>title</code>、<code>theme</code>、<code>headingDivider</code>、<code>toc</code></td>
+</tr>
+<tr>
+<td>代码运行 · mdcode2run</td>
+<td>文档顶部 <code>---</code> 围栏</td>
+<td>是（<code>code-exec:</code> 段 + 顶层）</td>
+<td>执行环境 / 连接配置</td>
+<td><code>code-exec.java.JAVA_HOME</code>、<code>host</code></td>
+</tr>
+<tr>
+<td>课堂竞答 · classbuzz</td>
+<td>正文 <code>&lt;!--quiz--&gt;</code> 注释 + 服务端房间</td>
+<td><strong>否</strong></td>
+<td>题目与竞答房间</td>
+<td><code>answer</code>、<code>limit</code>、<code>id</code></td>
+</tr>
+</tbody></table>
+<h2>什么是 frontmatter</h2>
+<p>YAML frontmatter 是写在 Markdown 文档<strong>最顶部</strong>的一段 <code>---</code> 围栏块：</p>
+<pre><code class="language-markdown">---
+title: 我的讲义
+theme: lecture
+---
+
+# 正文从这里开始
+</code></pre>
+<p>通用规则（各项目略有差异，详见各组件页）：</p>
+<ul>
+<li>必须位于文档最顶部，围栏两侧允许空格或制表符。</li>
+<li>标量解析：数字、布尔、去引号字符串；不引第三方 YAML 库。</li>
+<li>有 frontmatter 则作者声明全算数，未声明的键不补默认值（无配置时走各项目内置缺省）。</li>
+<li>未知键通常静默忽略，不报错。</li>
+</ul>
+<h2>跨组件要点</h2>
+<ul>
+<li><strong>文览的 frontmatter 不归自己全管</strong>：muya 渲染层无键语义，纸面叶只认 2 键，放映键完整委托给内置 md2slides。</li>
+<li><strong>同一份讲义可能同时被多个组件读</strong>：讲义里既写 <code>theme:</code>（md2slides）又写 <code>&lt;!--quiz--&gt;</code>（classbuzz）是常见用法——前者控制放映，后者出题，互不干扰。</li>
+<li><strong>优先级模型各不相同</strong>：<ul>
+<li>md2slides：<code>show/page</code> &gt; 壳 config &gt; 引擎缺省；<code>headingDivider/theme/...</code> &gt; <code>DECK_DEFAULTS</code></li>
+<li>mdcode2run：fence 块级标注 &gt; 文档 frontmatter &gt; 引擎配置（秘密层）</li>
+<li>文览纸面叶：独立正则各取各的，未声明回退默认</li>
+<li>classbuzz：题注字段 &gt; 引擎缺省；房间状态由服务端持有</li>
+</ul>
+</li>
+<li><strong>密码不进 frontmatter</strong>（mdcode2run）：秘密只放引擎配置，这是分享讲义的前提。</li>
+<li><code>page</code> 与 <code>paginate</code> 是两个不同的键：前者管放映翻页粒度，后者管页脚打不打页码。</li>
+</ul>
+<h2>易错点</h2>
+<ul>
+<li><code>doc-type</code>（md2slides 旧文提过）<strong>未实现</strong>，写了无效。</li>
+<li><code>&lt;!-- pagebreak --&gt;</code>（纸面叶）与 <code>&lt;!--quiz--&gt;</code>（竞答）都是正文注释标记，<strong>不是</strong> frontmatter。</li>
+<li>classbuzz 讲义顶部写 <code>---</code> 块不生效——它不解析 YAML。</li>
+</ul>
+
+      </section>
+      <section class="doc" id="wenlan" data-index="1">
+        <div class="source">来源：<code>wenlan/docs/FRONTMATTER.md</code> · 由各项目维护，经 <code>sync-help-docs.mjs</code> 同步</div>
+<blockquote>
+<p>依据源码逐项核实（2026-11-04）：<code>packages/desktop/src/renderer/src/util/paperPagination.ts</code>
+（paper 叶读取）。键有增删先改代码，再同步本文件。
+跨引擎总册：<code>../../AUTHORING-SPEC.md</code>（生态根目录）。</p>
+</blockquote>
+<h2>0. 范围</h2>
+<ul>
+<li>文览自身只消费**纸面叶（paper）**的纸型/纸面主题两键（见 §1）。</li>
+<li>编辑器内核 muya 把 front-matter 当<strong>通用块</strong>渲染（<code>pre.mu-frontmatter</code>），<strong>没有任何键语义</strong>；
+偏好设置里的 <code>frontmatterType</code> 只影响新建 front-matter 块的围栏风格（<code>-</code> / <code>;</code> / <code>+</code> / <code>{</code>），不解析键值。</li>
+<li>放映（deck）链路的 front-matter 键由内置的 md2slides 消费，不归本仓库管——
+见 <code>../../md2slides/docs/FRONTMATTER.md</code>（本仓库 <code>packages/desktop/resources/md2slides/</code> 是它的构建副本）。</li>
+</ul>
+<h2>1. 纸面叶键（paperPagination.ts）</h2>
+<table>
+<thead>
+<tr>
+<th>键</th>
+<th>值</th>
+<th>说明</th>
+<th>缺省</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>paper</code></td>
+<td><code>a4</code> / <code>letter</code></td>
+<td>纸型。<strong>键名大小写敏感</strong>（须写 <code>paper:</code>），值大小写不敏感；未知值按未声明处理</td>
+<td>A4（屏测与打印链同源回退）</td>
+</tr>
+<tr>
+<td><code>paperTheme</code></td>
+<td><code>academic</code> / <code>liber</code> / <code>thesis</code></td>
+<td>纸面主题（<code>assets/themes/export/*.theme.css</code>）。只动排版层（字体/字号/标题/表格），不动纸面几何——屏显页数 = printToPDF 页数不被主题破坏。值会被转小写匹配</td>
+<td>无主题（裸排版层）</td>
+</tr>
+</tbody></table>
+<p>写法示例：</p>
+<pre><code class="language-markdown">---
+paper: A4
+paperTheme: thesis
+---
+</code></pre>
+<h2>2. 解析细节</h2>
+<ul>
+<li>独立正则各解析各的（<code>parseDeclaredPaperSize</code> / <code>parsePaperTheme</code>），未声明或解析不出 = <code>null</code>，
+调用方各回退默认：屏侧 A4，导出对话框保留用户上次选择。</li>
+<li>纸型/边距归 front-matter（边距当前固定 20/15mm，front-matter 无边距键）。</li>
+<li><code>&lt;!-- pagebreak --&gt;</code> 是正文注释标记，不是 front-matter。</li>
+</ul>
+
+      </section>
+      <section class="doc" id="md2slides" data-index="2">
+        <div class="source">来源：<code>md2slides/docs/FRONTMATTER.md</code> · 由各项目维护，经 <code>sync-help-docs.mjs</code> 同步</div>
+<blockquote>
+<p>依据源码逐项核实（2026-11-04）：<code>core/parse/frontMatter.js</code>（解析与 <code>deckMeta</code>）、
+<code>core/compose.js</code>（消费点）。键有增删先改代码，再同步本文件。
+跨引擎总册（fence 标注 / 壳配置 / 优先级总表）：<code>../../AUTHORING-SPEC.md</code>（生态根目录）。</p>
+</blockquote>
+<h2>0. 解析规则（frontMatter.js，唯一实现）</h2>
+<ul>
+<li>只认<strong>文档最顶部</strong>的 <code>---</code> 围栏块：<code>/^[ \t]*---[ \t]*\r?\n[\s\S]*?\r?\n---[ \t]*\r?\n?/</code>。</li>
+<li>标量解析，不引 js-yaml：数字、布尔、去引号字符串。<code>date: 2026-10-24</code> 是字符串不是日期对象。</li>
+<li>无 front-matter 的文档由 compose 注入默认（<code>headingDivider: 3</code> + <code>theme: lecture</code>）；
+<strong>有则作者的话全算数</strong>，未声明的键不补默认值。</li>
+<li>未知键被忽略，不报错。</li>
+</ul>
+<h2>1. 元数据键（<code>deckMeta</code>，11 键）</h2>
+<p>去向：封面页 + PPTX 文件属性（title→标题、subtitle→主题、author→作者）。</p>
+<table>
+<thead>
+<tr>
+<th>键</th>
+<th>值</th>
+<th>去向</th>
+<th>缺省</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>title</code></td>
+<td>文本</td>
+<td>封面题名；PPTX 文件属性·标题</td>
+<td><code>null</code>（无 title 则无封面页）</td>
+</tr>
+<tr>
+<td><code>subtitle</code></td>
+<td>文本</td>
+<td>封面副标题；PPTX 文件属性·主题</td>
+<td><code>null</code></td>
+</tr>
+<tr>
+<td><code>author</code></td>
+<td>文本</td>
+<td>封面作者；PPTX 文件属性·作者</td>
+<td><code>null</code></td>
+</tr>
+<tr>
+<td><code>date</code></td>
+<td>文本/数字</td>
+<td>封面日期；字符串原样进 IR，sidecar（Python）<code>strptime</code></td>
+<td><code>null</code></td>
+</tr>
+<tr>
+<td><code>datetime</code></td>
+<td>文本</td>
+<td><code>date</code> 的别名（marp 兼容）；两边都写 <code>date</code> 优先</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>book</code></td>
+<td>文本</td>
+<td>书籍/课程名 → 页眉左侧内容源</td>
+<td><code>null</code></td>
+</tr>
+<tr>
+<td><code>header</code></td>
+<td><code>true</code> / <code>false</code> / <code>&quot;文本&quot;</code></td>
+<td>页眉三态：开 / 关 / 自定义文本</td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td><code>footer</code></td>
+<td>同上</td>
+<td>页脚三态</td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td><code>keywords</code></td>
+<td><code>A, B</code> 或 <code>[A, B]</code></td>
+<td>正文命中即高亮（分隔符 <code>,</code> <code>，</code> <code>;</code> <code>；</code> <code>、</code>，大小写不敏感去重）；只驱动渲染，不进 PPTX 属性</td>
+<td><code>[]</code></td>
+</tr>
+<tr>
+<td><code>show</code></td>
+<td><code>page</code> / <code>element</code></td>
+<td>放映形态：整页全显 / 渐进揭示</td>
+<td>壳 config → 引擎缺省 <code>page</code></td>
+</tr>
+<tr>
+<td><code>page</code></td>
+<td><code>true</code> / <code>false</code></td>
+<td>仅 <code>show: page</code> 有意义：逐元素游走（默认）/ 纯整页翻</td>
+<td><code>null</code>（回退壳 config）</td>
+</tr>
+</tbody></table>
+<h2>2. 渲染键（<code>frontMatterPairs</code> → compose 消费）</h2>
+<table>
+<thead>
+<tr>
+<th>键</th>
+<th>值</th>
+<th>说明</th>
+<th>缺省</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>headingDivider</code></td>
+<td>1–6</td>
+<td>第 N 级标题起切页（钳到 1–6）</td>
+<td><code>3</code></td>
+</tr>
+<tr>
+<td><code>theme</code></td>
+<td>主题名</td>
+<td><code>core/themes/</code> 下 <code>@theme</code> 声明匹配；不存在回退 lecture 并留警告</td>
+<td><code>lecture</code></td>
+</tr>
+<tr>
+<td><code>paginate</code></td>
+<td><code>true</code></td>
+<td>打页码（严格 <code>=== true</code> 才生效）</td>
+<td>不打</td>
+</tr>
+<tr>
+<td><code>semicolons</code></td>
+<td><code>false</code></td>
+<td>分号转列表<strong>关闭</strong>（默认开；只有显式 <code>false</code> 生效）</td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td><code>toc</code></td>
+<td><code>true</code> / <code>false</code> / 数字 1–6</td>
+<td>章节目录页：true = 每章前一页目录、当前章高亮；数字 = 子项列到该级；章节数 &lt; 2 时不插</td>
+<td><code>true</code></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><code>page</code> 与 <code>paginate</code> 是两个键：<code>page</code> 管放映翻页粒度，<code>paginate</code> 管页脚打不打页码。</p>
+</blockquote>
+<blockquote>
+<p><code>doc-type</code>（USAGE 旧文提及）：<strong>未实现</strong>，代码无消费点，写了无效果。</p>
+</blockquote>
+<h2>3. 不是 front-matter 的东西（别写错位置）</h2>
+<ul>
+<li>抢答题：正文里 <code>&lt;!--quiz {&quot;answer&quot;:&quot;B&quot;,&quot;limit&quot;:30}--&gt;</code> 标记，见 <code>core/quiz/parse.js</code> 与 USAGE §3.7。</li>
+<li>分栏：正文里 <code>&lt;!-- begin/split/end --&gt;</code> 注释。</li>
+<li>块级标注（mdcode2run 的 <code>demo</code> / <code>file=</code> 等）：fence info-string，见生态根目录 AUTHORING-SPEC §二。</li>
+</ul>
+<h2>4. 优先级</h2>
+<pre><code>放映形态   front-matter show/page &gt; 壳 config.json SHOW/PAGE &gt; 引擎缺省
+主题/分页  front-matter headingDivider/theme/paginate/semicolons/toc &gt; DECK_DEFAULTS
+</code></pre>
+<p>宿主可经 <code>compose(md, { defaults })</code> 注入文档级默认（仅对无 front-matter 的文档生效）。</p>
+
+      </section>
+      <section class="doc" id="mdcode2run" data-index="3">
+        <div class="source">来源：<code>mdcode2run/docs/FRONTMATTER.md</code> · 由各项目维护，经 <code>sync-help-docs.mjs</code> 同步</div>
+<blockquote>
+<p>依据源码逐项核实（2026-11-04）：<code>front-matter.js</code>（读取层）、<code>fences.js</code>
+（<code>parseCodeExecFrontMatter</code>，code-exec 段解析）。键有增删先改代码，再同步本文件。
+块级 fence 标注（<code>demo</code> / <code>file=</code> / <code>job</code>…）不属 front-matter，见 <code>../FENCE.md</code>。</p>
+</blockquote>
+<h2>0. 解析规则（front-matter.js）</h2>
+<ul>
+<li>配置三层的前言层：<strong>fence meta（块级）&gt; front-matter（本文档）&gt; 引擎配置（秘密层）</strong>。</li>
+<li>查找顺序：<code>code-exec.&lt;section&gt;.&lt;key&gt;</code>（新，文档级默认）→ 顶层 <code>&lt;key&gt;</code>（旧写法，仍认）。</li>
+<li>键名<strong>大小写不敏感</strong>（<code>find()</code> 归一比较）。</li>
+<li>只解析缩进映射 + 标量：不碰列表 / 嵌套深层 / 含空格的长文本值
+（那些属于 title / tags 这类展示性元数据，不是配置）。</li>
+<li><strong>密码不在此列</strong>——秘密只放引擎配置（宿主偏好），前言层无权读取。</li>
+</ul>
+<h2>1. <code>code-exec:</code> 段（文档级执行默认）</h2>
+<table>
+<thead>
+<tr>
+<th>键</th>
+<th>语言</th>
+<th>值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>code-exec.java.JAVA_HOME</code></td>
+<td>java</td>
+<td>JDK 根目录或 bin 目录</td>
+<td>每次运行现取（换文档换 JDK）</td>
+</tr>
+<tr>
+<td><code>code-exec.java.class-path</code></td>
+<td>java</td>
+<td><code>;</code> 分隔字符串或数组</td>
+<td><code>dir/*</code> 展开为该目录全部 jar；相对路径基于文档目录</td>
+</tr>
+<tr>
+<td><code>code-exec.python.PYTHON_PATH</code></td>
+<td>python</td>
+<td>解释器路径</td>
+<td>相对路径按 cwd 解析</td>
+</tr>
+<tr>
+<td><code>code-exec.mysql.HOST</code></td>
+<td>mysql</td>
+<td>标量</td>
+<td>连接覆盖；<code>PORT</code> / <code>USER</code> / <code>DATABASE</code> 同理</td>
+</tr>
+<tr>
+<td><code>code-exec.mysql.PASSWORD</code></td>
+<td>—</td>
+<td><strong>禁止</strong></td>
+<td>秘密只在引擎层（分享讲义的前提）</td>
+</tr>
+</tbody></table>
+<p>段名（java / python / mysql…）即语言段；同一段内键大小写不敏感。</p>
+<h2>2. 顶层旧写法（仍认，优先级低于 <code>code-exec:</code> 段）</h2>
+<table>
+<thead>
+<tr>
+<th>键</th>
+<th>别名</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>host</code></td>
+<td><code>hostname</code> <code>ssh_host</code> <code>remote_host</code></td>
+<td>远端主机（配合块内 <code>[user@host]$</code> 提示符或壳配置 MODE=remote）</td>
+</tr>
+<tr>
+<td><code>user</code></td>
+<td><code>username</code> <code>ssh_user</code> <code>remote_user</code></td>
+<td>远端用户名</td>
+</tr>
+<tr>
+<td>（其余顶层标量键）</td>
+<td>—</td>
+<td><strong>凭据表</strong>：键=用户名、值=密码；<code>sudo</code> 自动改写 <code>sudo -S</code> 喂密码</td>
+</tr>
+<tr>
+<td><code>JAVA_HOME</code> / <code>class-path</code></td>
+<td>—</td>
+<td>java 旧顶层写法（<code>code-exec.java.*</code> 优先）</td>
+</tr>
+</tbody></table>
+<h2>3. 优先级链</h2>
+<pre><code>java  JAVA_HOME : code-exec.java.JAVA_HOME → 顶层 JAVA_HOME → 引擎 java.JAVA_HOME → 环境变量 JAVA_HOME
+java  class-path: code-exec.java.class-path → 顶层 class-path → 引擎 java.CLASS_PATH
+python 解释器    : code-exec.python.PYTHON_PATH → 引擎 python.PYTHON_PATH
+mysql 连接四键   : code-exec.mysql.* → 引擎 mysql.*（password 只在引擎层）
+shell 目标       : 块内提示符 [user@host] &gt; 顶层 host/user &gt; 引擎 shell.HOST/USER
+</code></pre>
+
+      </section>
+      <section class="doc" id="classbuzz" data-index="4">
+        <div class="source">来源：<code>classbuzz/docs/FRONTMATTER.md</code> · 由各项目维护，经 <code>sync-help-docs.mjs</code> 同步</div>
+<blockquote>
+<p>依据源码逐项核实（2026-11-06）：题目标记由 md2slides 的 <code>core/quiz/parse.js</code> 解析，
+房间协议见本仓 <code>DESIGN.md</code> §7。字段有增删先改代码，再同步本文件。
+<strong>classbuzz 没有 YAML front-matter</strong>——本文记录的是等价的「写在讲义里、控制竞答行为」的配置，
+为了与生态其他组件统一命名，仍叫 <code>FRONTMATTER.md</code>。</p>
+</blockquote>
+<h2>0. 范围与载体</h2>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>配置载体</td>
+<td>① 讲义正文注释 <code>&lt;!--quiz {...}--&gt;</code>；② 服务端房间状态（WS 协议）</td>
+</tr>
+<tr>
+<td>是否 YAML front-matter</td>
+<td><strong>否</strong>。全仓无 <code>---</code> 围栏解析，文档顶部写 <code>---</code> 块不生效</td>
+</tr>
+<tr>
+<td>作用域</td>
+<td>题目（答案/时限/题号）与竞答房间（口令/成绩/阶段）</td>
+</tr>
+<tr>
+<td>解析位置</td>
+<td><code>md2slides/core/quiz/parse.js</code>（题注）；本仓 <code>DESIGN.md</code> §7 WS 协议（房间）</td>
+</tr>
+<tr>
+<td>优先级</td>
+<td>题注字段 &gt; 引擎默认（30 秒）；房间状态由服务端持有，客户端不可覆盖</td>
+</tr>
+</tbody></table>
+<h2>1. 题注字段（<code>&lt;!--quiz ...--&gt;</code>）</h2>
+<p>标记必须是<strong>独占一行</strong>的注释（最多 3 空格缩进），紧跟其后的<strong>第一个段落是题干</strong>、
+<strong>再紧跟的第一个列表是选项</strong>；两者之间不能插入别的块，否则标记被当作普通注释忽略。</p>
+<p>两种写法都认：</p>
+<pre><code class="language-markdown">&lt;!--quiz {&quot;answer&quot;:&quot;B&quot;,&quot;limit&quot;:30,&quot;id&quot;:&quot;q1&quot;}--&gt;
+1 + 1 = ?
+
+- 1
+- 2
+- 3
+- 4
+</code></pre>
+<pre><code class="language-markdown">&lt;!--quiz answer=B limit=30--&gt;
+1 + 1 = ?
+
+- 1
+- 2
+- 3
+- 4
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>值</th>
+<th>说明</th>
+<th>缺省</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>answer</code></td>
+<td><code>A</code>–<code>F</code> 字母（忽略大小写）或 0 基序号</td>
+<td>归一为 <strong>0 基序号</strong>（<code>B</code> → <code>1</code>）；认不出或没写 = <code>null</code>，面板报「没设答案」，不猜</td>
+<td><code>null</code></td>
+</tr>
+<tr>
+<td><code>limit</code></td>
+<td>秒数</td>
+<td>钳到 <strong>5–300</strong> 秒；别名 <code>limitsec</code> / <code>limitSec</code>；产出为 <code>limitSec</code></td>
+<td><code>30</code></td>
+</tr>
+<tr>
+<td><code>id</code></td>
+<td>文本</td>
+<td>题号，透传到 <code>qid</code>；不写则按出现顺序 <code>q1</code> / <code>q2</code>…</td>
+<td><code>qN</code></td>
+</tr>
+</tbody></table>
+<ul>
+<li>JSON 优先；JSON 不合法时退回 <code>key=value</code> 简写（值可带引号，但不能含空格）。</li>
+<li>参数完全读不懂、或找不到题干/选项时，标记<strong>原样留在文档里</strong>（当普通注释），
+方便老师看出笔误，不会静默吞掉。</li>
+<li>空标记 <code>&lt;!--quiz--&gt;</code> 合法：答案为空、时限 30 秒。</li>
+</ul>
+<h2>2. 房间配置（WS 协议）</h2>
+<p>题目由讲义的「发放」按钮经 <code>host_open</code> 送入房间，房间状态全部由服务端持有：</p>
+<table>
+<thead>
+<tr>
+<th>消息</th>
+<th>载荷</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>host_create</code></td>
+<td><code>{}</code></td>
+<td>创建房间，回 <code>host_ok{room, token, joinUrl}</code></td>
+</tr>
+<tr>
+<td><code>host_attach</code></td>
+<td><code>{room, passcode}</code></td>
+<td><strong>第二个教师端</strong>（放映讲义侧）凭房口令换 host 角色</td>
+</tr>
+<tr>
+<td><code>host_open</code></td>
+<td><code>{qid, stem, options, answer, limitSec}</code></td>
+<td>开题；<code>answer</code> / <code>limitSec</code> 即题注字段</td>
+</tr>
+<tr>
+<td><code>question_open</code></td>
+<td><code>{qid, stem, options, limitSec, deadline}</code></td>
+<td>广播给学生，<strong><code>answer</code> 不下发</strong></td>
+</tr>
+<tr>
+<td><code>host_abort</code> / <code>host_close</code> / <code>host_next</code></td>
+<td><code>{}</code></td>
+<td>作废 / 提前收卷判分 / 结束本题</td>
+</tr>
+<tr>
+<td><code>host_reset_scores</code></td>
+<td><code>{}</code></td>
+<td>全班成绩清零</td>
+</tr>
+</tbody></table>
+<ul>
+<li>讲义侧以 <code>host_attach</code>（房间号 + 房口令）接入，题目不写在服务端配置里。</li>
+<li><code>question_result</code> 回讲义底部浮层：正确答案 / 选项分布 / 最快 / 榜单。</li>
+<li>清零会同时抹 <code>room.scores</code>、每人 <code>stats{answers, correct, fastestMs}</code>、<code>room.lastResult</code>；
+有题在进行中一律拒清。</li>
+</ul>
+<h2>3. 优先级</h2>
+<pre><code>题目字段   讲义 &lt;!--quiz {...}--&gt;  &gt;  parseQuizMeta 缺省（limit 30 / answer null）
+房间状态   服务端 room.*            &gt;  客户端（只读，不可覆盖）
+放映键     md2slides front-matter  &gt;  壳 config &gt; 引擎缺省（与题注互不相干）
+</code></pre>
+<h2>4. 注意</h2>
+<ul>
+<li>同一份讲义可同时被 md2slides 与 classbuzz 读：<code>---</code> 顶栏里的 <code>theme</code> / <code>headingDivider</code>
+归放映，正文的 <code>&lt;!--quiz--&gt;</code> 归竞答，互不冲突。</li>
+<li>不要把放映 / 纸面的 front-matter 键写进 classbuzz 讲义期待它生效——本组件不解析 YAML。</li>
+<li>题注是 <strong>markdown-it core 规则</strong>在 token 流上消费的（渲染后注释已被 sectionize 丢掉），
+不是渲染完再遍历 DOM；宿主凭 <code>data-md2s-quiz*</code> 属性认题。</li>
+<li>多选 / 判断 / 题库 JSON 尚未落地，当前只支持单选字母。</li>
+</ul>
+
+      </section>
+    </main>
+  </div>
+</body>
+</html>

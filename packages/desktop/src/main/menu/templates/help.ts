@@ -30,6 +30,40 @@ const isUpdatable = (): boolean => {
 
 export default function(): MenuItemConstructorOptions {
   const submenu: MenuItemConstructorOptions[] = [
+    // 离线帮助：四份 frontmatter 文档分别由各项目维护，构建时同步进 static/help/。
+    // 独立窗口承载（不与主窗口的 side-bar 文件树争左侧位置），可离线查阅。
+    {
+      label: t('menu.help.frontmatterDocs'),
+      submenu: [
+        {
+          label: t('menu.help.frontmatterWenlan'),
+          click() {
+            actions.showHelpDocs('wenlan')
+          }
+        },
+        {
+          label: t('menu.help.frontmatterSlides'),
+          click() {
+            actions.showHelpDocs('md2slides')
+          }
+        },
+        {
+          label: t('menu.help.frontmatterCodeRun'),
+          click() {
+            actions.showHelpDocs('mdcode2run')
+          }
+        },
+        {
+          label: t('menu.help.frontmatterQuiz'),
+          click() {
+            actions.showHelpDocs('classbuzz')
+          }
+        }
+      ]
+    },
+    {
+      type: 'separator'
+    },
     {
       label: t('menu.help.markdownReference'),
       click() {

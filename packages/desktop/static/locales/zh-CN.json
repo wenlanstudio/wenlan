@@ -103,7 +103,12 @@
       "support": "支持文览",
       "license": "许可证",
       "about": "关于",
-      "checkUpdates": "检查更新"
+      "checkUpdates": "检查更新",
+      "frontmatterDocs": "文档配置（Frontmatter）",
+      "frontmatterWenlan": "文览 · 纸面叶",
+      "frontmatterSlides": "放映 · md2slides",
+      "frontmatterCodeRun": "代码运行 · mdcode2run",
+      "frontmatterQuiz": "课堂竞答 · classbuzz"
     },
     "marktext": {
       "title": "文览",

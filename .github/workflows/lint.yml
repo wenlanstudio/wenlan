@@ -24,3 +24,8 @@ jobs:
 
       - name: Run TypeScript typecheck
         run: pnpm typecheck
+
+      # 离线帮助文档：挡住「改了快照忘了重建页面」与「本仓 frontmatter 改了没同步」。
+      # 独立发布 CI 里没有兄弟仓，脚本会按已提交的快照校验，不会因缺源而失败。
+      - name: Check offline help docs are in sync
+        run: pnpm help:docs:check

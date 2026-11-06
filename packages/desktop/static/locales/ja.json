@@ -103,7 +103,12 @@
       "support": "Wenlan を支援",
       "license": "ライセンス",
       "about": "バージョン情報",
-      "checkUpdates": "更新の確認"
+      "checkUpdates": "更新の確認",
+      "frontmatterDocs": "ドキュメント設定（Frontmatter）",
+      "frontmatterWenlan": "文覧 · 紙面",
+      "frontmatterSlides": "スライド · md2slides",
+      "frontmatterCodeRun": "コード実行 · mdcode2run",
+      "frontmatterQuiz": "クイズ · classbuzz"
     },
     "marktext": {
       "title": "Wenlan",

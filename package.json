@@ -14,6 +14,8 @@
     "format": "prettier --write .",
     "lint": "eslint --cache .",
     "minify-locales": "tsx scripts/minify-locales.ts",
+    "help:docs": "node scripts/sync-help-docs.mjs",
+    "help:docs:check": "node scripts/sync-help-docs.mjs --check",
     "rebuild-native": "pnpm --filter wenlan rebuild-native",
     "start": "pnpm --filter wenlan start",
     "dev": "pnpm --filter wenlan dev",

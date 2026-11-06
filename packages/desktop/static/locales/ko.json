@@ -103,7 +103,12 @@
       "support": "Wenlan 후원",
       "license": "라이선스",
       "about": "정보",
-      "checkUpdates": "업데이트 확인"
+      "checkUpdates": "업데이트 확인",
+      "frontmatterDocs": "문서 설정 (Frontmatter)",
+      "frontmatterWenlan": "문람 · 용지 보기",
+      "frontmatterSlides": "슬라이드 · md2slides",
+      "frontmatterCodeRun": "코드 실행 · mdcode2run",
+      "frontmatterQuiz": "퀴즈 · classbuzz"
     },
     "marktext": {
       "title": "Wenlan",
