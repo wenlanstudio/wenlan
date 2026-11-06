@@ -168,6 +168,21 @@ class HTMLPreview extends Parent {
                 return;
             }
 
+            // The sanitizer erases whole classes of source outright (comments,
+            // unknown/foreign tags, unclosed comments) — a block holding only
+            // those would render as a zero-height hole: invisible, unclickable,
+            // unreachable by the caret (#15). Show the raw source as a chip
+            // instead; clicking lands in the source editor like any preview
+            // content.
+            if (!htmlContent.trim() && html.trim()) {
+                const chip = document.createElement('span');
+                chip.className = 'mu-html-comment';
+                chip.textContent = html.trim();
+                this.domNode!.innerHTML = '';
+                this.domNode!.appendChild(chip);
+                return;
+            }
+
             const parser = new DOMParser();
             const doc = parser.parseFromString(htmlContent, 'text/html');
             const imgs = doc.documentElement.querySelectorAll('img');

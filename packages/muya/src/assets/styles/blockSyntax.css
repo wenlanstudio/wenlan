@@ -263,6 +263,35 @@
     color: var(--editor-color-50);
 }
 
+/* 注释等会被 sanitizer 整体剥除的 html 源码（#15）：块没有可渲染内容时
+   以原文 chip 露出，不再不可见不可点；点击经预览委托进源码编辑。 */
+.mu-html-comment {
+    display: inline-block;
+
+    max-width: 100%;
+    padding: 0 0.4em;
+    overflow: hidden;
+
+    color: var(--editor-color-30);
+
+    font-size: 0.85em;
+    font-family: var(--mu-code-font-family, monospace);
+    line-height: 1.6;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+
+    background: var(--editor-color-04);
+    border-radius: 3px;
+
+    cursor: default;
+
+    user-select: none;
+}
+
+.mu-html-comment:hover {
+    color: var(--editor-color-50);
+}
+
 /* code block */
 .mu-code-block,
 .mu-frontmatter,
