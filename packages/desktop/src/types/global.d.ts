@@ -265,6 +265,14 @@ declare global {
       }
       getLog(): readonly unknown[]
       isStale(revision: number): boolean
+      getIdentity(): {
+        sessionId: string
+        blockCount: number
+        ambiguousCount: number
+        lastReanchorMs: number
+        blockIds: string[]
+      }
+      getProjection(): unknown
     }
     marktext?: {
       env?: { windowId: number; [key: string]: unknown }

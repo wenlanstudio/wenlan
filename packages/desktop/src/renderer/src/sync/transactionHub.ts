@@ -1,4 +1,5 @@
 import type { IChangeMeta } from '@muyajs/core'
+import { BlockRegistry } from './blockIdentity'
 
 // sync-design v2.2 / M0. One document, one transaction stream, one Revision.
 //
@@ -61,8 +62,10 @@ export interface DocChanged {
   txn: Txn
   revision: number
   docSessionId: string
-  /** M1 fills this once block ids exist; kept in the contract from day one. */
-  affectedIds?: string[]
+  /** Session-scoped ids in document order, one per canonical top-level block. */
+  blockIds: readonly string[]
+  /** Ids that were newly allocated, moved, or whose state hash changed. */
+  affectedIds: string[]
 }
 
 export interface ExternalIntent {
@@ -141,9 +144,12 @@ export class TransactionHub {
   private _broadcastCount = 0
   private _suppressedEchoes = 0
   private _failedApplies = 0
+  private _blockStateProvider: (() => readonly unknown[]) | null = null
+  private _blocks: BlockRegistry
 
   constructor() {
     this._docSessionId = this._newSession()
+    this._blocks = new BlockRegistry(this._docSessionId)
   }
 
   get revision(): number {
@@ -152,6 +158,23 @@ export class TransactionHub {
 
   get docSessionId(): string {
     return this._docSessionId
+  }
+
+  get blocks(): BlockRegistry {
+    return this._blocks
+  }
+
+  /**
+   * Injected by the editor shell. Keeps the hub independent of Muya while still
+   * letting every commit carry a freshly re-anchored block identity (D1).
+   */
+  setBlockStateProvider(provider: (() => readonly unknown[]) | null): void {
+    this._blockStateProvider = provider
+  }
+
+  /** Re-anchor without a transaction, e.g. after a view remount. */
+  reanchor(): void {
+    if (this._blockStateProvider) this._blocks.reanchor(this._blockStateProvider())
   }
 
   subscribe(listener: (event: DocChanged) => void): () => void {
@@ -203,6 +226,7 @@ export class TransactionHub {
     if (docId !== undefined && docId === this._docId) return
     this._docId = docId ?? null
     this._docSessionId = this._newSession()
+    this._blocks.reset(this._docSessionId)
     this._revision = 0
     this._log = []
     this._seenTxnIds.clear()
@@ -320,10 +344,26 @@ export class TransactionHub {
     if (this._log.length > MAX_LOG) this._log.shift()
     this._remember(txn.txnId)
 
+    // Re-anchor at commit time: Muya's json state is already authoritative even
+    // when its DOM walker has not finished the incremental update yet.
+    let blockIds: readonly string[] = this._blocks.getIds()
+    let affectedIds: string[] = []
+    if (this._blockStateProvider) {
+      try {
+        const result = this._blocks.reanchor(this._blockStateProvider())
+        blockIds = result.blockIds
+        affectedIds = result.affectedIds
+      } catch (error) {
+        console.error('[sync] block re-anchor failed', error)
+      }
+    }
+
     const event: DocChanged = {
       txn,
       revision: this._revision,
-      docSessionId: this._docSessionId
+      docSessionId: this._docSessionId,
+      blockIds,
+      affectedIds
     }
     this._broadcastCount += 1
     for (const listener of [...this._listeners]) {
@@ -355,18 +395,40 @@ export class TransactionHub {
 /** Module singleton: it must outlive editor.vue's v-if teardown in source mode. */
 export const transactionHub = new TransactionHub()
 
+export interface IdentitySnapshot {
+  sessionId: string
+  blockCount: number
+  ambiguousCount: number
+  lastReanchorMs: number
+  blockIds: string[]
+}
+
 export interface SyncDebugSurface {
   getSnapshot(): HubSnapshot
   getLog(): readonly Txn[]
   isStale(revision: number): boolean
+  getIdentity(): IdentitySnapshot
+  getProjection(): unknown
 }
 
-/** Read-only inspection surface for diagnostics and e2e assertions (N5). */
-export function installSyncDebugSurface(hub: TransactionHub): void {
+/**
+ * Read-only inspection surface for diagnostics and e2e assertions (N5).
+ * Projection diagnostics are injected by the caller to keep the version-layer
+ * dependency pointing one way (projectionVersion -> hub).
+ */
+export function installSyncDebugSurface(
+  hub: TransactionHub,
+  getProjectionDiagnostics: () => unknown = () => null
+): void {
   const surface: SyncDebugSurface = Object.freeze({
     getSnapshot: () => hub.getSnapshot(),
     getLog: () => hub.getLog(),
-    isStale: (revision: number) => hub.isStale(revision)
+    isStale: (revision: number) => hub.isStale(revision),
+    getIdentity: () => ({
+      ...hub.blocks.getDiagnostics(),
+      blockIds: [...hub.blocks.getIds()]
+    }),
+    getProjection: getProjectionDiagnostics
   })
   Object.defineProperty(window, '__wenlanSync', {
     configurable: true,

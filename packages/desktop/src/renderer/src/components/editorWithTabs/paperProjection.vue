@@ -46,6 +46,14 @@ import {
 // 面 + 投影面），.markdown-body 组在应用 DOM 里无宿主（惰性）。挂类必须
 // 发生在量测前（fragment 开头），主题的排版值才进分页账目。
 import '@/assets/themes/export/thesis.theme.css'
+import { transactionHub } from '@/sync/transactionHub'
+import {
+  beginProjection,
+  finishProjection,
+  isProjectionStale,
+  type ProjectionRequest
+} from '@/sync/projectionVersion'
+import { fragmentIdOf, markFragment } from '@/sync/fragmentAnchor'
 
 const props = defineProps<{
   markdown: string
@@ -60,6 +68,14 @@ const muya = shallowRef<Muya | null>(null)
 
 const PROJECTION_DEBOUNCE_MS = 250
 let applyTimer = 0
+
+// M1: content still arrives through props.markdown, while doc-changed supplies
+// the Revision and block ids this projection consumes. The projection never
+// writes back — a stale async rebuild is dropped instead of being painted.
+let latestBlockIds: readonly string[] = []
+let layoutRevision = 0
+let projectionRevision = 0
+let unsubscribeDocChanged: (() => void) | undefined
 
 const sum = (xs: number[]): number => xs.reduce((a, c) => a + c, 0)
 
@@ -79,7 +95,8 @@ const fragmentLines = (
   seams: PaperSeamV2[],
   cards: HTMLElement[],
   boundaries: number[],
-  zoom: number
+  zoom: number,
+  blockId: string
 ): void => {
   const lineStarts: number[] = []
   let acc = 0
@@ -100,10 +117,24 @@ const fragmentLines = (
     const win = document.createElement('div')
     win.className = 'mu-paper-clip'
     if (s === 0) {
+      markFragment(b.el as HTMLElement, {
+        blockId,
+        fragmentId: fragmentIdOf(blockId, 0),
+        kind: 'lines',
+        from,
+        to
+      })
       win.style.height = `${mt + lineStarts[to]! - lineStarts[from]!}px`
       win.appendChild(b.el!)
     } else {
       const clone = b.el!.cloneNode(true) as HTMLElement
+      markFragment(clone, {
+        blockId,
+        fragmentId: fragmentIdOf(blockId, s),
+        kind: 'lines',
+        from,
+        to
+      })
       clone.style.transform = `translateY(${-(mt + lineStarts[from]!)}px)`
       win.style.height = `${lineStarts[to]! - lineStarts[from]!}px`
       win.appendChild(clone)
@@ -119,7 +150,8 @@ const fragmentTable = (
   b: PaperBlockBoxV2,
   seams: PaperSeamV2[],
   cards: HTMLElement[],
-  boundaries: number[]
+  boundaries: number[],
+  blockId: string
 ): void => {
   const figure = b.el as HTMLElement
   const table = figure.querySelector(':scope > table')
@@ -134,10 +166,24 @@ const fragmentTable = (
   }
   const segs = [0, ...seams.map((s) => s.split!.keep), b.table.rowHeights.length]
   for (const tr of rows.slice(1 + segs[1]!)) tr.remove()
+  markFragment(figure, {
+    blockId,
+    fragmentId: fragmentIdOf(blockId, 0),
+    kind: 'table-rows',
+    from: 0,
+    to: segs[1]!
+  })
   cards[pageIndexOf(boundaries, b.top)]!.appendChild(figure)
   for (let s = 1; s < segs.length - 1; s++) {
     const page = cards[pageIndexOf(boundaries, seams[s - 1]!.y)]!
     const contFig = figure.cloneNode(false) as HTMLElement
+    markFragment(contFig, {
+      blockId,
+      fragmentId: fragmentIdOf(blockId, s),
+      kind: 'table-rows',
+      from: segs[s]!,
+      to: segs[s + 1]!
+    })
     contFig.classList.add('mu-paper-table-cont')
     const contTable = table.cloneNode(false) as HTMLElement
     contTable.appendChild(rows[0]!.cloneNode(true))
@@ -161,13 +207,21 @@ const fragmentKids = (
   b: PaperBlockBoxV2,
   seams: PaperSeamV2[],
   cards: HTMLElement[],
-  boundaries: number[]
+  boundaries: number[],
+  blockId: string
 ): void => {
   const el = b.el as HTMLElement
   const childEls = Array.from(el.children).filter((kid) =>
     el.tagName === 'UL' || el.tagName === 'OL' ? kid.tagName === 'LI' : kid instanceof HTMLElement
   ) as HTMLElement[]
   if (!b.kids || !b.kids.length || !childEls.length) {
+    markFragment(el, {
+      blockId,
+      fragmentId: fragmentIdOf(blockId, 0),
+      kind: 'whole',
+      from: 0,
+      to: 0
+    })
     cards[pageIndexOf(boundaries, b.top)]!.appendChild(el)
     return
   }
@@ -202,6 +256,13 @@ const fragmentKids = (
       kid.remove()
     }
   }
+  markFragment(el, {
+    blockId,
+    fragmentId: fragmentIdOf(blockId, 0),
+    kind: 'kids',
+    from: 0,
+    to: segs[1]!
+  })
   cards[pageIndexOf(boundaries, b.top)]!.appendChild(el)
 
   // 段 1..n：续段外壳。整属子元素移入（再延伸到后段的截高）；跨段起头
@@ -209,6 +270,13 @@ const fragmentKids = (
   for (let s = 1; s < segs.length - 1; s++) {
     const page = cards[pageIndexOf(boundaries, seams[s - 1]!.y)]!
     const shell = el.cloneNode(false) as HTMLElement
+    markFragment(shell, {
+      blockId,
+      fragmentId: fragmentIdOf(blockId, s),
+      kind: 'kids',
+      from: segs[s]!,
+      to: segs[s + 1]!
+    })
     shell.classList.add('mu-paper-kids-cont')
     // OL 续号：段内首个完整 li 的序（若段首个是跨段克隆，其后首个完整
     // li = 跨段子元素 + 1；纯克隆段无可见序，取值不影响显示）。
@@ -246,7 +314,7 @@ const fragmentKids = (
 }
 
 /** 分片执行器：量测（自然几何）→ 拟合 → 页卡换装。 */
-const fragment = (): void => {
+const fragment = (request: ProjectionRequest): void => {
   const muyaInst = muya.value
   const deckEl = deck.value
   if (!muyaInst || !deckEl) return
@@ -290,23 +358,44 @@ const fragment = (): void => {
     cards.push(card)
   }
   deckEl.dataset.pageCount = String(layout.pageCount)
+  deckEl.dataset.docSessionId = request.docSessionId
+  deckEl.dataset.docRevision = String(request.docRevision)
+  deckEl.dataset.layoutRevision = String(request.layoutRevision)
+  deckEl.dataset.projectionRevision = String(++projectionRevision)
 
   for (let i = 0; i < m.blocks.length; i++) {
     const b = m.blocks[i]!
     const el = b.el
     if (!el) continue
+    // 缝用测量数组下标；身份用规范块树下标（测量会跳过 frontmatter /
+    // 零高块，两者不能混用）。
+    const blockId = latestBlockIds[b.stateIndex ?? i] ?? ''
     const seams = layout.seams.filter((s) => s.split?.block === i)
     if (!seams.length) {
+      markFragment(el as HTMLElement, {
+        blockId,
+        fragmentId: fragmentIdOf(blockId, 0),
+        kind: 'whole',
+        from: 0,
+        to: 0
+      })
       cards[pageIndexOf(boundaries, b.top)]!.appendChild(el)
     } else if (b.table && seams.some((s) => s.split!.kind === 'table-rows')) {
-      fragmentTable(b, seams, cards, boundaries)
+      fragmentTable(b, seams, cards, boundaries, blockId)
     } else if (b.kids && seams.some((s) => s.split!.kind === 'kids')) {
-      fragmentKids(b, seams, cards, boundaries)
+      fragmentKids(b, seams, cards, boundaries, blockId)
     } else if (b.lines) {
-      fragmentLines(b, seams, cards, boundaries, zoom)
+      fragmentLines(b, seams, cards, boundaries, zoom, blockId)
     } else {
       // 无子结构的超页块（高图 / 长 pre）：真分片下无法表达——整块进首屏
       // 页、溢出可见（v1 穿缝的对应物，A″ 已知视觉，§5）。
+      markFragment(el as HTMLElement, {
+        blockId,
+        fragmentId: fragmentIdOf(blockId, 0),
+        kind: 'whole',
+        from: 0,
+        to: 0
+      })
       cards[pageIndexOf(boundaries, b.top)]!.appendChild(el)
     }
   }
@@ -320,11 +409,19 @@ const rebuild = (): void => {
   const gen = ++rebuildGen
   const muyaInst = muya.value
   if (!muyaInst) return
+  const request = beginProjection(++layoutRevision)
   muyaInst.setContent(props.markdown ?? '')
-  // 双 rAF：等 muya 渲染提交布局后再量测分片。
+  // 双 rAF：等 muya 渲染提交布局后再量测分片。世代号作废同一投影内
+  // 交叠的重建；版本守卫作废跨事务的过期结果（§6 异步一致性）。
   requestAnimationFrame(() =>
     requestAnimationFrame(() => {
-      if (gen === rebuildGen) fragment()
+      if (gen !== rebuildGen) return
+      if (isProjectionStale(request)) {
+        finishProjection(request, projectionRevision, false)
+        return
+      }
+      fragment(request)
+      finishProjection(request, projectionRevision, true)
     })
   )
 }
@@ -350,12 +447,18 @@ onMounted(() => {
   const instance = new Muya(host.value, options)
   instance.init()
   muya.value = instance
+  latestBlockIds = transactionHub.blocks.getIds()
+  unsubscribeDocChanged = transactionHub.subscribe((event) => {
+    latestBlockIds = event.blockIds
+  })
   rebuild()
   void document.fonts?.ready.then(rebuild)
 })
 
 onBeforeUnmount(() => {
   window.clearTimeout(applyTimer)
+  unsubscribeDocChanged?.()
+  unsubscribeDocChanged = undefined
   muya.value?.destroy()
   muya.value = null
 })

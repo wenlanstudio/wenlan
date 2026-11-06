@@ -4,8 +4,10 @@
 //
 // 各视图排版不同，scrollTop 的数字不能互滚（分栏视图把分栏组 regroup 成栏，
 // 文档总高与 page 视图不同；源码视图是一行一行的纯文本）。因此同步的货币是
-// 「文档位置」，用三种坐标共同表达：
+// 「文档位置」，用四种坐标共同表达（M1 起身份坐标优先）：
 //
+//   - `blockId`：会话级规范块身份（sync-design D1/D5）。编辑、插入、重排后仍
+//     指向同一个块，比下标抗漂移；投影续体另记 `fragmentId`。
 //   - `blockIndex`：内容块序列中的下标。page 视图是 `.mu-container` 的顶层块，
 //     columns 视图把栏内块按文档顺序展开、滤掉标记块后，得到同一序列。
 //   - `line`：markdown 源码行号（1-based）。源码视图天然拥有这个坐标。
@@ -17,11 +19,19 @@
 // updateScrollPosition 记忆，两套机制用途不同——那个记住「上次离开文档的
 // 位置」，这个保证「多个视图停在同一个地方」。
 
+import { blockIdOf } from '@/sync/blockIdentity'
+
 /**
  * 一个视图的视口位置。字段按视图填充，读取方用自己认得的那个坐标，缺失时
  * 退回到 `text` 换算。
  */
 export interface ViewAnchor {
+  /** 会话级规范块身份；命中即优于下标与文本桥。 */
+  blockId?: string
+  /** 投影续体（跨页/跨片 fragment）；同一 blockId 可有多个 fragment。 */
+  fragmentId?: string
+  /** 锚点块顶相对视口顶的偏移，恢复时一并还原。 */
+  viewportOffset?: number
   /** 内容块序列中的下标（document/page、document/columns 视图）。 */
   blockIndex?: number
   /** markdown 源码行号，1-based（code/source 源码视图）。 */
@@ -155,15 +165,25 @@ export function viewAnchorOf(container: HTMLElement | null): ViewAnchor | null {
   const viewTop = container.getBoundingClientRect().top + 1
   const index = blocks.findIndex((el) => el.getBoundingClientRect().bottom > viewTop)
   const at = index === -1 ? blocks.length - 1 : index
+  const block = blocks[at]
+  const blockId = blockIdOf(block) ?? undefined
+  const fragmentId = (block as HTMLElement).dataset?.fragmentId || undefined
 
-  return { blockIndex: at, text: blockText(blocks[at]) }
+  return {
+    blockIndex: at,
+    blockId,
+    ...(fragmentId ? { fragmentId } : {}),
+    text: blockText(block),
+    viewportOffset:
+      block.getBoundingClientRect().top - container.getBoundingClientRect().top
+  }
 }
 
 /**
- * 把锚点滚到视口顶部（瞬时；越界时夹取到首 / 末块）。优先用 blockIndex，但
- * 校验该坐标处的块文本是否仍与锚点 text 一致——文档编辑会让块序号漂移，校验
- * 失败就放弃精确坐标、退回 text 桥（`findBlockIndex`），避免滚到错误位置。
- * blockIndex 缺失（锚点来自 source 视图）时同样走 text 桥。
+ * 把锚点滚回视口（瞬时；越界时夹取到首 / 末块）。优先级：fragmentId →
+ * blockId → blockIndex（文本校验）→ text 桥。身份锚在编辑、插入、重排后仍
+ * 命中同一个规范块；只有没有身份的旧锚才退回脆弱的下标换算。
+ * `viewportOffset` 一并还原块顶相对视口的位置。
  */
 export function scrollViewToAnchor(container: HTMLElement | null, anchor: ViewAnchor | null): void {
   if (!container || !anchor)
@@ -173,15 +193,38 @@ export function scrollViewToAnchor(container: HTMLElement | null, anchor: ViewAn
   if (!blocks.length)
     return
 
-  let index = anchor.blockIndex
-  if (index != null) {
-    // 越界夹取到首 / 末块（与原 clamp 行为一致）。
-    if (index < 0) index = 0
-    else if (index >= blocks.length) index = blocks.length - 1
-    // 编辑后块序号会漂移：坐标处的文本若与锚点 text 不符，放弃精确坐标、
-    // 退回 text 桥，避免滚到错误位置。
-    if (anchor.text && !sameAnchorText(blockText(blocks[index]), anchor.text))
-      index = undefined
+  let index: number | undefined
+  let fromIdentity = false
+  if (anchor.fragmentId) {
+    const found = blocks.findIndex(
+      (el) => (el as HTMLElement).dataset?.fragmentId === anchor.fragmentId
+    )
+    if (found >= 0) {
+      index = found
+      fromIdentity = true
+    }
+  }
+  if (index == null && anchor.blockId) {
+    const found = blocks.findIndex((el) => blockIdOf(el) === anchor.blockId)
+    if (found >= 0) {
+      index = found
+      fromIdentity = true
+    }
+  }
+
+  // 文本桥校验只约束「按序号」的旧锚：身份命中后文本可能已被编辑，那正是
+  // 身份要解决的问题，不能因文本变化把命中作废。
+  if (index == null) {
+    index = anchor.blockIndex
+    if (index != null) {
+      // 越界夹取到首 / 末块（与原 clamp 行为一致）。
+      if (index < 0) index = 0
+      else if (index >= blocks.length) index = blocks.length - 1
+      if (anchor.text && !sameAnchorText(blockText(blocks[index]), anchor.text))
+        index = undefined
+    }
+  } else if (fromIdentity) {
+    index = Math.max(0, Math.min(index, blocks.length - 1))
   }
 
   if (index == null) {
@@ -193,7 +236,9 @@ export function scrollViewToAnchor(container: HTMLElement | null, anchor: ViewAn
 
   const target = blocks[Math.max(0, Math.min(index, blocks.length - 1))]
   container.scrollTop
-    += target.getBoundingClientRect().top - container.getBoundingClientRect().top
+    += target.getBoundingClientRect().top
+      - container.getBoundingClientRect().top
+      - (anchor.viewportOffset ?? 0)
 }
 
 /**

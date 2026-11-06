@@ -125,6 +125,8 @@ import {
   type DocChanged,
   type JsonChange
 } from '@/sync/transactionHub'
+import { applyBlockIds } from '@/sync/blockIdentity'
+import { getProjectionDiagnostics } from '@/sync/projectionVersion'
 import { useProjectStore } from '@/store/project'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
@@ -159,6 +161,21 @@ let muyaPluginsRegistered = false
 // The save pipeline is a doc-changed subscriber, so it must be torn down with
 // this component (source mode replaces editor.vue with CodeMirror).
 let unsubscribeDocChanged: (() => void) | undefined
+
+// M1: ids are applied to the live engine's top-level DOM on the next frame.
+// Muya dispatches json-change BEFORE its incremental DOM walker finishes, so a
+// same-tick write would tag the outgoing nodes. Coalescing also keeps the cost
+// off the typing hot path.
+let blockIdRaf = 0
+let pendingBlockIds: readonly string[] = []
+const scheduleBlockIdApplication = (ids: readonly string[]): void => {
+  pendingBlockIds = ids
+  if (blockIdRaf) return
+  blockIdRaf = requestAnimationFrame(() => {
+    blockIdRaf = 0
+    applyBlockIds(editor.value?.domNode ?? null, pendingBlockIds)
+  })
+}
 
 // The engine's `selection-change` / `json-change` payload. The consumed
 // `@muyajs/core` declaration does not re-export this shape, so describe the
@@ -1592,6 +1609,7 @@ const setMarkdownToEditor = (payload: unknown) => {
     // `setContent` resets the document and clears the undo history; only set a
     // cursor afterwards (a freshly-opened file has no history to restore).
     editor.value.setContent(newMarkdown ?? '')
+    transactionHub.reanchor()
     // The freshly loaded content is this tab's clean baseline (id 0). Re-seed
     // the monotonic save-tracking allocator so undoing an edit back to this
     // content reads as clean again (matches the store's `lastSavedHistoryId: 0`).
@@ -1723,6 +1741,9 @@ const handleFileChange = (payload: unknown) => {
       // session, no edit transaction. Same-doc remounts keep the Revision chain.
       transactionHub.switchDocument(id)
       editor.value.setContent(newMarkdown)
+      // Whole-tree swap: re-anchor against the NEW canonical states even though
+      // setContent emits no json-change (D1 covers every rebuild, not just edits).
+      transactionHub.reanchor()
       // Tab switch swaps content without firing `json-change`, so re-seed the
       // TOC (otherwise returning to an open tab keeps the other tab's TOC).
       editorStore.UPDATE_TOC(editor.value.getTOC())
@@ -1885,7 +1906,7 @@ const handleCodeRunRequest = (event: Event): void => {
 }
 
 onMounted(() => {
-  installSyncDebugSurface(transactionHub)
+  installSyncDebugSurface(transactionHub, getProjectionDiagnostics)
   printer = new Printer()
 
   // issue #2：把「真实可用的编辑视口高度」发布成 CSS 变量。面板展开/拖拽时
@@ -1986,6 +2007,11 @@ onMounted(() => {
   // the document tree and instantiates the registered UI plugins).
   muya.init({ focus: editorStore.TAKE_OPEN_INTENT(currentFile.value?.pathname) !== false })
   editor.value = muya
+  // M1: the first document (and every view remount) needs an identity pass even
+  // though loading it produced no transaction.
+  transactionHub.setBlockStateProvider(() => editor.value?.getState() ?? [])
+  transactionHub.reanchor()
+  applyBlockIds(muya.domNode, transactionHub.blocks.getIds())
   applyLens()
   // The first document's content is set via constructor options, so no
   // `file-loaded` / `setMarkdownToEditor` runs for it — seed its TOC here.
@@ -2086,6 +2112,7 @@ onMounted(() => {
   unsubscribeDocChanged = transactionHub.subscribe((event: DocChanged) => {
     // Future projections subscribe to this bus event; they never write back.
     bus.emit('doc-changed', event)
+    scheduleBlockIdApplication(event.blockIds)
     // There is a chance that this event is fired AFTER the tab is switched. If we purely rely on this.currentFile later on
     // it can be invalid updates. Hence, we need the id to identify changes as part of each tab
     if (!currentFile.value || !editor.value) return
@@ -2253,6 +2280,11 @@ onMounted(() => {
 onBeforeUnmount(() => {
   unsubscribeDocChanged?.()
   unsubscribeDocChanged = undefined
+  if (blockIdRaf) {
+    cancelAnimationFrame(blockIdRaf)
+    blockIdRaf = 0
+  }
+  transactionHub.setBlockStateProvider(null)
   document.removeEventListener(CODE_RUN_EVENT, handleCodeRunRequest)
   // 切到 code/source 或占位视图时本组件经 `v-if` 销毁，下面的 destroy() 会连
   // muya 实例与 undo 栈一起丢掉（page ↔ columns 已共用同一实例，不再销毁）。

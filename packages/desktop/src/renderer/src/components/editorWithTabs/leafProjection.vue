@@ -37,6 +37,14 @@ import { usePreferencesStore } from '@/store/preferences'
 import { buildMuyaViewOptions } from '@/util/muyaViewOptions'
 import { getMuyaLocale } from '@/util/muyaLocale'
 import { usePaperPagination, parsePaperGeometry, parsePaperTheme } from '@/util/paperPagination'
+import { applyBlockIds } from '@/sync/blockIdentity'
+import { transactionHub } from '@/sync/transactionHub'
+import {
+  beginProjection,
+  finishProjection,
+  isProjectionStale,
+  type ProjectionRequest
+} from '@/sync/projectionVersion'
 
 const props = defineProps<{
   /** 投影哪种文支叶：column=分栏透镜；spare=逻辑页（行级缝叠加，旧 key page）。
@@ -61,22 +69,40 @@ usePaperPagination({
 
 const PROJECTION_DEBOUNCE_MS = 250
 let applyTimer = 0
+let layoutRevision = 0
+let projectionRevision = 0
+let unsubscribeDocChanged: (() => void) | undefined
 
-const applyMarkdown = (): void => {
-  if (muya.value) muya.value.setContent(props.markdown ?? '')
+/** Stamp the versions this projection consumed; a stale build is not painted. */
+const applyProjection = (request: ProjectionRequest): void => {
+  const root = muya.value?.domNode ?? null
+  if (isProjectionStale(request) || !root) {
+    finishProjection(request, projectionRevision, false)
+    return
+  }
+  root.dataset.docSessionId = request.docSessionId
+  root.dataset.docRevision = String(request.docRevision)
+  root.dataset.layoutRevision = String(request.layoutRevision)
+  root.dataset.projectionRevision = String(++projectionRevision)
+  applyBlockIds(root, transactionHub.blocks.getIds())
   // 纸面主题同拍（文/纸叶同一套 thesis CSS，单源）：挂在 domNode（
   // .mu-container 祖先）上，命中 .paper-theme-thesis 作用域组。
-  muya.value?.domNode?.classList.toggle(
+  root.classList.toggle(
     'paper-theme-thesis',
     parsePaperTheme(props.markdown ?? '') === 'thesis'
   )
+  finishProjection(request, projectionRevision, true)
 }
 
 watch(
   () => props.markdown,
   () => {
     window.clearTimeout(applyTimer)
-    applyTimer = window.setTimeout(applyMarkdown, PROJECTION_DEBOUNCE_MS)
+    const request = beginProjection(++layoutRevision)
+    applyTimer = window.setTimeout(() => {
+      muya.value?.setContent(props.markdown ?? '')
+      applyProjection(request)
+    }, PROJECTION_DEBOUNCE_MS)
   }
 )
 
@@ -94,14 +120,16 @@ onMounted(() => {
   instance.init()
   muya.value = instance
   // 首挂内容经构造器传入（不走 applyMarkdown），主题类在此补挂。
-  instance.domNode?.classList.toggle(
-    'paper-theme-thesis',
-    parsePaperTheme(props.markdown ?? '') === 'thesis'
-  )
+  unsubscribeDocChanged = transactionHub.subscribe((event) => {
+    if (muya.value?.domNode) applyBlockIds(muya.value.domNode, event.blockIds)
+  })
+  applyProjection(beginProjection(++layoutRevision))
 })
 
 onBeforeUnmount(() => {
   window.clearTimeout(applyTimer)
+  unsubscribeDocChanged?.()
+  unsubscribeDocChanged = undefined
   muya.value?.destroy()
   muya.value = null
 })

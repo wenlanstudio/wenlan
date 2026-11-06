@@ -83,6 +83,11 @@ printToPDF 页数）对两叶同时成立**（推挤不改块高，页数相同�
 - **事务不变量**（sync-design D2/M0 已落地）：九个表面的写汇入同一事务流
   （`sync/transactionHub.ts`），共享 docRevision、undo/redo 与 dirty/save；
   投影刷新自身不产生事务，外源 apply 按 txnId 只确认一次；
+- **身份/版本不变量**（D1/D5/M1 已落地）：`blockId` 是会话级视图锚、不落盘；
+  每次整树重建重锚，重复内容歧义即换新 id；投影节点带
+  `data-block-id / data-fragment-id / data-fragment-range`，滚动与光标按
+  `fragmentId → blockId → 下标 → 文本桥` 恢复；投影结果带
+  doc/layout/projection 三级 Revision，过期异步结果直接丢弃；
 - **配置选择式**：点一下选中、再点一下取消，搭配由用户自定，**至多两叶**：
   - 1 叶 → 该视图全屏；
   - 2 叶 → 分屏，左右按按钮序（flow < column < spare < page < slide <
@@ -236,6 +241,7 @@ printToPDF 页数）对两叶同时成立**（推挤不改块高，页数相同�
 | 切换器（五叶可见 + 一叶雪藏）+ 滑块联动 | `components/viewSwitcher/`                                                                                                                                                                                                                                                                     |
 | 分屏壳 / 分割条 / pane 接线             | `components/editorWithTabs/index.vue`                                                                                                                                                                                                                                                          |
 | 统一事务流 / Revision / doc-changed     | `renderer/src/sync/transactionHub.ts`（M0：Txn 信封、外源串行队列、txnId 去重、保存回声抑制、`window.__wenlanSync` 只读诊断面）；引擎侧 `@muyajs/core` 的 `IChangeMeta` 透传；接线见 `editor.vue` / `store/editor.ts`                                                                          |
+| 身份重锚 / 版本化投影 / 分片锚（M1）    | `renderer/src/sync/` 下 `blockIdentity.ts` / `stableHash.ts` / `projectionVersion.ts` / `fragmentAnchor.ts`；投影 DOM 挂 `data-block-id` / `data-fragment-id` / 三级 Revision；`util/viewScrollSync.ts` 按身份恢复滚动与光标                                                                   |
 | 展示组两叶的投影面（放映 / 页览）       | `components/editorWithTabs/deckPane.vue`（leaf × view/panel 两维变体；服务引用计数）                                                                                                                                                                                                           |
 | 文支叶的只读投影（栏/页）               | `components/editorWithTabs/leafProjection.vue`（muya 只读第二实例，lens 决定姿态）                                                                                                                                                                                                             |
 | 纸叶真分片投影（A″）                    | `components/editorWithTabs/paperProjection.vue`（只读实例 + 分片执行器：裁剪窗对/表格行手术/整块搬移；全屏态活引擎 display:none 留任隐藏服务后端，见 §2）                                                                                                                                      |

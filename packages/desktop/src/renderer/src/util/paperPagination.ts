@@ -248,6 +248,12 @@ export interface PaperBlockBoxV2 extends PaperBlockBox {
    * 整个搬移，跨段（超页子单元）的做裁剪手术。
    */
   kidOwners?: number[]
+  /**
+   * 该测量块对应的**规范块树顶层索引**（`.mu-container` 原始 child 序，
+   * 含被测量跳过的 frontmatter / 零高块）。M1 用它把 DOM 块锚到
+   * `blockIds[stateIndex]`；纯层单测合成数据可缺省 = 测量数组下标。
+   */
+  stateIndex?: number
 }
 
 export interface PaperSeamV2 {
@@ -823,7 +829,9 @@ export const measurePaperBlocksV2 = (
   const pageContentHeight = (geometry.pageHeightMm - 40) * MM_TO_PX * zoom
 
   const blocks: PaperBlockBoxV2[] = []
-  for (const child of Array.from(container.children)) {
+  const children = Array.from(container.children)
+  for (let stateIndex = 0; stateIndex < children.length; stateIndex++) {
+    const child = children[stateIndex]
     if (!(child instanceof HTMLElement)) continue
     if (child.matches(EXCLUDED_SELECTOR)) continue
     const r = child.getBoundingClientRect()
@@ -833,6 +841,7 @@ export const measurePaperBlocksV2 = (
       top: r.top - rect.top - contentTopOffset,
       bottom: r.bottom - rect.top - contentTopOffset,
       isPagebreak: child.querySelector('.mu-mdcols-pagebreak') !== null,
+      stateIndex,
       el: child
     }
     if (child.tagName === 'P') {

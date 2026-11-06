@@ -4,10 +4,11 @@
 > 「编辑如何汇聚、投影如何发散」，视图模型管「叶子如何组织、状态如何持久化」。
 > 冲突时以本文为准并同步修订 view-model.md（沿用其立法惯例）。
 >
-> 状态：**设计基线 + M0 已落地**（2026-11-06，分支 `feat/sync-m0-txn-adapter`）。
+> 状态：**设计基线 + M0 / M1 已落地**（2026-11-06；M0 `feat/sync-m0-txn-adapter`、
+> M1 `feat/sync-m1-identity-projection`，后者基于前者）。
 > N1 的九个可编辑表面、D2 的双向事务入口、D4/D7/D8 的页/览几何分治已拍板；
-> D1–D8 作为后续里程碑的实施约束。M0 只统一写路径与 Revision，**不改任何投影
-> 与编辑表面**；M1–M5 仍是设计约束。
+> D1–D8 作为后续里程碑的实施约束。M0 统一写路径与 Revision；M1 补块身份重锚、
+> 版本化投影与分片/滚动锚，**仍未接入九个编辑表面**；M2–M5 仍是设计约束。
 
 ## 1. 需求（从 #3 与多轮讨论蒸馏）
 
@@ -350,7 +351,41 @@ Muya 自源：用户输入 → Muya apply → json-change ─┐
     另：`parity-source-undo-saved.spec.ts` 的 PG2/PG14 共 4 例在 develop 基线
     上同样失败（A/B 实测，与 M0 无关），属既有红灯，需另立问题跟踪。
   - M0 未覆盖：块身份重锚、版本化投影、九个表面编辑、几何缓存、览/示协议握手。
-- **M1 身份与版本化投影**：完成所有整树重建的重锚、版本化投影、滚动/光标锚定。
+- **M1 身份与版本化投影（已落地）**：完成所有整树重建的重锚、版本化投影、
+  滚动/光标锚定。
+  - 身份（D1）：`sync/blockIdentity.ts` + `sync/stableHash.ts`。会话级 `blockId`
+    不落盘、不写进规范块树；完整状态哈希（FNV-1a 64 位 + 键序稳定序列化）覆盖
+    类型/属性/文本/渲染元数据。重锚 = 前后缀裁剪 + 中间段有序 LCS；纯重排按
+    hash 多重集配对；**同 hash 出现多次即判歧义并分配新 id**，不猜目标块。
+    `hub._commit` 注入 state provider 重锚并把 `blockIds` / `affectedIds` 放进
+    `doc-changed`；`switchDocument` 重置会话。覆盖 `setContent`（文件加载/tab
+    切换）、`replaceContent`（源码交接/磁盘重载）、整树 undo/redo（事务提交）、
+    视图重建（onMounted 显式 reanchor）。
+  - 版本化投影（§3/D4）：`sync/projectionVersion.ts` 维护
+    `docRevision → layoutRevision → projectionRevision`，异步结果严格按会话与
+    版本拒收。paperProjection 的 `rebuildGen` 之外再加版本守卫；deck 挂
+    `data-doc-session-id / doc-revision / layout-revision / projection-revision`；
+    leafProjection 同样带版本并随 `doc-changed` 更新块锚；`md2s:build` 带请求
+    版本（iframe 回带与拒收归 M5）。
+  - 分片锚（D5）：`sync/fragmentAnchor.ts`。整块/行级裁剪/续表/子单元续段
+    全部挂 `data-block-id / data-fragment-id / data-fragment-kind /
+data-fragment-range`；反查用 `querySelectorAll`，**不假设唯一命中**。
+    `measurePaperBlocksV2` 记录 `stateIndex`，把「测量下标」与「规范块树下标」
+    分开（测量会跳过 frontmatter / 零高块）。
+  - 滚动/光标锚：`viewScrollSync.ts` 的 `ViewAnchor` 增
+    `blockId / fragmentId / viewportOffset`，恢复优先级 fragmentId → blockId →
+    blockIndex（文本校验）→ text 桥；活引擎 DOM 的 id 在 `doc-changed` 后合帧
+    写入（Muya 先 emit 再走增量 DOM walker，同 tick 写会标到旧节点）。
+  - 验收：单测 `blockIdentity.spec.ts`(10)、`fragmentAnchor.spec.ts`(5)、
+    `projectionVersion.spec.ts`(5)、`viewScrollIdentity.spec.ts`(6)；e2e
+    `sync-m1-identity.spec.ts`(6)：活引擎/投影块锚稳定、版本戳、编辑后未变块
+    不换 id、跨页块多 fragment 锚、纯投影刷新零事务。既有回归 31/31（含
+    `paper-page-count` 10 例 N3 硬验收与 M0 6 例）。
+  - **已知边界**：① 投影内容仍由 `props.markdown` 全量 `setContent` 重建，M1
+    只版本化结果、不做增量投影（M4 的增量布局另立）；② 重复内容块每轮重锚都换
+    新 id，滚动锚会退回文本桥——这是「宁可重建不写错块」的代价；③ M1 每次事务
+    对全量 TState 做哈希，O(n)，`lastReanchorMs` 已埋点供 M4 的增量 Merkle 基准
+    替换；④ 览/示 iframe 的 ready 回带版本与严格拒收仍属 M5。
 - **M2 文/页最小闭环**：先普通段落，验证 IME、commit/cancel、undo、外部重载，
   再扩展页内的代码块、列表和表格分片；此处只处理内容分片，不接入码/表/图
   块级编辑控件。
@@ -374,11 +409,12 @@ Muya 自源：用户输入 → Muya apply → json-change ─┐
 | bus 增量事件、chokidar 树推送                        | 文件级机制不动；补自己保存回声抑制                                                              |
 | md2slides 引擎（Typora 共用）                        | 策略库化，双宿主共享                                                                            |
 | `editor.vue` 丢弃 op/source 的 `json-change` handler | **M0 已改**：`hub.ingest()` 同 tick 封装 + `doc-changed` 单一广播；保存管线改订阅 `doc-changed` |
+| 投影靠 `children` 下标 + 文本桥                      | **M1 已改**：`blockIds` / `data-block-id` / `data-fragment-id` + 版本戳；锚定按身份优先         |
 
-## 11. 与 view-model.md 的同步项（M0 已修订）
+## 11. 与 view-model.md 的同步项（M0 / M1 已修订）
 
-本文 N1 拍板后，view-model.md 中以下历史约束需要同步修订（**2026-11-06 M0
-分支已按此修订 §2 / §3 / §6**）：
+本文 N1 拍板后，view-model.md 中以下历史约束需要同步修订（**2026-11-06
+M0 / M1 分支已按此修订 §2 / §3 / §6**）：
 
 - 「右 pane 一律只读投影」改为「同一时刻至多一个活编辑面」；
 - 页叶「只读真分片投影」保留其渲染实现，但不再等于不可编辑；
@@ -387,7 +423,8 @@ Muya 自源：用户输入 → Muya apply → json-change ─┐
   语义；码/表/图不得被建模成新视图叶；
 - 「示」的 Esc、步进与编辑态优先级以 D6 为准。
 
-**边界提醒**：文档写的是目标语义，不等于代码已到位。M0 只统一了写路径与
-Revision；页/览/示的 fragment 编辑闭环、块身份重锚与 iframe 协议握手仍是
-M1/M2/M5 的工作。当前只读投影是渲染实现（A″ 裁决保留），不是设计上的
-不可编辑。
+**边界提醒**：文档写的是目标语义，不等于代码已到位。M0 统一了写路径与
+Revision，M1 完成块身份重锚、版本化投影与块/分片/滚动锚；页/览/示的
+fragment **编辑**闭环仍属 M2/M5，iframe 协议握手属 M5。当前只读投影是渲染
+实现（A″ 裁决保留），不是设计上的不可编辑；投影的 `data-block-id` 目前只用于
+定位与锚定，尚未承载写请求。

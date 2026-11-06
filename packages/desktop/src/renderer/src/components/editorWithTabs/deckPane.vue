@@ -97,6 +97,7 @@ import { useEditorStore } from '@/store/editor'
 import { useEditorViewStore } from '@/store/editorView'
 import { usePreferencesStore } from '@/store/preferences'
 import { renderGraphvizToDataUrl, renderPlantumlToDataUrl } from '@/util/md2slidesDiagram'
+import { beginProjection } from '@/sync/projectionVersion'
 
 const props = defineProps<{
   /** 示支的叶：present 放映 / slide 页览。 */
@@ -163,6 +164,10 @@ const postToDeck = (msg: Record<string, unknown>): void => {
   deckFrame.value?.contentWindow?.postMessage(msg, origin.value ?? '*')
 }
 
+// 览/示在 iframe 内自治布局（D8）；宿主只把消费版本随构建请求带过去。
+// ready 回带版本与严格拒收属于 M5 的协议握手，此处不改动 iframe 侧。
+let layoutRevision = 0
+
 const sendBuild = (preservePage = false): void => {
   // 每次重建先清旧提示：警告是「这次构建」的结论，修好（补图/改主题名）后
   // 不该继续挂着上一轮的文字。
@@ -173,10 +178,14 @@ const sendBuild = (preservePage = false): void => {
     preservePage && index.value > 1 && total.value > 0
       ? Math.min(index.value, total.value)
       : undefined
+  const request = beginProjection(++layoutRevision)
   postToDeck({
     type: 'md2s:build',
     md: props.markdown,
     mdDir: mdDir.value,
+    docSessionId: request.docSessionId,
+    docRevision: request.docRevision,
+    layoutRevision: request.layoutRevision,
     runOpts: {
       view: props.leaf === 'slide' ? 'list' : 'present',
       ...(startIndex !== undefined ? { startIndex } : {})
