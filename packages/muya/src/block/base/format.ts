@@ -763,7 +763,12 @@ class Format extends Content {
         switch (true) {
             case !!thematicBreak
                 && new Set(thematicBreak.split('').filter(i => /\S/.test(i))).size === 1:
-                this._convertToThematicBreak();
+                // `---` alone on the document's first block is the front-matter
+                // fence, not a horizontal rule: hold the conversion so Enter can
+                // turn the paragraph into front matter (#15). Anything else
+                // (`----`, `***`, a `---` further down) stays a thematic break.
+                if (!this._heldAsFrontmatterFence())
+                    this._convertToThematicBreak();
                 break;
 
             case !!bulletList:
@@ -799,6 +804,15 @@ class Format extends Content {
                 this.convertToParagraph();
                 break;
         }
+    }
+
+    // The front-matter fence is `---` at column 0 of the document's very first
+    // block; once front matter exists the top is taken and `---` converts to a
+    // thematic break again.
+    private _heldAsFrontmatterFence(): boolean {
+        return this.text === '---'
+            && this.blockName === 'paragraph.content'
+            && this.scrollPage?.firstChild === this.parent;
     }
 
     // Thematic Break

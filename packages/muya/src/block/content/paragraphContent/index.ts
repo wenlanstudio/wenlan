@@ -22,6 +22,7 @@ import { firstWordOfInfo, isKeyboardEvent, isLengthEven, parseFenceLine } from '
 import { createDiagramState, diagramTypeOfLang } from '../../../utils/diagram/fence';
 import logger from '../../../utils/logger';
 import Format from '../../base/format';
+import { insertFrontMatterAtStart } from '../../blockTransforms';
 import OrderList from '../../commonMark/orderList';
 import TaskList from '../../gfm/taskList';
 import { ScrollPage } from '../../scrollPage';
@@ -617,6 +618,18 @@ class ParagraphContent extends Format {
         if (event.shiftKey && !this.dropSoftBreakBeforeCursor())
             return this.shiftEnterHandler(event);
 
+        // `---` alone as the document's first block is the front-matter fence:
+        // Enter turns the paragraph into front matter instead of splitting the
+        // line (the input-time thematic-break conversion is held back for it,
+        // see Format._heldAsFrontmatterFence) (#15).
+        if (this._enterBecomesFrontMatter()) {
+            event.preventDefault();
+            event.stopPropagation();
+            insertFrontMatterAtStart(this.muya);
+            this.parent!.remove();
+            return;
+        }
+
         // Any paragraph that would convert to a block (code fence, math block,
         // table, HTML block) converts in place, even inside a block-quote or
         // list item — the resulting block stays nested in its container
@@ -639,6 +652,21 @@ class ParagraphContent extends Format {
             this._enterInListItem(event);
         else
             this._enterConvert(event);
+    }
+
+    // The fence must be the whole paragraph and the caret at its end; the
+    // paragraph must be the document's first block (front matter only ever
+    // sits there — once one exists, `---` behaves like any other thematic
+    // break).
+    private _enterBecomesFrontMatter(this: ParagraphContent): boolean {
+        if (this.text !== '---')
+            return false;
+
+        const { start, end } = this.getCursor()!;
+        if (start.offset !== end.offset || end.offset !== this.text.length)
+            return false;
+
+        return this.scrollPage?.firstChild === this.parent;
     }
 
     private _paragraphParentType() {
