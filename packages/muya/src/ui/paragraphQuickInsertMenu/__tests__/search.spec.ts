@@ -85,6 +85,7 @@ describe('paragraphQuickInsertMenu search() — zh-CN localized matching', () =>
         const sectionNames = menu.renderData.map(d => d.name);
         expect(sectionNames).toEqual([
             'basic blocks',
+            'column markers',
             'headings',
             'advanced blocks',
             'list blocks',
@@ -98,6 +99,14 @@ describe('paragraphQuickInsertMenu search() — zh-CN localized matching', () =>
             'paragraph',
             'thematic-break',
             'frontmatter',
+        ]);
+
+        // The /begin /split /end slash commands (#17) sit in their own section.
+        const markers = menu.renderData.find(d => d.name === 'column markers')!;
+        expect(markers.children.map(c => c.label)).toEqual([
+            'column-begin',
+            'column-split',
+            'column-end',
         ]);
 
         // h1-h6 are "headings" in CommonMark, not "headers" (#3811).

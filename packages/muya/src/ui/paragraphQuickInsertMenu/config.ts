@@ -107,6 +107,31 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
         ],
     },
     {
+        // `/begin` `/split` `/end` 快捷命令（#17）：分栏标记是独立成行的 html
+        // 注释，begin 自带默认两栏 50:50 比例声明，栏由 split 划出、end 收口。
+        name: 'column markers',
+        children: [
+            {
+                title: 'Begin Columns',
+                subTitle: '<!-- begin 50:50 -->',
+                label: 'column-begin',
+                icon: htmlIcon,
+            },
+            {
+                title: 'Split Columns',
+                subTitle: '<!-- split -->',
+                label: 'column-split',
+                icon: htmlIcon,
+            },
+            {
+                title: 'End Columns',
+                subTitle: '<!-- end -->',
+                label: 'column-end',
+                icon: htmlIcon,
+            },
+        ],
+    },
+    {
         name: 'headings',
         children: [
             {

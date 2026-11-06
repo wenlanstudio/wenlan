@@ -529,3 +529,50 @@ describe('replaceBlockByLabel — math block follows texMathDollars', () => {
         }
     });
 });
+
+// /begin /split /end slash commands (#17): each label drops the matching
+// column marker as a standalone html-block, and the caret lands in a fresh
+// paragraph after it (same flow as the thematic-break insert).
+describe('replaceBlockByLabel — column marker slash commands (#17)', () => {
+    it.each([
+        ['column-begin', '<!-- begin 50:50 -->'],
+        ['column-split', '<!-- split -->'],
+        ['column-end', '<!-- end -->'],
+    ])('%s inserts the marker as an html-block', (label, marker) => {
+        const { captured, restore } = setupCreateSpy();
+        try {
+            const block = makeFakeOriginBlock();
+            replaceBlockByLabel({
+                block,
+                muya: makeFakeMuya(),
+                label,
+            });
+
+            const html = captured.find(c => c.label === 'html-block')!;
+            expect(html).toBeTruthy();
+            expect(html.state.name).toBe('html-block');
+            expect(html.state.text).toBe(marker);
+            expect(block.replaceWith).toHaveBeenCalledTimes(1);
+        }
+        finally {
+            restore();
+        }
+    });
+
+    it('plain html-block insert keeps the default div scaffold', () => {
+        const { captured, restore } = setupCreateSpy();
+        try {
+            replaceBlockByLabel({
+                block: makeFakeOriginBlock(),
+                muya: makeFakeMuya(),
+                label: 'html-block',
+            });
+
+            const html = captured.find(c => c.label === 'html-block')!;
+            expect(html.state.text).toBe('<div>\n\n</div>');
+        }
+        finally {
+            restore();
+        }
+    });
+});

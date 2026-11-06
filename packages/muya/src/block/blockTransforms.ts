@@ -120,6 +120,12 @@ function buildLeafBlock(label: TLeafReplacementLabel, muya: Muya, text: string) 
         if (isParagraphState(inner))
             inner.text = text;
     }
+    else if (cloned.name === 'html-block' && text) {
+        // The column-marker slash commands (#17) reuse the html-block builder
+        // with the marker text; the plain insert passes '' and keeps the
+        // default <div>\n\n</div> scaffold.
+        cloned.text = text;
+    }
 
     return ScrollPage.loadBlock(label).create(muya, cloned);
 }
@@ -183,6 +189,16 @@ export function canInsertLabel(label: string, muya: Muya): boolean {
     return label !== 'math-block' || muya.options.texMathDollars;
 }
 
+// `/begin` `/split` `/end` quick-insert commands (#17): the marker text each
+// label drops. `begin` defaults to a two-column 50:50 group — the ratio is
+// declared on the begin marker and the columns themselves come from the
+// `split` markers the author adds.
+const COLUMN_MARKER_TEXT: Record<'column-begin' | 'column-split' | 'column-end', string> = {
+    'column-begin': '<!-- begin 50:50 -->',
+    'column-split': '<!-- split -->',
+    'column-end': '<!-- end -->',
+};
+
 export function buildReplacementBlock(label: string, muya: Muya, text: string) {
     if (!canInsertLabel(label, muya))
         return null;
@@ -193,6 +209,16 @@ export function buildReplacementBlock(label: string, muya: Muya, text: string) {
         return buildDiagramBlock(label, muya);
 
     switch (label) {
+        case 'column-begin':
+            // fall through
+        case 'column-split':
+            // fall through
+        case 'column-end':
+            // The `/begin` `/split` `/end` slash commands (#17): a column
+            // marker is a standalone html-block comment, so build the html
+            // block with the marker text instead of the default empty
+            // `<div>\n\n</div>` scaffold.
+            return buildLeafBlock('html-block', muya, COLUMN_MARKER_TEXT[label]);
         case 'paragraph':
             // fall through
         case 'thematic-break':
@@ -270,10 +296,12 @@ export function replaceBlockByLabel({ block, muya, label, text = '' }: {
 
 // Position the caret after a block was inserted or replaced. A thematic-break
 // is not editable, so append a trailing empty paragraph and put the caret there
-// (so the user can keep typing below the rule); otherwise move the caret into
+// (so the user can keep typing below the rule); the column markers follow the
+// same pattern — the natural next keystroke is the column content below the
+// marker, not editing the marker's own source. Otherwise move the caret into
 // the new block.
 function finishInsertedBlock(newBlock: Parent, muya: Muya, label: string) {
-    if (label === 'thematic-break') {
+    if (label === 'thematic-break' || label.startsWith('column-')) {
         const nextParagraphBlock = ScrollPage.loadBlock('paragraph').create(
             muya,
             deepClone(emptyStates.paragraph),
