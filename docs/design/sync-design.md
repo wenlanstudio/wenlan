@@ -341,15 +341,18 @@ Muya 自源：用户输入 → Muya apply → json-change ─┐
     源码交接/磁盘重载 → 外源队列、整树重建 → switchDocument）与 `store/editor.ts`
     （保存成功登记文件指纹）。
   - 验收：单测 `syncTransactionHub.spec.ts`（12 例）与 muya `changeMeta.spec.ts`
-    （4 例），e2e `sync-m0-transaction.spec.ts`（自源键入、外部磁盘重载、undo
-    的 origin 与单次广播、Revision 链、过期版本判定）。
-  - **实测边界（2026-11-06）**：`index.vue` 在源码模式下以 `v-if` 卸载
-    `editor.vue`，切回时按 `props.markdown` 重建 Muya 实例，因此
-    `replaceContent` 的源码交接分支在当前 UI 结构下不会触发；外源队列由
-    **外部磁盘重载**路径验收，源码草稿的连续编辑协议仍归 M3（§10 映射项）。
-    e2e 相应地断言「源码往返不得凭空产生 source 事务」。
-    另：`parity-source-undo-saved.spec.ts` 的 PG2/PG14 共 4 例在 develop 基线
-    上同样失败（A/B 实测，与 M0 无关），属既有红灯，需另立问题跟踪。
+    （4 例），e2e `sync-m0-transaction.spec.ts`（自源键入、源码交接、外部磁盘
+    重载、undo 的 origin 与单次广播、Revision 链、过期版本判定）。
+  - **源码交接缺陷（2026-11-06 发现并修复，分支 `fix/source-mode-parity-and-lint`）**：
+    `index.vue` 曾以 `v-else-if` 在源码模式卸载 `editor.vue`，切回时按
+    `props.markdown` 重建 Muya ⇒ `replaceContent` 不触发、sourceCode 卸载时
+    发出的 `file-changed` 无人接收、undo 栈与 `preSourceModeSelection` 丢失，
+    `parity-source-undo-saved.spec.ts` 的 PG2/PG14 共 4 例长期红灯（develop
+    基线同样失败，A/B 实测与 M0/M1 无关）。修复：活引擎在源码模式**保持挂载**
+    （`.lens-host.source-hidden` 仅 CSS 收起），`source-code` 改独立 `v-if`。
+    现在退出源码模式会产生**恰好一条 `origin: 'source'` 事务**，
+    `sync-m0-transaction.spec.ts` 相应改为断言单次提交；parity 全套 8/8 通过。
+    源码草稿的**连续**编辑协议仍归 M3（§10 映射项）。
   - M0 未覆盖：块身份重锚、版本化投影、九个表面编辑、几何缓存、览/示协议握手。
 - **M1 身份与版本化投影（已落地）**：完成所有整树重建的重锚、版本化投影、
   滚动/光标锚定。

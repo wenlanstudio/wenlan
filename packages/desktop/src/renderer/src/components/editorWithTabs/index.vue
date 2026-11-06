@@ -40,10 +40,14 @@
              左 pane（当前唯一活编辑面；编辑面不变量见 view-model §2、
              编辑意图协议见 sync-design D6）。纸叶是只读投影（A″），
              不进活引擎。 -->
+        <!-- 源码模式下活引擎**保持挂载**（仅 CSS 收起）：v-if 卸载会丢掉
+             undo 栈与 preSourceModeSelection，sourceCode 卸载时发出的
+             file-changed 也没人接，PG2/PG14 的单步 undo 交接随之失效。 -->
         <div
-          v-else-if="editorLens"
+          v-else-if="editorLens || topView === 'code'"
           class="lens-host"
-          :data-lens="editorLens"
+          :class="{ 'source-hidden': topView === 'code' }"
+          :data-lens="editorLens ?? 'flow'"
         >
           <editor
             :markdown="markdown"
@@ -55,14 +59,14 @@
         </div>
         <!-- 本（源码）：CodeMirror 独立渲染，非透镜 -->
         <source-code
-          v-else-if="topView === 'code'"
+          v-if="topView === 'code'"
           :markdown="markdown"
           :muya-index-cursor="muyaIndexCursor"
           :text-direction="textDirection"
         />
         <!-- 图视图占位（figure 未实现） -->
         <div
-          v-else-if="topView === 'figure'"
+          v-if="topView === 'figure'"
           class="view-placeholder"
         >
           <div class="placeholder-inner">
@@ -334,6 +338,12 @@ const startDrag = (ev: PointerEvent): void => {
    sizing (`.editor-wrapper { height: 100% }`) is untouched. */
 .lens-host {
   display: contents;
+}
+
+/* 源码模式：CodeMirror 占满左 pane，活引擎退居隐藏服务后端（与
+   paper-fullscreen 收起 pane-left 同理）。不卸载才能保住 undo 栈与交接。 */
+.lens-host.source-hidden {
+  display: none;
 }
 
 .view-placeholder {

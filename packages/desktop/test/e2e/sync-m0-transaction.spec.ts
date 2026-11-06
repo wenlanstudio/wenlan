@@ -97,19 +97,20 @@ test.describe('M0 unified transaction stream', () => {
     expect(after.pendingTxnId).toBeNull()
   })
 
-  test('source-mode roundtrip is a remount, not a phantom transaction', async() => {
+  test('source-mode handoff submits exactly one external transaction', async() => {
     const before = await snapshot(page)
     await setSourceMarkdown(page, app, '# Hello\n\nEdited in source mode.\n')
-    await page.waitForTimeout(400)
 
-    // index.vue tears editor.vue down in source mode and rebuilds Muya from
-    // props.markdown on the way back, so `replaceContent` is NOT reached. The
-    // hub must not invent a source transaction for a swap it never applied;
-    // the source-draft protocol belongs to M3.
+    // The live engine stays mounted in source mode, so the CodeMirror ->
+    // WYSIWYG handoff reaches `replaceContent`: one external intent, one Txn,
+    // one broadcast. Entering source mode may flush a pending self-sourced
+    // batch, which is why only the source count is pinned.
+    await expect
+      .poll(async() => (await snapshot(page)).origins.filter(origin => origin === 'source').length)
+      .toBe(before.origins.filter(origin => origin === 'source').length + 1)
+
     const after = await snapshot(page)
-    expect(after.origins.filter(origin => origin === 'source')).toHaveLength(
-      before.origins.filter(origin => origin === 'source').length
-    )
+    expect(after.broadcastCount - before.broadcastCount).toBe(after.revision - before.revision)
     expect(after.pendingTxnId).toBeNull()
     expect(after.failedApplies).toBe(0)
     expect(after.docSessionId).toBe(before.docSessionId)
@@ -141,8 +142,8 @@ test.describe('M0 unified transaction stream', () => {
   })
 
   test('undo is attributed and stays on the same Revision chain', async() => {
-    // A source-mode remount restores the engine history from tabHistory, which
-    // may be empty; seed a definite undoable edit in the live engine first.
+    // Seed a definite undoable edit so the test does not depend on how much
+    // history the source-mode handoff left in the engine's undo stack.
     const typed = await snapshot(page)
     await typeIntoEditor(page, ' undo-me')
     await expect
