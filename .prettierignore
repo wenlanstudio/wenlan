@@ -6,3 +6,9 @@ packages/muya/
 # pnpm owns this file's formatting; Prettier reformats it wholesale and pnpm
 # rewrites it back on the next install, so the churn is pure noise.
 pnpm-lock.yaml
+
+# 应用内离线帮助：sources/*.md 是兄弟仓库文档的**逐字快照**，index.html 是由它们
+# 预渲染出的产物（内嵌快照指纹）。一旦被 Prettier 重排表格/空行，快照就不再等于
+# 源文件，`pnpm help:docs:check` 会报漂移。这两类文件只允许由
+# scripts/sync-help-docs.mjs 生成，禁止格式化。
+packages/desktop/static/help/

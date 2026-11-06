@@ -16,29 +16,29 @@
 
 去向：封面页 + PPTX 文件属性（title→标题、subtitle→主题、author→作者）。
 
-| 键         | 值                          | 去向                                                                                          | 缺省                          |
-| ---------- | --------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------- |
-| `title`    | 文本                        | 封面题名；PPTX 文件属性·标题                                                                  | `null`（无 title 则无封面页） |
-| `subtitle` | 文本                        | 封面副标题；PPTX 文件属性·主题                                                                | `null`                        |
-| `author`   | 文本                        | 封面作者；PPTX 文件属性·作者                                                                  | `null`                        |
-| `date`     | 文本/数字                   | 封面日期；字符串原样进 IR，sidecar（Python）`strptime`                                        | `null`                        |
-| `datetime` | 文本                        | `date` 的别名（marp 兼容）；两边都写 `date` 优先                                              | —                             |
-| `book`     | 文本                        | 书籍/课程名 → 页眉左侧内容源                                                                  | `null`                        |
-| `header`   | `true` / `false` / `"文本"` | 页眉三态：开 / 关 / 自定义文本                                                                | `true`                        |
-| `footer`   | 同上                        | 页脚三态                                                                                      | `true`                        |
-| `keywords` | `A, B` 或 `[A, B]`          | 正文命中即高亮（分隔符 `,` `，` `;` `；` `、`，大小写不敏感去重）；只驱动渲染，不进 PPTX 属性 | `[]`                          |
-| `show`     | `page` / `element`          | 放映形态：整页全显 / 渐进揭示                                                                 | 壳 config → 引擎缺省 `page`   |
-| `page`     | `true` / `false`            | 仅 `show: page` 有意义：逐元素游走（默认）/ 纯整页翻                                          | `null`（回退壳 config）       |
+| 键 | 值 | 去向 | 缺省 |
+|---|---|---|---|
+| `title` | 文本 | 封面题名；PPTX 文件属性·标题 | `null`（无 title 则无封面页） |
+| `subtitle` | 文本 | 封面副标题；PPTX 文件属性·主题 | `null` |
+| `author` | 文本 | 封面作者；PPTX 文件属性·作者 | `null` |
+| `date` | 文本/数字 | 封面日期；字符串原样进 IR，sidecar（Python）`strptime` | `null` |
+| `datetime` | 文本 | `date` 的别名（marp 兼容）；两边都写 `date` 优先 | — |
+| `book` | 文本 | 书籍/课程名 → 页眉左侧内容源 | `null` |
+| `header` | `true` / `false` / `"文本"` | 页眉三态：开 / 关 / 自定义文本 | `true` |
+| `footer` | 同上 | 页脚三态 | `true` |
+| `keywords` | `A, B` 或 `[A, B]` | 正文命中即高亮（分隔符 `,` `，` `;` `；` `、`，大小写不敏感去重）；只驱动渲染，不进 PPTX 属性 | `[]` |
+| `show` | `page` / `element` | 放映形态：整页全显 / 渐进揭示 | 壳 config → 引擎缺省 `page` |
+| `page` | `true` / `false` | 仅 `show: page` 有意义：逐元素游走（默认）/ 纯整页翻 | `null`（回退壳 config） |
 
 ## 2. 渲染键（`frontMatterPairs` → compose 消费）
 
-| 键               | 值                          | 说明                                                                                  | 缺省      |
-| ---------------- | --------------------------- | ------------------------------------------------------------------------------------- | --------- |
-| `headingDivider` | 1–6                         | 第 N 级标题起切页（钳到 1–6）                                                         | `3`       |
-| `theme`          | 主题名                      | `core/themes/` 下 `@theme` 声明匹配；不存在回退 lecture 并留警告                      | `lecture` |
-| `paginate`       | `true`                      | 打页码（严格 `=== true` 才生效）                                                      | 不打      |
-| `semicolons`     | `false`                     | 分号转列表**关闭**（默认开；只有显式 `false` 生效）                                   | `true`    |
-| `toc`            | `true` / `false` / 数字 1–6 | 章节目录页：true = 每章前一页目录、当前章高亮；数字 = 子项列到该级；章节数 < 2 时不插 | `true`    |
+| 键 | 值 | 说明 | 缺省 |
+|---|---|---|---|
+| `headingDivider` | 1–6 | 第 N 级标题起切页（钳到 1–6） | `3` |
+| `theme` | 主题名 | `core/themes/` 下 `@theme` 声明匹配；不存在回退 lecture 并留警告 | `lecture` |
+| `paginate` | `true` | 打页码（严格 `=== true` 才生效） | 不打 |
+| `semicolons` | `false` | 分号转列表**关闭**（默认开；只有显式 `false` 生效） | `true` |
+| `toc` | `true` / `false` / 数字 1–6 | 章节目录页：true = 每章前一页目录、当前章高亮；数字 = 子项列到该级；章节数 < 2 时不插 | `true` |
 
 > `page` 与 `paginate` 是两个键：`page` 管放映翻页粒度，`paginate` 管页脚打不打页码。
 

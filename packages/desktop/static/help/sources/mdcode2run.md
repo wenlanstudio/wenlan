@@ -15,24 +15,24 @@
 
 ## 1. `code-exec:` 段（文档级执行默认）
 
-| 键                             | 语言   | 值                    | 说明                                               |
-| ------------------------------ | ------ | --------------------- | -------------------------------------------------- |
-| `code-exec.java.JAVA_HOME`     | java   | JDK 根目录或 bin 目录 | 每次运行现取（换文档换 JDK）                       |
-| `code-exec.java.class-path`    | java   | `;` 分隔字符串或数组  | `dir/*` 展开为该目录全部 jar；相对路径基于文档目录 |
-| `code-exec.python.PYTHON_PATH` | python | 解释器路径            | 相对路径按 cwd 解析                                |
-| `code-exec.mysql.HOST`         | mysql  | 标量                  | 连接覆盖；`PORT` / `USER` / `DATABASE` 同理        |
-| `code-exec.mysql.PASSWORD`     | —      | **禁止**              | 秘密只在引擎层（分享讲义的前提）                   |
+| 键 | 语言 | 值 | 说明 |
+|---|---|---|---|
+| `code-exec.java.JAVA_HOME` | java | JDK 根目录或 bin 目录 | 每次运行现取（换文档换 JDK） |
+| `code-exec.java.class-path` | java | `;` 分隔字符串或数组 | `dir/*` 展开为该目录全部 jar；相对路径基于文档目录 |
+| `code-exec.python.PYTHON_PATH` | python | 解释器路径 | 相对路径按 cwd 解析 |
+| `code-exec.mysql.HOST` | mysql | 标量 | 连接覆盖；`PORT` / `USER` / `DATABASE` 同理 |
+| `code-exec.mysql.PASSWORD` | — | **禁止** | 秘密只在引擎层（分享讲义的前提） |
 
 段名（java / python / mysql…）即语言段；同一段内键大小写不敏感。
 
 ## 2. 顶层旧写法（仍认，优先级低于 `code-exec:` 段）
 
-| 键                         | 别名                                | 说明                                                             |
-| -------------------------- | ----------------------------------- | ---------------------------------------------------------------- |
-| `host`                     | `hostname` `ssh_host` `remote_host` | 远端主机（配合块内 `[user@host]$` 提示符或壳配置 MODE=remote）   |
-| `user`                     | `username` `ssh_user` `remote_user` | 远端用户名                                                       |
-| （其余顶层标量键）         | —                                   | **凭据表**：键=用户名、值=密码；`sudo` 自动改写 `sudo -S` 喂密码 |
-| `JAVA_HOME` / `class-path` | —                                   | java 旧顶层写法（`code-exec.java.*` 优先）                       |
+| 键 | 别名 | 说明 |
+|---|---|---|
+| `host` | `hostname` `ssh_host` `remote_host` | 远端主机（配合块内 `[user@host]$` 提示符或壳配置 MODE=remote） |
+| `user` | `username` `ssh_user` `remote_user` | 远端用户名 |
+| （其余顶层标量键） | — | **凭据表**：键=用户名、值=密码；`sudo` 自动改写 `sudo -S` 喂密码 |
+| `JAVA_HOME` / `class-path` | — | java 旧顶层写法（`code-exec.java.*` 优先） |
 
 ## 3. 优先级链
 
