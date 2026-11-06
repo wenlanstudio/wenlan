@@ -109,7 +109,26 @@ export default class ExportMarkdown {
     }
 
     generate(states: TState[]) {
-        return this._convertStatesToMarkdown(states);
+        return this._convertStatesToMarkdown(this._disambiguateLeadingHr(states));
+    }
+
+    // A `-`-style thematic break as the very first block serializes to a
+    // leading `---`, which the loader's front-matter preprocessing cannot
+    // distinguish from a YAML opener: on the next load (source-mode toggle,
+    // save, external reload) everything up to the next `---` is swallowed
+    // into the front-matter block and disappears from the document body.
+    // Emit `***` instead — a visually identical rule that always reloads as
+    // a rule. Any `---` NOT at the document start is unambiguous.
+    private _disambiguateLeadingHr(states: TState[]): TState[] {
+        const first = states[0];
+        if (
+            first?.name === 'thematic-break'
+            && typeof first.text === 'string'
+            && /^ {0,3}-{3,}\s*$/.test(first.text)
+        ) {
+            return [{ ...first, text: '***' }, ...states.slice(1)];
+        }
+        return states;
     }
 
     private _convertStatesToMarkdown(
