@@ -12,6 +12,7 @@ import type {
     ITaskListState,
     TState,
 } from './types';
+import { VOID_HTML_TAGS } from '../config';
 import { firstWordOfInfo, parseFenceLine } from '../utils';
 import { analyzeColumnMarkers, parseMarker } from '../utils/columns/syntax';
 import { createDiagramState, diagramTypeOfLang } from '../utils/diagram/fence';
@@ -28,6 +29,12 @@ interface IColumnMarkerHit {
 }
 
 const debug = logger('import markdown: ');
+
+// A first line that is a COMPLETE standalone tag holding no content: any
+// self-closing `<abc src=""/>`, or a void element (`<br>`, `<img ...>`, …)
+// with or without the slash. Such a line cannot "own" the lines after it.
+const SELF_CLOSING_TAG_LINE = /^<[a-z][a-z\d]*(?:\s[^<>]*)?\/>/i;
+const OPEN_TAG_LINE = /^<([a-z][a-z\d]*)(?:\s[^<>]*)?>/i;
 
 interface IMarkdownToStateOptions {
     footnote: boolean;
@@ -394,9 +401,42 @@ export class MarkdownToState {
             // The marker was merged into the previous paragraph's text; the
             // inlineRenderer draws the trailing badge, no state of its own.
         }
+        else if (this._splitAfterContentlessTag(text, parentList)) {
+            // The tag line became its own html-block; the swallowed lines came
+            // back as a paragraph.
+        }
         else {
             parentList[0].push({ name: 'html-block' as const, text });
         }
+    }
+
+    // CommonMark HTML block type 7 keeps every following line until a blank
+    // one, so `<abc src=""/>\n文字` loads as ONE html block and the trailing
+    // text stops being editable markdown. A contentless tag (self-closing or
+    // void) cannot own following lines — split them back out as a paragraph.
+    // A remainder that itself opens with a tag keeps CommonMark swallowing:
+    // that reads as authored multi-line HTML.
+    private _splitAfterContentlessTag(text: string, parentList: TState[][]): boolean {
+        const newlineIndex = text.indexOf('\n');
+        if (newlineIndex === -1)
+            return false;
+
+        const firstLine = text.slice(0, newlineIndex).trimEnd();
+        const rest = text.slice(newlineIndex + 1).trim();
+        if (!rest || rest.startsWith('<'))
+            return false;
+
+        const selfClosing = SELF_CLOSING_TAG_LINE.test(firstLine);
+        const openTag = OPEN_TAG_LINE.exec(firstLine);
+        // VOID_HTML_TAGS is a literal tuple type; widen it for this lookup.
+        const voidTags = VOID_HTML_TAGS as readonly string[];
+        const isVoid = !!openTag && voidTags.includes(openTag[1].toLowerCase());
+        if (!selfClosing && !isVoid)
+            return false;
+
+        parentList[0].push({ name: 'html-block' as const, text: firstLine });
+        parentList[0].push({ name: 'paragraph' as const, text: rest });
+        return true;
     }
 
     // `token` is one run of same-kind items (see compatibleTaskList).
