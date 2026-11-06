@@ -146,6 +146,7 @@ export const CLASS_NAMES = genUpper2LowerKeyHash([
     'MU_IMAGE_LOADING',
     'MU_EMPTY_IMAGE',
     'MU_IMAGE_MARKED_TEXT',
+    'MU_IMAGE_LIVE_PREVIEW',
     'MU_IMAGE_SRC',
     'MU_IMAGE_CONTAINER',
     'MU_INLINE_IMAGE',

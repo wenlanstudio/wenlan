@@ -386,7 +386,12 @@ describe('image renderer — caret inside the image source', () => {
         );
 
         expect(getWrapperSelector(out)).toBe(`span.${CLASS_NAMES.MU_IMAGE_MARKED_TEXT}`);
-        expect(findImgSrc(out)).toBeUndefined();
+        // #13: the source view carries a live preview underneath — the img
+        // moved there, it no longer means "the image replaced the source".
+        expect(findImgSrc(out)).toBe('https://example.com/x.png');
+        expect(getWrapperSelector((out as VNode[])[1])).toBe(
+            `span.${CLASS_NAMES.MU_IMAGE_LIVE_PREVIEW}`,
+        );
     });
 
     // 光标停在 offset 0（文档刚打开时就是这样）不能算"在源码里"，否则段首的

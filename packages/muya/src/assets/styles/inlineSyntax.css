@@ -669,6 +669,22 @@ blockquote .mu-hide.mu-math > .mu-math-render {
     background-size: cover;
 }
 
+/* 源码编辑态下方的实时预览（#13）：块级、随源码逐键刷新。不接收指针事件，
+   点击穿透回源码文本；img 走 loadImageAsync 的缓存 URL。 */
+.mu-image-live-preview {
+    display: block;
+    margin-top: 0.5em;
+    text-align: center;
+
+    pointer-events: none;
+    user-select: none;
+}
+
+.mu-image-live-preview img {
+    display: inline-block;
+    max-width: 100%;
+}
+
 /* text after ``` in paragraph content */
 .mu-language {
     color: var(--editor-color-50);

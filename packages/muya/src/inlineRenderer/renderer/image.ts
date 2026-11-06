@@ -75,11 +75,12 @@ function isImageSelected(
     );
 }
 
-// 光标是否位于图片 markdown 源码的【内部】。
-// 必须严格落在 `(start, end)` 开区间内：用闭区间（或 muya 标记显隐那套
-// `[start, end]` 冲突判定）会把紧贴边界的光标也算进去——文档刚打开、光标停在
-// 首段 offset 0 时，段首的图片就会被当成"正在编辑源码"而显示成文本，图片根本
-// 不渲染。点击图片时落点被特意放在 `end - 1`，所以是严格内部。
+// 光标/选区是否与图片 markdown 源码区间相交。
+// 旧判定要求端点严格落在 `(start, end)` 开区间内——那只照顾了「点击图片落点
+// end-1」这一种进入方式；拖选整段 `![alt](src)`（端点落到 token 边界甚至
+// 之外）会立刻判为不相交，同一次 patch 就把代码换回图片，源码根本没法编辑
+// （#13/#11）。改成区间相交：相交即视为编辑意图；光标恰好停在边界上不算
+// ——文档刚打开、光标停在段首 offset 0 时，段首的图片仍直接渲染成图片。
 function isCaretInImageSource(block: Format, token: ImageToken, cursor?: IRenderCursor) {
     // 空图片（`![abc]()`，插入图片后还没选文件）永远显示占位符"点击添加图片"并
     // 弹出选图工具：插入后光标就落在它里面，若这时按源码显示，占位符和选图入口
@@ -93,11 +94,10 @@ function isCaretInImageSource(block: Format, token: ImageToken, cursor?: IRender
         return false;
 
     const { start, end } = token.range;
+    const selectionStart = Math.min(anchor.offset, focus.offset);
+    const selectionEnd = Math.max(anchor.offset, focus.offset);
 
-    return (
-        (anchor.offset > start && anchor.offset < end)
-        || (focus.offset > start && focus.offset < end)
-    );
+    return selectionStart < end && selectionEnd > start;
 }
 
 // I don't want operate dom directly, is there any better way? need help!
@@ -105,14 +105,44 @@ export default function image(
     this: Renderer,
     { h, cursor, block, token }: ISyntaxRenderOptions & { token: ImageToken },
 ) {
-    // 光标落进图片的 markdown 源码时（点击图片即进入该状态），把源码显示成可编辑
-    // 文本，让用户直接改 `![](assets/a.png)` 这段文字；移开光标后重新渲染成图片。
+    // 源码编辑态下方的实时预览。不可编辑也不可点（pointer-events 收掉，点击
+    // 落回源码文本）；src 解析复用 loadImageAsync 的缓存 URL，本地图片不会因
+    // 整块 innerHTML 重建而反复走盘。
+    const renderLivePreview = () => {
+        const imageSrc = getImageSrc(token.attrs.src);
+        const { url: resolvedUrl } = this.loadImageAsync(imageSrc, token.attrs);
+        const imgData = {
+            props: {
+                alt: token.attrs.alt.replace(/[`*{}[\]()#+\-.!_>~:|<$]/g, ''),
+                src: resolvedUrl ?? imageSrc.src,
+                title: token.attrs.title,
+            },
+        };
+
+        if (typeof token.attrs.width === 'string' && token.attrs.width)
+            Object.assign(imgData.props, { width: token.attrs.width });
+
+        if (typeof token.attrs.height === 'string' && token.attrs.height)
+            Object.assign(imgData.props, { height: token.attrs.height });
+
+        return h(
+            `span.${CLASS_NAMES.MU_IMAGE_LIVE_PREVIEW}`,
+            { attrs: { contenteditable: 'false' } },
+            [h('img', imgData)],
+        );
+    };
+
+    // 光标/选区与图片源码相交时（点击图片即进入该状态），把源码显示成可编辑
+    // 文本，让用户直接改 `![](assets/a.png)` 这段文字；光标离开后重新渲染成
+    // 图片。已定交互（#13）：源码在上，图片预览实时跟在下方——与代码型图表
+    // 同构，每次按键随 token 重解析刷新。
     if (isCaretInImageSource(block, token, cursor)) {
         return [
             h(
                 `span.${CLASS_NAMES.MU_IMAGE_MARKED_TEXT}`,
                 this.highlight(h, block, token.range.start, token.range.end, token),
             ),
+            renderLivePreview(),
         ];
     }
 
