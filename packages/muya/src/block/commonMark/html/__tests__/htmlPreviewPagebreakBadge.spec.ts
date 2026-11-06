@@ -35,7 +35,7 @@ const DOC = [
     '',
     '<!-- pagebreak -->',
     '',
-    'B'
+    'B',
 ].join('\n');
 
 describe('htmlPreview — pagebreak marker badge (view-model §5)', () => {
