@@ -124,6 +124,12 @@ export const DOC_TABS: DocTab[] = [
             title: 'Command line interface',
             file: 'end-user/CLI.md',
             hint: 'Flags, switches, exit codes'
+          },
+          {
+            slug: ['frontmatter'],
+            title: '文档 Frontmatter 配置',
+            file: 'end-user/FRONTMATTER.md',
+            hint: '纸面叶 / 放映 / 代码运行 / 竞答题注'
           }
         ]
       },
