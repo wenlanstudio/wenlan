@@ -65,19 +65,25 @@
 
 ## Issue 待办
 
-> 来自 wenlanstudio/wenlan 的开放 issue（2026-11-07 更新，6 条）。全文与评论见 `D:\md-ecosystem\issues-2026-11-06.md`。#13/#14/#15/#17 已实现并关闭（`babffa04` 已推送）。
+> 来自 wenlanstudio/wenlan 的开放 issue（2026-11-07 更新，7 条）。全文与评论见 `D:\md-ecosystem\issues-2026-11-06.md`。#13/#14/#15/#17 已实现并关闭（`babffa04` 已推送）。
 
 ### 视图切换丢内容排查（2026-11-07，用户报告的最高优先级；用户更正：丢失发生在修改正文过程中）
 
 - 已修一：文档首块是 `---` 水平线的讲义（空行开头挡住 fm 锚定，首载为正文），切一次源码/存盘后，直到下一个 `---` 的内容被吞成 frontmatter。序列化器现把首块 `---` 规则改写为 `***`（`stateToMarkdown` + `leadingThematicBreak.spec`）。303 份真实讲义扫描（parse→serialize→parse 定点）：唯一结构性丢失类，其余 152→12 份差异均为良性重排（列表缩进归一、表格对齐、loose 标志翻转）
 - 已修二（`77e2b777`，用户报告的正主）：**「本」视图是编辑器组件的兄弟 v-if 分支**——切「本」时引擎连总线监听一起卸载，退出时 sourceCode 的 `file-changed` emit 落在总线上没有活着的监听者，源码光标丢失；重挂载走「新开标签页」路径落文档首块。frontmatter 文档里用户继续打字把 fm 打成非法 YAML，整块塌缩成正文（e2e 现场：`---` 变水平线、键入文字粘进 title 行）。修复 = sourceCode 卸载时直写 store 持久化 `tab.muyaIndexCursor` + editor.vue 挂载后消费一次性令牌放回光标。配套 e2e `editing-content-preservation.spec.ts`（3 份真实讲义 × CDP 真实 IME/粘贴/代码块输入/围栏转换/快速连打；ByteFlow、Python基础全过）
-- **遗留三（未修，仅桌面复现）**：desktop editing-preservation 在 00-SQL引擎.md 上转换+续打后文本错位重排（`og(...)console.l`、`n4js`）、引用正文截断。⚠️ 二分弯路记录：muya e2e 二分床最初三版都有装置 bug（裸 test 没走 fixture、nth(2) 不存在、paste 误点引用段、code 步骤命中 frontmatter 不可见 content），产生的「粘贴落引用段」「ime,paste 失败」结论全部作废。修正后的忠实床（sql-bisect-loss.spec.ts，探针验证粘贴时光标正确）全组合 **通过**——引擎层不复现，嫌疑集中到桌面壳的源码往返链路（CodeMirror getValue→replaceContent→setCursorByOffset/adjustCursor）。下一步：把源码往返插进二分床步骤之间，或直接在桌面 spec 逐步打点。该文档 `marp: true`+紧随 `---` 是 setext 标题、首段即引用段
+- 已修三（2026-11-07，遗留三终结）：desktop editing-preservation 在 00-SQL引擎.md 上转换+续打后引用段截断（ANTLR 行只剩前 63 字符、围栏 meta 变 `n4js`、代码内容旋转）。根因有**两个**，都在引擎：
+  1. `_enterConvert`（paragraphContent）整段 `replaceWith` 成空代码块——光标后还有文本时尾部直接蒸发。真实触发链：编辑区偏窄时段落软换行，End 落在**软行尾**（63 = 视觉行宽）而非段尾，Enter×2 拆段后光标在尾行段首，敲 ```js 回车转换。修复 = 光标后文本另立段落排在转换块后，光标前不是完整块语法则退回普通拆段
+  2. 转换 Enter 被 **CodeBlockLanguageSelector 浮层吞掉**（` ```js ` 触发 typedFence → 语言选择器弹出并捕获 Enter），其 selectItem 走第二条整段替换路径——meta `n4js` 就是 search('js') 的首条子串建议。修复 = BaseFloat 新增 `shouldCaptureContentKeydown` 按事件否决钩子；选择器在目标段落光标后还有文本时对 Enter 让路，落回段落的 `_enterConvert`
+  - 桌面现场：`__mt_editor`/`__mt_source_cm` 诊断钩子（editor.vue/sourceCode.vue）+ 路由/门逐级打点定位；e2e 探针已全部移除，钩子保留
+  - preservation 断言升级为拆行感知（`survivesAsSplit`：合法拆行的前后两半都在场即不算丢）；muya 新增回归 `fence-convert-soft-wrap-loss.spec.ts`（合成 + 真实讲义双层）。回归：muya 单测 2764 / e2e chromium 500 全绿，desktop preservation 3 文档 + view-switch 4 文档全绿
+  - ⚠️ muya e2e 床的坑：`delay:0` 连打丢键且偶发整个编辑器对键盘失联（模型纹丝不动）——复现类 spec 一律 `delay:30` + 步后 waitForTimeout；另 vite 对 muya src 是实 serving，探针不生效时先怀疑 console 过滤器（fixture 的 goto 在 page.on('console') 注册之前，模块级日志天然看不到）
 - 新增 desktop e2e `view-switch-content-preservation.spec.ts`：4 份真实讲义 × 叶切换（栏/页/览/示）+ 文↔本 + 人工编辑，全文逐字节比对，4/4 过
 - 旧 TODO「重大bug 渲染切源码丢数据」原 repro 已核实不复现，销案
 - 运维坑（已知坑的变体）：跑过 `pnpm dev` 后 `out/main` 是 dev 模式产物，之后所有 desktop e2e 起不来（Invalid URL）——e2e 前必须 `NODE_ENV=production pnpm run build:unpack` 重建
 
 ### Bug 性质（先修）
 
+- [ ] **fm 锚定 FRONT_REG 不认标准 marp 文档**（遗留三排查的副产品，2026-11-07）：`utils/marked/frontMatter.ts` 的 FRONT_REG 要求闭合 `---` 后跟 `\n{2,}`（空行）或文件结束，而标准写法 `---\nmarp: true\n---\n正文` 后紧跟正文——fm 解析失败，`---` 成水平线、`marp: true` + 第二个 `---` 被吃成 setext 标题（内容零丢失，但 marp 元数据降级、文档头经修一规范成 `***`）。放宽成接受单个 `\n` 会改变「hr+文本+hr」类文档的语义（hr 三连变 fm），需先跑 303 讲义扫描看影响面再定。muya 层已核实：pristine parse 的首块就是 thematic-break（`sqlFmRoundtrip` 单测可复现，临时文件已删）
 - [x] #14 编辑文本时视口到处跳动 —— 已修 `3e096e2a`：muya 零尺寸光标矩形返回 null + desktop 仅在选区位于本容器内才滚动跟随。待真机验收
 - [x] #15 一单 4 项 —— 全部落地，待真机验收：空行删除保软换行 `1fd24a2b`；顶部 `---` 回车建 front-matter（并澄清那是水平线不是分页符）`b66ce0bd`；注释/剥空 html 块渲染原文 chip 可见可点 `a137b1c9`；自闭合/void 标签行不再吞后继段落 `796e7ca3`。行内徽标（紧贴段落的 `<!-- end -->`，§4.6 有意设计）仍未可点，保留
 - [x] #13（#11 已并入）图片源码编辑 —— 已做 `a6cce080`：选区与 token 区间相交即保持源码态 + 源码下方实时预览。待真机验收
@@ -92,6 +98,7 @@
 
 ### 写作效率
 
+- [ ] #19 菜单-帮助 —— 帮助窗口的 frontmatter 文档内容取自各仓库 `docs/frontmatter`；为每个 md 补完整配置示例（值取默认值 + 带注释），方便用户直接复制粘贴进文档 frontmatter 再按注释自定义
 - [x] #17 快捷命令 —— 三条分栏标记已做 `e40d9530`（'/' 菜单新增「分栏标记」组）；/quiz 未做：问答题模板内容待定
 
 ### 门面与品牌
