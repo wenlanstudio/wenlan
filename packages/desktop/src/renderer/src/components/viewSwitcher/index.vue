@@ -20,12 +20,10 @@
       <span class="width-label">{{ sliderValue }}</span>
     </div>
 
-    <!-- 刻度「文 栏│页 览 示」（2026-11-05 命名调整，视图模型文首）：
-         旧 key page（逻辑页）→ spare「备」并雪藏；旧 key paper（物理纸）
-         → page「页」。可见五叶 = 文 / 栏 / 页 / 览 / 示；分隔线落在
-         展示组首叶 page（现「页」）前。配置选择式：点选/点消至多两叶
+    <!-- 刻度「文 栏│页 览 示」（视图模型 §1）：可见五叶 = 文 / 栏 / 页 /
+         览 / 示；分隔线落在展示组首叶 page 前。配置选择式：点选/点消至多两叶
          （1=全屏 2=分屏，选满点不动、不可选空）。column 只对真有分栏标记的
-         文档显示（§4.4 #5），隐藏叶由 store.HIDDEN_LEAVES 统一收口。 -->
+         文档显示（§4.4 #5）。 -->
     <div class="leaves">
       <button
         v-for="leaf in visibleLeaves"
@@ -126,12 +124,9 @@ const codeRunTitle = computed<string>(() => {
 
 // 叶的短名与提示。label 是单字 CJK 刻度（与主视图图标同族，刻意不翻译）；
 // title 中文提示——与 deck 工具条同策略（该用户群中文工作语言）。
-// 2026-11-05 命名调整（视图模型文首映射表）：旧 key page → spare「备」并隐藏，
-// 旧 key paper → page「页」。日后启用「备」只需清空 HIDDEN_LEAVES。
 const LEAF_META: Record<Leaf, { label: string; title: string }> = {
   flow: { label: '文', title: '全文（连续流编辑）' },
-  column: { label: '栏', title: '分栏（空间离散，需 begin 标记）' },
-  spare: { label: '备', title: '备用——逻辑页（连续流 + 分页缝提示），暂不启用' },
+  column: { label: '栏', title: '分栏（空间离散，需 begin 标记；只读）' },
   page: { label: '页', title: '页——A4 真分页预览（切行/续表真渲染，只读）' },
   slide: { label: '览', title: '页览——全部真实页排开看（溢出的逻辑页带「N页」徽章）' },
   present: { label: '示', title: '全屏放映（一次一页，Esc 退出）' }

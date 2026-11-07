@@ -102,9 +102,8 @@ const countPdfPages = (data: Buffer): number => {
 test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages', () => {
   // 一文档一实例：启动 → 进「页」叶全屏 → 读屏测页数（两读稳定）→ 走真实
   // 导出管线数 PDF 页。Windows 冷启动慢，hook/test 超时给足。
-  // 2026-11-05 刻度裁决：原「纸」（物理纸/真分片）改称「页」，原「页」
-  // （逻辑页/活引擎缝）改称「备」并隐藏。因此可见页叶的计数一律在
-  // .mu-paper-deck 上；.mu-paper-overlay 只属于已隐藏的「备」叶。
+  // 页叶的计数一律在 .mu-paper-deck 上（真分片投影）；活引擎缝叠加
+  // （.mu-paper-overlay）已随旧逻辑页叶移除。
   const runAcceptance = async(doc: string): Promise<{ screenCount: number; pdfCount: number }> => {
     const launched = await launchWithMarkdown(doc)
     const { app, page } = launched
@@ -158,10 +157,10 @@ test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages
     expect(screenCount).toBe(pdfCount)
   })
 
-  test('the retired logical-page leaf stays hidden (刻度裁决：旧「页」→「备」隐藏)', async() => {
-    // 旧「页」叶（活引擎缝叠加 / .mu-paper-overlay）已改名「备」并隐藏，
-    // 刻度裁决后用户只见「文 [栏] 页 览 示」。这里守住「不再出现第二套
-    // 页计数」这一语义，避免旧 data-lens 分支被误重新接上。
+  test('the removed logical-page leaf stays gone (旧「逻辑页」叶已移除)', async() => {
+    // 旧逻辑页叶（活引擎缝叠加 / .mu-paper-overlay）已整体移除，用户只见
+    // 「文 [栏] 页 览 示」。这里守住「不再出现第二套页计数」这一语义，
+    // 避免旧 data-lens 分支被误重新接上。
     const { app, page } = await launchWithMarkdown(DOC)
     try {
       await waitForMenuReady(app)
@@ -210,7 +209,7 @@ test.describe('page/paper leaf hard acceptance: screen pages == printToPDF pages
       const screenCount = Number(await deck.getAttribute('data-page-count'))
 
       // 判别器：真分片投影把内容结构性搬进页卡，卡片数与屏显页数严格一致
-      // （旧逻辑页的 .mu-paper-seam[data-split] 随「备」叶一起隐藏）。
+      // （旧逻辑页的 .mu-paper-seam[data-split] 已随其移除）。
       const cardCount = await page.locator('.mu-paper-page').count()
       expect(cardCount, 'true-fragment page cards should match the page count').toBe(screenCount)
 

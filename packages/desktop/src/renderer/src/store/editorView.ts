@@ -5,45 +5,33 @@ import { usePreferencesStore } from './preferences'
 import { useEditorStore } from './editor'
 
 /**
- * 视图模型（docs/design/view-model.md）：二组六叶选择。
- * 当前 UI 刻度「文 栏│页 览 示」——2026-11-05 命名调整：旧 key `page`（逻辑页）
- * 改为 `spare`、显示名「备」并雪藏；旧 key `paper`（物理纸）改为 `page`、提为
- * 正式的「页」。key 与 UI 名已对齐，映射与迁移见文首表格。
+ * 视图模型（docs/design/view-model.md）：二组五叶选择，UI 刻度「文 栏│页 览 示」。
  *
- * 编辑组（写作姿态，muya 进程内）= { flow 全文, column 分栏, spare 逻辑页 }；
+ * 编辑组（写作姿态，muya 进程内）= { flow 全文, column 分栏 }；
  * 展示组（成页姿态）= { page 物理纸, slide 页览, present 放映 }。组判据 =
  * 姿态而非可编辑性；引擎边界（muya 活叶 │ 投影/iframe）不与刻度分隔线重合。
- * spare = 逻辑纸（连续流 + 行级缝叠加）；page = 物理纸（只读真分片预览，
- * A″ 裁决 / M4.3b——切行/续表真渲染，卡内编辑已随推挤退役）；spare/page
- * 共享同一拟合引擎（paginateBlocksV2）与打印语义，只差呈现。
+ * page = 只读真分片预览（A″：切行/续表真渲染，卡内编辑已随推挤退役）。
  *
- * 选择模型：六叶平铺常驻（栏格随文档有无 begin 标记显隐），点击选中至多两叶
+ * 一文多览（view-model §6）：可编辑面只有文（flow 活引擎）与本（code 顶级
+ * 视图），栏/页/览/示一律只读，想编辑即跳转文/本。
+ *
+ * 选择模型：五叶平铺常驻（栏格随文档有无 begin 标记显隐），点击选中至多两叶
  * ——一叶全屏、两叶分屏（左右按 LEAVES 顺序，编辑左展示右、细左粗右自动
  * 成立）。配置选择式（淘宝选规格）：点一下选中、再点一下取消，搭配由用户
  * 自定；已选满两叶时第三叶点不动（先摘一片才能换）；最后一片不可摘（不可
- * 选到零）。编辑面不变量：同一时刻至多一个活编辑面——左 pane/全屏（页叶
- * 除外，页叶为只读投影）= 活引擎；右 pane 一律只读投影。
- * 表/图/本是顶级正交视图，与六叶互斥（挂起不丢）。
+ * 选到零）。
+ * 表/图/本是顶级正交视图，与五叶互斥（挂起不丢）。
  */
 
-export type Leaf = 'flow' | 'column' | 'spare' | 'page' | 'slide' | 'present'
+export type Leaf = 'flow' | 'column' | 'page' | 'slide' | 'present'
 
-/** 按钮顺序 = 分屏左右顺序（细→粗、编辑左展示右）。spare 逻辑页落第三位、
- *  page 物理纸落第四位（§1/§5：两叶共享测量基座，只差渲染姿态）。 */
-export const LEAVES = ['flow', 'column', 'spare', 'page', 'slide', 'present'] as const
+/** 按钮顺序 = 分屏左右顺序（细→粗、编辑左展示右）。 */
+export const LEAVES = ['flow', 'column', 'page', 'slide', 'present'] as const
 
-/**
- * 2026-11-05 命名调整：旧 `page`（逻辑页）与旧 `paper`（物理纸）刻度重复、
- * 语义难分 ⇒ 逻辑页改 key `spare`、显示名「备」并雪藏；物理纸改 key `page`、
- * 显示名「页」。日后想启用「备」，只需清空本数组 + 把 viewSwitcher 的
- * `LEAF_META.spare.label` 改回，零迁移成本。
- */
-export const HIDDEN_LEAVES: readonly Leaf[] = ['spare']
-
-/** 切换器上真正出现的叶：隐藏叶不出，栏格随文档有无 begin 标记显隐。
+/** 切换器上真正出现的叶：栏格随文档有无 begin 标记显隐。
  *  收口进 store，避免 viewSwitcher 与单测各写一份过滤条件后漂移。 */
 export const visibleLeafList = (hasColumns: boolean): Leaf[] =>
-  LEAVES.filter((leaf) => !HIDDEN_LEAVES.includes(leaf) && (leaf !== 'column' || hasColumns))
+  LEAVES.filter((leaf) => leaf !== 'column' || hasColumns)
 
 const SHOW_LEAVES: readonly Leaf[] = ['slide', 'present']
 
@@ -66,7 +54,7 @@ export type TopView = 'table' | 'figure' | 'code'
 
 export const TOP_VIEWS = ['table', 'figure', 'code'] as const
 
-export type SliderDuty = 'flow-width' | 'spare-zoom' | 'page-zoom' | 'slide-zoom' | 'none'
+export type SliderDuty = 'flow-width' | 'page-zoom' | 'slide-zoom' | 'none'
 
 const DEFAULT_RATIO = 0.45 // 右 pane 初始占比
 
@@ -88,61 +76,6 @@ interface EditorViewState {
 
 const STORAGE_KEY = 'marktext-editor-view'
 
-/** 2026-11-05 key 重排后写入的持久化版本；旧数据没有这个字段。 */
-const LEAF_SCHEMA = 2
-
-/**
- * 旧 key → 新 key（**仅**对无 `leafSchema` 的旧持久化生效）：
- *   'page'  = 旧逻辑页，现雪藏为 spare → 落回 flow（绝不解释成新 page）
- *   'paper' = 旧物理纸，现为正式的「页」→ page
- * 新版数据里的 'page' 已经是物理纸，绝不能走这张表——靠 leafSchema 区分。
- * 没有版本号就无法分辨「旧 page」与「新 page」，会把用户送错视图。
- */
-const LEGACY_LEAF_KEYS: Record<string, Leaf> = {
-  page: 'flow',
-  paper: 'page'
-}
-
-/**
- * 旧持久化形状（mainView/subView 二级结构，含中间形态 previewForm）→ 叶选择。
- * 迁移映射：document/page→[flow]、document/column→[column]、document/slide（P4
- * 已废的 slide 编辑视图）→[flow]、present/slides→[present]、table/figure/code→topView；
- * previewForm==='present' → 追加 present 成对。更早的 word/ppt/excel/dev
- * 改名一并收口。（这里的 page 是更早的上游视图名，不是六叶 key。）
- */
-const migrateLegacy = (parsed: Record<string, unknown>): EditorViewState | null => {
-  const mainRaw = parsed.mainView
-  if (typeof mainRaw !== 'string') return null
-  const RENAMED_MAIN: Record<string, string> = {
-    word: 'document',
-    ppt: 'present',
-    slides: 'present',
-    excel: 'table',
-    dev: 'code'
-  }
-  const main = RENAMED_MAIN[mainRaw] ?? mainRaw
-
-  const RENAMED_SUB: Record<string, string> = { reading: 'column', columns: 'column' }
-  const subRaw = typeof parsed.subView === 'string' ? (RENAMED_SUB[parsed.subView] ?? parsed.subView) : ''
-
-  const leaves: Leaf[] = []
-  let topView: TopView | null = null
-
-  if (main === 'document') {
-    leaves.push(subRaw === 'column' ? 'column' : 'flow')
-  } else if (main === 'present') {
-    leaves.push('present')
-  } else if (isTopView(main)) {
-    topView = main
-    leaves.push('flow')
-  } else {
-    return null
-  }
-  if (parsed.previewForm === 'present' && !leaves.includes('present')) leaves.push('present')
-
-  return { leaves, topView, rightRatio: clampRatio(parsed.rightRatio) }
-}
-
 const loadPersisted = (): EditorViewState | null => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -151,17 +84,10 @@ const loadPersisted = (): EditorViewState | null => {
     if (!parsed || typeof parsed !== 'object') return null
     const obj = parsed as Record<string, unknown>
 
+    // 持久化只认现行形状（leaves 数组）；未知 key / 旧形状一律落默认 flow——
+    // 不做旧数据照顾。
     if (Array.isArray(obj.leaves)) {
-      // 旧数据先按旧 key 映射，再把隐藏叶（spare「备」）落回 flow：绝不把用户
-      // 留在「选中了切换器上看不见的叶」的状态（最后一片点不掉会卡死）。
-      // 新版数据带 leafSchema，其 'page' 直接按物理纸解释，不进映射表。
-      const legacy = obj.leafSchema !== LEAF_SCHEMA
-      const leaves = obj.leaves
-        .map((l) => {
-          const mapped = legacy && typeof l === 'string' ? (LEGACY_LEAF_KEYS[l] ?? l) : l
-          return HIDDEN_LEAVES.includes(mapped as Leaf) ? 'flow' : mapped
-        })
-        .filter(isLeaf)
+      const leaves = obj.leaves.filter(isLeaf)
       if (leaves.length >= 1) {
         return {
           leaves: sanitizeLeaves(leaves.slice(-2)),
@@ -169,9 +95,7 @@ const loadPersisted = (): EditorViewState | null => {
           rightRatio: clampRatio(obj.rightRatio)
         }
       }
-      return null
     }
-    return migrateLegacy(obj)
   } catch {
     // ignore corrupted storage
   }
@@ -217,17 +141,15 @@ export const useEditorViewStore = defineStore('editorView', () => {
     topView.value === null && leafSelection.value.length === 1 ? leafSelection.value[0]! : null
   )
 
-  /** 编辑器透镜：table 是顶级透镜；flow/column/spare/page 作全屏或分屏左
+  /** 编辑器透镜：table 是顶级透镜；flow/column/page 作全屏或分屏左
    *  pane 时活。page 在全屏态是「隐藏服务后端」——页叶的可见面是真分片
    *  投影（paperProjection，A″），活引擎退居幕后供养 bus 服务（导出/TOC），
    *  由 index.vue 以 paper-fullscreen 收起其占位。 */
-  const editorLens = computed<'flow' | 'column' | 'spare' | 'page' | 'table' | null>(() => {
+  const editorLens = computed<'flow' | 'column' | 'page' | 'table' | null>(() => {
     if (topView.value === 'table') return 'table'
     if (topView.value !== null) return null
     return (
-      orderedLeaves.value.find(
-        (l) => l === 'flow' || l === 'column' || l === 'spare' || l === 'page'
-      ) ?? null
+      orderedLeaves.value.find((l) => l === 'flow' || l === 'column' || l === 'page') ?? null
     )
   })
 
@@ -260,7 +182,7 @@ export const useEditorViewStore = defineStore('editorView', () => {
   // 这三个判断原先各自长在 editorWithTabs/index.vue 里；底部执行面板挪到
   // app.vue 全宽层后，两处都要用同一条判据，故收口进 store，避免两份漂移。
 
-  /** 全屏页叶（原纸叶，A″）：可见面 = 真分片投影，活引擎收起作隐藏服务后端。
+  /** 全屏页叶（A″）：可见面 = 真分片投影，活引擎收起作隐藏服务后端。
    *  名字保留 `paper` 是因为它描述「纸面真分片投影占满」这一渲染形态，
    *  不是叶 key；配套 CSS 类同为 .paper-fullscreen。 */
   const isPaperFullscreen = computed(
@@ -334,8 +256,6 @@ export const useEditorViewStore = defineStore('editorView', () => {
     const leaf = activeLeaf.value
     if (leaf === 'present') return 'none'
     if (leaf === 'slide') return 'slide-zoom' // 页缩放，待接线
-    // 备/页共享拟合引擎（旧称页/纸）：版式基钉死纸面宽度，缩放是刚需。
-    if (leaf === 'spare') return 'spare-zoom' // 逻辑页缩放，待接线
     if (leaf === 'page') return 'page-zoom' // 物理纸投影页缩放，待接线（§5）
     return 'flow-width'
   })
@@ -343,17 +263,13 @@ export const useEditorViewStore = defineStore('editorView', () => {
   /** 光标指示（行:列）只在有活编辑面时才有意义（page 页叶是只读投影，不算）。 */
   const isEditorVisible = computed<boolean>(
     () =>
-      editorLens.value === 'flow' ||
-      editorLens.value === 'column' ||
-      editorLens.value === 'spare' ||
-      isSourceMode.value
+      editorLens.value === 'flow' || editorLens.value === 'column' || isSourceMode.value
   )
 
   const persist = (): void => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        leafSchema: LEAF_SCHEMA,
         leaves: leafSelection.value,
         topView: topView.value,
         rightRatio: rightRatio.value
@@ -423,9 +339,7 @@ export const useEditorViewStore = defineStore('editorView', () => {
   /** 点叶：配置选择式——点一下选中，再点一下取消；选满两叶后第三叶点不动
    *  （先摘一片才能换）；最后一片不可摘。 */
   const toggleLeaf = (leaf: Leaf): void => {
-    // 雪藏叶不进选择态：菜单/命令/旧代码若还想选它，也别造出看不见的叶。
-    if (HIDDEN_LEAVES.includes(leaf)) return
-    topView.value = null // 顶级视图与四叶互斥：点叶即回叶
+    topView.value = null // 顶级视图与叶互斥：点叶即回叶
     const sel = leafSelection.value
     if (sel.includes(leaf)) {
       if (sel.length === 1) return // 最后一片点不掉

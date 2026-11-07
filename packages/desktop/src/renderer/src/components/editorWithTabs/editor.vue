@@ -108,7 +108,7 @@ import { moveImageToFolder, uploadImage } from '@/util/fileSystem'
 import { guessClipboardFilePath } from '@/util/clipboard'
 import { dataURLToFile } from '@/util/dataURLToFile'
 import { getCssForOptions, getHtmlToc, type PdfCssOptions, type HtmlTocOptions } from '@/util/pdf'
-import { usePaperPagination, parsePaperGeometry, parsePaperTheme } from '@/util/paperPagination'
+import { parsePaperTheme } from '@/util/paperPagination'
 import {
   getTocHeadingScrollTop,
   resolveTocHeadingElement,
@@ -268,16 +268,6 @@ let viewportObserver: ResizeObserver | null = null
 const mediaViewer = ref<InstanceType<typeof MediaViewer> | null>(null)
 const viewerOpen = ref(false)
 const rowInput = ref<InputNumberInstance | null>(null)
-
-// 页叶：分页测量与行级缝叠加（util/paperPagination，M4.3b）。纸叶已改
-// 只读真分片投影（paperProjection.vue），活引擎不再承担纸姿态；zoom 改变
-// 视觉坐标，作为额外重测源。
-usePaperPagination({
-  isActive: () => props.lens === 'spare',
-  getRoot: () => editor.value?.domNode ?? null,
-  getGeometry: () => parsePaperGeometry(currentFile.value?.markdown ?? ''),
-  watchSources: [() => preferencesStore.zoom]
-})
 
 // Non-reactive variables
 let printer: Printer | null = null
@@ -442,13 +432,13 @@ watch(
   }
 )
 
-// flow/column/page/paper render the same blocks in different layouts, so the
+// flow/column/page render the same blocks in different layouts, so the
 // same `scrollTop` lands on a different region of the document — re-apply the
 // tab's anchor once the class flip has been laid out (TODO1 #4). The table
 // lens hides blocks instead, which invalidates a block index captured in
-// another lens, so it is deliberately left alone. Paper is the read-only
+// another lens, so it is deliberately left alone. Page is the read-only
 // projection's hidden service backend in fullscreen (A″) — no visible surface.
-const FORM_LENSES = ['flow', 'column', 'spare', 'page'] as const
+const FORM_LENSES = ['flow', 'column', 'page'] as const
 const isFormLens = (lens: string | null | undefined): lens is (typeof FORM_LENSES)[number] =>
   lens != null && (FORM_LENSES as readonly string[]).includes(lens)
 const restoreLensAnchor = (): void => {

@@ -38,17 +38,15 @@ describe('paper lens basis mirrors the print chain (view-model §5 / M1)', () =>
   })
 
   it('makes the A4 card of the muya container (both live lens and projection)', () => {
-    // 2026-11-05 key 重排：物理纸叶旧 key paper → page。
     expect(paperLens).toContain("[data-lens='page'] .mu-container")
     expect(paperLens).toContain('.paper-projection .mu-container')
     expect(paperLens).toContain('width: var(--paper-page-width) !important')
     expect(paperLens).toContain('min-height: var(--paper-page-height) !important')
   })
 
-  it('pins the spare leaf (logical paper) to the same layout basis (§5 评审补裁)', () => {
-    // 逻辑页叶旧 key page → spare；两叶同钉纸面版式基是页数相等的物理前提。
-    expect(paperLens).toContain("[data-lens='spare'] .mu-container")
-    expect(paperLens).toContain("[data-lens='spare'] .mu-editor")
+  it('keeps the layout basis spare-free (the logical-page leaf is gone)', () => {
+    // 旧逻辑页叶（spare）已整体移除：版式基不得再给它留选择器分支。
+    expect(paperLens).not.toContain("data-lens='spare'")
   })
 
   it('mirrors github-markdown-css block metrics (the pagination drivers)', () => {

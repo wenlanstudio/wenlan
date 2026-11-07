@@ -1,5 +1,5 @@
 /**
- * 页/纸共享 A4 版式基 —— 视图模型 §5 / M1（M3.5 起页叶同基）。
+ * 页叶 A4 版式基 —— 视图模型 §5。
  *
  * 度量值与打印链默认严格一致——这是"编辑所见 = 打印所得"（§5 度量来源
  * 裁决 = muya 直测）的物理基础：
@@ -9,23 +9,17 @@
  *     （github-markdown-light.css，打印链经 muya markdownToHtml 内联）；
  *   - 字体栈镜像 exportStyle.css——它在 gh-css 之后加载，打印正文的
  *     实际字体以它为准（Noto 两字体 unicode-range 只收音乐/数学字形）。
- * 打印链默认即本基准，M1 不改打印侧一行；M2 的"屏显页数 = printToPDF
- * 页数"硬验收负责抓漂移（gh-css / exportStyle 升版本会先在这里暴露）。
- * 评审补裁：页叶（逻辑页）与纸叶同钉纸面版式基——页数相等（硬验收对两
- * 叶同时成立）的物理前提就是屏显版式 = 打印版式；两叶只差渲染姿态
- * （页 = 缝叠加投影，纸 = 推挤 + 卡层）。
+ * 打印链默认即本基准；"屏显页数 = printToPDF 页数"硬验收负责抓漂移
+ * （gh-css / exportStyle 升版本会先在这里暴露）。
  *
- * 2026-11-05 key 重排：旧 page（逻辑页）→ spare、旧 paper（物理纸）→ page，
- * 下面的 data-lens 选择器随之更新；.paper-projection / --paper-* / 本文件名
- * 是「A4 纸面版式基」的实现层命名，不是叶 key，一律保留。
- *
- * 选择器两处复用：活引擎宿主 [data-lens='spare']/[data-lens='page']
- * （editorWithTabs 的 lens-host，display:contents 不影响后代选择器）与
- * 分屏右 pane 的只读投影 .paper-projection（leafProjection.vue，lens 为
- * spare/page 时都挂此类——投影共用同一版式基）。
- * --mu-* 是 muya 根元素 applyAppearance 的内联变量，须 !important 才能
- * 压过 setProperty；纸面几何是物理事实，同样 !important 压过屏显偏好
- * （页宽滑块的 --editor-area-width、主题背景、editor.vue 的容器 padding）。
+ * 选择器两处复用：活引擎宿主 [data-lens='page']（editorWithTabs 的
+ * lens-host，display:contents 不影响后代选择器）与页叶真分片投影
+ * .paper-projection（paperProjection.vue）。--mu-* 是 muya 根元素
+ * applyAppearance 的内联变量，须 !important 才能压过 setProperty；
+ * 纸面几何是物理事实，同样 !important 压过屏显偏好（页宽滑块的
+ * --editor-area-width、主题背景、editor.vue 的容器 padding）。
+ * .paper-projection / --paper-* / 本文件名是「A4 纸面版式基」的实现层
+ * 命名，不是叶 key。
  */
 
 :root {
@@ -45,7 +39,6 @@
 
 /* —— 引擎度量对齐（字号/行高/字体 = 打印链实际值） —— */
 
-[data-lens='spare'] .mu-editor,
 [data-lens='page'] .mu-editor,
 .paper-projection .mu-editor,
 .paper-projection .mu-paper-page {
@@ -64,9 +57,8 @@
   color: var(--paper-text-color);
 }
 
-/* —— 页/纸面容器：纸卡片即 .mu-container（连续纸；页缝/页码 M2 叠加） —— */
+/* —— 页面容器：纸卡即 .mu-container —— */
 
-[data-lens='spare'] .mu-container,
 [data-lens='page'] .mu-container,
 .paper-projection .mu-container {
   box-sizing: border-box;
@@ -86,7 +78,7 @@
     0 0 0 1px rgba(0, 0, 0, 0.06);
 }
 
-/* 分屏右 pane 的纸面投影：纸卡与 pane 边缘留口气 */
+/* 分屏右 pane 的页投影：页卡与 pane 边缘留口气 */
 .paper-projection {
   padding: 16px 0;
 }
@@ -94,24 +86,17 @@
 /* —— 块度量镜像 github-markdown-css@5.9（gh 值，非 blockSyntax 值） —— */
 
 /* p：0 0 10px */
-[data-lens='spare'] .mu-container p,
 [data-lens='page'] .mu-container p,
 .paper-projection .mu-container p {
   margin: 0 0 10px;
 }
 
 /* 标题：1.5rem/1rem、行高 1.25、gh 字号阶；h1/h2 带 .3em 底距与分隔线 */
-[data-lens='spare'] .mu-container h1,
 [data-lens='page'] .mu-container h1,
-[data-lens='spare'] .mu-container h2,
 [data-lens='page'] .mu-container h2,
-[data-lens='spare'] .mu-container h3,
 [data-lens='page'] .mu-container h3,
-[data-lens='spare'] .mu-container h4,
 [data-lens='page'] .mu-container h4,
-[data-lens='spare'] .mu-container h5,
 [data-lens='page'] .mu-container h5,
-[data-lens='spare'] .mu-container h6,
 [data-lens='page'] .mu-container h6,
 .paper-projection .mu-container h1,
 .paper-projection .mu-container h2,
@@ -124,7 +109,6 @@
   line-height: 1.25;
 }
 
-[data-lens='spare'] .mu-container h1,
 [data-lens='page'] .mu-container h1,
 .paper-projection .mu-container h1 {
   font-size: 2em;
@@ -132,7 +116,6 @@
   border-bottom: 1px solid var(--paper-border-color);
 }
 
-[data-lens='spare'] .mu-container h2,
 [data-lens='page'] .mu-container h2,
 .paper-projection .mu-container h2 {
   font-size: 1.5em;
@@ -140,34 +123,28 @@
   border-bottom: 1px solid var(--paper-border-color);
 }
 
-[data-lens='spare'] .mu-container h3,
 [data-lens='page'] .mu-container h3,
 .paper-projection .mu-container h3 {
   font-size: 1.25em;
 }
 
-[data-lens='spare'] .mu-container h4,
 [data-lens='page'] .mu-container h4,
 .paper-projection .mu-container h4 {
   font-size: 1em;
 }
 
-[data-lens='spare'] .mu-container h5,
 [data-lens='page'] .mu-container h5,
 .paper-projection .mu-container h5 {
   font-size: 0.875em;
 }
 
-[data-lens='spare'] .mu-container h6,
 [data-lens='page'] .mu-container h6,
 .paper-projection .mu-container h6 {
   font-size: 0.85em;
 }
 
 /* ul/ol：0 0 1rem、缩进 2em（gh :424 组 + :328） */
-[data-lens='spare'] .mu-container ul,
 [data-lens='page'] .mu-container ul,
-[data-lens='spare'] .mu-container ol,
 [data-lens='page'] .mu-container ol,
 .paper-projection .mu-container ul,
 .paper-projection .mu-container ol {
@@ -176,11 +153,8 @@
 }
 
 /* dl/table/pre 同组：0 0 1rem（gh :424）。表格单元格 6px 13px 两边本就一致 */
-[data-lens='spare'] .mu-container dl,
 [data-lens='page'] .mu-container dl,
-[data-lens='spare'] .mu-container .mu-table,
 [data-lens='page'] .mu-container .mu-table,
-[data-lens='spare'] .mu-container pre,
 [data-lens='page'] .mu-container pre,
 .paper-projection .mu-container dl,
 .paper-projection .mu-container .mu-table,
@@ -189,7 +163,6 @@
   padding: 0;
 }
 
-[data-lens='spare'] .mu-container pre,
 [data-lens='page'] .mu-container pre,
 .paper-projection .mu-container pre {
   padding: 1rem;
@@ -203,17 +176,15 @@
 
 /* #7 边界①修复：muya 的内容 span 自设 `white-space: pre`（编辑面不折行），
  * 继承链盖过外层 pre 的 pre-wrap——外层规则对折行根本不生效（e2e 探针实
- * 证：单逻辑行横向溢出、视觉行只有 1）。纸面透镜里内容 span 必须显式跟
+ * 证：单逻辑行横向溢出、视觉行只有 1）。页投影里内容 span 必须显式跟
  * pre-wrap 对齐，屏打两侧折点才同源；行带测量（文本节点 range 矩形）随之
  * 拿到视觉行级 top，折行处也能切缝。 */
-[data-lens='spare'] .mu-container pre .mu-codeblock-content,
 [data-lens='page'] .mu-container pre .mu-codeblock-content,
 .paper-projection .mu-container pre .mu-codeblock-content {
   white-space: pre-wrap;
 }
 
 /* blockquote：margin 0、左右 1em、.25em 左线（gh） */
-[data-lens='spare'] .mu-container blockquote,
 [data-lens='page'] .mu-container blockquote,
 .paper-projection .mu-container blockquote {
   margin: 0;
@@ -223,7 +194,6 @@
 }
 
 /* hr：高 .25em、1.5rem 0（gh） */
-[data-lens='spare'] .mu-container hr,
 [data-lens='page'] .mu-container hr,
 .paper-projection .mu-container hr {
   height: 0.25em;
@@ -234,97 +204,15 @@
 }
 
 /* figure（非表格）：1em 2.5rem（gh） */
-[data-lens='spare'] .mu-container figure:not(.mu-table),
 [data-lens='page'] .mu-container figure:not(.mu-table),
 .paper-projection .mu-container figure:not(.mu-table) {
   margin: 1em 2.5rem;
 }
 
-/* —— 分页投影（M2）：缝 + 页码徽章，测量结果的绝对定位叠加 —— */
-
-/* overlay 挂在滚动区（.mu-editor）内随之滚动；锚定 .mu-container 的
-   border-box（尺寸/位置由 usePaperPagination 以视觉 px 写入）。z-index 高于
-   正文让穿缝虚线可见，pointer-events:none 保持编辑交互纯净。
-
-   `:not(.paper-projection-muya)` 排除纸叶真分片的隐藏量测宿主：muya 构造
-   把宿主替换成自带 .mu-editor 的新节点（muyajs muya.ts getContainer），本
-   规则因此与组件 scoped 的 `.paper-projection-muya{position:absolute}` 同为
-   (0,2,0)、按源序胜出——宿主落回文档流，整张 A4 高度把纸卡顶下去（上方
-   一大片空白回归，e2e「真分片卡片」断言锁死）。 */
-[data-lens='spare'] .mu-editor,
-[data-lens='page'] .mu-editor,
-.paper-projection .mu-editor:not(.paper-projection-muya) {
-  position: relative;
-  /* 圈住堆叠上下文：纸姿态卡层 z:-1 沉到正文之下，但不跌出引擎背景。 */
-  isolation: isolate;
-}
-
-.mu-paper-overlay {
-  position: absolute;
-  z-index: 10;
-  pointer-events: none;
-}
-
-/* 缝线：1px 虚线横贯纸面；穿缝（超整页块内）同款虚线，降不透明度示弱。 */
-.mu-paper-seam {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 0;
-  border-top: 1px dashed var(--paper-border-color);
-}
-
-.mu-paper-seam.crossed {
-  opacity: 0.55;
-}
-
-/* 页码徽章：页尾右缘，白底小字压在缝线上方。 */
-.mu-paper-page-num {
-  position: absolute;
-  right: 6px;
-  z-index: 1;
-  padding: 0 4px;
-  font-size: 10px;
-  line-height: 14px;
-  color: #9198a1;
-  background: #fff;
-  font-variant-numeric: tabular-nums;
-}
-
-/* 已知留白（M2 视页数验收裁决）：内联 code 字号 gh 为 1em、muya 为 .85em，
+/* 已知留白（视页数验收裁决）：内联 code 字号 gh 为 1em、muya 为 .85em，
    因 muya 代码块结构里 code 选择器交错，先不碰，等 e2e 页数 diff 定夺。 */
 
-/* —— 纸姿态（M3.5 切片 B）：推挤流 + 卡层 —— */
-
-/* 卡层：z:-1 沉到正文之下（.mu-editor isolation:isolate 圈住堆叠上下文，
-   卡画在引擎背景之上、内容之下）；每页一张白卡，白底/阴影自容器移交。 */
-.mu-paper-cards {
-  position: absolute;
-  z-index: -1;
-  pointer-events: none;
-}
-
-.mu-paper-card {
-  position: absolute;
-  left: 0;
-  right: 0;
-  background: #fff;
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.16),
-    0 0 0 1px rgba(0, 0, 0, 0.06);
-}
-
-/* 推挤类挂上时容器自身透明——白卡由卡层画（选择器须压过上方共享规则
-   的 !important 白底，否则卡层被盖住）。
-   （M4.3b A″：推挤已退役，mu-paper-pushed/mu-paper-cards/mu-paper-card
-   随之失去挂载点，规则留作回退路径存档。） */
-[data-lens='page'] .mu-container.mu-paper-pushed,
-.paper-projection .mu-container.mu-paper-pushed {
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-/* —— 纸叶真分片投影（M4.3b，A″）：页卡常流堆叠 —— */
+/* —— 页叶真分片投影（paperProjection）：页卡常流堆叠 —— */
 
 /* 页卡兼领 mu-container（执行器加类）：块搬进卡后仍在「容器」作用域内，
    上方全部块度量规则零改动命中。本规则只收口三处与活容器（连续纸）的
@@ -349,6 +237,19 @@
     'Segoe UI Emoji';
   font-size: var(--paper-font-size);
   line-height: var(--paper-line-height);
+}
+
+/* 页码徽章：页首右缘小字（paperProjection 卡片页码）。 */
+.mu-paper-page-num {
+  position: absolute;
+  right: 6px;
+  z-index: 1;
+  padding: 0 4px;
+  font-size: 10px;
+  line-height: 14px;
+  color: #9198a1;
+  background: #fff;
+  font-variant-numeric: tabular-nums;
 }
 
 .paper-projection .mu-paper-page .mu-paper-page-num {

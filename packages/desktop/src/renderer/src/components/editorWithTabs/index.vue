@@ -37,8 +37,7 @@
         />
         <!-- 透镜宿主：WYSIWYG 引擎在 flow/column/page/table 透镜间常驻，
              切换只翻转 `data-lens` 而不重绘（TODO1 #21、#26）。分屏时活引擎占
-             左 pane（唯一编辑面，编辑面不变量 §2）。纸叶是只读投影（A″），
-             不进活引擎。 -->
+             左 pane。页叶是只读投影（A″），不进活引擎。 -->
         <div
           v-else-if="editorLens"
           class="lens-host"
@@ -107,11 +106,10 @@
         @pointerdown="startDrag"
       />
       <!-- 右 pane：示支叶（slide 列表 / present 放映）、页叶真分片投影
-           （paperProjection，A″ 只读；旧称纸叶）或文支投影（column 分栏 /
-           spare 逻辑页——右 pane 一律只读投影，编辑面不变量 §2）。key 按 leaf
-           分实例——同一 iframe 实例的 view 恒定（deck 侧 player/列表布局二选一），
-           slide 与 present 各持一份；投影实例的 columnsLayout 建构期定死，
-           column↔spare 切换按 key 重建。 -->
+           （paperProjection，A″ 只读）或栏投影（column 只读第二实例——右
+           pane 一律只读，编辑面不变量 §2）。key 按 leaf 分实例——同一
+           iframe 实例的 view 恒定（deck 侧 player/列表布局二选一），
+           slide 与 present 各持一份；投影实例的 columnsLayout 建构期定死。 -->
       <div
         v-if="isSplit"
         class="pane pane-right"
@@ -129,7 +127,7 @@
           :markdown="markdown"
         />
         <leaf-projection
-          v-else-if="rightLeaf === 'column' || rightLeaf === 'spare'"
+          v-else-if="rightLeaf === 'column'"
           :key="`proj-${rightLeaf}`"
           :lens="rightLeaf"
           :markdown="markdown"
@@ -143,7 +141,7 @@
         mode="view"
         :markdown="markdown"
       />
-      <!-- 全屏纸叶（A″）：只读真分片预览占满编辑区；活引擎留在收起的
+      <!-- 全屏页叶（A″）：只读真分片预览占满编辑区；活引擎留在收起的
            pane-left 里供养 bus 服务（isPaperFullscreen）。 -->
       <paper-projection
         v-if="isPaperFullscreen"
@@ -202,14 +200,14 @@ const hasLeftPane = computed(
   () => isSplit.value || editorLens.value !== null || topView.value !== null
 )
 
-// 全屏纸叶（A″）：可见面 = 真分片投影；活引擎留在 pane-left 里作隐藏服务
+// 全屏页叶（A″）：可见面 = 真分片投影；活引擎留在 pane-left 里作隐藏服务
 // 后端（bus 导出/TOC 依赖 editor.vue 挂载），pane-left 由 .paper-fullscreen
 // 收起（display:none——导出走序列化不需要布局）。
 // isPaperFullscreen / isPresentFullscreen / isDeckFullscreen 的判据在
 // store/editorView（app.vue 也要用），此处仅解构。
 
 // 分屏左 pane 的引擎透镜由 store.editorLens 给出：orderedLeaves 首个
-// flow/column/spare/page 叶（LEAVES 序保证左细右粗、文左示右；page M0 暂照
+// flow/column/page 叶（LEAVES 序保证左细右粗、文左示右；page M0 暂照
 // flow 渲染）。
 
 // —— 分割条拖拽（视图模型 §3）——
@@ -256,7 +254,7 @@ const startDrag = (ev: PointerEvent): void => {
       display: flex;
     }
 
-    /* 全屏纸叶（A″）：pane-left 是隐藏服务后端（bus 导出/TOC 依赖活引擎
+    /* 全屏页叶（A″）：pane-left 是隐藏服务后端（bus 导出/TOC 依赖活引擎
        组件挂载），收起不占位——导出走序列化，不需要布局。 */
     &.paper-fullscreen {
       & > .pane-left {
