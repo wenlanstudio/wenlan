@@ -57,8 +57,23 @@ test.describe('bisect the conversion-loss preconditions', () => {
         }
 
         if (STEPS.has('paste')) {
+            // 与桌面一致：粘贴沿用上一步留下的光标（不点击），需要 ime 先行
+            const probe = await page.evaluate(() => {
+                const sel = document.getSelection()
+                let node = sel?.anchorNode
+                if (node && node.nodeType === Node.TEXT_NODE) node = node.parentElement
+                const quote = node instanceof Element ? node.closest('blockquote') : null
+                const para = node instanceof Element ? node.closest('.mu-paragraph-content') : null
+                return {
+                    hasSelection: !!sel && sel.rangeCount > 0,
+                    collapsed: sel?.isCollapsed ?? null,
+                    inQuote: !!quote,
+                    paraText: para?.textContent?.slice(0, 30) ?? null,
+                    anchorOffset: sel?.anchorOffset ?? null
+                }
+            })
+            console.log('CARET-PROBE-BEFORE-PASTE:', JSON.stringify(probe))
             await page.evaluate(() => navigator.clipboard.writeText('粘贴第一行\n粘贴第二行'))
-            await paragraphs.first().click()
             await page.keyboard.press('Control+v')
         }
 
@@ -70,7 +85,8 @@ test.describe('bisect the conversion-loss preconditions', () => {
         }
 
         if (STEPS.has('code')) {
-            const code = page.locator('.mu-codeblock-content').first()
+            // first() 会命中 frontmatter 的（折叠不可见）code content
+            const code = page.locator('.mu-codeblock-content:visible').first()
             await code.click()
             await page.keyboard.press('Control+End')
             await page.keyboard.type('\necho 编辑不丢内容', { delay: 0 })
