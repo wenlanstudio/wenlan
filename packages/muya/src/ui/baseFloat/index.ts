@@ -27,6 +27,17 @@ abstract class BaseFloat {
     protected options: IBaseOptions;
     public status: boolean = false;
     public capturesContentKeydown = false;
+    /**
+     * Per-event veto for `capturesContentKeydown`. `Ui.handleContentKeydown`
+     * consults this before swallowing a content keydown; floats that only
+     * own a key in certain caret contexts override it (e.g. the code-block
+     * language picker must not own Enter when the caret still has paragraph
+     * text after it — swallowing there would turn the whole paragraph into a
+     * code block and drop that text).
+     */
+    public shouldCaptureContentKeydown(_event: KeyboardEvent): boolean {
+        return true;
+    }
     public floatBox: HTMLElement | null = null;
     public container: HTMLElement | null = null;
     private _lastScrollTop: number | null = null;

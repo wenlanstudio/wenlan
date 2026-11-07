@@ -13,7 +13,11 @@ function makeUi(): Ui {
 }
 
 function fakeFloat(capturesContentKeydown: boolean): BaseFloat {
-    return { capturesContentKeydown } as unknown as BaseFloat;
+    return {
+        capturesContentKeydown,
+        // BaseFloat's default veto (true) — mocked floats behave like real ones.
+        shouldCaptureContentKeydown: () => true,
+    } as unknown as BaseFloat;
 }
 
 function keyEvent(key: string): KeyboardEvent {

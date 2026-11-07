@@ -3,6 +3,7 @@ import type LangInputContent from '../../block/content/langInputContent';
 import type ParagraphContent from '../../block/content/paragraphContent';
 import type { Muya } from '../../index';
 import { ScrollPage } from '../../block/scrollPage';
+import { EVENT_KEYS } from '../../config';
 import { firstWordOfInfo, parseFenceLine } from '../../utils';
 import { createDiagramState, diagramTypeOfLang } from '../../utils/diagram/fence';
 import { search } from '../../utils/prism';
@@ -69,6 +70,26 @@ export class CodeBlockLanguageSelector extends BaseScrollFloat {
     public override capturesContentKeydown = true;
     private _oldVNode: VNode | null = null;
     private _block: ParagraphContent | LangInputContent | null = null;
+
+    /**
+     * The picker owns Enter only while it converts the freshly typed fence
+     * line — i.e. the caret sits at the end of the paragraph text. When the
+     * fence was typed at the start of an existing line (soft-wrap End lands
+     * mid-paragraph, Enter×2 splits, ```js typed at the tail line's start),
+     * Enter must fall through to the paragraph's own conversion, which keeps
+     * the text after the caret: capturing here replaced the whole paragraph
+     * with an empty code block and silently dropped that text (视图切换丢内
+     * 容遗留三，桌面复现 meta 里出现搜索首条建议 `n4js`）。
+     */
+    public override shouldCaptureContentKeydown(event: KeyboardEvent): boolean {
+        if (event.key !== EVENT_KEYS.Enter)
+            return true;
+        const block = this._block;
+        if (!block || block.blockName !== 'paragraph.content')
+            return true;
+        const cursor = block.getCursor();
+        return !cursor || cursor.end.offset >= block.text.length;
+    }
 
     constructor(muya: Muya, options = {}) {
         const name = 'mu-list-picker';

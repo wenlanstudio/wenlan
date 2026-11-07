@@ -306,6 +306,32 @@ class ParagraphContent extends Format {
         event.preventDefault();
         event.stopPropagation();
 
+        const { start, end } = this.getCursor()!;
+        // 光标后还有内容时，转换只能消费光标前的块语法；光标后的文本另立
+        // 段落、排在转换块之后——整段 replaceWith 会把它吞掉（真实复现：编辑
+        // 区偏窄时段落软换行，End 落在软行尾而非段尾，Enter×2 拆段后光标在
+        // 段首，敲 ```js 回车转换，段落尾部蒸发）。光标前不是完整块语法时
+        // 退回普通拆段，同样无损失。
+        const tailText = end.offset < this.text.length ? this.text.slice(end.offset) : '';
+        if (tailText) {
+            const truncated = this.text.slice(0, start.offset);
+            const truncatedMatch = matchBlockConversion(
+                truncated,
+                this.muya.options.texMathDollars,
+                this.muya.options.multilineBlockquote,
+            );
+            if (!truncatedMatch)
+                return super.enterHandler(event);
+
+            const tailNode = ScrollPage.loadBlock('paragraph').create(
+                this.muya,
+                { name: 'paragraph', text: tailText },
+            );
+            this.parent!.parent!.insertAfter(tailNode, this.parent!);
+            this.text = truncated;
+            this.update();
+        }
+
         const match = matchBlockConversion(
             this.text,
             this.muya.options.texMathDollars,

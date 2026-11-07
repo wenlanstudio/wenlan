@@ -50,10 +50,12 @@ export class Ui {
 
         // Block the content handler only when a shown float actually captures
         // the key; a passive float (e.g. the format toolbar) must let it through
-        // so Enter/Tab/arrows over a selection still work (#3196).
+        // so Enter/Tab/arrows over a selection still work (#3196). A float can
+        // also veto per event (`shouldCaptureContentKeydown`) when it does not
+        // own the key in the current caret context.
         let captured = false;
         for (const tool of this.shownFloat) {
-            if (tool.capturesContentKeydown) {
+            if (tool.capturesContentKeydown && tool.shouldCaptureContentKeydown(event)) {
                 event.preventDefault();
                 captured = true;
                 break;
