@@ -457,6 +457,8 @@ onMounted(() => {
   }
 
   editor.value = codeMirrorInstance
+  // e2e 诊断钩子（同 editor.vue 的 __mt_editor）：直读源码视图 CodeMirror 实例。
+  ;(window as unknown as Record<string, unknown>).__mt_source_cm = codeMirrorInstance
   tabId.value = id
   updateSelectionWordCount(codeMirrorInstance)
 

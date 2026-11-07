@@ -1954,6 +1954,9 @@ onMounted(() => {
   // the document tree and instantiates the registered UI plugins).
   muya.init({ focus: editorStore.TAKE_OPEN_INTENT(currentFile.value?.pathname) !== false })
   editor.value = muya
+  // e2e 诊断钩子：桌面 e2e 没有绕过 UI 直读引擎的通道（全部经由源码模式 CM），
+  // 排查「往返前后引擎状态」需要直接拿实例。只挂 live 引用，随实例替换更新。
+  ;(window as unknown as Record<string, unknown>).__mt_editor = muya
   applyLens()
   // The first document's content is set via constructor options, so no
   // `file-loaded` / `setMarkdownToEditor` runs for it — seed its TOC here.

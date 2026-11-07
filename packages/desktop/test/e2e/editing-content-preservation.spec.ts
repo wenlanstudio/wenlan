@@ -51,11 +51,20 @@ function counts(lines: string[]): Map<string, number> {
 }
 
 // 原文每一行（规范化）的文本必须仍存在于当前全文某处（子串级）——整段/整块
-// 消失即丢内容。行级多集比对会误报两类**格式性重排**：表格分隔线重排对齐
-// （`| --- |` ↔ 按列宽加长）和相邻行并入（软换行/列表惰性续行），它们不丢
-// 内容——装饰性分隔行（纯 `-`/`|`/`:` 构成）整行剔除，其余行做子串检查，
-// 另设总字数下限兜底。
+// 消失即丢内容。行级多集比对会误报三类**非丢失重排**：表格分隔线重排对齐
+// （`| --- |` ↔ 按列宽加长）和相邻行并入（软换行/列表惰性续行）不丢内容；
+// 软换行段落里按 End 落在软行尾、Enter 拆段会把一行**合法拆成两半**（遗留
+// 三现场）——前后两半都在场即算覆盖。装饰性分隔行（纯 `-`/`|`/`:` 构成）
+// 整行剔除，其余行做子串检查，另设总字数下限兜底。
 const DECORATIVE = /^(?:\|[\s:|-]+\|)|^(?:-{3,}$)|(?:^\*{3,}$)/
+
+// 一行被 Enter 合法拆开时，取其在场最长前缀，其余部分必须整段在场。
+function survivesAsSplit(line: string, doc: string): boolean {
+  for (let k = line.length - 1; k >= 1; k--) {
+    if (doc.includes(line.slice(0, k))) return doc.includes(line.slice(k))
+  }
+  return false
+}
 
 async function assertNoLoss(
   page: Page,
@@ -69,7 +78,7 @@ async function assertNoLoss(
   const missing: string[] = []
   for (const line of baselineLines) {
     if (DECORATIVE.test(line) || line.length < 4) continue
-    if (!doc.includes(line)) missing.push(line.slice(0, 60))
+    if (!doc.includes(line) && !survivesAsSplit(line, doc)) missing.push(line.slice(0, 60))
   }
   // 自有删除只有 5 次 Backspace；全文显著缩短即有内容被吃。
   const missingSummary = missing.length ? `missing:${JSON.stringify(missing.slice(0, 12))}` : ''
