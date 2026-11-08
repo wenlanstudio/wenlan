@@ -1,5 +1,5 @@
 /**
- * md2slidesDiagram.ts — 示支视图（页览/放映）的图表桥。
+ * md2slidesDiagram.ts — 映支视图（页览/放映）的图表桥。
  *
  * deck 页面（deck-full）里 compose 自己跑，mermaid / echarts 由页面侧渲染；但
  * graphviz(dot) 与 plantuml 页面里画不了，经 postMessage 托**本进程**离屏出图：

@@ -14,7 +14,7 @@ export interface DocAnchor {
   topBlock?: number
   /** 视口顶源行（1 基） */
   topLine?: number
-  /** 光标源行（1 基；览/示跟随用，本视图原生产出） */
+  /** 光标源行（1 基；览/映跟随用，本视图原生产出） */
   cursorLine?: number
   /** 兜底桥证据（视口顶块/行的纯文本） */
   text?: string

@@ -35,7 +35,7 @@
       </button>
     </div>
 
-    <!-- 文档级指示器：放映/全屏时整组隐藏；「示」激活时只留换叶入口。 -->
+    <!-- 文档级指示器：放映/全屏时整组隐藏；「映」激活时只留换叶入口。 -->
     <div
       v-if="!isWindowFullScreen && !presentExclusive"
       class="status-right"

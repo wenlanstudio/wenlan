@@ -75,7 +75,7 @@
 
 <script setup lang="ts">
 /**
- * deckPane — 示支两叶（present 放映 / slide 页览）共用的 md2slides 投影面
+ * deckPane — 映支两叶（present 放映 / slide 页览）共用的 md2slides 投影面
  * （视图模型 §2/§4）。同一套机制（本地服务 + iframe + postMessage 桥 + 300ms
  * 防抖原地重建 + 重建保页 + 面板态键盘归属），两叶只差 runOpts.view：
  * - present → view:"present"（一次一页的播放器）；
@@ -99,7 +99,7 @@ import { usePreferencesStore } from '@/store/preferences'
 import { renderGraphvizToDataUrl, renderPlantumlToDataUrl } from '@/util/md2slidesDiagram'
 
 const props = defineProps<{
-  /** 示支的叶：present 放映 / slide 页览。 */
+  /** 映支的叶：present 放映 / slide 页览。 */
   leaf: 'present' | 'slide'
   /** view＝该叶全屏；panel＝分屏 pane（视图模型 §3）。 */
   mode: 'view' | 'panel'

@@ -5,7 +5,7 @@ import { usePreferencesStore } from './preferences'
 import { useEditorStore } from './editor'
 
 /**
- * 视图模型（docs/design/view-model.md）：二组五叶选择，UI 刻度「文 栏│页 览 示」。
+ * 视图模型（docs/design/view-model.md）：二组五叶选择，UI 刻度「文 栏│页 览 映」。
  *
  * 编辑组（写作姿态，muya 进程内）= { flow 全文, column 分栏 }；
  * 展示组（成页姿态）= { page 物理纸, slide 页览, present 放映 }。组判据 =
@@ -13,7 +13,7 @@ import { useEditorStore } from './editor'
  * page = 只读真分片预览（A″：切行/续表真渲染，卡内编辑已随推挤退役）。
  *
  * 一文多览（view-model §6）：可编辑面只有文（flow 活引擎）与本（code 顶级
- * 视图），栏/页/览/示一律只读，想编辑即跳转文/本。
+ * 视图），栏/页/览/映一律只读，想编辑即跳转文/本。
  *
  * 选择模型：五叶平铺常驻（栏格随文档有无 begin 标记显隐），点击选中至多两叶
  * ——一叶全屏、两叶分屏（左右按 LEAVES 顺序，编辑左展示右、细左粗右自动
@@ -35,13 +35,13 @@ export const visibleLeafList = (hasColumns: boolean): Leaf[] =>
 
 const SHOW_LEAVES: readonly Leaf[] = ['slide', 'present']
 
-/** page 只与前三叶配对（§2）：页×览/示在 v1 语义不成立——分屏要求两侧对
+/** page 只与前三叶配对（§2）：页×览/映在 v1 语义不成立——分屏要求两侧对
  *  同一文档做一致解释，而 md2slides 只服务幻灯片形态（览对 A4 文档 v1 不做、
  *  页对幻灯片文档给不出幻灯片语义；全屏单叶不受此限），与它们相点即单选替换。 */
 const isPairable = (a: Leaf, b: Leaf): boolean =>
   !(a === 'page' && SHOW_LEAVES.includes(b)) && !(b === 'page' && SHOW_LEAVES.includes(a))
 
-/** 持久化净化：若成对非法（page×示支），只留 LEAVES 序靠前者。 */
+/** 持久化净化：若成对非法（page×映支），只留 LEAVES 序靠前者。 */
 const sanitizeLeaves = (leaves: Leaf[]): Leaf[] => {
   const [a, b] = leaves
   if (a && b && !isPairable(a, b)) {
@@ -155,22 +155,22 @@ export const useEditorViewStore = defineStore('editorView', () => {
 
   const isSourceMode = computed<boolean>(() => topView.value === 'code')
 
-  // ── 示面板独占态（分屏时放映占满整窗；不持久化，会话内状态） ──
-  // 与 paper-fullscreen 同构：pane-left 收起不卸载（避免 muya 重建），示 pane
+  // ── 映面板独占态（分屏时放映占满整窗；不持久化，会话内状态） ──
+  // 与 paper-fullscreen 同构：pane-left 收起不卸载（避免 muya 重建），映 pane
   // 占满。leafSelection 不动——退出独占即回到原两视图。
   const presentExclusive = ref(false)
   const setPresentExclusive = (v: boolean): void => {
     presentExclusive.value = v
   }
-  // 叶选择离开示支或退出分屏时，独占态失去意义，自动复位。
+  // 叶选择离开映支或退出分屏时，独占态失去意义，自动复位。
   watch([leafSelection, isSplit], () => {
     if (!leafSelection.value.includes('present') || !isSplit.value) {
       presentExclusive.value = false
     }
   })
 
-  // ── 「示」一键全屏放映（沉浸式；会话内状态，不持久化） ──
-  // 点「示」不再走配置选择式，而是单叶 present + Electron 原生全屏，布局层
+  // ── 「映」一键全屏放映（沉浸式；会话内状态，不持久化） ──
+  // 点「映」不再走配置选择式，而是单叶 present + Electron 原生全屏，布局层
   // 据此隐藏侧栏/标题栏/状态栏/底部执行面板。进入前的选择与窗口全屏态由
   // 下面三个变量暂存，退出时复原。侧栏只做显示层屏蔽，不动用户偏好。
   const presentImmersive = ref(false)
@@ -189,12 +189,12 @@ export const useEditorViewStore = defineStore('editorView', () => {
     () => !isSplit.value && topView.value === null && activeLeaf.value === 'page'
   )
 
-  /** 示面板独占：分屏 + 用户点「独占」，放映占满整窗。 */
+  /** 映面板独占：分屏 + 用户点「独占」，放映占满整窗。 */
   const isPresentFullscreen = computed(
     () => isSplit.value && presentExclusive.value && rightLeaf.value === 'present'
   )
 
-  /** 单选示支叶全屏（slide 列表 / present 放映独占编辑区）。 */
+  /** 单选映支叶全屏（slide 列表 / present 放映独占编辑区）。 */
   const isDeckFullscreen = computed(
     () =>
       !isSplit.value &&
@@ -286,7 +286,7 @@ export const useEditorViewStore = defineStore('editorView', () => {
     preferencesStore.DISPATCH_EDITOR_VIEW_STATE({ sourceCode: shouldBeSource })
   }
 
-  /** 点「示」：记住当前选择 → 单叶放映 → 窗口原生全屏。
+  /** 点「映」：记住当前选择 → 单叶放映 → 窗口原生全屏。
    *  布局层（app.vue / sideBar / editorWithTabs）按 presentImmersive 收起所有
    *  chrome；不改 layoutStore.showSideBar，退出即自动恢复侧栏。 */
   const enterPresentImmersive = (): void => {
@@ -346,7 +346,7 @@ export const useEditorViewStore = defineStore('editorView', () => {
       leafSelection.value = sel.filter((l) => l !== leaf)
     } else {
       if (sel.length >= 2) return // 已选满：先摘一片才能换（用户自己搭配）
-      // page×示支不可配对：相点即单选替换（§5 交互）——"点啥进啥"的直感
+      // page×映支不可配对：相点即单选替换（§5 交互）——"点啥进啥"的直感
       const only = sel[0]
       leafSelection.value =
         sel.length === 1 && only && !isPairable(only, leaf) ? [leaf] : [...sel, leaf]
@@ -380,7 +380,7 @@ export const useEditorViewStore = defineStore('editorView', () => {
 
   /** 跳转编辑的目标态（视图模型 §6.3）：让「文」接管编辑面——清顶级视图；
    * 叶选择已含文则保持，否则左叶（全屏即唯一叶）换成文、右叶保留
-   * （栏×页 → 文×页、览×示 → 文×示）。与 focusEditor 的区别：不折叠分屏。 */
+   * （栏×页 → 文×页、览×映 → 文×映）。与 focusEditor 的区别：不折叠分屏。 */
   const enterFlowEditor = (): void => {
     topView.value = null
     const sel = [...leafSelection.value]

@@ -1423,7 +1423,7 @@ const offDocAnchor = onDocAnchorChange(anchor => {
   if (anchor?.origin !== 'reverse') return
   if (props.lens !== 'flow' && props.lens !== 'column') return
   requestAnimationFrame(() => {
-    scrollViewToAnchor(getScrollContainer(), { blockIndex: anchor.topBlock, text: anchor.text })
+    scrollViewToAnchor(getScrollContainer(), { blockIndex: anchor.topBlock, text: anchor.text }, { behavior: 'smooth' })
   })
 })
 

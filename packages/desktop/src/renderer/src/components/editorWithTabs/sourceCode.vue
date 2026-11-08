@@ -351,7 +351,7 @@ const listenChange = (cm: CodeMirror.Editor) => {
     updateSelectionWordCount(instance)
     const cursor = instance.getCursor()
     bus.emit('cursor-position', { line: cursor.line + 1, ch: cursor.ch + 1 })
-    // 锚服务：cursorLine 随光标走（览/示「改哪页跳哪页」跟随用，1 基）；
+    // 锚服务：cursorLine 随光标走（览/映「改哪页跳哪页」跟随用，1 基）；
     // 编辑面活动，origin 同步归位 'scroll'（清掉可能的 reverse 残留）。
     writeDocAnchor({ cursorLine: cursor.line + 1, origin: 'scroll' })
   })
@@ -389,7 +389,7 @@ const handleScroll = () => {
     const { line: bridgeLine, text } = sourceAnchorOf(cm.getValue(), line + 1)
     // 合并写进单槽锚：topLine 记真实视口顶行（源码内部恢复精度），text 供
     // 其它视图 text 桥兜底；origin 显式 'scroll'（防 reverse 残留自激）；
-    // cursorLine 随光标移动单独更新（览/示跟随用）。
+    // cursorLine 随光标移动单独更新（览/映跟随用）。
     writeDocAnchor({ topLine: bridgeLine, text, origin: 'scroll' })
   })
 }

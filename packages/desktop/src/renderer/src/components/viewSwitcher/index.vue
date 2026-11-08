@@ -20,8 +20,8 @@
       <span class="width-label">{{ sliderValue }}</span>
     </div>
 
-    <!-- 刻度「文 栏│页 览 示」（视图模型 §1）：可见五叶 = 文 / 栏 / 页 /
-         览 / 示；分隔线落在展示组首叶 page 前。配置选择式：点选/点消至多两叶
+    <!-- 刻度「文 栏│页 览 映」（视图模型 §1）：可见五叶 = 文 / 栏 / 页 /
+         览 / 映；分隔线落在展示组首叶 page 前。配置选择式：点选/点消至多两叶
          （1=全屏 2=分屏，选满点不动、不可选空）。column 只对真有分栏标记的
          文档显示（§4.4 #5）。 -->
     <div class="leaves">
@@ -48,7 +48,7 @@
       </button>
     </div>
 
-    <!-- 顶级正交视图：图 / 表 / [码]（不进文示树）。「本」已并入左侧编辑
+    <!-- 顶级正交视图：图 / 表 / [码]（不进文映树）。「本」已并入左侧编辑
          组（2026-11-08 重排）。「码」是底部代码执行工具窗口的开关；只在
          「文」**独占**时可点，分屏时同样禁用（判据在 store.isCodeRunSurface）。 -->
     <div class="main-views">
@@ -97,7 +97,7 @@ const { toggleLeaf, toggleTopView, enterPresentImmersive, exitPresentImmersive }
   editorViewStore
 const { editorLineWidth } = storeToRefs(preferencesStore)
 
-/** 「示」是一键全屏放映，不参与「配置选择式」：点一下进全屏，再点一下退出。
+/** 「映」是一键全屏放映，不参与「配置选择式」：点一下进全屏，再点一下退出。
  *  其余可见叶仍走 toggleLeaf 的选中/取消模型（store 语义保持不动）。 */
 const onLeafClick = (leaf: Leaf): void => {
   if (leaf === 'present') {
@@ -128,7 +128,7 @@ const LEAF_META: Record<Leaf, { label: string; title: string }> = {
   column: { label: '栏', title: '分栏（空间离散，需 begin 标记；只读）' },
   page: { label: '页', title: '页——A4 真分页预览（切行/续表真渲染，只读）' },
   slide: { label: '览', title: '页览——全部真实页排开看（溢出的逻辑页带「N页」徽章）' },
-  present: { label: '示', title: '全屏放映（一次一页，Esc 退出）' }
+  present: { label: '映', title: '全屏放映（一次一页，Esc 退出）' }
 }
 
 const TOP_VIEW_META: Record<string, { icon: string; title: string }> = {

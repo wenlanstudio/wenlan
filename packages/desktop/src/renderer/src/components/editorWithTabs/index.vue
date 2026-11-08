@@ -105,7 +105,7 @@
         title="拖动调整两侧比例"
         @pointerdown="startDrag"
       />
-      <!-- 右 pane：示支叶（slide 列表 / present 放映）、页叶真分片投影
+      <!-- 右 pane：映支叶（slide 列表 / present 放映）、页叶真分片投影
            （paperProjection，A″ 只读）或栏投影（column 只读第二实例——右
            pane 一律只读，编辑面不变量 §2）。key 按 leaf 分实例——同一
            iframe 实例的 view 恒定（deck 侧 player/列表布局二选一），
@@ -133,7 +133,7 @@
           :markdown="markdown"
         />
       </div>
-      <!-- 全屏示支叶（slide 列表 / present 放映单选时占满编辑区） -->
+      <!-- 全屏映支叶（slide 列表 / present 放映单选时占满编辑区） -->
       <deck-pane
         v-if="!isSplit && topView === null && (activeLeaf === 'slide' || activeLeaf === 'present')"
         :key="activeLeaf"
@@ -208,7 +208,7 @@ const sideBarOffset = computed<number>(() =>
 // Actions 不经 storeToRefs（它只包 state/getter）。
 const { setRightRatio } = editorViewStore
 
-// 左 pane 是否有内容（分屏左叶 / 透镜 / 源码 / 图占位）。单选示支叶时为
+// 左 pane 是否有内容（分屏左叶 / 透镜 / 源码 / 图占位）。单选映支叶时为
 // false——pane-left 不渲染，deck-pane 独占容器。
 const hasLeftPane = computed(
   () => isSplit.value || editorLens.value !== null || topView.value !== null
@@ -221,7 +221,7 @@ const hasLeftPane = computed(
 // store/editorView（app.vue 也要用），此处仅解构。
 
 // 分屏左 pane 的引擎透镜由 store.editorLens 给出：orderedLeaves 首个
-// flow/column/page 叶（LEAVES 序保证左细右粗、文左示右；page M0 暂照
+// flow/column/page 叶（LEAVES 序保证左细右粗、文左映右；page M0 暂照
 // flow 渲染）。
 
 // —— 分割条拖拽（视图模型 §3）——
@@ -262,7 +262,7 @@ const startDrag = (ev: PointerEvent): void => {
     flex: 1;
     overflow: hidden;
 
-    /* 分屏壳（视图模型 §2）：左细右粗、文左示右。非 split 时保持原 block
+    /* 分屏壳（视图模型 §2）：左细右粗、文左映右。非 split 时保持原 block
        流，透镜分支的布局假设（.editor-wrapper height:100% 等）零改动。 */
     &.split {
       display: flex;
@@ -276,8 +276,8 @@ const startDrag = (ev: PointerEvent): void => {
       }
     }
 
-    /* 示面板独占：pane-left 收起不卸载（muya 保活，退出独占零重建）；
-       示 pane 占满整窗。 */
+    /* 映面板独占：pane-left 收起不卸载（muya 保活，退出独占零重建）；
+       映 pane 占满整窗。 */
     &.present-fullscreen {
       & > .pane-left {
         display: none;

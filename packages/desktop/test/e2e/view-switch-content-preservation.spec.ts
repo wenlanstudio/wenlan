@@ -15,7 +15,7 @@ import {
 // 视图切换丢内容回归（用户报告：「视图切换时，内容丢失，最不能接受」）。
 //
 // 用 test-mds 里的真实讲义做黑盒验证，模拟人类操作：打开文档 → 在 叶视图
-// （栏/页/览/示）之间来回切换 → 切「本」源码模式 → 手敲一段增量文字 → 再切
+// （栏/页/览/映）之间来回切换 → 切「本」源码模式 → 手敲一段增量文字 → 再切
 // 一轮视图 → 校验全文逐字节不丢。getMarkdownContent 本身要进/出一次源码
 // 模式，所以每次测量同时计一次 文↔本 往返。
 //
@@ -60,8 +60,8 @@ async function settle(page: Page, ms = 700): Promise<void> {
   await page.waitForTimeout(ms)
 }
 
-// 「示」是跨源 iframe 全屏放映：焦点可能落在 iframe 里，父页面收不到 Esc——
-// 两个上下文都发一遍；若还在放映态，再点一次「示」按钮切换退出（onLeafClick
+// 「映」是跨源 iframe 全屏放映：焦点可能落在 iframe 里，父页面收不到 Esc——
+// 两个上下文都发一遍；若还在放映态，再点一次「映」按钮切换退出（onLeafClick
 // 的 present 是切换语义）。兜底判据：回到 `.editor-component` 可见。
 async function exitPresent(page: Page): Promise<void> {
   await page.keyboard.press('Escape')
@@ -73,7 +73,7 @@ async function exitPresent(page: Page): Promise<void> {
     }
   }
   await settle(page, 400)
-  const btn = page.locator('.leaf-btn', { hasText: '示' }).first()
+  const btn = page.locator('.leaf-btn', { hasText: '映' }).first()
   if (await btn.isVisible().catch(() => false)) {
     // 放映态下若刻度仍可见，这个点击是「退出全屏」
     const stillImmersive = await page.evaluate(
@@ -105,8 +105,8 @@ async function leafJourney(page: Page): Promise<string[]> {
       await backToEditor(page)
     }
   }
-  if (await clickLeaf(page, '示')) {
-    visited.push('示')
+  if (await clickLeaf(page, '映')) {
+    visited.push('映')
     await settle(page, 1500)
     await exitPresent(page)
     await backToEditor(page)
