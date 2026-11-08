@@ -11,7 +11,7 @@ inputs:
       Pinned commit in wenlanstudio/md2slides. Bump deliberately when the
       asset bundle changes; never track a moving branch from a release build.
     required: false
-    default: 'dea81c427131532219afd72e94d83b2d4fcd3691'
+    default: 'd9ec884190166788bf1d351c26f8043bfd72e1b3'
 
 runs:
   using: composite
