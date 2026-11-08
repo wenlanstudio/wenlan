@@ -795,8 +795,6 @@
   "view": {
     "slidesView": "Slides View",
     "tableView": "Tables View",
-    "figureView": "Figure View",
-    "comingSoon": "Coming soon",
     "pageWidth": "Page Width",
     "cursorPosition": "Cursor Position",
     "readOnlyLocked": "Read-only mode",
@@ -919,8 +917,6 @@
       "readingView": "Reading View",
       "slidesView": "Slides View",
       "tableView": "Tables View",
-      "figureView": "Figure View",
-      "comingSoon": "Coming soon",
       "pageWidth": "Page Width",
       "cursorPosition": "Cursor Position",
       "readOnlyLocked": "Read-only mode",

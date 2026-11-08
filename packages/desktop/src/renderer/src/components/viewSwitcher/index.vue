@@ -107,8 +107,8 @@ const LEAF_META: Record<Leaf, { label: string; title: string }> = {
 }
 
 const TOP_VIEW_META: Record<string, { icon: string; title: string }> = {
-  table: { icon: '表', title: 'Tables' },
-  figure: { icon: '图', title: 'Figure' },
+  table: { icon: '表', title: '表——全文表格总览（只读透镜）' },
+  figure: { icon: '图', title: '图——代码型图表总览（mermaid/echarts 等，只读透镜；行内图片不进图）' },
   code: { icon: '码', title: '码——全文代码块总览（只读透镜；点块定位执行窗）' }
 }
 

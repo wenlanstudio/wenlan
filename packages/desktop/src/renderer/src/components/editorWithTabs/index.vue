@@ -35,7 +35,7 @@
           mode="panel"
           :markdown="markdown"
         />
-        <!-- 透镜宿主：WYSIWYG 引擎在 flow/column/page/table 透镜间常驻，
+        <!-- 透镜宿主：WYSIWYG 引擎在 flow/column/page 与表/图/码透镜间常驻，
              切换只翻转 `data-lens` 而不重绘（TODO1 #21、#26）。分屏时活引擎占
              左 pane。页叶是只读投影（A″），不进活引擎。 -->
         <div
@@ -52,51 +52,14 @@
           />
         </div>
         <!-- 本（源码，topView 'source'）：CodeMirror 独立渲染，非透镜。
-             码透镜（topView 'code'）不在此——它走上面的 lens-host。 -->
+             表/图/码透镜不在此——走上面的 lens-host（图=代码型图表块透镜，
+             2026-11-08 起替代原占位）。 -->
         <source-code
           v-else-if="topView === 'source'"
           :markdown="markdown"
           :muya-index-cursor="muyaIndexCursor"
           :text-direction="textDirection"
         />
-        <!-- 图视图占位（figure 未实现） -->
-        <div
-          v-else-if="topView === 'figure'"
-          class="view-placeholder"
-        >
-          <div class="placeholder-inner">
-            <div class="placeholder-icon">
-              <svg
-                viewBox="0 0 24 24"
-                width="48"
-                height="48"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.2"
-              >
-                <rect
-                  x="3"
-                  y="3"
-                  width="18"
-                  height="18"
-                  rx="2"
-                />
-                <circle
-                  cx="8.5"
-                  cy="8.5"
-                  r="1.5"
-                />
-                <path d="M21 15l-5-5L5 21" />
-              </svg>
-            </div>
-            <div class="placeholder-title">
-              {{ t('view.figureView') }}
-            </div>
-            <div class="placeholder-hint">
-              {{ t('view.comingSoon') }}
-            </div>
-          </div>
-        </div>
       </div>
       <!-- 分割条：分屏时的比例手柄（视图模型 §3）。宽度控制被它吸收——
            页宽滑块此时收起（store.sliderDuty）。 -->
@@ -160,7 +123,6 @@ import { usePreferencesStore } from '@/store/preferences'
 import { useEditorViewStore } from '@/store/editorView'
 import { storeToRefs } from 'pinia'
 import { watch } from 'vue'
-import { t } from '@/i18n'
 import { reviseMarkdown } from '@/util/docAnchor'
 import Editor from './editor.vue'
 import ColumnsDiagnostics from './columnsDiagnostics.vue'
@@ -208,7 +170,7 @@ const sideBarOffset = computed<number>(() =>
 // Actions 不经 storeToRefs（它只包 state/getter）。
 const { setRightRatio } = editorViewStore
 
-// 左 pane 是否有内容（分屏左叶 / 透镜 / 源码 / 图占位）。单选映支叶时为
+// 左 pane 是否有内容（分屏左叶 / 透镜 / 源码）。单选映支叶时为
 // false——pane-left 不渲染，deck-pane 独占容器。
 const hasLeftPane = computed(
   () => isSplit.value || editorLens.value !== null || topView.value !== null
@@ -344,37 +306,5 @@ const startDrag = (ev: PointerEvent): void => {
    sizing (`.editor-wrapper { height: 100% }`) is untouched. */
 .lens-host {
   display: contents;
-}
-
-.view-placeholder {
-  flex: 1;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: auto;
-  color: var(--editorColor50);
-}
-
-.placeholder-inner {
-  text-align: center;
-  padding: 40px;
-}
-
-.placeholder-icon {
-  margin-bottom: 16px;
-  opacity: 0.5;
-}
-
-.placeholder-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: var(--editorColor);
-}
-
-.placeholder-hint {
-  font-size: 14px;
-  opacity: 0.7;
 }
 </style>

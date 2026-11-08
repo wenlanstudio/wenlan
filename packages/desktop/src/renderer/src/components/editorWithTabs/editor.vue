@@ -679,13 +679,13 @@ watch(hideQuickInsertHint, (value, oldValue) => {
   }
 })
 
-// M0 只读收口（视图模型 §6）：文/本之外一律只读——栏/表/码透镜在用户锁之外
+// M0 只读收口（视图模型 §6）：文/本之外一律只读——栏/表/图/码透镜在用户锁之外
 // 再加一层锁，离开透镜按用户锁复原，不得顺手解开用户自己上的锁。引擎三层
 // 强制（表面/事件/状态）不变，这里只翻选项；初始值仍由 buildMuyaViewOptions
 // 带入（含用户锁），挂载后再补一次（覆盖透镜初始值，如启动即恢复到栏/表）。
 // 值未变时跳过——setOptions({ readOnly }) 即便同值也触发整树重建
 // （contenteditable 派生自构造期选项，须重建才能翻转），不能白付。
-const READ_ONLY_LENSES = new Set(['column', 'table', 'code'])
+const READ_ONLY_LENSES = new Set(['column', 'table', 'code', 'figure'])
 const isLensReadOnly = (): boolean => props.lens != null && READ_ONLY_LENSES.has(props.lens)
 
 const applyReadOnlyLock = (): void => {
@@ -2565,6 +2565,15 @@ onBeforeUnmount(() => {
 [data-lens='code'] .mu-code-run,
 [data-lens='code'] .mu-code-copy {
   opacity: 1;
+}
+
+/* Lens: show only the document's code-typed diagrams (2026-11-08, view-model
+   §1) — mermaid/echarts/plantuml 等围栏图表块（`figure.mu-diagram-block`）。
+   Same mechanism as the table/code lenses. Inline images do NOT enter this
+   lens: muya has no image block state (评估后放弃——晋升时机与图片工具生态
+   都 key 在行内选中态上)，they live inside paragraphs and stay hidden here. */
+[data-lens='figure'] .mu-container > *:not(.mu-diagram-block) {
+  display: none;
 }
 
 /* 打字机居中位同理：50vh 会把光标推到面板背后（面板越高越明显）。用实测视口

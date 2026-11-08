@@ -77,6 +77,12 @@
 - 码透镜顺带继承表透镜的**双击跳文**（`handleLensDblClick` 走 `isLensReadOnly()`，自动覆盖）。
 - 涉及：editorView.ts（键名/门控/持久化）、viewSwitcher（删执行窗开关钮）、editor.vue（`READ_ONLY_LENSES` + `[data-lens='code']` CSS + 点块定位 handler）、execPanel.vue（× 关闭钮 + `execPanel.close` 12 locale）、editorWithTabs/index.vue（source 分支）。单测 editorViewStore.spec 38 绿；新增 e2e 看守 `code-block-lens.spec.ts`。
 
+### 图透镜落地（2026-11-08，用户拍板：只显示代码型图）
+
+- 「图」从占位升级为**代码型图表块只读透镜**（`figure.mu-diagram-block`，表/码完全同构：`[data-lens='figure']` CSS 藏块 + 只读锁 + 双击跳文自动继承）；占位分支与 `view.figureView`/`view.comingSoon` 死键（含 `commands.view` 副本）×12 locale 连根清除。
+- **行内图片不进图**——muya 无 image 块态：曾评估给 muya 加 image state（独占段图片成块，`markdownToState.ts:502` 的 TODO），用户裁决放弃。难点在交互层不在机制层：图片语法闭括号成型无回车锚点（段落转块先例 `_enterConvert` 全是回车触发）、图片工具生态（工具条/编辑弹窗/mediaViewer/粘贴盖图）全 key 在行内选中态 affiliation 上。
+- e2e 看守 `figure-lens.spec.ts`（图表块显/段落代码块藏/含图段落藏/往返）。
+
 ### 视图切换丢内容排查（2026-11-07，用户报告的最高优先级；用户更正：丢失发生在修改正文过程中）
 
 - 已修一：文档首块是 `---` 水平线的讲义（空行开头挡住 fm 锚定，首载为正文），切一次源码/存盘后，直到下一个 `---` 的内容被吞成 frontmatter。序列化器现把首块 `---` 规则改写为 `***`（`stateToMarkdown` + `leadingThematicBreak.spec`）。303 份真实讲义扫描（parse→serialize→parse 定点）：唯一结构性丢失类，其余 152→12 份差异均为良性重排（列表缩进归一、表格对齐、loose 标志翻转）

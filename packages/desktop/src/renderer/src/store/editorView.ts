@@ -150,16 +150,22 @@ export const useEditorViewStore = defineStore('editorView', () => {
     topView.value === null && leafSelection.value.length === 1 ? leafSelection.value[0]! : null
   )
 
-  /** 编辑器透镜：table/code 是顶级透镜（2026-11-08 起 `code` = 码，全文
-   *  代码块只读总览；`source` = 本，CodeMirror 独立渲染非透镜）；flow/
-   *  column/page 作全屏或分屏左 pane 时活。page 在全屏态是「隐藏服务后端」
-   *  ——页叶的可见面是真分片投影（paperProjection，A″），活引擎退居幕后
-   *  供养 bus 服务（导出/TOC），由 index.vue 以 paper-fullscreen 收起其占位。 */
-  const editorLens = computed<'flow' | 'column' | 'page' | 'table' | 'code' | null>(() => {
-    if (topView.value === 'table' || topView.value === 'code') return topView.value
-    if (topView.value !== null) return null
-    return orderedLeaves.value.find((l) => l === 'flow' || l === 'column' || l === 'page') ?? null
-  })
+  /** 编辑器透镜：table/code/figure 是顶级透镜（2026-11-08；`code` = 码，
+   *  全文代码块只读总览；`figure` = 图，代码型图表块（mermaid/echarts 等
+   *  figure.mu-diagram-block）只读总览——行内图片不进图，image state 已评估
+   *  后放弃；`source` = 本，CodeMirror 独立渲染非透镜）；flow/column/page 作
+   *  全屏或分屏左 pane 时活。page 在全屏态是「隐藏服务后端」——页叶的可见面
+   *  是真分片投影（paperProjection，A″），活引擎退居幕后供养 bus 服务（导出/
+   *  TOC），由 index.vue 以 paper-fullscreen 收起其占位。 */
+  const editorLens = computed<'flow' | 'column' | 'page' | 'table' | 'code' | 'figure' | null>(
+    () => {
+      if (topView.value === 'table' || topView.value === 'code' || topView.value === 'figure') {
+        return topView.value
+      }
+      if (topView.value !== null) return null
+      return orderedLeaves.value.find((l) => l === 'flow' || l === 'column' || l === 'page') ?? null
+    }
+  )
 
   const isSourceMode = computed<boolean>(() => topView.value === 'source')
 

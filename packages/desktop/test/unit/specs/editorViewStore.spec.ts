@@ -187,6 +187,19 @@ describe('editorView selection model', () => {
     expect(store.activeLeaf).toBe('flow')
   })
 
+  it('toggling 图 (figure) rides the lens host, not the placeholder', () => {
+    // 2026-11-08：图占位退役，图 = 代码型图表块只读透镜（表/码同构）。
+    const store = useEditorViewStore()
+    store.toggleTopView('figure')
+    expect(store.editorLens).toBe('figure')
+    expect(store.sliderDuty).toBe('flow-width')
+    expect(store.isCodeRunSurface).toBe(false) // 图不是执行面
+
+    store.toggleTopView('figure')
+    expect(store.topView).toBeNull()
+    expect(store.activeLeaf).toBe('flow')
+  })
+
   it('the code-run panel surface covers 文独占 and 码透镜独占 only', () => {
     const store = useEditorViewStore()
     expect(store.isCodeRunSurface).toBe(true) // 文独占（现行基线）

@@ -795,8 +795,6 @@
   "view": {
     "slidesView": "幻灯片视图",
     "tableView": "表格视图",
-    "figureView": "插图视图",
-    "comingSoon": "即将推出",
     "pageWidth": "页面宽度",
     "cursorPosition": "光标位置",
     "readOnlyLocked": "只读模式",
@@ -919,8 +917,6 @@
       "readingView": "阅读视图",
       "slidesView": "幻灯片视图",
       "tableView": "表格视图",
-      "figureView": "插图视图",
-      "comingSoon": "即将推出",
       "pageWidth": "页面宽度",
       "cursorPosition": "光标位置",
       "readOnlyLocked": "只读模式",
