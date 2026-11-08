@@ -144,3 +144,25 @@ export function rememberSurface(surface: EditingSurface): void {
 export function lastEditingSurface(): EditingSurface {
   return lastSurface
 }
+
+// e2e 诊断钩子（同 editor.vue 的 __mt_editor 惯例）：锚链路没有 DOM 直读
+// 通道，排查跟随/恢复需要从页面直接读锚与行表状态。
+declare global {
+  interface Window {
+    __mt_docAnchor?: {
+      read: typeof readDocAnchor
+      matches: typeof matchesCurrentMarkdown
+      blockToLine: typeof blockIndexToLine
+      size: () => number
+      lastMd: () => string | null
+    }
+  }
+}
+window.__mt_docAnchor = {
+  read: readDocAnchor,
+  matches: matchesCurrentMarkdown,
+  blockToLine: blockIndexToLine,
+  // 诊断：订阅者数量与 lastMd（双实例/守卫早退的判据）。
+  size: () => listeners.size,
+  lastMd: () => lastMd
+}

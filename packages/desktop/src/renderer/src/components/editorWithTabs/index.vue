@@ -181,12 +181,15 @@ const props = defineProps<{
 }>()
 
 // 一文多览锚服务（§6.1）：markdown 每逢内容变化推进 mdRev——所有锚写读
-// 共用这个版本号，消费侧据此丢弃过期锚（防抖窗口内允许旧态）。
+// 共用这个版本号，消费侧据此丢弃过期锚（防抖窗口内允许旧态）。immediate
+// 必须开：初始 markdown 不经变化，漏记会让 matchesCurrentMarkdown 恒 false
+// ——只读投影的跟随/恢复回调第一行就早退（M1 首版跟随全死的根因之一）。
 watch(
   () => props.markdown,
   (md) => {
     reviseMarkdown(md)
-  }
+  },
+  { immediate: true }
 )
 
 const { effectiveSideBarWidth } = storeToRefs(useLayoutStore())

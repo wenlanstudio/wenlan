@@ -36,6 +36,7 @@ import { buildMuyaViewOptions } from '@/util/muyaViewOptions'
 import { getMuyaLocale } from '@/util/muyaLocale'
 import { parsePaperTheme } from '@/util/paperPagination'
 import {
+  blockIndexToLine,
   matchesCurrentMarkdown,
   onDocAnchorChange,
   readDocAnchor,
@@ -55,12 +56,26 @@ const { language } = storeToRefs(preferencesStore)
 
 const host = ref<HTMLDivElement | null>(null)
 const muya = shallowRef<Muya | null>(null)
+// 本域块首行表（右栏自己的 muya 解析域）：锚的 topBlock 是主引擎域，两个
+// 域的 contentBlocks 序列**不齐**——分栏标记块在 flow 里是可见徽标（计入）、
+// 在 columns 布局里隐藏（剔除），实测块序差 3。跨域跟随须经行号换算
+// （主域块 → 行 → 本域块），blockIndex 直通只在同 columnsLayout 下成立。
+const localLines = shallowRef<number[] | null>(null)
 
 const PROJECTION_DEBOUNCE_MS = 250
 let applyTimer = 0
 
 const applyMarkdown = (): void => {
-  if (muya.value) muya.value.setContent(props.markdown ?? '')
+  if (muya.value) {
+    muya.value.setContent(props.markdown ?? '')
+    // 本域行表随内容重建（O(文档)，与 setContent 同量级）。
+    try {
+      localLines.value = muya.value.getBlockStartLines()
+    } catch (e) {
+      console.error('[leafProjection] local line table failed:', e)
+      localLines.value = null
+    }
+  }
   // 纸面主题同拍（与页投影、打印导出链单源）：挂在 domNode（.mu-container
   // 祖先）上，命中 .paper-theme-thesis 作用域组。
   muya.value?.domNode?.classList.toggle(
@@ -71,14 +86,31 @@ const applyMarkdown = (): void => {
 
 // —— 锚服务接线（§6.1/§6.3）——
 /** 把锚的 topBlock 滚到本投影视口顶。同实例语义：投影是同一 markdown 的
- *  第二 muya 实例，topBlock 即本容器 contentBlocks 序的下标。滚动容器是
- *  外层 `.leaf-projection`（overflow:auto），muya domNode 只是块根——两者
- *  混用一个参数会滚错节点，跟随静默失效（M1 首版踩过）。 */
+ *  第二 muya 实例，topBlock 即本容器 contentBlocks 序的下标。
+ *  块根与滚动容器都从 **muya 实例**取：构造时 muya `getContainer` 会
+ *  `replaceWith` 掉传入的 host div——Vue 的 template ref 从此指着 detached
+ *  旧壳（parentElement 为 null），只有 `muya.domNode` 是实时在文档里的；
+ *  滚动容器是它的父（.leaf-projection，overflow:auto）。混用 ref 会让跟随
+ *  静默失效（M1 首版踩过）。 */
 const scrollToBlock = (blockIndex: number | undefined, text: string | undefined): void => {
   const root = muya.value?.domNode as HTMLElement | null | undefined
-  const scroller = host.value?.parentElement ?? null
+  const scroller = root?.parentElement ?? null
   if (!root || !scroller) return
-  scrollViewToAnchorIn(scroller, root, { blockIndex, text })
+
+  // 跨域换算：主域块 → 行（主引擎行表）→ 本域块（localLines）。行表任一侧
+  // 不可用时退回直通（text 校验失败再退 text 桥——scrollViewToAnchorIn 内建）。
+  let index = blockIndex
+  const line = blockIndexToLine(props.markdown ?? '', blockIndex)
+  if (line != null && localLines.value && localLines.value.length) {
+    const lines = localLines.value
+    let i = 0
+    for (let k = 0; k < lines.length; k++) {
+      if (lines[k]! <= line) i = k
+      else break
+    }
+    index = i
+  }
+  scrollViewToAnchorIn(scroller, root, { blockIndex: index, text })
 }
 
 const offDocAnchor = onDocAnchorChange(anchor => {
@@ -134,6 +166,12 @@ onMounted(() => {
   const instance = new Muya(host.value, options)
   instance.init()
   muya.value = instance
+  // 本域行表初值（后续随 applyMarkdown 防抖重建）。
+  try {
+    localLines.value = instance.getBlockStartLines()
+  } catch (e) {
+    console.error('[leafProjection] local line table failed:', e)
+  }
   // 首挂内容经构造器传入（不走 applyMarkdown），主题类在此补挂。
   instance.domNode?.classList.toggle(
     'paper-theme-thesis',
