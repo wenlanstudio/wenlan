@@ -51,6 +51,12 @@ export { drawioEmbedUrl, exportDrawio, loadDrawioDiagram, renderDrawio } from '.
 export { diagramLangs, diagramTypeOfLang } from './utils/diagram/fence';
 export { renderDiagramForExport } from './utils/diagram/render';
 export type { IExportRenderOptions, IRenderOptions } from './utils/diagram/render';
+// DOM → block lookup: every rendered element carries its owning block via
+// `attachDOMNode`; hosts use this to resolve a click target to a block (e.g.
+// the read-only lenses' double-click-to-edit jump resolves the clicked block,
+// then re-queries it by path after the re-render that a readOnly toggle
+// triggers). Returns `undefined` for elements outside the block tree.
+export { getBlock } from './utils/dom';
 export type { IImageInfo } from './utils/image';
 export { getImageInfo } from './utils/image';
 export { escapeHTML, sanitize, unescapeHTML, wordCount } from './utils/index';

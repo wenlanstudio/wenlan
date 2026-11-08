@@ -378,6 +378,22 @@ export const useEditorViewStore = defineStore('editorView', () => {
     syncToPreferences()
   }
 
+  /** 跳转编辑的目标态（视图模型 §6.3）：让「文」接管编辑面——清顶级视图；
+   * 叶选择已含文则保持，否则左叶（全屏即唯一叶）换成文、右叶保留
+   * （栏×页 → 文×页、览×示 → 文×示）。与 focusEditor 的区别：不折叠分屏。 */
+  const enterFlowEditor = (): void => {
+    topView.value = null
+    const sel = [...leafSelection.value]
+    if (!sel.includes('flow')) {
+      // leafSelection 存的是点选顺序，左右按 LEAVES 序排——换左叶先排序。
+      sel.sort((a, b) => LEAVES.indexOf(a) - LEAVES.indexOf(b))
+      sel[0] = 'flow'
+      leafSelection.value = sel
+    }
+    persist()
+    syncToPreferences()
+  }
+
   const setRightRatio = (ratio: number): void => {
     const next = clampRatio(ratio)
     if (next !== rightRatio.value) {
@@ -452,6 +468,7 @@ export const useEditorViewStore = defineStore('editorView', () => {
     exitPresentImmersive,
     toggleLeaf,
     removeLeaf,
+    enterFlowEditor,
     toggleTopView,
     focusEditor,
     setRightRatio,

@@ -77,6 +77,7 @@ import {
   CodeBlockLanguageSelector,
   EmojiSelector,
   FootnoteTool,
+  getBlock,
   ImageEditTool,
   ImagePathPicker,
   LinkTools,
@@ -103,7 +104,7 @@ import Printer from '@/services/printService'
 import { SpellcheckerLanguageCommand } from '@/commands'
 import { SpellChecker } from '@/spellchecker'
 import { isMac, animatedScrollTo } from '@/util'
-import { flushScrollAnchor, readViewAnchor, scrollViewToAnchor, syncScrollAnchor } from '@/util/viewScrollSync'
+import { flushScrollAnchor, readViewAnchor, scrollViewToAnchor, syncScrollAnchor, contentBlocks, blockText, writeViewAnchor } from '@/util/viewScrollSync'
 import { moveImageToFolder, uploadImage } from '@/util/fileSystem'
 import { guessClipboardFilePath } from '@/util/clipboard'
 import { dataURLToFile } from '@/util/dataURLToFile'
@@ -118,6 +119,7 @@ import { findActiveHeadingSlug, type HeadingPosition } from '@/util/findActiveHe
 import { addCommonStyle } from '@/util/theme'
 import { usePreferencesStore } from '@/store/preferences'
 import { useEditorStore } from '@/store/editor'
+import { useEditorViewStore } from '@/store/editorView'
 import { useProjectStore } from '@/store/project'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
@@ -180,6 +182,7 @@ const props = defineProps<{
 // Get stores
 const preferencesStore = usePreferencesStore()
 const editorStore = useEditorStore()
+const editorViewStore = useEditorViewStore()
 const projectStore = useProjectStore()
 
 // Use storeToRefs to extract reactive properties from the stores
@@ -646,17 +649,24 @@ watch(hideQuickInsertHint, (value, oldValue) => {
   }
 })
 
-// The read-only lock is enforced by the engine (surface + event + state
-// gates); the initial value rides in via `buildMuyaViewOptions`, this watch
-// flips it live. Replaces the old DOM beforeinput guard, which IME
-// composition (non-cancelable beforeinput) and the engine's own keydown
-// edits slipped straight through.
-watch(
-  () => editorStore.readOnly,
-  (value) => {
-    editor.value?.setOptions({ readOnly: value })
-  }
-)
+// M0 只读收口（视图模型 §6）：文/本之外一律只读——栏/表透镜在用户锁之外
+// 再加一层锁，离开透镜按用户锁复原，不得顺手解开用户自己上的锁。引擎三层
+// 强制（表面/事件/状态）不变，这里只翻选项；初始值仍由 buildMuyaViewOptions
+// 带入（含用户锁），挂载后再补一次（覆盖透镜初始值，如启动即恢复到栏/表）。
+// 值未变时跳过——setOptions({ readOnly }) 即便同值也触发整树重建
+// （contenteditable 派生自构造期选项，须重建才能翻转），不能白付。
+const READ_ONLY_LENSES = new Set(['column', 'table'])
+const isLensReadOnly = (): boolean =>
+  props.lens != null && READ_ONLY_LENSES.has(props.lens)
+
+const applyReadOnlyLock = (): void => {
+  const locked = editorStore.readOnly || isLensReadOnly()
+  const engine = editor.value
+  if (!engine || engine.options.readOnly === locked) return
+  engine.setOptions({ readOnly: locked })
+}
+
+watch([() => editorStore.readOnly, () => props.lens], applyReadOnlyLock)
 
 watch(wrapCodeBlocks, (value, oldValue) => {
   if (value !== oldValue && editor.value) {
@@ -1336,6 +1346,56 @@ const revealSourceLine = (payload: unknown) => {
   }
 }
 
+// —— M0 跳转编辑（视图模型 §6.3）：栏/表双击哪块，跳回文的哪块 ——
+// 同一活引擎实例，块即 muya 自己的块对象；但切回文会解锁、setOptions 的
+// 整树重建让块对象失效——同一 state 重建出的树路径相同，先存 json1 路径，
+// 切换后按路径重查。栏↔文是透镜切换（不重建组件），滚动走锚点恢复，锚点
+// 先写成双击块，恢复目标即是它。
+const contentPathAt = (target: Element): (string | number)[] | null => {
+  const container = getScrollContainer()
+  let el: Element | null = target
+  while (el && el !== container && !getBlock(el)) el = el.parentElement
+  if (!el || el === container) return null
+  const block = getBlock(el)
+  if (!block) return null
+  const content = 'firstContentInDescendant' in block ? block.firstContentInDescendant() : block
+  return content ? [...content.path] : null
+}
+
+const handleLensDblClick = (event: MouseEvent): void => {
+  if (!isLensReadOnly()) return
+  const target = event.target instanceof Element ? event.target : null
+  const container = getScrollContainer()
+  if (!target || !container || !container.contains(target)) return
+
+  const tabId = currentFile.value?.id
+  if (tabId != null) {
+    const blocks = contentBlocks(container)
+    const topEl = blocks.find(b => b.contains(target))
+    if (topEl) {
+      writeViewAnchor(tabId, { blockIndex: blocks.indexOf(topEl), text: blockText(topEl) })
+    }
+  }
+
+  const path = contentPathAt(target)
+  // 用户锁开着照常跳转，但不落光标（锁不变；非可编辑面上 setCursor 与表面
+  // 打架——focus() 同理由此早退）。
+  const userLocked = editorStore.readOnly
+  editorViewStore.enterFlowEditor()
+  if (!path || userLocked) return
+
+  void nextTick().then(() => {
+    requestAnimationFrame(() => {
+      const content = editor.value?.editor?.scrollPage?.queryBlock([...path])
+      if (content && 'setCursor' in content) {
+        content.setCursor(0, 0, true)
+        editor.value?.focus()
+        scrollCursorToCenter(200)
+      }
+    })
+  })
+}
+
 /**
  * Scrolls the editor to the heading for a TOC entry. See
  * `resolveTocHeadingElement` for why the slug is resolved by document order
@@ -1948,6 +2008,9 @@ onMounted(() => {
   // 排查「往返前后引擎状态」需要直接拿实例。只挂 live 引用，随实例替换更新。
   ;(window as unknown as Record<string, unknown>).__mt_editor = muya
   applyLens()
+  // 挂载即落在栏/表透镜（启动恢复持久化选择）时，初始 readOnly 只含用户锁
+  // ——补一次，把透镜锁也叠上。
+  applyReadOnlyLock()
   // The first document's content is set via constructor options, so no
   // `file-loaded` / `setMarkdownToEditor` runs for it — seed its TOC here.
   editorStore.UPDATE_TOC(muya.getTOC())
@@ -2090,6 +2153,10 @@ onMounted(() => {
     }
   }
   container.addEventListener('scroll', scrollHandler, { passive: true })
+
+  // M0 跳转编辑：只读透镜（栏/表）上双击 → 跳回文的对应块。原生 dblclick
+  // 不受引擎 readOnly 事件闸影响；handler 自带透镜判据，文/页透镜零开销早退。
+  container.addEventListener('dblclick', handleLensDblClick)
 
   // 视图切入（code/source 或占位视图 → document/page）：本组件由 `v-if` 重建，
   // tab 切换不会走到这里（那条路径由 file-changed 的 scrollTop 恢复），所以
@@ -2278,6 +2345,7 @@ onBeforeUnmount(() => {
   if (scrollHandler && editor.value) {
     const container = getScrollContainer()
     container?.removeEventListener('scroll', scrollHandler)
+    container?.removeEventListener('dblclick', handleLensDblClick)
   }
   scrollHandler = null
 

@@ -186,6 +186,49 @@ describe('editorView selection model', () => {
     expect(store.topView).toBeNull()
   })
 
+  // 跳转编辑目标态（视图模型 §6.3）：让「文」接管编辑面，但不折叠分屏——
+  // 左叶（全屏即唯一叶）换成文、右叶保留；已含文则只清顶级视图。
+  it('enterFlowEditor replaces a fullscreen column leaf with flow', () => {
+    const store = useEditorViewStore()
+    store.leafSelection = ['column']
+    store.enterFlowEditor()
+    expect(store.leafSelection).toEqual(['flow'])
+    expect(store.topView).toBeNull()
+  })
+
+  it('enterFlowEditor swaps the left leaf and keeps the right (column×page → flow×page)', () => {
+    const store = useEditorViewStore()
+    store.leafSelection = ['column', 'page']
+    store.enterFlowEditor()
+    expect(store.leafSelection).toEqual(['flow', 'page'])
+  })
+
+  it('enterFlowEditor normalizes click order to leaf order before swapping', () => {
+    const store = useEditorViewStore()
+    store.leafSelection = ['page', 'column'] // 点选顺序 ≠ LEAVES 序
+    store.enterFlowEditor()
+    expect(store.leafSelection).toEqual(['flow', 'page'])
+  })
+
+  it('enterFlowEditor keeps a selection that already has flow, dropping only the top view', () => {
+    const store = useEditorViewStore()
+    store.toggleLeaf('slide') // ['flow', 'slide']
+    store.toggleTopView('table')
+    expect(store.topView).toBe('table')
+    store.enterFlowEditor()
+    expect(store.leafSelection).toEqual(['flow', 'slide'])
+    expect(store.topView).toBeNull()
+  })
+
+  it('enterFlowEditor recovers from a table view over a read-only fullscreen leaf', () => {
+    const store = useEditorViewStore()
+    store.leafSelection = ['page']
+    store.toggleTopView('table')
+    store.enterFlowEditor()
+    expect(store.leafSelection).toEqual(['flow'])
+    expect(store.topView).toBeNull()
+  })
+
   it('removeLeaf drops one pane but never the last (deck panel ✕ path)', () => {
     const store = useEditorViewStore()
     store.toggleLeaf('present')
