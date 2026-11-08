@@ -2,12 +2,14 @@
  * md2slidesDiagram.ts — 映支视图（页览/放映）的图表桥。
  *
  * deck 页面（deck-full）里 compose 自己跑，mermaid / echarts 由页面侧渲染；但
- * graphviz(dot) 与 plantuml 页面里画不了，经 postMessage 托**本进程**离屏出图：
+ * graphviz(dot) / plantuml / matplotlib 页面里画不了，经 postMessage 托**本进程**离屏出图：
  *
  *   graphviz → `@viz-js/viz`（WASM，与 muya 编辑器同款依赖——编辑器里长什么样，
  *              deck 里就是什么样，同库同版本）→ SVG → PNG（2x，画白底）
  *   plantuml → 既有 `mt::diagram::fetch-plantuml` IPC（main 进程 net.fetch 到
  *              plantuml server）→ PNG 字节 → data URL
+ *   matplotlib → 既有 `mt::diagram::render-external` IPC（main 进程 spawn Python，
+ *              与「文」视图同一条通道、同一个开关）→ SVG → PNG（同 graphviz 的栅格口径）
  *
  * 出来的是**冻结位图**：注入 deck 那一刻定死，分页 / 查看器 / IR / PPTX 导出全链
  * 路同一份字节（"所见即所导"；SVG 是带样式依赖的活物，搬家会变样——裁决见
@@ -80,4 +82,51 @@ export const renderPlantumlToDataUrl = async(source: string, server: string): Pr
     binary += String.fromCharCode(...result.data.subarray(i, i + 0x8000))
   }
   return `data:${result.mime};base64,${btoa(binary)}`
+}
+
+/** base64（UTF-8 字节）→ 文本；atob 只给 latin1，必须过一遍 TextDecoder 才不会把中文弄坏。 */
+const decodeBase64Utf8 = (data: string): string => {
+  const binary = atob(data)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return new TextDecoder('utf-8').decode(bytes)
+}
+
+/** SVG 文本 → PNG data URL；尺寸取解码后的 naturalWidth/Height（matplotlib 的 SVG 带 pt 尺寸）。 */
+const rasterizeMarkup = (markup: string): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => {
+      const naturalWidth = image.naturalWidth || 960
+      const naturalHeight = image.naturalHeight || 720
+      const scale = Math.min(PNG_SCALE, Math.sqrt(MAX_PIXELS / (naturalWidth * naturalHeight)))
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.max(1, Math.round(naturalWidth * scale))
+      canvas.height = Math.max(1, Math.round(naturalHeight * scale))
+      const context = canvas.getContext('2d')
+      if (!context) {
+        reject(new Error('matplotlib 图栅格化失败：拿不到 2D 上下文'))
+        return
+      }
+      context.fillStyle = BACKGROUND
+      context.fillRect(0, 0, canvas.width, canvas.height)
+      context.drawImage(image, 0, 0, canvas.width, canvas.height)
+      resolve(canvas.toDataURL('image/png'))
+    }
+    image.onerror = () => reject(new Error('matplotlib 图栅格化失败：SVG 装载失败'))
+    image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`
+  })
+
+/**
+ * matplotlib 源码 → PNG data URL。
+ *
+ * 与「文」视图同一条 IPC（`window.diagram.renderExternal`），因此共用同一个开关与
+ * Python 路径偏好：文视图能画的，览/映就能画；文视图关着，这边也会明确报错。
+ * IPC 回的是 SVG（编辑器要矢量），deck 要**冻结位图**（分页 / IR / PPTX 同一份字节），
+ * 所以在这里栅格成 PNG。
+ */
+export const renderMatplotlibToDataUrl = async(source: string): Promise<string> => {
+  const result = await window.diagram.renderExternal('matplotlib', source)
+  if (!result.ok) throw new Error(`matplotlib 渲染失败：${result.error}`)
+  return rasterizeMarkup(decodeBase64Utf8(result.data))
 }

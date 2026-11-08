@@ -96,7 +96,7 @@ import type { Md2rEvent } from '@shared/types/mdcode2run'
 import { useEditorStore } from '@/store/editor'
 import { useEditorViewStore } from '@/store/editorView'
 import { usePreferencesStore } from '@/store/preferences'
-import { renderGraphvizToDataUrl, renderPlantumlToDataUrl } from '@/util/md2slidesDiagram'
+import { renderGraphvizToDataUrl, renderPlantumlToDataUrl, renderMatplotlibToDataUrl } from '@/util/md2slidesDiagram'
 
 const props = defineProps<{
   /** 映支的叶：present 放映 / slide 页览。 */
@@ -308,13 +308,15 @@ const handleExecEvent = (event: Md2rEvent): void => {
   if (event.type === 'job-done' && execReq === req) execReq = null
 }
 
-/** 图表托渲染：deck 页面画不了的两类（graphviz / plantuml），本进程离屏出位图。 */
+/** 图表托渲染：deck 页面画不了的几类，本进程离屏出位图。 */
 const onRpc = async (data: { id: number; diagramType: string; source: string }): Promise<void> => {
   try {
     const dataUrl =
       data.diagramType === 'plantuml'
         ? await renderPlantumlToDataUrl(data.source, plantumlServer.value)
-        : await renderGraphvizToDataUrl(data.source)
+        : data.diagramType === 'matplotlib'
+          ? await renderMatplotlibToDataUrl(data.source)
+          : await renderGraphvizToDataUrl(data.source)
     postToDeck({ type: 'md2s:rpc-result', id: data.id, ok: true, dataUrl })
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
