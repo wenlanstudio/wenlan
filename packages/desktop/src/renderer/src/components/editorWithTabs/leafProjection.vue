@@ -41,7 +41,7 @@ import {
   readDocAnchor,
   writeDocAnchor
 } from '@/util/docAnchor'
-import { blockText, contentBlocks, scrollViewToAnchor } from '@/util/viewScrollSync'
+import { blockText, contentBlocks, scrollViewToAnchorIn } from '@/util/viewScrollSync'
 
 const props = defineProps<{
   /** 投影栏叶：只读第二实例，columnsLayout 建构期定死。 */
@@ -71,11 +71,14 @@ const applyMarkdown = (): void => {
 
 // —— 锚服务接线（§6.1/§6.3）——
 /** 把锚的 topBlock 滚到本投影视口顶。同实例语义：投影是同一 markdown 的
- *  第二 muya 实例，topBlock 即本容器 contentBlocks 序的下标。 */
+ *  第二 muya 实例，topBlock 即本容器 contentBlocks 序的下标。滚动容器是
+ *  外层 `.leaf-projection`（overflow:auto），muya domNode 只是块根——两者
+ *  混用一个参数会滚错节点，跟随静默失效（M1 首版踩过）。 */
 const scrollToBlock = (blockIndex: number | undefined, text: string | undefined): void => {
   const root = muya.value?.domNode as HTMLElement | null | undefined
-  if (!root) return
-  scrollViewToAnchor(root, { blockIndex, text })
+  const scroller = host.value?.parentElement ?? null
+  if (!root || !scroller) return
+  scrollViewToAnchorIn(scroller, root, { blockIndex, text })
 }
 
 const offDocAnchor = onDocAnchorChange(anchor => {

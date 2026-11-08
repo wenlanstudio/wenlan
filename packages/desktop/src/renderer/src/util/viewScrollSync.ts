@@ -149,13 +149,27 @@ export function viewAnchorOf(container: HTMLElement | null): ViewAnchor | null {
  * 把锚点滚到视口顶部（瞬时；越界时夹取到首 / 末块）。优先用 blockIndex，但
  * 校验该坐标处的块文本是否仍与锚点 text 一致——文档编辑会让块序号漂移，校验
  * 失败就放弃精确坐标、退回 text 桥（`findBlockIndex`），避免滚到错误位置。
- * blockIndex 缺失（锚点来自 source 视图）时同样走 text 桥。
+ * blockIndex 缺失（锚点来自 source 视图）时同样走 text 桶。
  */
 export function scrollViewToAnchor(container: HTMLElement | null, anchor: ViewAnchor | null): void {
-  if (!container || !anchor)
+  scrollViewToAnchorIn(container, container, anchor)
+}
+
+/**
+ * 同上，但滚动容器与块序列根**分离**——投影类宿主的滚动容器是 muya domNode
+ * 的外层包裹（如 leafProjection 的 `.leaf-projection`），块序列仍在引擎的
+ * `.mu-container` 里；把两者混成一个参数会滚错元素（scrollTop 落在不滚动的
+ * 节点上，跟随静默失效）。
+ */
+export function scrollViewToAnchorIn(
+  scroller: HTMLElement | null,
+  blocksRoot: HTMLElement | null,
+  anchor: ViewAnchor | null
+): void {
+  if (!scroller || !blocksRoot || !anchor)
     return
 
-  const blocks = contentBlocks(container)
+  const blocks = contentBlocks(blocksRoot)
   if (!blocks.length)
     return
 
@@ -178,8 +192,8 @@ export function scrollViewToAnchor(container: HTMLElement | null, anchor: ViewAn
   }
 
   const target = blocks[Math.max(0, Math.min(index, blocks.length - 1))]
-  container.scrollTop
-    += target.getBoundingClientRect().top - container.getBoundingClientRect().top
+  scroller.scrollTop
+    += target.getBoundingClientRect().top - scroller.getBoundingClientRect().top
 }
 
 /**

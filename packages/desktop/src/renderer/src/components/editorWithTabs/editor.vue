@@ -1383,7 +1383,7 @@ const handleLensDblClick = (event: MouseEvent): void => {
   const topEl = blocks.find(b => b.contains(target))
   const topIndex = topEl ? blocks.indexOf(topEl) : null
   const topText = topEl ? blockText(topEl) : undefined
-  if (topIndex != null) writeDocAnchor({ topBlock: topIndex, text: topText })
+  if (topIndex != null) writeDocAnchor({ topBlock: topIndex, text: topText, origin: 'scroll' })
 
   // 跳转目标（§6.3）：最近编辑面是本 → 经块首行表换算行号，锚写 topLine、
   // 切顶级视图 code（挂载恢复落在该行）；否则走文（下述同实例路径）。
@@ -1422,9 +1422,9 @@ let lineTableTimer = 0
 const offDocAnchor = onDocAnchorChange(anchor => {
   if (anchor?.origin !== 'reverse') return
   if (props.lens !== 'flow' && props.lens !== 'column') return
-  requestAnimationFrame(() =>
+  requestAnimationFrame(() => {
     scrollViewToAnchor(getScrollContainer(), { blockIndex: anchor.topBlock, text: anchor.text })
-  )
+  })
 })
 
 /**
@@ -2043,8 +2043,14 @@ onMounted(() => {
   // ——补一次，把透镜锁也叠上。
   applyReadOnlyLock()
   // 一文多览锚服务：本文擎是行表的唯一重建方 + 最近编辑面记忆 + 初始表。
+  // 行表构建包防御：真机输入若触发解析异常，不得中断挂载后半段（TOC seed、
+  // 滚动/双击监听）——那才是真白屏。
   rememberSurface('flow')
-  updateLineTable(muya.getMarkdown(), muya.getBlockStartLines())
+  try {
+    updateLineTable(muya.getMarkdown(), muya.getBlockStartLines())
+  } catch (e) {
+    console.error('[editor] block start-line table failed:', e)
+  }
   // The first document's content is set via constructor options, so no
   // `file-loaded` / `setMarkdownToEditor` runs for it — seed its TOC here.
   editorStore.UPDATE_TOC(muya.getTOC())
@@ -2160,7 +2166,12 @@ onMounted(() => {
     window.clearTimeout(lineTableTimer)
     lineTableTimer = window.setTimeout(() => {
       const engine = editor.value
-      if (engine) updateLineTable(engine.getMarkdown(), engine.getBlockStartLines())
+      if (!engine) return
+      try {
+        updateLineTable(engine.getMarkdown(), engine.getBlockStartLines())
+      } catch (e) {
+        console.error('[editor] block start-line table failed:', e)
+      }
     }, LINE_TABLE_DEBOUNCE_MS)
     // Stash the real engine history for in-session tab-switch restoration. The
     // synthetic save-tracking id is derived from the live document content (a
@@ -2188,9 +2199,10 @@ onMounted(() => {
     if (currentFile.value) {
       editorStore.updateScrollPosition(currentFile.value.id, container.scrollTop)
       // 视图间滚动同步（§6.1 锚服务）：rAF 合帧记录视口顶块（topBlock+text）。
-      // columns 是同一引擎上的透镜，滚动坐标同域；只读投影经 onDocAnchorChange
-      // 跟随，本视图↔源码视图的切换恢复同读单槽锚。
-      scheduleDocAnchorWrite(() => viewAnchorOf(container))
+      // origin 显式写 'scroll'——writeDocAnchor 是合并写，不显式覆盖会让单击
+      // 右栏留下的 'reverse' 永久残留，反向订阅把自己的滚动回声又当成定位
+      // 指令，自激循环卡死滚动。
+      scheduleDocAnchorWrite(() => ({ ...viewAnchorOf(container), origin: 'scroll' as const }))
     }
   }
   container.addEventListener('scroll', scrollHandler, { passive: true })
@@ -2396,7 +2408,7 @@ onBeforeUnmount(() => {
   // 瞬间的位置（TODO1 #4）。
   if (currentFile.value?.id) {
     const container = getScrollContainer()
-    if (container) flushDocAnchorWrite(() => viewAnchorOf(container))
+    if (container) flushDocAnchorWrite(() => ({ ...viewAnchorOf(container), origin: 'scroll' as const }))
   }
   window.clearTimeout(lineTableTimer)
   offDocAnchor()
