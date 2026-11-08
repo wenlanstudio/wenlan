@@ -151,20 +151,25 @@ export function viewAnchorOf(container: HTMLElement | null): ViewAnchor | null {
  * 失败就放弃精确坐标、退回 text 桥（`findBlockIndex`），避免滚到错误位置。
  * blockIndex 缺失（锚点来自 source 视图）时同样走 text 桶。
  */
-export function scrollViewToAnchor(container: HTMLElement | null, anchor: ViewAnchor | null): void {
-  scrollViewToAnchorIn(container, container, anchor)
+export function scrollViewToAnchor(
+  container: HTMLElement | null,
+  anchor: ViewAnchor | null,
+  options?: ScrollViewOptions
+): void {
+  scrollViewToAnchorIn(container, container, anchor, options)
 }
 
-/**
- * 同上，但滚动容器与块序列根**分离**——投影类宿主的滚动容器是 muya domNode
- * 的外层包裹（如 leafProjection 的 `.leaf-projection`），块序列仍在引擎的
- * `.mu-container` 里；把两者混成一个参数会滚错元素（scrollTop 落在不滚动的
- * 节点上，跟随静默失效）。
- */
+/** 定位行为：smooth = 跟随/定位（用户在看，滚动要可追踪）；auto = 恢复
+ *  （挂载/透镜切换，瞬时落位不演动画）。 */
+export interface ScrollViewOptions {
+  behavior?: ScrollBehavior
+}
+
 export function scrollViewToAnchorIn(
   scroller: HTMLElement | null,
   blocksRoot: HTMLElement | null,
-  anchor: ViewAnchor | null
+  anchor: ViewAnchor | null,
+  options?: ScrollViewOptions
 ): void {
   if (!scroller || !blocksRoot || !anchor)
     return
@@ -192,8 +197,12 @@ export function scrollViewToAnchorIn(
   }
 
   const target = blocks[Math.max(0, Math.min(index, blocks.length - 1))]
-  scroller.scrollTop
-    += target.getBoundingClientRect().top - scroller.getBoundingClientRect().top
+  const top = scroller.scrollTop
+    + target.getBoundingClientRect().top - scroller.getBoundingClientRect().top
+  // smooth 才走 scrollTo（可动画）；auto 直接赋值（瞬时，且 jsdom 的 scrollTo
+  // 是 no-op，单测环境靠这条路径断言 scrollTop）。
+  if (options?.behavior === 'smooth') scroller.scrollTo({ top, behavior: 'smooth' })
+  else scroller.scrollTop = top
 }
 
 /**

@@ -31,7 +31,6 @@ import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Muya, type IMuyaOptions } from '@muyajs/core'
 import { usePreferencesStore } from '@/store/preferences'
-import { useEditorViewStore } from '@/store/editorView'
 import { buildMuyaViewOptions } from '@/util/muyaViewOptions'
 import { getMuyaLocale } from '@/util/muyaLocale'
 import { parsePaperTheme } from '@/util/paperPagination'
@@ -51,7 +50,6 @@ const props = defineProps<{
 }>()
 
 const preferencesStore = usePreferencesStore()
-const editorViewStore = useEditorViewStore()
 const { language } = storeToRefs(preferencesStore)
 
 const host = ref<HTMLDivElement | null>(null)
@@ -92,7 +90,11 @@ const applyMarkdown = (): void => {
  *  旧壳（parentElement 为 null），只有 `muya.domNode` 是实时在文档里的；
  *  滚动容器是它的父（.leaf-projection，overflow:auto）。混用 ref 会让跟随
  *  静默失效（M1 首版踩过）。 */
-const scrollToBlock = (blockIndex: number | undefined, text: string | undefined): void => {
+const scrollToBlock = (
+  blockIndex: number | undefined,
+  text: string | undefined,
+  behavior: 'smooth' | 'auto' = 'smooth'
+): void => {
   const root = muya.value?.domNode as HTMLElement | null | undefined
   const scroller = root?.parentElement ?? null
   if (!root || !scroller) return
@@ -110,39 +112,77 @@ const scrollToBlock = (blockIndex: number | undefined, text: string | undefined)
     }
     index = i
   }
-  scrollViewToAnchorIn(scroller, root, { blockIndex: index, text })
+  scrollViewToAnchorIn(scroller, root, { blockIndex: index, text }, { behavior })
 }
+
+// —— 回声抑制：单击/双击发 reverse 后，左栏滚到该块顶产生的 scroll 锚会
+// 经跟随链路传回来——目标块恰是刚点的块，右栏会被拉到块顶（用户明说右栏
+// 不得动）。按「目标块首行 == 最近 reverse 行」判回声，吞掉这一次；用户
+// 随后手动滚走（行不同）即恢复跟随。
+let lastReverseLine: number | null = null
 
 const offDocAnchor = onDocAnchorChange(anchor => {
   if (!anchor || !matchesCurrentMarkdown(props.markdown ?? '')) return
   if (anchor.origin === 'reverse') return // 自己发的锚不吃回声
-  requestAnimationFrame(() => scrollToBlock(anchor.topBlock, anchor.text))
+  requestAnimationFrame(() => {
+    const root = muya.value?.domNode as HTMLElement | null | undefined
+    if (!root) return
+    // 回声判定要在换算后的本域目标块上做：目标块首行 == 最近 reverse 行
+    // ⇒ 这是反向定位的连锁，右栏不动。
+    const line = blockIndexToLine(props.markdown ?? '', anchor.topBlock)
+    let targetIndex = anchor.topBlock ?? -1
+    if (line != null && localLines.value && localLines.value.length) {
+      const lines = localLines.value
+      let i = 0
+      for (let k = 0; k < lines.length; k++) {
+        if (lines[k]! <= line) i = k
+        else break
+      }
+      targetIndex = i
+    }
+    const targetLine = localLines.value?.[targetIndex] ?? null
+    if (lastReverseLine != null && targetLine === lastReverseLine) return
+    scrollToBlock(anchor.topBlock, anchor.text, 'smooth')
+  })
 })
 
-const handleClick = (event: MouseEvent): void => {
+const locateBlockAt = (event: MouseEvent): { index: number; text: string; line: number | null } | null => {
   const root = muya.value?.domNode
   const target = event.target instanceof Element ? event.target : null
-  if (!root || !target || !root.contains(target)) return
+  if (!root || !target || !root.contains(target)) return null
 
   const blocks = contentBlocks(root)
   const topEl = blocks.find(b => b.contains(target))
-  if (!topEl) return
-  // 反向定位（§6.3）：发锚 origin=reverse，编辑面滚到对应块（不切视图）。
+  if (!topEl) return null
+  const index = blocks.indexOf(topEl)
+  return { index, text: blockText(topEl), line: localLines.value?.[index] ?? null }
+}
+
+const handleClick = (event: MouseEvent): void => {
+  const at = locateBlockAt(event)
+  if (!at) return
+  // 反向定位（§6.3）：发锚 origin=reverse，编辑面滚到对应块（不切视图、
+  // 不动右栏）。记录行号供跟随回声判定。
+  lastReverseLine = at.line
   writeDocAnchor({
-    topBlock: blocks.indexOf(topEl),
-    text: blockText(topEl),
+    topBlock: at.index,
+    text: at.text,
     origin: 'reverse'
   })
 }
 
 const handleDblClick = (event: MouseEvent): void => {
-  const root = muya.value?.domNode
-  const target = event.target instanceof Element ? event.target : null
-  if (!root || !target || !root.contains(target)) return
-  handleClick(event)
-  // 跳转编辑（§6.3）：切文；光标落位由 editor.vue 的反向锚订阅 + enterFlowEditor
-  // 的透镜 watcher 完成（同 markdown 的第二实例，topBlock 语义一致）。
-  editorViewStore.enterFlowEditor()
+  const at = locateBlockAt(event)
+  if (!at) return
+  // 跳转定位（§6.3 裁决口径：想编辑 = 跳转滚动到相应区域）——右栏先滚到
+  // 双击块（平滑），左栏经 reverse 锚跟随对齐；不切视图、不落光标。
+  lastReverseLine = at.line
+  scrollToBlock(at.index, at.text, 'smooth')
+  writeDocAnchor({
+    topBlock: at.index,
+    text: at.text,
+    origin: 'reverse'
+  })
 }
 
 watch(
@@ -178,10 +218,11 @@ onMounted(() => {
     parsePaperTheme(props.markdown ?? '') === 'thesis'
   )
 
-  // 恢复：挂载时按锚停到与编辑面同一个文档区域（分屏建立/换 tab 重建均走此）。
+  // 恢复：挂载时按锚停到与编辑面同一个文档区域（分屏建立/换 tab 重建均走
+  // 此）；瞬时落位，不演动画。
   const anchor = readDocAnchor()
   if (anchor && matchesCurrentMarkdown(props.markdown ?? '')) {
-    requestAnimationFrame(() => requestAnimationFrame(() => scrollToBlock(anchor.topBlock, anchor.text)))
+    requestAnimationFrame(() => requestAnimationFrame(() => scrollToBlock(anchor.topBlock, anchor.text, 'auto')))
   }
 
   const root = instance.domNode

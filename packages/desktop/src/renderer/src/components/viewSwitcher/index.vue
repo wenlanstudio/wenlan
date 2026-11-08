@@ -25,11 +25,22 @@
          （1=全屏 2=分屏，选满点不动、不可选空）。column 只对真有分栏标记的
          文档显示（§4.4 #5）。 -->
     <div class="leaves">
+      <!-- 「本」（Markdown 源码，topView 'code'）在「文」左边：与文同属
+           编辑组（2026-11-08 重排，b.1）——点击切源码视图（叶选择挂起），
+           与叶按钮同款样式；active 与 topView 挂钩而非 leafSelection。 -->
+      <button
+        class="leaf-btn"
+        :class="{ active: topView === 'code' }"
+        title="本——Markdown 源码（编辑组）"
+        @click="toggleTopView('code')"
+      >
+        本
+      </button>
       <button
         v-for="leaf in visibleLeaves"
         :key="leaf"
         class="leaf-btn"
-        :class="{ active: leafSelection.includes(leaf), groupStart: leaf === 'page' }"
+        :class="{ active: leafSelection.includes(leaf), groupStart: leaf === 'column' }"
         :title="LEAF_META[leaf].title"
         @click="onLeafClick(leaf)"
       >
@@ -37,10 +48,9 @@
       </button>
     </div>
 
-    <!-- 顶级正交视图：表 / 图 / [码] / 本（不进文示树）。
-         「码」是底部代码执行工具窗口的开关，与视图按钮同组、夹在「图」与
-         「本」之间；只在「文」**独占**时可点，分屏时同样禁用（判据在
-         store.isCodeRunSurface）。 -->
+    <!-- 顶级正交视图：图 / 表 / [码]（不进文示树）。「本」已并入左侧编辑
+         组（2026-11-08 重排）。「码」是底部代码执行工具窗口的开关；只在
+         「文」**独占**时可点，分屏时同样禁用（判据在 store.isCodeRunSurface）。 -->
     <div class="main-views">
       <button
         v-for="tv in topViewsBeforeCode"
@@ -60,16 +70,6 @@
         @click="panel.toggle()"
       >
         码
-      </button>
-      <button
-        v-for="tv in topViewsAfterCode"
-        :key="tv"
-        class="main-view-btn"
-        :class="{ active: topView === tv }"
-        :title="TOP_VIEW_META[tv].title"
-        @click="toggleTopView(tv)"
-      >
-        {{ TOP_VIEW_META[tv].icon }}
       </button>
     </div>
   </div>
@@ -108,10 +108,9 @@ const onLeafClick = (leaf: Leaf): void => {
   toggleLeaf(leaf)
 }
 
-/** 「码」夹在「图」与「本」之间：按 code 把 TOP_VIEWS 切成前后两段，
- *  以后往 TOP_VIEWS 增删视图也不必改这段模板。 */
+/** 「本」已并入左侧编辑组（2026-11-08 重排）——主视图组只剩图/表，码是
+ *  独立按钮。往后往 TOP_VIEWS 增删视图不必改模板。 */
 const topViewsBeforeCode = TOP_VIEWS.filter((v) => v !== 'code')
-const topViewsAfterCode = TOP_VIEWS.filter((v) => v === 'code')
 
 const codeRunEnabled = computed<boolean>(() => isCodeRunSurface.value)
 /** 计数与运行中状态不占按钮面积，收进 hover 提示；运行中另有角标脉冲。 */
@@ -181,7 +180,7 @@ const handleSliderChange = () => {
 }
 
 /* 编辑组与展示组之间一道分隔，提示二组两根正交轴（视图模型 §1）。
-   groupStart 落在 page（UI 名「页」）前，即展示组首叶。 */
+   groupStart 落在 column（UI 名「栏」）前，即展示组首叶（编辑组 = 本/文）。 */
 .leaf-btn.groupStart {
   border-left: 1px solid var(--editorColor10);
   padding-left: 7px;
