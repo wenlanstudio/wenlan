@@ -30,6 +30,7 @@ import {
     locateSentinelOffsets,
     resolveSentinelCursor,
 } from './selection/offsetCursor';
+import { MarkdownToState } from './state/markdownToState';
 import ExportMarkdown from './state/stateToMarkdown';
 import { isAnyListState, isAtxHeadingState, isCodeBlockState, isSetextHeadingState } from './state/types';
 import { Ui } from './ui/ui';
@@ -107,19 +108,19 @@ const CROSS_BLOCK_LIST_LABELS = new Set(['bullet-list', 'order-list', 'task-list
 
 // Structural table operations exposed through `Muya.tableAction`. The names
 // mirror the Typora table context menu one-to-one.
-export type TableActionType =
-    | 'insertRowAbove'
-    | 'insertRowBelow'
-    | 'insertColumnLeft'
-    | 'insertColumnRight'
-    | 'deleteRow'
-    | 'deleteColumn'
-    | 'moveRowUp'
-    | 'moveRowDown'
-    | 'moveColumnLeft'
-    | 'moveColumnRight'
-    | 'copyTable'
-    | 'deleteTable';
+export type TableActionType
+    = | 'insertRowAbove'
+        | 'insertRowBelow'
+        | 'insertColumnLeft'
+        | 'insertColumnRight'
+        | 'deleteRow'
+        | 'deleteColumn'
+        | 'moveRowUp'
+        | 'moveRowDown'
+        | 'moveColumnLeft'
+        | 'moveColumnRight'
+        | 'copyTable'
+        | 'deleteTable';
 
 // Paragraph-menu labels whose block toggles back to a paragraph when the cursor
 // is already inside one (the menu item is checked) — clicking unwraps/removes it.
@@ -261,6 +262,36 @@ export class Muya {
 
     getTOC(): ITocItem[] {
         return this.editor.jsonState.getTOC();
+    }
+
+    /**
+     * 顶层内容块首行表（宿主一文多览锚服务，`MarkdownToState
+     * .topLevelLineTable`）：按本实例的解析选项跑当前文档的序列化结果。
+     * O(文档) 全解析——宿主在 json-change 防抖后调用，不进打字热路径。
+     * 对位失败返回 `null`（宿主退回 text 桥）。
+     */
+    getBlockStartLines(): number[] | null {
+        const {
+            footnote,
+            texMathDollars,
+            texMathGfm,
+            texMathSingleBackslash,
+            texMathDoubleBackslash,
+            trimUnnecessaryCodeBlockEmptyLines,
+            frontMatter,
+            multilineBlockquote,
+        } = this.options;
+
+        return new MarkdownToState({
+            footnote,
+            texMathDollars,
+            texMathGfm,
+            texMathSingleBackslash,
+            texMathDoubleBackslash,
+            trimUnnecessaryCodeBlockEmptyLines,
+            frontMatter,
+            multilineBlockquote,
+        }).topLevelLineTable(this.getMarkdown());
     }
 
     undo() {

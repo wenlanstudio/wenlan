@@ -1,25 +1,11 @@
-// 视图间滚动同步（TODO1 #4）：同一个 txt 的多个视图（document/page、
-// document/columns、code/source 源码）是同一份文档的不同排版，切换视图时应当
-// 停在同一个文档区域。
-//
-// 各视图排版不同，scrollTop 的数字不能互滚（分栏视图把分栏组 regroup 成栏，
-// 文档总高与 page 视图不同；源码视图是一行一行的纯文本）。因此同步的货币是
-// 「文档位置」，用三种坐标共同表达：
-//
-//   - `blockIndex`：内容块序列中的下标。page 视图是 `.mu-container` 的顶层块，
-//     columns 视图把栏内块按文档顺序展开、滤掉标记块后，得到同一序列。
-//   - `line`：markdown 源码行号（1-based）。源码视图天然拥有这个坐标。
-//   - `text`：视口顶部那一块 / 那一行的纯文本——两种坐标之间的桥。各视图的
-//     排版不同但文本相同，用它可以在视图之间换算位置。
-//
-// 锚点按 tab id 存在渲染进程内的模块 Map：视图切换不跨会话，刷新后从文档
-// 顶部开始是可接受的行为。tab 自身的跨会话 scrollTop 另由 store 的
-// updateScrollPosition 记忆，两套机制用途不同——那个记住「上次离开文档的
-// 位置」，这个保证「多个视图停在同一个地方」。
+// 视图间滚动同步的纯换算函数（TODO1 #4 的老存储已退役：多标签页关闭后，
+// 位置存储收口到 util/docAnchor.ts 的单槽锚服务——本文件只保留 DOM 序列
+// （contentBlocks 域）与 text 桥换算，供锚服务与各视图消费）。
 
 /**
  * 一个视图的视口位置。字段按视图填充，读取方用自己认得的那个坐标，缺失时
- * 退回到 `text` 换算。
+ * 退回到 `text` 换算（锚存储在 util/docAnchor.ts，本类型是其 topBlock/
+ * topLine/text 三坐标的无版本投影）。
  */
 export interface ViewAnchor {
   /** 内容块序列中的下标（document/page、document/columns 视图）。 */
@@ -222,22 +208,16 @@ export function sourceAnchorOf(markdown: string, line: number): ViewAnchor {
  * 源码视图：把锚点解析成行号（1-based）。锚点带行号时直接用（越界夹取），
  * 只有文本时（来自 page / columns 视图）在源码里找对应行；找不到返回 null。
  */
-export function resolveSourceLine(markdown: string, anchor: ViewAnchor | null): number | null {
-  if (!anchor)
+/**
+ * text 桥：在源码里找与 `text` 对应的行（1-based）。先全等再包含匹配；
+ * 找不到返回 null。锚服务行表不可用时的兜底（restoreViewAnchor 第三级）。
+ */
+export function findLineByText(markdown: string, text: string): number | null {
+  if (!text)
     return null
 
   const lines = markdown.split('\n')
-  if (anchor.line != null) {
-    const ln = Math.max(1, Math.min(anchor.line, lines.length))
-    // 编辑后行号会漂移：该行的文本若与锚点 text 不符，放弃精确行号、退回 text 桥。
-    if (!anchor.text || sameAnchorText(stripMarkdownSyntax(lines[ln - 1] ?? ''), anchor.text))
-      return ln
-  }
-
-  if (!anchor.text)
-    return null
-
-  const target = normalizeAnchorText(anchor.text)
+  const target = normalizeAnchorText(text)
   if (!target)
     return null
 
@@ -247,64 +227,9 @@ export function resolveSourceLine(markdown: string, anchor: ViewAnchor | null): 
   }
 
   for (let i = 0; i < lines.length; i++) {
-    if (sameAnchorText(stripMarkdownSyntax(lines[i]), anchor.text))
+    if (sameAnchorText(stripMarkdownSyntax(lines[i]), text))
       return i + 1
   }
 
   return null
-}
-
-const anchors = new Map<string, ViewAnchor>()
-
-/** 读某 tab 的滚动锚点；从未记录过返回 null。 */
-export function readViewAnchor(tabId: string): ViewAnchor | null {
-  return anchors.get(tabId) ?? null
-}
-
-/**
- * 记录某 tab 的滚动锚点。**合并而非覆盖**：各视图只能算出自己的坐标
- * （page/columns 有 blockIndex、source 有 line），覆盖会让每次跨视图都必走
- * 脆弱的 text 桥换算——空行断链即跳顶、重复文本即错位。合并后 blockIndex 与
- * line 常驻，任一视图读时直接命中本坐标，仅当本坐标因编辑漂移（读时校验
- * 失败）才退回 text 桥。
- */
-export function writeViewAnchor(tabId: string, anchor: ViewAnchor): void {
-  const prev = anchors.get(tabId)
-  anchors.set(tabId, prev ? { ...prev, ...anchor } : anchor)
-}
-
-// 滚动事件每帧最多派发一次，但 viewAnchorOf 要对所有内容块做一次
-// getBoundingClientRect，大文档下合并到 rAF 里算一次更稳。两个视图不会
-// 同时滚动，一个模块级 rAF 句柄足够。
-let anchorRaf = 0
-
-/** 在 scroll 处理器里调用：把容器当前的视口顶部块记为该 tab 的锚点。 */
-export function syncScrollAnchor(container: HTMLElement, tabId: string): void {
-  if (anchorRaf)
-    return
-
-  anchorRaf = requestAnimationFrame(() => {
-    anchorRaf = 0
-    const anchor = viewAnchorOf(container)
-    if (anchor !== null)
-      writeViewAnchor(tabId, anchor)
-  })
-}
-
-/**
- * 同步把容器当前视口顶部块记为该 tab 的锚点（不进 rAF）。视图
- * `onBeforeUnmount` 调它：rAF 合并写法的回调可能在组件销毁后才跑，此时容器
- * 已脱离文档、`getBoundingClientRect` 量到 0，锚点会错。这里取消 pending rAF
- * 并同步算一次，保证切走时锚点是离开瞬间的位置；仍走合并写入，保留其它视图
- * 留下的坐标。
- */
-export function flushScrollAnchor(container: HTMLElement, tabId: string): void {
-  if (anchorRaf) {
-    cancelAnimationFrame(anchorRaf)
-    anchorRaf = 0
-  }
-
-  const anchor = viewAnchorOf(container)
-  if (anchor !== null)
-    writeViewAnchor(tabId, anchor)
 }

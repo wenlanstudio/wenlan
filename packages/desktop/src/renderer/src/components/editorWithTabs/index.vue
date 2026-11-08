@@ -158,7 +158,9 @@ import { useLayoutStore } from '@/store/layout'
 import { usePreferencesStore } from '@/store/preferences'
 import { useEditorViewStore } from '@/store/editorView'
 import { storeToRefs } from 'pinia'
+import { watch } from 'vue'
 import { t } from '@/i18n'
+import { reviseMarkdown } from '@/util/docAnchor'
 import Editor from './editor.vue'
 import ColumnsDiagnostics from './columnsDiagnostics.vue'
 import SourceCode from './sourceCode.vue'
@@ -167,7 +169,7 @@ import LeafProjection from './leafProjection.vue'
 import PaperProjection from './paperProjection.vue'
 import TabNotifications from './notifications.vue'
 
-defineProps<{
+const props = defineProps<{
   markdown: string
   // `cursor` originates as `IFileState.cursor` which is `unknown`
   // (see src/shared/types/files.ts); align here instead of forcing every
@@ -177,6 +179,15 @@ defineProps<{
   textDirection: string
   platform: string
 }>()
+
+// 一文多览锚服务（§6.1）：markdown 每逢内容变化推进 mdRev——所有锚写读
+// 共用这个版本号，消费侧据此丢弃过期锚（防抖窗口内允许旧态）。
+watch(
+  () => props.markdown,
+  (md) => {
+    reviseMarkdown(md)
+  }
+)
 
 const { effectiveSideBarWidth } = storeToRefs(useLayoutStore())
 const { zoom } = storeToRefs(usePreferencesStore())

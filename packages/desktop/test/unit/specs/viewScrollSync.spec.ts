@@ -3,15 +3,11 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
   contentBlocks,
   findBlockIndex,
-  flushScrollAnchor,
-  readViewAnchor,
-  resolveSourceLine,
+  findLineByText,
   scrollViewToAnchor,
   sourceAnchorOf,
   stripMarkdownSyntax,
-  syncScrollAnchor,
-  viewAnchorOf,
-  writeViewAnchor
+  viewAnchorOf
 } from '@/util/viewScrollSync'
 
 // 视图间滚动同步（TODO1 #4）的纯 DOM 逻辑。三个视图（document/page、document/columns、
@@ -177,32 +173,8 @@ describe('viewAnchorOf / scrollViewToAnchor', () => {
   })
 })
 
-describe('anchor store', () => {
-  it('round-trips per tab id', () => {
-    expect(readViewAnchor('tab-a')).toBeNull()
-
-    writeViewAnchor('tab-a', { blockIndex: 3, text: 'x' })
-    writeViewAnchor('tab-b', { line: 7, text: 'y' })
-
-    expect(readViewAnchor('tab-a')?.blockIndex).toBe(3)
-    expect(readViewAnchor('tab-b')?.line).toBe(7)
-    expect(readViewAnchor('tab-c')).toBeNull()
-  })
-
-  it('coalesces scroll captures into one animation frame', async() => {
-    container.innerHTML = para('b0') + para('b1')
-    mockRects(container, [0, 100])
-
-    syncScrollAnchor(container, 'tab-r')
-    syncScrollAnchor(container, 'tab-r')
-    // rAF 未跑完前不落盘——一次滚动只算一次。
-    expect(readViewAnchor('tab-r')).toBeNull()
-
-    await new Promise(requestAnimationFrame)
-
-    expect(readViewAnchor('tab-r')?.blockIndex).toBe(0)
-  })
-})
+// 锚存储已收口到 util/docAnchor.ts（多标签页关闭，per-tab Map 退役）——
+// 本文件只锁定纯换算函数。
 
 describe('text bridge between the views', () => {
   it('strips the markdown syntax of a source line', () => {
@@ -245,18 +217,14 @@ describe('source anchor', () => {
     expect(sourceAnchorOf(markdown, 0).line).toBe(1)
   })
 
-  it('resolves a line anchor to the same line', () => {
-    expect(resolveSourceLine(markdown, { line: 3 })).toBe(3)
+  it('findLineByText resolves a text anchor (from the page view) to its source line', () => {
+    expect(findLineByText(markdown, '正文段落')).toBe(3)
+    expect(findLineByText(markdown, '列表项')).toBe(4)
   })
 
-  it('resolves a text anchor (from the page view) to its source line', () => {
-    expect(resolveSourceLine(markdown, { text: '正文段落' })).toBe(3)
-    expect(resolveSourceLine(markdown, { text: '列表项' })).toBe(4)
-  })
-
-  it('returns null when the anchor matches nothing', () => {
-    expect(resolveSourceLine(markdown, { text: '不在文档里' })).toBeNull()
-    expect(resolveSourceLine(markdown, null)).toBeNull()
+  it('findLineByText returns null when the text matches nothing', () => {
+    expect(findLineByText(markdown, '不在文档里')).toBeNull()
+    expect(findLineByText(markdown, '')).toBeNull()
   })
 })
 
@@ -264,18 +232,7 @@ describe('source anchor', () => {
 // blockIndex、source 有 line）。合并写入让两套坐标常驻，跨视图直接命中本
 // 坐标；编辑会让坐标漂移，读时校验文本不符就退回 text 桥——这是「切换视图
 // 位置丢失 / 跳顶」根因（TODO1 #4）的修复覆盖。
-describe('cross-view anchor merge + drift validation', () => {
-  it('merges coordinates instead of overwriting (each view keeps the others\' field)', () => {
-    // source 视图写 { line, text }、page 视图写 { blockIndex, text }：合并后
-    // 两者都在，任一视图读时直接命中本坐标，不必走脆弱的 text 桥换算。
-    writeViewAnchor('merge', { line: 7, text: 'src' })
-    writeViewAnchor('merge', { blockIndex: 3, text: 'blk' })
-
-    const anchor = readViewAnchor('merge')
-    expect(anchor?.line).toBe(7)
-    expect(anchor?.blockIndex).toBe(3)
-  })
-
+describe('cross-view drift validation (pure functions)', () => {
   it('sourceAnchorOf walks up to a content-bearing line when the viewport top is blank', () => {
     // 视口顶部行常是空行 / 代码围栏，strip 后为空——空 text 会让 text 桥
     // 断链、切到 page/columns 时静默 return 跳顶。向上找最近的有内容行作桥
@@ -307,27 +264,5 @@ describe('cross-view anchor merge + drift validation', () => {
     scrollViewToAnchor(container, { blockIndex: 99 })
 
     expect(container.scrollTop).toBe(500)
-  })
-
-  it('resolveSourceLine falls back to the text bridge when the line drifted', () => {
-    const md = ['标题', '', '正文', '- 列表项'].join('\n')
-    // line 3 现在是「正文」，但锚点 text 是「列表项」——放弃精确行号、按
-    // text 找到 line 4。
-    expect(resolveSourceLine(md, { line: 3, text: '列表项' })).toBe(4)
-  })
-
-  it('flushScrollAnchor writes synchronously and cancels a pending rAF', async() => {
-    container.innerHTML = para('b0') + para('b1')
-    mockRects(container, [0, 100])
-
-    syncScrollAnchor(container, 'flush')   // schedules a rAF, not yet landed
-    expect(readViewAnchor('flush')).toBeNull()
-
-    flushScrollAnchor(container, 'flush')   // cancels the rAF, writes now
-    expect(readViewAnchor('flush')?.blockIndex).toBe(0)
-
-    await new Promise(requestAnimationFrame)
-    // The cancelled rAF must not fire afterwards and overwrite the anchor.
-    expect(readViewAnchor('flush')?.blockIndex).toBe(0)
   })
 })

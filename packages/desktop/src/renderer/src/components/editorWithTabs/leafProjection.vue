@@ -20,6 +20,10 @@
  * - markdown 变化 250ms 防抖 `setContent`（每次都是全量块树重建，不能跟
  *   打字同频；左 pane 的活引擎才是实时面）。
  *
+ * M1 锚服务（§6.1/§6.3）：消费单槽 docAnchor 跟随与恢复（topBlock 直通，
+ * 同一 markdown 的第二实例顶层块序与主引擎一致）；单击 = 反向定位（发锚
+ * origin=reverse），双击 = 跳转编辑（同上并切文，光标落在对应块）。
+ *
  * 已知妥协：Muya.use 是进程级静态注册——若本组件挂载前 editor.vue 已注册过
  * UI 插件，投影实例也会实例化它们（readOnly 下多数浮层无从触发，风险可接受）。
  */
@@ -27,9 +31,17 @@ import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Muya, type IMuyaOptions } from '@muyajs/core'
 import { usePreferencesStore } from '@/store/preferences'
+import { useEditorViewStore } from '@/store/editorView'
 import { buildMuyaViewOptions } from '@/util/muyaViewOptions'
 import { getMuyaLocale } from '@/util/muyaLocale'
 import { parsePaperTheme } from '@/util/paperPagination'
+import {
+  matchesCurrentMarkdown,
+  onDocAnchorChange,
+  readDocAnchor,
+  writeDocAnchor
+} from '@/util/docAnchor'
+import { blockText, contentBlocks, scrollViewToAnchor } from '@/util/viewScrollSync'
 
 const props = defineProps<{
   /** 投影栏叶：只读第二实例，columnsLayout 建构期定死。 */
@@ -38,6 +50,7 @@ const props = defineProps<{
 }>()
 
 const preferencesStore = usePreferencesStore()
+const editorViewStore = useEditorViewStore()
 const { language } = storeToRefs(preferencesStore)
 
 const host = ref<HTMLDivElement | null>(null)
@@ -54,6 +67,47 @@ const applyMarkdown = (): void => {
     'paper-theme-thesis',
     parsePaperTheme(props.markdown ?? '') === 'thesis'
   )
+}
+
+// —— 锚服务接线（§6.1/§6.3）——
+/** 把锚的 topBlock 滚到本投影视口顶。同实例语义：投影是同一 markdown 的
+ *  第二 muya 实例，topBlock 即本容器 contentBlocks 序的下标。 */
+const scrollToBlock = (blockIndex: number | undefined, text: string | undefined): void => {
+  const root = muya.value?.domNode as HTMLElement | null | undefined
+  if (!root) return
+  scrollViewToAnchor(root, { blockIndex, text })
+}
+
+const offDocAnchor = onDocAnchorChange(anchor => {
+  if (!anchor || !matchesCurrentMarkdown(props.markdown ?? '')) return
+  if (anchor.origin === 'reverse') return // 自己发的锚不吃回声
+  requestAnimationFrame(() => scrollToBlock(anchor.topBlock, anchor.text))
+})
+
+const handleClick = (event: MouseEvent): void => {
+  const root = muya.value?.domNode
+  const target = event.target instanceof Element ? event.target : null
+  if (!root || !target || !root.contains(target)) return
+
+  const blocks = contentBlocks(root)
+  const topEl = blocks.find(b => b.contains(target))
+  if (!topEl) return
+  // 反向定位（§6.3）：发锚 origin=reverse，编辑面滚到对应块（不切视图）。
+  writeDocAnchor({
+    topBlock: blocks.indexOf(topEl),
+    text: blockText(topEl),
+    origin: 'reverse'
+  })
+}
+
+const handleDblClick = (event: MouseEvent): void => {
+  const root = muya.value?.domNode
+  const target = event.target instanceof Element ? event.target : null
+  if (!root || !target || !root.contains(target)) return
+  handleClick(event)
+  // 跳转编辑（§6.3）：切文；光标落位由 editor.vue 的反向锚订阅 + enterFlowEditor
+  // 的透镜 watcher 完成（同 markdown 的第二实例，topBlock 语义一致）。
+  editorViewStore.enterFlowEditor()
 }
 
 watch(
@@ -82,10 +136,22 @@ onMounted(() => {
     'paper-theme-thesis',
     parsePaperTheme(props.markdown ?? '') === 'thesis'
   )
+
+  // 恢复：挂载时按锚停到与编辑面同一个文档区域（分屏建立/换 tab 重建均走此）。
+  const anchor = readDocAnchor()
+  if (anchor && matchesCurrentMarkdown(props.markdown ?? '')) {
+    requestAnimationFrame(() => requestAnimationFrame(() => scrollToBlock(anchor.topBlock, anchor.text)))
+  }
+
+  const root = instance.domNode
+  root?.addEventListener('click', handleClick)
+  root?.addEventListener('dblclick', handleDblClick)
 })
 
 onBeforeUnmount(() => {
   window.clearTimeout(applyTimer)
+  offDocAnchor()
+  // 投影不写锚（跟随是单向的，锚代表编辑面位置；§6.2）。
   muya.value?.destroy()
   muya.value = null
 })

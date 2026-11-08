@@ -104,7 +104,18 @@ import Printer from '@/services/printService'
 import { SpellcheckerLanguageCommand } from '@/commands'
 import { SpellChecker } from '@/spellchecker'
 import { isMac, animatedScrollTo } from '@/util'
-import { flushScrollAnchor, readViewAnchor, scrollViewToAnchor, syncScrollAnchor, contentBlocks, blockText, writeViewAnchor } from '@/util/viewScrollSync'
+import { scrollViewToAnchor, contentBlocks, blockText, viewAnchorOf } from '@/util/viewScrollSync'
+import {
+  blockIndexToLine,
+  flushDocAnchorWrite,
+  lastEditingSurface,
+  onDocAnchorChange,
+  readDocAnchor,
+  rememberSurface,
+  scheduleDocAnchorWrite,
+  updateLineTable,
+  writeDocAnchor
+} from '@/util/docAnchor'
 import { moveImageToFolder, uploadImage } from '@/util/fileSystem'
 import { guessClipboardFilePath } from '@/util/clipboard'
 import { dataURLToFile } from '@/util/dataURLToFile'
@@ -445,11 +456,11 @@ const FORM_LENSES = ['flow', 'column', 'page'] as const
 const isFormLens = (lens: string | null | undefined): lens is (typeof FORM_LENSES)[number] =>
   lens != null && (FORM_LENSES as readonly string[]).includes(lens)
 const restoreLensAnchor = (): void => {
-  const id = currentFile.value?.id
-  if (id == null) return
-  const anchor = readViewAnchor(id)
+  const anchor = readDocAnchor()
   if (anchor === null) return
-  requestAnimationFrame(() => scrollViewToAnchor(getScrollContainer(), anchor))
+  requestAnimationFrame(() =>
+    scrollViewToAnchor(getScrollContainer(), { blockIndex: anchor.topBlock, text: anchor.text })
+  )
 }
 
 watch(
@@ -1368,13 +1379,19 @@ const handleLensDblClick = (event: MouseEvent): void => {
   const container = getScrollContainer()
   if (!target || !container || !container.contains(target)) return
 
-  const tabId = currentFile.value?.id
-  if (tabId != null) {
-    const blocks = contentBlocks(container)
-    const topEl = blocks.find(b => b.contains(target))
-    if (topEl) {
-      writeViewAnchor(tabId, { blockIndex: blocks.indexOf(topEl), text: blockText(topEl) })
-    }
+  const blocks = contentBlocks(container)
+  const topEl = blocks.find(b => b.contains(target))
+  const topIndex = topEl ? blocks.indexOf(topEl) : null
+  const topText = topEl ? blockText(topEl) : undefined
+  if (topIndex != null) writeDocAnchor({ topBlock: topIndex, text: topText })
+
+  // 跳转目标（§6.3）：最近编辑面是本 → 经块首行表换算行号，锚写 topLine、
+  // 切顶级视图 code（挂载恢复落在该行）；否则走文（下述同实例路径）。
+  if (topIndex != null && lastEditingSurface() === 'source') {
+    const line = blockIndexToLine(props.markdown ?? '', topIndex)
+    if (line != null) writeDocAnchor({ topLine: line, origin: 'reverse' })
+    editorViewStore.toggleSourceMode()
+    return
   }
 
   const path = contentPathAt(target)
@@ -1395,6 +1412,20 @@ const handleLensDblClick = (event: MouseEvent): void => {
     })
   })
 }
+
+// —— M1 锚服务接线（§6.1/§6.3）——
+const LINE_TABLE_DEBOUNCE_MS = 300
+let lineTableTimer = 0
+
+// 反向定位：只读面（栏右投影等）发来的锚 → 文/栏透镜就地滚到对应块（不落
+// 光标、不移焦点）。自己滚动写的锚（origin=scroll）不吃回声。
+const offDocAnchor = onDocAnchorChange(anchor => {
+  if (anchor?.origin !== 'reverse') return
+  if (props.lens !== 'flow' && props.lens !== 'column') return
+  requestAnimationFrame(() =>
+    scrollViewToAnchor(getScrollContainer(), { blockIndex: anchor.topBlock, text: anchor.text })
+  )
+})
 
 /**
  * Scrolls the editor to the heading for a TOC entry. See
@@ -2011,6 +2042,9 @@ onMounted(() => {
   // 挂载即落在栏/表透镜（启动恢复持久化选择）时，初始 readOnly 只含用户锁
   // ——补一次，把透镜锁也叠上。
   applyReadOnlyLock()
+  // 一文多览锚服务：本文擎是行表的唯一重建方 + 最近编辑面记忆 + 初始表。
+  rememberSurface('flow')
+  updateLineTable(muya.getMarkdown(), muya.getBlockStartLines())
   // The first document's content is set via constructor options, so no
   // `file-loaded` / `setMarkdownToEditor` runs for it — seed its TOC here.
   editorStore.UPDATE_TOC(muya.getTOC())
@@ -2121,6 +2155,13 @@ onMounted(() => {
     const { id } = currentFile.value
     if (!id) return
     const markdown = editor.value.getMarkdown()
+    // 块首行表随内容防抖重建（§6.1：O(文档) 全解析，不进打字热路径；表脏
+    // 窗口内换算退 text 桥）。
+    window.clearTimeout(lineTableTimer)
+    lineTableTimer = window.setTimeout(() => {
+      const engine = editor.value
+      if (engine) updateLineTable(engine.getMarkdown(), engine.getBlockStartLines())
+    }, LINE_TABLE_DEBOUNCE_MS)
     // Stash the real engine history for in-session tab-switch restoration. The
     // synthetic save-tracking id is derived from the live document content (a
     // monotonic, never-reused id — see `syntheticHistory.ts`), NOT the engine
@@ -2146,10 +2187,10 @@ onMounted(() => {
   scrollHandler = () => {
     if (currentFile.value) {
       editorStore.updateScrollPosition(currentFile.value.id, container.scrollTop)
-      // 视图间滚动同步（TODO1 #4）：记录本 tab 的块锚点。columns 已是同一引擎
-      // 上的透镜（不再重建引擎、滚动位置自然保留），所以只有切到 code/source
-      // ——CodeMirror 会顶掉本组件——再切回来时才需要靠锚点恢复。
-      syncScrollAnchor(container, currentFile.value.id)
+      // 视图间滚动同步（§6.1 锚服务）：rAF 合帧记录视口顶块（topBlock+text）。
+      // columns 是同一引擎上的透镜，滚动坐标同域；只读投影经 onDocAnchorChange
+      // 跟随，本视图↔源码视图的切换恢复同读单槽锚。
+      scheduleDocAnchorWrite(() => viewAnchorOf(container))
     }
   }
   container.addEventListener('scroll', scrollHandler, { passive: true })
@@ -2164,9 +2205,10 @@ onMounted(() => {
   // 保持默认（顶部）。page ↔ columns 不经过这里：同一实例，由上面的 lens
   // watcher 恢复。rAF 一帧等布局稳定后再量位置。
   requestAnimationFrame(() => {
-    const id = currentFile.value?.id
-    const anchor = id != null ? readViewAnchor(id) : null
-    if (anchor !== null) scrollViewToAnchor(getScrollContainer(), anchor)
+    const anchor = readDocAnchor()
+    if (anchor !== null) {
+      scrollViewToAnchor(getScrollContainer(), { blockIndex: anchor.topBlock, text: anchor.text })
+    }
   })
 
   editor.value.on(
@@ -2354,8 +2396,10 @@ onBeforeUnmount(() => {
   // 瞬间的位置（TODO1 #4）。
   if (currentFile.value?.id) {
     const container = getScrollContainer()
-    if (container) flushScrollAnchor(container, currentFile.value.id)
+    if (container) flushDocAnchorWrite(() => viewAnchorOf(container))
   }
+  window.clearTimeout(lineTableTimer)
+  offDocAnchor()
 
   resizeObserverForEditor.disconnect()
   viewportObserver?.disconnect()

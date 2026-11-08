@@ -71,13 +71,36 @@ const CONTAINER_TOKEN_TYPES = new Set([
 ]);
 
 export class MarkdownToState {
+    // —— 块首行表（宿主一文多览锚服务用）——
+    // `topLevelLineTable` 的调用期暂存：单线程同步流程里 generate/表查询互
+    // 不交错，不进任何持久状态。`_aligned=false` 或顶层块数与行数不齐时，
+    // 上次表查询作废（宿主退回 text 桥）。
+    private _flatLines: number[] | undefined;
+    private _aligned = true;
+    private _lastTable: number[] | null = null;
+
     constructor(private _options: IMarkdownToStateOptions = DEFAULT_OPTIONS) {}
 
     generate(markdown: string): TState[] {
         return this._convertMarkdownToState(markdown);
     }
 
-    private _convertMarkdownToState(markdown: string): TState[] {
+    /**
+     * 顶层内容块首行表（宿主锚服务 §6.1 块首行表）：index 与宿主
+     * `viewScrollSync.contentBlocks` 的 DOM 序**同域**——分栏组展开为成员
+     * 块、独立成块的分栏标记（block 级徽章载体）剔除，行内徽章所骑的段落
+     * 保留；值 = 块首行（1 基）。
+     *
+     * 对位自证：token.raw 逐段 `startsWith` 贴住源码才算数，对不上（词法
+     * 漂移 / 自定义扩展）或顶层块数与行数不齐返回 `null`，宿主退回 text
+     * 桥。空文档（无 token，合成段落）同样返回 `null`——无处可定位。
+     */
+    topLevelLineTable(markdown: string): number[] | null {
+        this._convertMarkdownToState(markdown, true);
+        return this._lastTable;
+    }
+
+    private _convertMarkdownToState(markdown: string, wantTable = false): TState[] {
         const {
             footnote = false,
             texMathDollars = true,
@@ -110,18 +133,66 @@ export class MarkdownToState {
         // 是 paragraph 且中间没有 space token 时空行不存在（见 inlineAdjacency.spec.ts）。
         let prevToken: TBlockToken | undefined;
 
+        // 块首行表的原材料（§topLevelLineTable），分两半：
+        // ① 预 pass 对位——lexBlock 的 pristine 产物是扁平顶层流（容器 token
+        // 的 raw 已含子块），逐段 startsWith 贴住源码自证，贴不住（词法漂移
+        // /尾余）即废表；space token 只推进对位、不产状态。行号挂 token 对象
+        // 上（Map），主循环里注入的子块 token 不在 Map 里、天然跳过——容器
+        // raw 不会被消费两遍。
+        const pristineLine = wantTable ? new Map<TBlockToken, number>() : undefined;
+        if (wantTable) {
+            this._flatLines = [];
+            this._aligned = true;
+            let rest = markdown;
+            let line = 1;
+            for (const t of tokens) {
+                const raw = t.type === 'block-end' ? '' : (t.raw ?? '');
+                if (!raw.length)
+                    continue;
+                if (!rest.startsWith(raw)) {
+                    this._aligned = false;
+                    break;
+                }
+                rest = rest.slice(raw.length);
+                if (t.type !== 'space')
+                    pristineLine!.set(t, line);
+                line += (raw.match(/\n/g) ?? []).length;
+            }
+            if (rest.length)
+                this._aligned = false;
+        }
+
         // eslint-disable-next-line no-cond-assign
         while ((token = tokens.shift())) {
+            // ② 记账——顶层 token 按它实际推出的 state 数记行（行内标记吸收：
+            // html token 并进前段、推 0 个 state，不记；一 token 推 N 个 state
+            // 记 N 份同线）。子容器状态推入 states 后，其子块在更深 parentList
+            // 里推入的是 children 数组，不进这里的账。
+            const atTop = parentList.length === 1;
+            const before = states.length;
+            const line = atTop && pristineLine ? pristineLine.get(token) : undefined;
             if (CONTAINER_TOKEN_TYPES.has(token.type))
                 this._handleContainerToken(token, parentList, tokens);
             else
                 this._handleLeafToken(token, parentList, tokens, trimUnnecessaryCodeBlockEmptyLines, prevToken);
+            if (line !== undefined) {
+                for (let k = before; k < states.length; k++)
+                    this._flatLines!.push(line);
+            }
             prevToken = token;
         }
 
-        const withColumns = this._buildColumnGroups(states);
+        // 1:1 守卫：按构造逐 state 记账后仍不齐（未来改动静默破坏）即废表。
+        if (wantTable && (!this._aligned || this._flatLines!.length !== states.length)) {
+            this._flatLines = undefined;
+            this._lastTable = null;
+        }
 
-        return withColumns.length ? withColumns : [{ name: 'paragraph', text: '' }];
+        const built = this._buildColumnGroups(states, wantTable ? this._flatLines : undefined);
+        if (wantTable)
+            this._lastTable = built.table && built.table.length ? built.table : null;
+
+        return built.states.length ? built.states : [{ name: 'paragraph', text: '' }];
     }
 
     /**
@@ -133,21 +204,45 @@ export class MarkdownToState {
      *
      * 合法性判定复用 `analyzeColumnMarkers`（§1.3 七条），与 lint / 导出管线
      * 同一份真值：不合法的组一律不建结构，内容原样保留。
+     *
+     * `lines`（可选）与入参 states 逐位对齐（顶层块首行）；返回值的 `table`
+     * 是**展平域**的行表——分栏组展开为成员块、独立成块的分栏标记剔除，
+     * 与宿主 `contentBlocks` 的 DOM 序同域（`topLevelLineTable` 消费）。
      */
-    private _buildColumnGroups(states: TState[]): TState[] {
+    private _buildColumnGroups(
+        states: TState[],
+        lines?: number[],
+    ): { states: TState[]; table?: number[] } {
         if (!states.length)
-            return states;
+            return { states, table: lines ? [] : undefined };
+
+        const withLines = lines != null;
+        const table: number[] = [];
+        // 表域 push 一段 [from, to) 的行：独立分栏标记块剔除（DOM 侧
+        // isMarkerBlock 同款语义；行内徽章所骑的段落不是独立标记块，保留）。
+        const pushRange = (from: number, to: number): void => {
+            if (!withLines)
+                return;
+            for (let i = from; i < to; i++) {
+                if (!this._isStandaloneMarkerState(states[i]!))
+                    table.push(lines![i]!);
+            }
+        };
 
         const hits = this._collectColumnMarkers(states);
-        if (!hits.length)
-            return states;
+        if (!hits.length) {
+            pushRange(0, states.length);
+            return { states, table: withLines ? table : undefined };
+        }
 
         // The marker objects are handed to the group analysis as they are, so
         // the hit of each marker in the flat state list can be recovered by
         // identity.
         const { groups } = analyzeColumnMarkers(hits.map(hit => hit.info));
-        if (!groups.length)
-            return states;
+        if (!groups.length) {
+            pushRange(0, states.length);
+            return { states, table: withLines ? table : undefined };
+        }
 
         const hitOfMarker = new Map<ColumnMarkerInfo, IColumnMarkerHit>();
         hits.forEach((hit) => {
@@ -165,6 +260,7 @@ export class MarkdownToState {
             // linear layout; no structure, no columns.
             if (group.degraded) {
                 out.push(...states.slice(cursor, endHit.index + 1));
+                pushRange(cursor, endHit.index + 1);
                 cursor = endHit.index + 1;
                 continue;
             }
@@ -172,6 +268,7 @@ export class MarkdownToState {
             // The `begin` marker stays outside the group: it terminates the
             // content *before* the columns, not a column of its own.
             out.push(...states.slice(cursor, beginHit.index + 1));
+            pushRange(cursor, beginHit.index + 1);
             cursor = beginHit.index + 1;
 
             const columns: IColumnState[] = [];
@@ -186,6 +283,7 @@ export class MarkdownToState {
                     name: 'column',
                     children: states.slice(columnStart, boundary.index + 1),
                 });
+                pushRange(columnStart, boundary.index + 1);
                 columnStart = boundary.index + 1;
             }
             cursor = columnStart;
@@ -198,8 +296,17 @@ export class MarkdownToState {
         }
 
         out.push(...states.slice(cursor));
+        pushRange(cursor, states.length);
 
-        return out;
+        return { states: out, table: withLines ? table : undefined };
+    }
+
+    /**
+     * 独立成分栏标记的 html 块（block 级徽章载体）——表域与 DOM 序里都不算
+     *  内容块；行内徽章（骑在段落 text 上的）不是 html 块，不受此滤。
+     */
+    private _isStandaloneMarkerState(state: TState): boolean {
+        return state.name === 'html-block' && parseMarker(state.text.trim()) != null;
     }
 
     /**

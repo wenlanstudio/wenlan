@@ -11,7 +11,8 @@ import { useEditorStore } from '@/store/editor'
 import { usePreferencesStore } from '@/store/preferences'
 import { findMarkdownHeadingLine, scrollSourceEditorToLine } from '@/util/sourceModeToc'
 import { scrollSourceToLine, sourceTopLine } from '@/util/sourceScroll'
-import { readViewAnchor, resolveSourceLine, sourceAnchorOf, writeViewAnchor } from '@/util/viewScrollSync'
+import { blockIndexToLine, flushDocAnchorWrite, readDocAnchor, rememberSurface, writeDocAnchor } from '@/util/docAnchor'
+import { findLineByText, sourceAnchorOf } from '@/util/viewScrollSync'
 import { storeToRefs } from 'pinia'
 import type CodeMirror from 'codemirror'
 import codeMirror, { setCursorAtFirstLine, setTextDirection } from '../../codeMirror'
@@ -350,6 +351,8 @@ const listenChange = (cm: CodeMirror.Editor) => {
     updateSelectionWordCount(instance)
     const cursor = instance.getCursor()
     bus.emit('cursor-position', { line: cursor.line + 1, ch: cursor.ch + 1 })
+    // 锚服务：cursorLine 随光标走（览/示「改哪页跳哪页」跟随用，1 基）。
+    writeDocAnchor({ cursorLine: cursor.line + 1 })
   })
 }
 
@@ -379,26 +382,40 @@ const handleScroll = () => {
     anchorRaf = 0
     const cm = editor.value
     const container = sourceCodeContainer.value
-    const id = tabId.value
-    if (!cm || !container || !id) return
+    if (!cm || !container) return
 
     const line = sourceTopLine(cm, container)
-    writeViewAnchor(id, sourceAnchorOf(cm.getValue(), line + 1))
+    const { line: bridgeLine, text } = sourceAnchorOf(cm.getValue(), line + 1)
+    // 合并写进单槽锚：topLine 记真实视口顶行（源码内部恢复精度），text 供
+    // 其它视图 text 桥兜底；cursorLine 随光标移动单独更新（览/示跟随用）。
+    writeDocAnchor({ topLine: bridgeLine, text })
   })
 }
 
-// 从别的视图切进源码视图时，停在同一个文档区域。锚点带行号时直接用，只有
-// 文本时（来自 page / columns 视图）在源码里找对应行。
+// 从别的视图切进源码视图时，停在同一个文档区域：锚带 topLine 直接用；只有
+// topBlock 时经锚服务行表换算，换不出再退 text 桥（行表脏窗口内兜底）。
 const restoreViewAnchor = (cm: CodeMirror.Editor, markdown: string): void => {
-  const id = tabId.value
-  if (!id) return
+  const anchor = readDocAnchor()
+  if (!anchor) return
 
-  const line = resolveSourceLine(markdown, readViewAnchor(id))
+  let line: number | null = null
+  if (anchor.topLine != null) {
+    const { text } = sourceAnchorOf(markdown, anchor.topLine)
+    // 编辑后行号会漂移：该行文本与锚 text 不符才放弃精确行号。
+    line = !anchor.text || text === anchor.text ? anchor.topLine : null
+  }
+  if (line == null && anchor.topBlock != null) {
+    const converted = blockIndexToLine(markdown, anchor.topBlock)
+    if (converted != null) line = converted
+  }
+  if (line == null && anchor.text) {
+    line = findLineByText(markdown, anchor.text)
+  }
   if (line == null) return
 
   // The line heights are only known after the editor laid out — wait a frame.
   requestAnimationFrame(() => {
-    scrollSourceToLine(cm, line - 1, sourceCodeContainer.value)
+    scrollSourceToLine(cm, line! - 1, sourceCodeContainer.value)
   })
 }
 
@@ -462,7 +479,10 @@ onMounted(() => {
   tabId.value = id
   updateSelectionWordCount(codeMirrorInstance)
 
-  // 视图间滚动同步（TODO1 #4）：从 page / columns 视图切进来时，停在同一个
+  // 一文多览锚服务：本视图是最近编辑面候选之一（跳转编辑目标）。
+  rememberSurface('source')
+
+  // 视图间滚动同步（§6.1 锚服务）：从 page / columns 视图切进来时，停在同一个
   // 文档区域。
   restoreViewAnchor(codeMirrorInstance, markdown ?? '')
 
@@ -495,9 +515,13 @@ onBeforeUnmount(() => {
   {
     const cm = editor.value
     const container = sourceCodeContainer.value
-    const id = tabId.value
-    if (cm && container && id)
-      writeViewAnchor(id, sourceAnchorOf(cm.getValue(), sourceTopLine(cm, container) + 1))
+    if (cm && container) {
+      const { line: bridgeLine, text } = sourceAnchorOf(
+        cm.getValue(),
+        sourceTopLine(cm, container) + 1
+      )
+      flushDocAnchorWrite(() => ({ topLine: bridgeLine, text }))
+    }
   }
 
   sourceCodeContainer.value?.removeEventListener('scroll', handleScroll)
