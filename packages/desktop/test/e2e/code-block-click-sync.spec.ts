@@ -95,8 +95,9 @@ test.describe('issue #4 — editor ↔ exec panel click sync', () => {
   })
 
   test('▶ with the panel closed opens it without scrolling the editor either', async() => {
-    // Close via the 「码」 toggle so only the ▶ click may re-open it.
-    await page.locator('.code-run-btn').click()
+    // Close via the panel's × (2026-11-08 起切换器没有执行窗开关) so only the
+    // ▶ click may re-open it.
+    await page.locator('.panel-close').click({ force: true })
     await expect(page.locator('.exec-panel')).toHaveCount(0)
 
     const fence2 = page.locator('.mu-code-block').nth(1)

@@ -13,6 +13,24 @@
       @mousedown="startResize"
       @dblclick="toggleMaximize"
     />
+    <!-- 右上角关闭钮：执行窗开关已从切换器移除（2026-11-08，视图模型 §1），
+         这里是唯一常驻关闭途径。输出工具栏让出右侧内边距防重叠。 -->
+    <button
+      class="panel-close"
+      :title="t('execPanel.close')"
+      @click="panel.setOpen(false)"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        width="12"
+        height="12"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path d="M6 6l12 12M18 6L6 18" />
+      </svg>
+    </button>
     <div
       class="panel-body"
       :style="{ height: `${panel.height}px` }"
@@ -57,7 +75,9 @@
           <span
             v-if="resultOf(b.line) && staleOf(b.line)"
             class="stale"
-          >{{ t('execPanel.stale') }}</span>
+          >{{
+            t('execPanel.stale')
+          }}</span>
           <span
             v-if="seqOf(b.line) !== null"
             class="seq"
@@ -65,7 +85,9 @@
           <span
             v-if="resultOf(b.line)?.ok === false"
             class="failed"
-          >{{ t('execPanel.failed') }}</span>
+          >{{
+            t('execPanel.failed')
+          }}</span>
           <button
             class="run-btn"
             :disabled="!b.runnable || isRunning(b.line)"
@@ -102,7 +124,9 @@
         <pre
           class="output-text"
           :class="{ error: resultOf(selectedLine)?.ok === false }"
-        >{{ finalOutputOf(selectedLine) }}</pre>
+        >{{
+          finalOutputOf(selectedLine)
+        }}</pre>
       </div>
     </div>
   </div>
@@ -115,11 +139,7 @@ import { t } from '@/i18n'
 import bus from '@/bus'
 import { useEditorStore } from '@/store/editor'
 import { useEditorViewStore } from '@/store/editorView'
-import {
-  useExecPanelStore,
-  PANEL_MIN_HEIGHT,
-  PANEL_DEFAULT_HEIGHT
-} from '@/store/execPanel'
+import { useExecPanelStore, PANEL_MIN_HEIGHT, PANEL_DEFAULT_HEIGHT } from '@/store/execPanel'
 import type { Md2rBlockInfo, Md2rEvent, Md2rRunResult } from '@shared/types/mdcode2run'
 import { diagramTypeOfLang } from '@muyajs/core'
 import { codeSlice, findFenceByCode } from '@/util/fenceRun'
@@ -171,7 +191,7 @@ const jobLine = new Map<string, number>()
 /** 累计输出上限：截尾保留尾部（尾部才是最新进展）。 */
 const MAX_OUTPUT_CHARS = 1_000_000
 
-const runnableBlocks = computed(() => blocks.value.filter(b => b.runnable))
+const runnableBlocks = computed(() => blocks.value.filter((b) => b.runnable))
 const runningCount = computed(() => Object.keys(running.value).length)
 
 /** 围栏是否属于「图表」而非「代码」：语言表以 muya 的 DIAGRAM_LANGS 为
@@ -228,9 +248,9 @@ const refresh = async (): Promise<void> => {
     // 图表围栏（mermaid/graphviz/plantuml/…）不进执行面板：引擎的块清单是
     // 「语法事实」（渲染端要画图），而 code run 是「可执行代码」的语义面，
     // 图表既不可跑也不该以置灰块的形式占位——它根本不属于这个工具窗口。
-    blocks.value = parsed.blocks.filter(b => !isDiagramLang(fenceLangOf(b.lang)))
+    blocks.value = parsed.blocks.filter((b) => !isDiagramLang(fenceLangOf(b.lang)))
     // stale 重算：行号锚定的块若代码快照变了 → 旧结果标 stale；块没了 → 丢结果
-    const byLine = new Map(blocks.value.map(b => [b.line, b]))
+    const byLine = new Map(blocks.value.map((b) => [b.line, b]))
     for (const line of Object.keys(results.value).map(Number)) {
       const b = byLine.get(line)
       if (!b) {
@@ -242,7 +262,7 @@ const refresh = async (): Promise<void> => {
     if (selectedLine.value !== null && !byLine.has(selectedLine.value)) {
       selectedLine.value = runnableBlocks.value[0]?.line ?? null
     }
-    if (!autoOpened && isCodeRunSurface.value && blocks.value.some(b => b.runnable)) {
+    if (!autoOpened && isCodeRunSurface.value && blocks.value.some((b) => b.runnable)) {
       autoOpened = true
       panel.setOpen(true)
       if (selectedLine.value === null) {
@@ -301,8 +321,9 @@ const handleEvent = (event: Md2rEvent): void => {
       delete running.value[line]
       // 作业终局：退出码追加进输出流（job 结果的 stdout 本来就是空的）
       const o = event.outcome
-      const tail =
-        o.error ? `\n[job] ${o.error}` : `\n[job] exit=${o.code ?? '?'} ${Math.round((o.durationMs ?? 0) / 100) / 10}s`
+      const tail = o.error
+        ? `\n[job] ${o.error}`
+        : `\n[job] exit=${o.code ?? '?'} ${Math.round((o.durationMs ?? 0) / 100) / 10}s`
       appendChunk(line, tail)
       break
     }
@@ -315,7 +336,7 @@ const handleEvent = (event: Md2rEvent): void => {
 const runBlock = async (line: number, opts: { reveal?: boolean } = {}): Promise<void> => {
   const path = docPath.value
   if (!path) return
-  const b = blocks.value.find(x => x.line === line)
+  const b = blocks.value.find((x) => x.line === line)
   if (!b) return
   selectedLine.value = line
   // reveal 默认开：面板里点块行 / 点 ▶ 要「所见即所跑」。但编辑器围栏上的 ▶
@@ -384,9 +405,7 @@ const handleFenceSelectRequest = (payload: unknown): void => {
   if (selectedLine.value === target.line) return
   selectedLine.value = target.line
   void nextTick(() => {
-    document
-      .querySelector('.exec-panel .block-row.active')
-      ?.scrollIntoView({ block: 'nearest' })
+    document.querySelector('.exec-panel .block-row.active')?.scrollIntoView({ block: 'nearest' })
   })
 }
 
@@ -421,7 +440,7 @@ const stopSelected = (): void => {
 // —— 视图辅助 ——
 /** 让编辑区滚到该块的围栏内容首行（空围栏退回围栏行）——所见即所跑。 */
 const revealBlock = (line: number): void => {
-  const b = blocks.value.find(x => x.line === line)
+  const b = blocks.value.find((x) => x.line === line)
   if (!b) return
   const target = b.end > b.line + 1 ? b.line + 1 : b.line
   bus.emit('mdcode2run-reveal-line', { line: target })
@@ -436,7 +455,7 @@ const select = (line: number): void => {
 const snippetOf = (b: Md2rBlockInfo): string => {
   const first = codeSlice(props.markdown, b)
     .split('\n')
-    .map(s => s.trim())
+    .map((s) => s.trim())
     .find(Boolean)
   if (!first) return ''
   return first.length > 36 ? `${first.slice(0, 36)}…` : first
@@ -456,7 +475,7 @@ const reasonOf = (b: Md2rBlockInfo): string => {
 const isRunning = (line: number): boolean => running.value[line] !== undefined
 
 const staleOf = (line: number): boolean => {
-  const b = blocks.value.find(x => x.line === line)
+  const b = blocks.value.find((x) => x.line === line)
   if (!b) return false
   const ran = ranCode.value[line]
   if (ran === undefined) return false
@@ -468,8 +487,7 @@ const seqOf = (line: number): number | null => {
   return typeof seq === 'number' && seq >= 0 ? seq : null
 }
 
-const langOf = (line: number): string =>
-  blocks.value.find(x => x.line === line)?.lang ?? ''
+const langOf = (line: number): string => blocks.value.find((x) => x.line === line)?.lang ?? ''
 
 const finalOutputOf = (line: number): string => {
   if (isRunning(line)) {
@@ -520,9 +538,10 @@ const maxHeight = (): number => {
   if (!container) return PANEL_MIN_HEIGHT
   const workspace = container.querySelector<HTMLElement>('.workspace')
   const titleBar = container.querySelector<HTMLElement>('.title-bar')
-  const titleBarPx = titleBar && getComputedStyle(titleBar).display !== 'none'
-    ? titleBar.getBoundingClientRect().height
-    : 0
+  const titleBarPx =
+    titleBar && getComputedStyle(titleBar).display !== 'none'
+      ? titleBar.getBoundingClientRect().height
+      : 0
   const available =
     (workspace?.getBoundingClientRect().height ?? 0) +
     (panelEl.value?.getBoundingClientRect().height ?? 0)
@@ -600,7 +619,8 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-/* 只渲染 body：开关与计数在状态栏（statusBar），这里没有 header。
+/* 只渲染 body：无 header——开关入口在围栏 ▶ 与码透镜点块（2026-11-08 起，
+   切换器不再有执行窗开关），右上角常驻关闭钮。
    高度由拖拽条决定（store 里的 px，上限按编辑列高度现算），越界就在块清单/
    输出内部滚动，别把编辑区挤没。 */
 .exec-panel {
@@ -611,6 +631,29 @@ onBeforeUnmount(() => {
   font-size: 12px;
   color: var(--editorColor);
   user-select: none;
+}
+
+.panel-close {
+  position: absolute;
+  top: 5px;
+  right: 8px;
+  z-index: 4; /* 压过 resizer 热区（z-index 3），热区只有 6px 高互不遮挡 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--editorColor40);
+  cursor: pointer;
+}
+
+.panel-close:hover {
+  color: var(--editorColor);
+  background: var(--editorColor08);
 }
 
 /* 拖拽热区跨在分隔线上：上半截落在编辑区里，鼠标够得着。 */
@@ -778,7 +821,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 3px 10px;
+  /* 右侧让出关闭钮的位置（18px 钮 + 8px 边距），stop 按钮不压角。 */
+  padding: 3px 34px 3px 10px;
   border-bottom: 1px solid var(--editorColor10);
 }
 

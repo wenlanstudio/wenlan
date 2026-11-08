@@ -1090,6 +1090,7 @@
     "empty": "No output yet",
     "output": "Output",
     "resizeHint": "Drag to resize · Double-click to maximize",
-    "noBlocks": "No runnable code blocks in this document"
+    "noBlocks": "No runnable code blocks in this document",
+    "close": "Close code run panel"
   }
 }

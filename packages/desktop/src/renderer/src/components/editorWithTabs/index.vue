@@ -51,9 +51,10 @@
             :lens="editorLens"
           />
         </div>
-        <!-- 本（源码）：CodeMirror 独立渲染，非透镜 -->
+        <!-- 本（源码，topView 'source'）：CodeMirror 独立渲染，非透镜。
+             码透镜（topView 'code'）不在此——它走上面的 lens-host。 -->
         <source-code
-          v-else-if="topView === 'code'"
+          v-else-if="topView === 'source'"
           :markdown="markdown"
           :muya-index-cursor="muyaIndexCursor"
           :text-direction="textDirection"
@@ -199,8 +200,7 @@ const { topView, isSplit, leftLeaf, rightLeaf, activeLeaf, editorLens, rightRati
   storeToRefs(editorViewStore)
 // 全屏/独占形态的判据收口在 store（底部执行面板挪到 app.vue 全宽层后，
 // 两处要用同一条判据，别再在这里复制一遍）。
-const { isPaperFullscreen, isPresentFullscreen, presentImmersive } =
-  storeToRefs(editorViewStore)
+const { isPaperFullscreen, isPresentFullscreen, presentImmersive } = storeToRefs(editorViewStore)
 // 沉浸式放映时侧栏被显示层收起，宽度补偿要跟着归零，否则放映区右侧留白。
 const sideBarOffset = computed<number>(() =>
   presentImmersive.value ? 0 : effectiveSideBarWidth.value

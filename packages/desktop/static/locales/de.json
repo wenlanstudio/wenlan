@@ -1080,7 +1080,8 @@
     "empty": "No output yet",
     "output": "Output",
     "resizeHint": "Ziehen zum Anpassen · Doppelklick zum Maximieren",
-    "noBlocks": "Keine ausführbaren Codeblöcke in diesem Dokument"
+    "noBlocks": "Keine ausführbaren Codeblöcke in diesem Dokument",
+    "close": "Code-Ausführungspanel schließen"
   },
   "view": {
     "slidesView": "Slides View",

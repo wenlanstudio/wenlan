@@ -12,7 +12,8 @@ import { launchWithMarkdown } from './helpers'
 // the typewriter caret still sit behind the panel.
 //
 // This spec runs against the built Electron renderer and measures the real DOM.
-// A fenced code block is needed for the 「码」 button to be enabled.
+// A fenced code block is needed for the panel to open (fence ▶ opens it;
+// 2026-11-08 起切换器没有执行窗开关，关闭走面板右上角 ×)。
 
 const MD = [
   '# layout',
@@ -186,13 +187,14 @@ test.describe('issue #2 — bottom panel really shrinks the three columns', () =
     await expect(page.locator('.editor-component')).toBeAttached({ timeout: 10000 })
     await injectRightColumn(page)
 
-    const codeBtn = page.locator('.code-run-btn')
-    expect(await codeBtn.isDisabled(), '「码」 must be enabled in flow view').toBe(false)
+    // 开关入口（2026-11-08）：围栏 ▶ 开、面板右上角 × 关。▶ 平时透明，force 过 CSS。
+    const runBtn = page.locator('a.mu-code-run').first()
+    const closeBtn = page.locator('.panel-close')
 
     // The document auto-opens the panel on first parse; start from a known
     // closed state so every later delta is measured against the same baseline.
     if (await page.locator('.exec-panel').count()) {
-      await codeBtn.click({ force: true })
+      await closeBtn.click({ force: true })
       await expect(page.locator('.exec-panel')).toHaveCount(0)
     }
     const closed = await settle(page)
@@ -203,7 +205,7 @@ test.describe('issue #2 — bottom panel really shrinks the three columns', () =
     expect(closed.bottomPanelVar, 'closed: --bottomPanelHeight').toBe(0)
 
     // —— open ——
-    await codeBtn.click({ force: true })
+    await runBtn.click({ force: true })
     await expect(page.locator('.exec-panel')).toBeVisible({ timeout: 5000 })
     const open = await settle(page)
     const openPanel = must(open.panel, 'open: panel')
@@ -237,7 +239,7 @@ test.describe('issue #2 — bottom panel really shrinks the three columns', () =
     expect(maximizedPanel.height, 'maximized: panel is taller than before').toBeGreaterThan(tallerPanel.height)
 
     // —— close again: everything returns to the closed baseline ——
-    await codeBtn.click({ force: true })
+    await closeBtn.click({ force: true })
     await expect(page.locator('.exec-panel')).toHaveCount(0)
     const reclosed = await settle(page)
     const reclosedWs = must(reclosed.workspace, 'reclosed: workspace')
@@ -246,7 +248,8 @@ test.describe('issue #2 — bottom panel really shrinks the three columns', () =
     expect(reclosed.bottomPanelVar, 'reclosed: --bottomPanelHeight').toBe(0)
 
     // —— 「本」源码视图：CodeMirror must fit its pane, not the whole window ——
-    await page.locator('.main-view-btn', { hasText: '本' }).click({ force: true })
+    // 2026-11-08 重排后「本」在编辑组（leaf-btn），键名 topView 'source'。
+    await page.locator('.leaf-btn', { hasText: '本' }).click({ force: true })
     await expect(page.locator('.source-code')).toBeVisible({ timeout: 5000 })
     const source = await readMetrics(page)
     const sourceCode = must(source.sourceCode, 'source: CodeMirror')

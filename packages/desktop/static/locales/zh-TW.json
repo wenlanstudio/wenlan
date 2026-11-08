@@ -1080,7 +1080,8 @@
     "empty": "暫無輸出",
     "output": "輸出",
     "resizeHint": "拖動調整高度 · 雙擊最大化/還原",
-    "noBlocks": "文件中沒有可執行的程式碼區塊"
+    "noBlocks": "文件中沒有可執行的程式碼區塊",
+    "close": "關閉執行窗"
   },
   "view": {
     "slidesView": "Slides View",

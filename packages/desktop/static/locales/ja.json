@@ -1080,7 +1080,8 @@
     "empty": "No output yet",
     "output": "Output",
     "resizeHint": "ドラッグで高さ変更・ダブルクリックで最大化",
-    "noBlocks": "実行可能なコードブロックがありません"
+    "noBlocks": "実行可能なコードブロックがありません",
+    "close": "実行パネルを閉じる"
   },
   "view": {
     "slidesView": "Slides View",

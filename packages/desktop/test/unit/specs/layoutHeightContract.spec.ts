@@ -75,7 +75,8 @@ describe('issue #2 — layout height contract', () => {
   it('consumes the measured variables in every place that used 100vh', () => {
     const editorCss = styleOf(read('components/editorWithTabs/editor.vue'))
     expect(editorCss).toContain('padding-bottom: var(--editorViewportHeight')
-    expect(editorCss).toContain('padding-top: max(0px, calc(var(--editorViewportHeight')
+    // prettier 会把超长 calc 折成多行，断言用空白容忍的形状匹配（语义不变）。
+    expect(editorCss).toMatch(/padding-top:\s*max\(\s*0px,\s*calc\(var\(--editorViewportHeight/)
     expect(editorCss).not.toContain('calc(50vh - 136px)')
 
     const sourceCss = styleOf(read('components/editorWithTabs/sourceCode.vue'))

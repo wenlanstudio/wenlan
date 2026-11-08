@@ -30,12 +30,7 @@ vi.mock('@/services/notification', () => ({
   default: { notify: vi.fn(), name: 'notify' }
 }))
 
-import {
-  LEAVES,
-  TOP_VIEWS,
-  visibleLeafList,
-  useEditorViewStore
-} from '@/store/editorView'
+import { LEAVES, TOP_VIEWS, visibleLeafList, useEditorViewStore } from '@/store/editorView'
 import { useEditorStore } from '@/store/editor'
 
 const switcherPath = resolve(
@@ -54,7 +49,9 @@ describe('editorView selection model', () => {
 
   it('declares the two-branch five-leaf structure', () => {
     expect(LEAVES).toEqual(['flow', 'column', 'page', 'slide', 'present'])
-    expect(TOP_VIEWS).toEqual(['table', 'figure', 'code'])
+    // 2026-11-08 本/码换名：'source' 即「本」（CodeMirror 源码），'code' 即
+    // 「码」（全文代码块只读透镜）。
+    expect(TOP_VIEWS).toEqual(['table', 'figure', 'source', 'code'])
   })
 
   it('exposes five visible leaves (column gated on markers)', () => {
@@ -166,16 +163,43 @@ describe('editorView selection model', () => {
     expect(store.leafSelection).toEqual(['flow', 'column'])
   })
 
-  it('toggling a top view twice returns to the leaves', () => {
+  it('toggling 本 (source) twice returns to the leaves', () => {
+    const store = useEditorViewStore()
+    store.toggleTopView('source')
+    expect(store.isSourceMode).toBe(true)
+    expect(store.editorLens).toBeNull() // 本是 CodeMirror 独立渲染，非透镜
+    expect(store.sliderDuty).toBe('flow-width')
+
+    store.toggleTopView('source')
+    expect(store.topView).toBeNull()
+    expect(store.activeLeaf).toBe('flow')
+  })
+
+  it('toggling 码 (code) twice returns to the leaves', () => {
     const store = useEditorViewStore()
     store.toggleTopView('code')
-    expect(store.isSourceMode).toBe(true)
-    expect(store.editorLens).toBeNull()
+    expect(store.isSourceMode).toBe(false)
+    expect(store.editorLens).toBe('code') // 码 = 第三个内容透镜（只读）
     expect(store.sliderDuty).toBe('flow-width')
 
     store.toggleTopView('code')
     expect(store.topView).toBeNull()
     expect(store.activeLeaf).toBe('flow')
+  })
+
+  it('the code-run panel surface covers 文独占 and 码透镜独占 only', () => {
+    const store = useEditorViewStore()
+    expect(store.isCodeRunSurface).toBe(true) // 文独占（现行基线）
+
+    store.toggleTopView('code')
+    expect(store.isCodeRunSurface).toBe(true) // 码透镜独占：围栏 ▶ / 点块定位可用
+
+    store.toggleTopView('table')
+    expect(store.isCodeRunSurface).toBe(false) // 表透镜不是执行面
+
+    store.toggleTopView('table') // 回 flow 全屏
+    store.toggleLeaf('slide') // (flow, slide) 分屏
+    expect(store.isCodeRunSurface).toBe(false) // 分屏不可用（现行判据保持）
   })
 
   it('focusEditor resets to flow fullscreen (deck view Esc path)', () => {
@@ -341,11 +365,43 @@ describe('editorView persistence', () => {
     localStorage.setItem('marktext-editor-view', 'not-json{')
     expect(reloaded().leafSelection).toEqual(['flow'])
 
+    localStorage.setItem('marktext-editor-view', JSON.stringify({ leaves: ['nope', 42] }))
+    expect(reloaded().leafSelection).toEqual(['flow'])
+  })
+
+  // 2026-11-08 本/码换名的一次性归位（视图模型 §2 唯一迁移例外）：旧数据
+  // 无 v 字段，topView 'code' 是旧「本」→ 载入读作 'source'；带 v:2 的新数据
+  // 'code' 就是码透镜，原样保留。防止换名后旧「本」静默变成码透镜。
+  it('relocates the legacy topView code (旧「本」) to source when the blob has no version', () => {
     localStorage.setItem(
       'marktext-editor-view',
-      JSON.stringify({ leaves: ['nope', 42] })
+      JSON.stringify({ leaves: ['flow'], topView: 'code', rightRatio: 0.45 })
     )
-    expect(reloaded().leafSelection).toEqual(['flow'])
+    const store = reloaded()
+    expect(store.topView).toBe('source')
+    expect(store.isSourceMode).toBe(true)
+    expect(store.editorLens).toBeNull()
+  })
+
+  it('keeps topView code as the code lens when the blob is v2', () => {
+    localStorage.setItem(
+      'marktext-editor-view',
+      JSON.stringify({ v: 2, leaves: ['flow'], topView: 'code', rightRatio: 0.45 })
+    )
+    const store = reloaded()
+    expect(store.topView).toBe('code')
+    expect(store.isSourceMode).toBe(false)
+    expect(store.editorLens).toBe('code')
+  })
+
+  it('round-trips the code lens across a reload (v2 blob)', () => {
+    let store = reloaded()
+    store.toggleTopView('code')
+    expect(store.editorLens).toBe('code')
+
+    store = reloaded()
+    expect(store.topView).toBe('code')
+    expect(store.editorLens).toBe('code')
   })
 })
 
@@ -384,14 +440,14 @@ describe('「示」 immersive fullscreen presentation', () => {
   it('restores the previous leaves and top view on exit', () => {
     const store = useEditorViewStore()
     store.toggleLeaf('present')
-    store.toggleTopView('code')
+    store.toggleTopView('source')
     store.enterPresentImmersive()
     expect(store.topView).toBeNull()
 
     store.exitPresentImmersive()
     expect(store.presentImmersive).toBe(false)
     expect(store.leafSelection).toEqual(['flow', 'present'])
-    expect(store.topView).toBe('code')
+    expect(store.topView).toBe('source')
     expect(setFullScreen).toHaveBeenLastCalledWith(false)
   })
 

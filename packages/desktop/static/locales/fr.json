@@ -1080,7 +1080,8 @@
     "empty": "No output yet",
     "output": "Output",
     "resizeHint": "Glisser pour redimensionner · Double-clic pour agrandir",
-    "noBlocks": "Aucun bloc de code exécutable dans ce document"
+    "noBlocks": "Aucun bloc de code exécutable dans ce document",
+    "close": "Fermer le panneau d'exécution"
   },
   "view": {
     "slidesView": "Slides View",

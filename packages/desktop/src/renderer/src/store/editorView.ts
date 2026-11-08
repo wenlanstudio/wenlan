@@ -12,15 +12,16 @@ import { useEditorStore } from './editor'
  * 姿态而非可编辑性；引擎边界（muya 活叶 │ 投影/iframe）不与刻度分隔线重合。
  * page = 只读真分片预览（A″：切行/续表真渲染，卡内编辑已随推挤退役）。
  *
- * 一文多览（view-model §6）：可编辑面只有文（flow 活引擎）与本（code 顶级
- * 视图），栏/页/览/映一律只读，想编辑即跳转文/本。
+ * 一文多览（view-model §6）：可编辑面只有文（flow 活引擎）与本（source 顶级
+ * 视图），栏/页/览/映/表/图/码一律只读，想编辑即跳转文/本。
  *
  * 选择模型：五叶平铺常驻（栏格随文档有无 begin 标记显隐），点击选中至多两叶
  * ——一叶全屏、两叶分屏（左右按 LEAVES 顺序，编辑左展示右、细左粗右自动
  * 成立）。配置选择式（淘宝选规格）：点一下选中、再点一下取消，搭配由用户
  * 自定；已选满两叶时第三叶点不动（先摘一片才能换）；最后一片不可摘（不可
  * 选到零）。
- * 表/图/本是顶级正交视图，与五叶互斥（挂起不丢）。
+ * 表/图/码/本是顶级正交视图，与五叶互斥（挂起不丢）；码 = 全文代码块只读
+ * 透镜（2026-11-08 起，键 'code'），本 = CodeMirror 源码（键 'source'）。
  */
 
 export type Leaf = 'flow' | 'column' | 'page' | 'slide' | 'present'
@@ -50,9 +51,9 @@ const sanitizeLeaves = (leaves: Leaf[]): Leaf[] => {
   return leaves
 }
 
-export type TopView = 'table' | 'figure' | 'code'
+export type TopView = 'table' | 'figure' | 'source' | 'code'
 
-export const TOP_VIEWS = ['table', 'figure', 'code'] as const
+export const TOP_VIEWS = ['table', 'figure', 'source', 'code'] as const
 
 export type SliderDuty = 'flow-width' | 'page-zoom' | 'slide-zoom' | 'none'
 
@@ -64,7 +65,8 @@ const clampRatio = (value: unknown): number => {
 }
 
 const isLeaf = (v: unknown): v is Leaf => (LEAVES as readonly string[]).includes(v as Leaf)
-const isTopView = (v: unknown): v is TopView => (TOP_VIEWS as readonly string[]).includes(v as TopView)
+const isTopView = (v: unknown): v is TopView =>
+  (TOP_VIEWS as readonly string[]).includes(v as TopView)
 
 interface EditorViewState {
   /** 选中叶，1..2 项（顺序无关，展示按 LEAVES 序）。 */
@@ -75,6 +77,10 @@ interface EditorViewState {
 }
 
 const STORAGE_KEY = 'marktext-editor-view'
+/** 持久 blob 版本。v2（2026-11-08）：本/码键名互换（本 `code`→`source`，码
+ *  启用 `code`）——无版本号的旧数据里 `topView: 'code'` 是旧「本」，载入时
+ *  一次性归位为 `'source'`（视图模型 §2 的唯一迁移例外）。 */
+const STORAGE_VERSION = 2
 
 const loadPersisted = (): EditorViewState | null => {
   try {
@@ -89,9 +95,12 @@ const loadPersisted = (): EditorViewState | null => {
     if (Array.isArray(obj.leaves)) {
       const leaves = obj.leaves.filter(isLeaf)
       if (leaves.length >= 1) {
+        // 一次性归位（见 STORAGE_VERSION）：旧数据无 v，'code' 是旧「本」。
+        const rawTopView =
+          obj.v === STORAGE_VERSION ? obj.topView : obj.topView === 'code' ? 'source' : obj.topView
         return {
           leaves: sanitizeLeaves(leaves.slice(-2)),
-          topView: isTopView(obj.topView) ? obj.topView : null,
+          topView: isTopView(rawTopView) ? rawTopView : null,
           rightRatio: clampRatio(obj.rightRatio)
         }
       }
@@ -141,19 +150,18 @@ export const useEditorViewStore = defineStore('editorView', () => {
     topView.value === null && leafSelection.value.length === 1 ? leafSelection.value[0]! : null
   )
 
-  /** 编辑器透镜：table 是顶级透镜；flow/column/page 作全屏或分屏左
-   *  pane 时活。page 在全屏态是「隐藏服务后端」——页叶的可见面是真分片
-   *  投影（paperProjection，A″），活引擎退居幕后供养 bus 服务（导出/TOC），
-   *  由 index.vue 以 paper-fullscreen 收起其占位。 */
-  const editorLens = computed<'flow' | 'column' | 'page' | 'table' | null>(() => {
-    if (topView.value === 'table') return 'table'
+  /** 编辑器透镜：table/code 是顶级透镜（2026-11-08 起 `code` = 码，全文
+   *  代码块只读总览；`source` = 本，CodeMirror 独立渲染非透镜）；flow/
+   *  column/page 作全屏或分屏左 pane 时活。page 在全屏态是「隐藏服务后端」
+   *  ——页叶的可见面是真分片投影（paperProjection，A″），活引擎退居幕后
+   *  供养 bus 服务（导出/TOC），由 index.vue 以 paper-fullscreen 收起其占位。 */
+  const editorLens = computed<'flow' | 'column' | 'page' | 'table' | 'code' | null>(() => {
+    if (topView.value === 'table' || topView.value === 'code') return topView.value
     if (topView.value !== null) return null
-    return (
-      orderedLeaves.value.find((l) => l === 'flow' || l === 'column' || l === 'page') ?? null
-    )
+    return orderedLeaves.value.find((l) => l === 'flow' || l === 'column' || l === 'page') ?? null
   })
 
-  const isSourceMode = computed<boolean>(() => topView.value === 'code')
+  const isSourceMode = computed<boolean>(() => topView.value === 'source')
 
   // ── 映面板独占态（分屏时放映占满整窗；不持久化，会话内状态） ──
   // 与 paper-fullscreen 同构：pane-left 收起不卸载（避免 muya 重建），映 pane
@@ -234,25 +242,28 @@ export const useEditorViewStore = defineStore('editorView', () => {
     })
   }
 
-  /** 「码」工具窗口（底部代码执行面板）的可用判据。
+  /** 底部执行窗（代码运行面板）的可用判据。
    *
-   *  只在「文」**独占**时可用：分屏（哪怕左叶是文）也不算——面板定位走源码行
-   *  → setCursorByOffset，分屏下两侧共享同一编辑面，工具窗口横跨全宽会把两
-   *  侧一起挤掉，且与另一侧的视图语义冲突。activeLeaf 只在非分屏的单叶态有值，
-   *  故 `activeLeaf === 'flow'` 本身已含 topView === null。
+   *  只在单视图可用：「文」独占，或码透镜（topView `'code'`）独占——围栏 ▶
+   *  与码透镜点块定位都落在这两个面上。分屏（哪怕左叶是文）不算：面板定位
+   *  走源码行 → setCursorByOffset，分屏下两侧共享同一编辑面，工具窗口横跨
+   *  全宽会把两侧一起挤掉，且与另一侧的视图语义冲突。activeLeaf 只在非分屏
+   *  的单叶态有值，故 `activeLeaf === 'flow'` 本身已含 topView === null；
+   *  topView 非空即非分屏，码透镜独占无需再查分屏。
    *
-   *  单一来源给 viewSwitcher 的按钮禁用态与 execPanel 的 body 显隐共用，避免
-   *  两处各写一份判据后漂移。 */
+   *  单一来源给 execPanel 的 body 显隐与自动展开共用，避免两处各写一份判据
+   *  后漂移（2026-11-08 起切换器不再有执行窗开关）。 */
   const isCodeRunSurface = computed<boolean>(
-    () => !isWindowFullScreen.value && isEditingSurface.value && activeLeaf.value === 'flow'
+    () =>
+      !isWindowFullScreen.value &&
+      isEditingSurface.value &&
+      (activeLeaf.value === 'flow' || topView.value === 'code')
   )
 
   /** 滑块职责：分屏时一律收起（宽度控制被分割条吸收），单视图按叶/顶级视图定。 */
   const sliderDuty = computed<SliderDuty>(() => {
     if (isSplit.value) return 'none'
-    if (topView.value === 'table' || topView.value === 'figure' || topView.value === 'code') {
-      return 'flow-width'
-    }
+    if (topView.value !== null) return 'flow-width'
     const leaf = activeLeaf.value
     if (leaf === 'present') return 'none'
     if (leaf === 'slide') return 'slide-zoom' // 页缩放，待接线
@@ -262,14 +273,14 @@ export const useEditorViewStore = defineStore('editorView', () => {
 
   /** 光标指示（行:列）只在有活编辑面时才有意义（page 页叶是只读投影，不算）。 */
   const isEditorVisible = computed<boolean>(
-    () =>
-      editorLens.value === 'flow' || editorLens.value === 'column' || isSourceMode.value
+    () => editorLens.value === 'flow' || editorLens.value === 'column' || isSourceMode.value
   )
 
   const persist = (): void => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
+        v: STORAGE_VERSION,
         leaves: leafSelection.value,
         topView: topView.value,
         rightRatio: rightRatio.value
@@ -403,7 +414,7 @@ export const useEditorViewStore = defineStore('editorView', () => {
   }
 
   const toggleSourceMode = (): void => {
-    toggleTopView('code')
+    toggleTopView('source')
   }
 
   // §4.4 #5 — fullscreen column falls back to flow when the document has no
@@ -431,7 +442,7 @@ export const useEditorViewStore = defineStore('editorView', () => {
     (isSource) => {
       const currentlySource = isSourceMode.value
       if (isSource && !currentlySource) {
-        topView.value = 'code'
+        topView.value = 'source'
         persist()
       } else if (!isSource && currentlySource) {
         topView.value = null

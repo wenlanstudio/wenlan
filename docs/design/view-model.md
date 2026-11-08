@@ -28,7 +28,13 @@
   分割条只是 UI 分隔；
 - 编辑组一根切法规轴（不切→横切），展示组一根浏览轴（滚动→全景→时序），
   两轴**正交**——不存在跨组的单一粒度序；
-- **表 / 图 / 本**是顶级正交视图（两个内容透镜 + CodeMirror 源码），不进这棵树；键名 `table` / `figure` / `code`——**`code` 即「本」**（Markdown 源码）。切换器在图与本之间另有「码」，是底部代码执行窗的开关（工具窗，非视图，仅文独占时可点）。可编辑与否见 §2。
+- **表 / 图 / 码**是顶级内容透镜（同一 muya 活引擎的只读形态；图仍为占位未实现），
+  **本**是 CodeMirror 源码视图——四者皆顶级正交视图，不进这棵树；键名
+  `table` / `figure` / `code` / `source`，**`code` 即「码」**（全文代码块总览，
+  2026-11-08 起），**`source` 即「本」**（Markdown 源码）。底部代码执行窗是
+  工具窗（非视图）：入口 = 文/码面代码块围栏的 ▶ 运行按钮、码透镜单击块定位，
+  仅单视图可用（判据 `isCodeRunSurface` = 文独占 ∨ 码透镜独占）；面板右上角
+  自带关闭钮，切换器不再承载执行窗开关。可编辑与否见 §2。
 
 **页（page）**——A4/Letter 纸面预览（frontmatter 声明）：内容按真分片装进
 一张张固定纸卡，页与页有真间隙，只读。度量来源 = muya 直测（§5）；
@@ -37,7 +43,7 @@
 ## 2. 选择模型
 
 - **五叶平铺**在切换器上（刻度「文 栏│页 览 映」，分隔线提示二组）；栏格随文档有无 `begin` 标记显隐；
-- **编辑面不变量：一文一编辑面，多览只读**（§6）——编辑面 = 文（muya 活引擎）或本（CodeMirror 源码态）；其余一律只读：各叶（`column`/`page`/`slide`/`present`）、顶级视图表与图、底部码窗——分屏右 pane 是只读投影（leafProjection 只读第二实例等），`column` 全屏/分屏左叶与表是活引擎只读态（§6）。只读面上不就地编辑，想编辑即跳转到文/本的相应处（§6.3）。
+- **编辑面不变量：一文一编辑面，多览只读**（§6）——编辑面 = 文（muya 活引擎）或本（CodeMirror 源码态）；其余一律只读：各叶（`column`/`page`/`slide`/`present`）、顶级视图表/图/码、底部执行窗——分屏右 pane 是只读投影（leafProjection 只读第二实例等），`column` 全屏/分屏左叶与表/码是活引擎只读态（§6）。只读面上不就地编辑，想编辑即跳转到文/本的相应处（§6.3）。
   **全屏页叶的可见面 = 只读真分片投影**（paperProjection），活引擎以
   display:none 留任「隐藏服务后端」——bus 导出/TOC 依赖 editor.vue 挂载，
   收起不占位（导出走序列化，不需要布局）；
@@ -51,17 +57,19 @@
     非法对净化为单片；(文, 页)、(栏, 页) 的右叶 = 真分片投影
     （paperProjection）；
   - 已两叶时第三叶点不动（先摘一片才能换）；最后一片不可摘（不可选到零）；
-- 表/图/本与五叶互斥：选中顶级视图时叶选择挂起不丢，切回即恢复；
+- 表/图/码/本与五叶互斥：选中顶级视图时叶选择挂起不丢，切回即恢复；
 - column 叶只对真有 `begin` 标记的文档显示；全屏 column 在标记消失时回退 flow
   （分屏中的 column 投影不回退——投影为空无害）；
 - 选择与分割比例持久化；只认现行形状，未知 key / 旧形状一律落默认
-  （`flow`），不做迁移。
+  （`flow`），不做迁移。唯一例外（2026-11-08）：本/码键名互换（本
+  `code`→`source`，码启用 `code`），持久 blob 加 `v: 2`——无 `v` 的旧数据
+  中 `topView: 'code'` 一次性归位为 `'source'`，防旧「本」静默变成码透镜。
 
 ## 3. 分屏交互
 
 - 中间**分割条可拖**，比例记住（0.2–0.8）；**分屏时页宽滑块失效收起**
   （宽度控制被分割条吸收）；
-- 单视图滑块回归：文/表/图 = 内容列宽（页宽滑块）；present 无；览 = 页缩放（声明未接线）；页 = 页缩放（版式基钉死纸面宽度，A4 常超窗宽，缩放是刚需，待接线，见 §5）；
+- 单视图滑块回归：文/表/图/码 = 内容列宽（页宽滑块）；present 无；览 = 页缩放（声明未接线）；页 = 页缩放（版式基钉死纸面宽度，A4 常超窗宽，缩放是刚需，待接线，见 §5）；
 - (览, 映) 两叶皆只读 = 预演/导航模式（缩略图墙 + 大页放映的姿态）；
 - 键盘归属：分屏时编辑器保焦点；deck 只吃鼠标/触屏；deck 聚焦时 Esc 关自己。
 
@@ -129,19 +137,20 @@
 
 目标形态：**一文一编辑面，多览只读**。编辑面 = 文（muya 活引擎）或本
 （CodeMirror 源码态）；其余一律只读——叶中的栏（第二实例投影）、页
-（真分片投影）、览/映（md2slides iframe），顶级视图中的表、图，以及底部
-码窗。同步定位回答三个问题：**跟随**（编辑面在哪，览面跟到哪）、**反向
+（真分片投影）、览/映（md2slides iframe），顶级视图中的表、图、码，以及底部
+执行窗。同步定位回答三个问题：**跟随**（编辑面在哪，览面跟到哪）、**反向
 定位**（览面点了哪，编辑面跳到哪）与**跳转编辑**（在览面想改，跳进编辑
 面的哪里）。
 
-**只读面收口**（2026-11-07 裁决：文、本之外一律不可编辑）：栏与表由活引擎
-以透镜承载（栏全屏/分屏左叶、表顶级视图），进透镜即锁、离开即复原——有效
-只读 = 用户只读锁 ∨ 只读透镜（column / table），复原按用户锁
+**只读面收口**（2026-11-07 裁决：文、本之外一律不可编辑）：栏与表/码由活引擎
+以透镜承载（栏全屏/分屏左叶、表/码顶级视图），进透镜即锁、离开即复原——有效
+只读 = 用户只读锁 ∨ 只读透镜（column / table / code），复原按用户锁
 取值，不得顺手解开用户自己上的锁。muya 原生支持运行时切换
 （`setOptions({ readOnly })`：容器 contenteditable 翻转 + 块树重建），故不
 另起只读投影，也无需页叶那样的隐藏服务后端。栏在分屏右叶是第二实例投影，
-本就只读。图（未实现）实现时即为只读面；码是底部代码执行窗（工具窗，非
-视图），只列块、跑块、看结果，本无编辑控件。状态栏锁图标仍只反映用户锁
+本就只读。图（未实现）实现时即为只读面；执行窗是底部工具窗（非视图），
+只列块、跑块、看结果，本无编辑控件，入口在文/码面的围栏 ▶ 与码透镜单击块。
+状态栏锁图标仍只反映用户锁
 （只读面的只读属视图本性，不另挂锁）。只读面上想编辑，一律跳回编辑面
 （§6.3）。分屏因此可以没有编辑面（栏×页/览/映、览×映）：此时左 pane 充当
 发锚方——栏是只读态活引擎，照常按滚动发锚；览经 §6.3 反向定位发锚——右叶
@@ -215,13 +224,19 @@ docAnchor = { mdRev, topBlock?, topLine?, cursorLine? }
 | 映                 | 面板态显式跳页 | 工具条「编辑」按钮         | 当前页首现标注                           |
 | 表                 | —（全屏独占）  | 双击                       | 块序（同实例）                           |
 | 图（未实现）       | —（全屏独占）  | 双击                       | 图所在块（实现时遵此）                   |
-| 码（底部执行窗）   | —              | 单击代码块（现行，已合规） | 块的围栏行（mdcode2run 解析，现成）      |
+| 码（透镜）         | —（全屏独占）  | 双击（同实例，遵栏/表）    | 块序（同实例）                           |
+| 执行窗（工具窗）   | —              | 单击代码块（现行，已合规） | 块的围栏行（mdcode2run 解析，现成）      |
+
+- 码透镜的单击不是跳转编辑而是**工具窗定位**：单击代码块 → 执行窗打开并
+  高亮定位该块（`mdcode2run-select-fence` 现成通路）；围栏 ▶ 按钮 → 执行窗
+  打开并直接运行该块（`muya:code-run` 现成通路）。两动作仅单视图（文独占 ∨
+  码透镜独占）可用。
 
 - 映不复用点与双击：放映器里触屏轻点归翻页，点图归看图浮层（浮层内双击
   是缩放），双击会先连翻两页或落进浮层，故走工具条按钮。览的图片同理：
   点图归看图浮层，对图片想编辑从页卡其余处双击。
-- **跳转目标**：编辑面已在屏上（文与只读叶分屏，或码窗所在的文）→ 就地
-  落光标，布局不变。不在屏上（全屏只读叶、只读叶分屏、表/图）→ 切到
+- **跳转目标**：编辑面已在屏上（文与只读叶分屏，或执行窗所在的文）→ 就地
+  落光标，布局不变。不在屏上（全屏只读叶、只读叶分屏、表/图/码）→ 切到
   **最近显示过的编辑面**（会话内记忆，缺省文）。目标是本：顶级视图切本，
   叶选择挂起不丢。目标是文：清顶级视图；叶选择已含文则保持，否则把左叶
   （全屏即唯一叶）换成文、右叶保留（栏×页 → 文×页、览×映 → 文×映、页 →
@@ -229,7 +244,7 @@ docAnchor = { mdRev, topBlock?, topLine?, cursorLine? }
 - **光标精度**：同实例（栏/表的活引擎只读态 → 文）落到双击处，块序与块内
   偏移直接可用；跨实例、跨引擎落到该块首行行首，与反向定位同为块级；码沿
   现行落到围栏内容首行。
-- **落光标走现成通路**：文侧 `setCursorByOffset({ line, ch })`——码窗跳文
+- **落光标走现成通路**：文侧 `setCursorByOffset({ line, ch })`——执行窗跳文
   （`mdcode2run-reveal-line` → `revealSourceLine`）已在用，保留撤销栈；内部
   整文重建两遍，单次操作可接受，**不进跟随热路径**（跟随靠 §6.1 块首行表）。
   本侧走 CodeMirror 行定位（sourceCode 现成）。docAnchor 行号 1 基，
@@ -290,18 +305,18 @@ rect 全 0）、表透镜滚顶（标题 display:none）、图/览/映无响应�
 
 ## 7. 实现地图
 
-| 物                                  | 位置                                                                                                                                                                                                                                                                                           |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 选择状态 / 派生面                   | `store/editorView.ts`（leafSelection ≤2 + topView 互斥 + rightRatio；持久化只认现行形状，未知 key 落默认）                                                                                                                                                                                     |
-| 切换器（五叶 + 码窗开关）+ 滑块联动 | `components/viewSwitcher/`                                                                                                                                                                                                                                                                     |
-| 分屏壳 / 分割条 / pane 接线         | `components/editorWithTabs/index.vue`                                                                                                                                                                                                                                                          |
-| 展示组两叶的投影面（放映 / 页览）   | `components/editorWithTabs/deckPane.vue`（leaf × view/panel 两维变体；服务引用计数）                                                                                                                                                                                                           |
-| 栏只读投影                          | `components/editorWithTabs/leafProjection.vue`（muya 只读第二实例，columnsLayout 建构期定死）                                                                                                                                                                                                  |
-| 页叶真分片投影                      | `components/editorWithTabs/paperProjection.vue`（只读实例 + 分片执行器：裁剪窗对/表格行手术/整块搬移；全屏态活引擎 display:none 留任隐藏服务后端，见 §2）                                                                                                                                      |
-| deck 侧页览布局与溢出徽章           | md2slides 仓 `host/marktext/deck-full-entry.js`（`runOpts.view:"list"`）+ `host/browser/deck-core.js`                                                                                                                                                                                          |
-| 资产分发                            | 改 md2slides 后 `npm run pack:marktext` + fork `scripts/sync-md2slides.mjs`，重启 dev 生效；`resources/` 是 gitignored 生成物，CI 由 `.github/actions/md2slides-assets` 从钉死提交自动产包，所有 `build:*` 前置 `scripts/check-md2slides-assets.mjs` 闸门，防「装得上、点览/映才报缺包」的残包 |
-| 页叶测量基座                        | 测量/拟合 `util/paperPagination.ts`（paginateBlocksV2 行级）+ `assets/styles/paperLens.css`；分页符族 `@muyajs/core` `utils/markers/pagebreak.ts`；决策内核 vendor `vendor/md2slides/layout-core.js`（单源 md2slides）；设计见 §5                                                              |
-| 一文多览锚服务                      | `util/docAnchor.ts`（新增：docAnchor 单槽 / mdRev / 跟随与反向定位；吸收 viewScrollSync 的切换恢复与 rAF 合帧，text 桥降级为表脏兜底；§6）                                                                                                                                                     |
-| 块首行表                            | `@muyajs/core` `state/markdownToState.ts` 顶层块 `meta.startLine`（解析副产物，会话级不落盘；§6.1 裁决 3）                                                                                                                                                                                     |
-| 览/映 locate 协议                   | md2slides 仓 `host/marktext/deck-full-entry.js`（行→页映射与点击取行，基于现成 `data-src-start/end`——标注源头 `core/parse/markdown.js`；`md2s:locate-up{line, edit?}`）+ fork `deckPane.vue`（`md2s:locate{line}`；§6.2/§6.3）                                                                 |
-| 跳转编辑（只读面 → 文/本）          | `store/editorView.ts`（目标编辑面的会话记忆 + 换左叶 / 清顶级视图）+ `editor.vue` `revealSourceLine`（`setCursorByOffset`，先例：码窗 `execPanel.vue` 的 `mdcode2run-reveal-line`）+ `sourceCode.vue` 行定位；只读锁 `editor.vue` 的 readOnly watcher（§6.3/§6.6 M0）                          |
+| 物                                     | 位置                                                                                                                                                                                                                                                                                           |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 选择状态 / 派生面                      | `store/editorView.ts`（leafSelection ≤2 + topView 互斥 + rightRatio；持久化只认现行形状，未知 key 落默认）                                                                                                                                                                                     |
+| 切换器（五叶 + 表/图/码/本）+ 滑块联动 | `components/viewSwitcher/`                                                                                                                                                                                                                                                                     |
+| 分屏壳 / 分割条 / pane 接线            | `components/editorWithTabs/index.vue`                                                                                                                                                                                                                                                          |
+| 展示组两叶的投影面（放映 / 页览）      | `components/editorWithTabs/deckPane.vue`（leaf × view/panel 两维变体；服务引用计数）                                                                                                                                                                                                           |
+| 栏只读投影                             | `components/editorWithTabs/leafProjection.vue`（muya 只读第二实例，columnsLayout 建构期定死）                                                                                                                                                                                                  |
+| 页叶真分片投影                         | `components/editorWithTabs/paperProjection.vue`（只读实例 + 分片执行器：裁剪窗对/表格行手术/整块搬移；全屏态活引擎 display:none 留任隐藏服务后端，见 §2）                                                                                                                                      |
+| deck 侧页览布局与溢出徽章              | md2slides 仓 `host/marktext/deck-full-entry.js`（`runOpts.view:"list"`）+ `host/browser/deck-core.js`                                                                                                                                                                                          |
+| 资产分发                               | 改 md2slides 后 `npm run pack:marktext` + fork `scripts/sync-md2slides.mjs`，重启 dev 生效；`resources/` 是 gitignored 生成物，CI 由 `.github/actions/md2slides-assets` 从钉死提交自动产包，所有 `build:*` 前置 `scripts/check-md2slides-assets.mjs` 闸门，防「装得上、点览/映才报缺包」的残包 |
+| 页叶测量基座                           | 测量/拟合 `util/paperPagination.ts`（paginateBlocksV2 行级）+ `assets/styles/paperLens.css`；分页符族 `@muyajs/core` `utils/markers/pagebreak.ts`；决策内核 vendor `vendor/md2slides/layout-core.js`（单源 md2slides）；设计见 §5                                                              |
+| 一文多览锚服务                         | `util/docAnchor.ts`（新增：docAnchor 单槽 / mdRev / 跟随与反向定位；吸收 viewScrollSync 的切换恢复与 rAF 合帧，text 桥降级为表脏兜底；§6）                                                                                                                                                     |
+| 块首行表                               | `@muyajs/core` `state/markdownToState.ts` 顶层块 `meta.startLine`（解析副产物，会话级不落盘；§6.1 裁决 3）                                                                                                                                                                                     |
+| 览/映 locate 协议                      | md2slides 仓 `host/marktext/deck-full-entry.js`（行→页映射与点击取行，基于现成 `data-src-start/end`——标注源头 `core/parse/markdown.js`；`md2s:locate-up{line, edit?}`）+ fork `deckPane.vue`（`md2s:locate{line}`；§6.2/§6.3）                                                                 |
+| 跳转编辑（只读面 → 文/本）             | `store/editorView.ts`（目标编辑面的会话记忆 + 换左叶 / 清顶级视图）+ `editor.vue` `revealSourceLine`（`setCursorByOffset`，先例：执行窗 `execPanel.vue` 的 `mdcode2run-reveal-line`）+ `sourceCode.vue` 行定位；只读锁 `editor.vue` 的 readOnly watcher（§6.3/§6.6 M0）                        |

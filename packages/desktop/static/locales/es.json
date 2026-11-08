@@ -1080,7 +1080,8 @@
     "empty": "No output yet",
     "output": "Output",
     "resizeHint": "Arrastra para cambiar el tamaño · Doble clic para maximizar",
-    "noBlocks": "No hay bloques de código ejecutables en este documento"
+    "noBlocks": "No hay bloques de código ejecutables en este documento",
+    "close": "Cerrar el panel de ejecución"
   },
   "view": {
     "slidesView": "Slides View",

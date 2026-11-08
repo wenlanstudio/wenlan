@@ -62,10 +62,20 @@
   - 正向：点 block-row → 编辑器滚到对应代码块，并选中/高亮该块；现在只有单向滚动（顶部对齐 48px），实际效果仍不好。
   - 反向：光标移进/点击某个代码块 → 块清单自动选中对应 block-row 并滚入可见区。
   - 这是同一套「双向同步」机制，不要再单独补一条滚动路径了。重做时一并设计滚动锚点、选中态、代码块边界识别（尤其底部面板展开后可用视口变矮的情况）。先不处理。
+  - 2026-11-08 追记：「块清单总览」这半边由新的码透镜承接（点「码」看全文代码块，单击块 = 执行窗定位，见下）；本条剩下的面板侧行→文跳转与滚动锚点仍按原文暂缓。
 
 ## Issue 待办
 
 > 来自 wenlanstudio/wenlan 的开放 issue（2026-11-07 更新，7 条）。全文与评论见 `D:\md-ecosystem\issues-2026-11-06.md`。#13/#14/#15/#17 已实现并关闭（`babffa04` 已推送）。
+
+### 码透镜 + 执行窗重安置（2026-11-08，用户拍板）
+
+- 「码」从底部执行窗开关升级为**第三个内容透镜**（全文代码块只读总览，机制同表透镜：同 muya 活引擎 + CSS 藏块 + 只读锁）；「本」让出键名 `code` 改 `source`。设计已落 view-model.md §1/§2/§6。
+- 执行窗入口迁移：围栏 ▶（文/码面，链路本就在）+ 码透镜单击块定位（`mdcode2run-select-fence`）；面板右上角加 × 关闭钮（旧开关删除后唯一常驻关闭途径）；`isCodeRunSurface` 判据扩为 文独占 ∨ 码透镜独占。
+- mermaid/echarts 等代码型图表**整体归图**（图透镜的料）：码透镜 CSS `:not(.mu-code-block)` 天然排除（图表是 `figure.mu-diagram-block`），执行窗块清单本就过滤图表围栏。
+- 持久化 v2 归位：blob 加 `v: 2`；无 `v` 旧数据的 `topView: 'code'`（旧「本」）一次性归位 `'source'`——「不做迁移」政策的唯一例外，防止旧「本」静默变码透镜。
+- 码透镜顺带继承表透镜的**双击跳文**（`handleLensDblClick` 走 `isLensReadOnly()`，自动覆盖）。
+- 涉及：editorView.ts（键名/门控/持久化）、viewSwitcher（删执行窗开关钮）、editor.vue（`READ_ONLY_LENSES` + `[data-lens='code']` CSS + 点块定位 handler）、execPanel.vue（× 关闭钮 + `execPanel.close` 12 locale）、editorWithTabs/index.vue（source 分支）。单测 editorViewStore.spec 38 绿；新增 e2e 看守 `code-block-lens.spec.ts`。
 
 ### 视图切换丢内容排查（2026-11-07，用户报告的最高优先级；用户更正：丢失发生在修改正文过程中）
 

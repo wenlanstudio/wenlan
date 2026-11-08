@@ -1080,7 +1080,8 @@
     "empty": "No output yet",
     "output": "Output",
     "resizeHint": "Yüksekliği sürükleyerek ayarlayın · Çift tıklayarak büyütün",
-    "noBlocks": "Bu belgede çalıştırılabilir kod bloğu yok"
+    "noBlocks": "Bu belgede çalıştırılabilir kod bloğu yok",
+    "close": "Kod çalıştırma panelini kapat"
   },
   "view": {
     "slidesView": "Slides View",

@@ -1,6 +1,6 @@
 <template>
   <div class="view-switcher">
-    <!-- 从右往左：主视图（可见叶 + 表图本）最右固定，页宽滑块最左。
+    <!-- 从右往左：主视图（可见叶 + 表图码）最右固定，页宽滑块最左。
          滑块职责由 store.sliderDuty 给出——分屏时一律收起（宽度控制被
          分割条吸收，视图模型 §3）。 -->
     <div
@@ -25,14 +25,14 @@
          （1=全屏 2=分屏，选满点不动、不可选空）。column 只对真有分栏标记的
          文档显示（§4.4 #5）。 -->
     <div class="leaves">
-      <!-- 「本」（Markdown 源码，topView 'code'）在「文」左边：与文同属
+      <!-- 「本」（Markdown 源码，topView 'source'）在「文」左边：与文同属
            编辑组（2026-11-08 重排，b.1）——点击切源码视图（叶选择挂起），
            与叶按钮同款样式；active 与 topView 挂钩而非 leafSelection。 -->
       <button
         class="leaf-btn"
-        :class="{ active: topView === 'code' }"
+        :class="{ active: topView === 'source' }"
         title="本——Markdown 源码（编辑组）"
-        @click="toggleTopView('code')"
+        @click="toggleTopView('source')"
       >
         本
       </button>
@@ -48,12 +48,13 @@
       </button>
     </div>
 
-    <!-- 顶级正交视图：图 / 表 / [码]（不进文映树）。「本」已并入左侧编辑
-         组（2026-11-08 重排）。「码」是底部代码执行工具窗口的开关；只在
-         「文」**独占**时可点，分屏时同样禁用（判据在 store.isCodeRunSurface）。 -->
+    <!-- 顶级正交视图：表 / 图 / 码（不进文映树）。「本」已并入左侧编辑组
+         （2026-11-08 重排）。「码」= 全文代码块只读透镜（2026-11-08 起，键
+         'code'）——旧版这里曾是底部执行窗开关，执行窗入口已迁往围栏 ▶ 与
+         码透镜点块定位，面板右上角自带关闭钮。 -->
     <div class="main-views">
       <button
-        v-for="tv in topViewsBeforeCode"
+        v-for="tv in mainTopViews"
         :key="tv"
         class="main-view-btn"
         :class="{ active: topView === tv }"
@@ -62,15 +63,6 @@
       >
         {{ TOP_VIEW_META[tv].icon }}
       </button>
-      <button
-        class="main-view-btn code-run-btn"
-        :class="{ active: codeRunEnabled && panel.open, running: panel.running > 0 }"
-        :disabled="!codeRunEnabled"
-        :title="codeRunTitle"
-        @click="panel.toggle()"
-      >
-        码
-      </button>
     </div>
   </div>
 </template>
@@ -78,23 +70,15 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import {
-  useEditorViewStore,
-  TOP_VIEWS,
-  visibleLeafList,
-  type Leaf
-} from '@/store/editorView'
+import { useEditorViewStore, TOP_VIEWS, visibleLeafList, type Leaf } from '@/store/editorView'
 import { usePreferencesStore } from '@/store/preferences'
-import { useExecPanelStore } from '@/store/execPanel'
 import { t } from '@/i18n'
 
 const editorViewStore = useEditorViewStore()
 const preferencesStore = usePreferencesStore()
-const panel = useExecPanelStore()
-const { leafSelection, topView, hasColumns, sliderDuty, isCodeRunSurface, presentImmersive } =
+const { leafSelection, topView, hasColumns, sliderDuty, presentImmersive } =
   storeToRefs(editorViewStore)
-const { toggleLeaf, toggleTopView, enterPresentImmersive, exitPresentImmersive } =
-  editorViewStore
+const { toggleLeaf, toggleTopView, enterPresentImmersive, exitPresentImmersive } = editorViewStore
 const { editorLineWidth } = storeToRefs(preferencesStore)
 
 /** 「映」是一键全屏放映，不参与「配置选择式」：点一下进全屏，再点一下退出。
@@ -108,18 +92,9 @@ const onLeafClick = (leaf: Leaf): void => {
   toggleLeaf(leaf)
 }
 
-/** 「本」已并入左侧编辑组（2026-11-08 重排）——主视图组只剩图/表，码是
- *  独立按钮。往后往 TOP_VIEWS 增删视图不必改模板。 */
-const topViewsBeforeCode = TOP_VIEWS.filter((v) => v !== 'code')
-
-const codeRunEnabled = computed<boolean>(() => isCodeRunSurface.value)
-/** 计数与运行中状态不占按钮面积，收进 hover 提示；运行中另有角标脉冲。 */
-const codeRunTitle = computed<string>(() => {
-  if (!codeRunEnabled.value) return `${t('execPanel.title')}（仅「文」独占视图可展开）`
-  const counts = panel.total > 0 ? ` ${panel.runnable}/${panel.total}` : ''
-  const running = panel.running > 0 ? ` · ${t('execPanel.running')}` : ''
-  return `${t('execPanel.title')}${counts}${running}`
-})
+/** 「本」已并入左侧编辑组（2026-11-08 重排）——主视图组 = 表/图/码三个
+ *  内容透镜。往后往 TOP_VIEWS 增删视图不必改模板。 */
+const mainTopViews = TOP_VIEWS.filter((v) => v !== 'source')
 
 // 叶的短名与提示。label 是单字 CJK 刻度（与主视图图标同族，刻意不翻译）；
 // title 中文提示——与 deck 工具条同策略（该用户群中文工作语言）。
@@ -134,7 +109,7 @@ const LEAF_META: Record<Leaf, { label: string; title: string }> = {
 const TOP_VIEW_META: Record<string, { icon: string; title: string }> = {
   table: { icon: '表', title: 'Tables' },
   figure: { icon: '图', title: 'Figure' },
-  code: { icon: '本', title: 'Markdown Source' }
+  code: { icon: '码', title: '码——全文代码块总览（只读透镜；点块定位执行窗）' }
 }
 
 const visibleLeaves = computed<Leaf[]>(() => visibleLeafList(hasColumns.value))
@@ -252,45 +227,6 @@ const handleSliderChange = () => {
 .main-view-btn.active {
   color: var(--editorBgColor);
   background: var(--editorColor50);
-}
-
-/* 非「文」视图：按钮常驻但不可点，也不吃 hover。 */
-.main-view-btn:disabled {
-  opacity: 0.38;
-  cursor: default;
-}
-
-.main-view-btn:disabled:hover {
-  color: var(--editorColor40);
-  background: transparent;
-}
-
-.code-run-btn {
-  position: relative;
-}
-
-/* 运行中：右上角主题色脉冲点（原状态栏 running-dot 移到按钮上）。 */
-.code-run-btn.running::after {
-  content: '';
-  position: absolute;
-  top: 1px;
-  right: 1px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--themeColor);
-  animation: code-run-pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes code-run-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.3;
-  }
 }
 
 /* Page width slider */

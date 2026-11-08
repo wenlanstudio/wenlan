@@ -2,7 +2,9 @@
   <div
     ref="wrapperRef"
     class="editor-wrapper"
-    :class="[{ typewriter: typewriter, focus: focus, source: sourceCode, 'viewer-open': viewerOpen }]"
+    :class="[
+      { typewriter: typewriter, focus: focus, source: sourceCode, 'viewer-open': viewerOpen }
+    ]"
     :dir="textDirection"
   >
     <div
@@ -70,7 +72,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef, reactive, watch, onMounted, onBeforeUnmount, nextTick, markRaw } from 'vue'
+import {
+  ref,
+  shallowRef,
+  reactive,
+  watch,
+  onMounted,
+  onBeforeUnmount,
+  nextTick,
+  markRaw
+} from 'vue'
 import log from 'electron-log'
 import {
   Muya,
@@ -100,6 +111,7 @@ import EditorSearch from '../search/index.vue'
 import MediaViewer from '../mediaViewer/index.vue'
 import bus from '@/bus'
 import notice from '@/services/notification'
+import { useExecPanelStore } from '@/store/execPanel'
 import Printer from '@/services/printService'
 import { SpellcheckerLanguageCommand } from '@/commands'
 import { SpellChecker } from '@/spellchecker'
@@ -194,6 +206,8 @@ const props = defineProps<{
 const preferencesStore = usePreferencesStore()
 const editorStore = useEditorStore()
 const editorViewStore = useEditorViewStore()
+// 码透镜点块定位要开执行窗（§6.3）；execPanel store 不反向依赖本组件，无环。
+const execPanelStore = useExecPanelStore()
 const projectStore = useProjectStore()
 
 // Use storeToRefs to extract reactive properties from the stores
@@ -365,13 +379,9 @@ const adaptSelectionChange = (changes: MuyaChange) => {
   const anchorBlock = changes.anchorBlock as { text?: string } | null | undefined
   const focusBlock = changes.focusBlock as { text?: string } | null | undefined
   const anchorInfo = changes.anchorBlockInfo as
-    | { type?: string; functionType?: string }
-    | null
-    | undefined
+    { type?: string; functionType?: string } | null | undefined
   const focusInfo = changes.focusBlockInfo as
-    | { type?: string; functionType?: string }
-    | null
-    | undefined
+    { type?: string; functionType?: string } | null | undefined
   const rawAffiliation = (changes.affiliation ?? []) as EngineAffiliationEntry[]
   const affiliation = rawAffiliation.map((entry) => {
     const functionType =
@@ -436,7 +446,10 @@ const applyLens = (): void => {
 const applyPaperTheme = (): void => {
   const container = editor.value?.domNode as HTMLElement | undefined
   if (!container) return
-  container.classList.toggle('paper-theme-thesis', parsePaperTheme(props.markdown ?? '') === 'thesis')
+  container.classList.toggle(
+    'paper-theme-thesis',
+    parsePaperTheme(props.markdown ?? '') === 'thesis'
+  )
 }
 
 watch(
@@ -573,17 +586,23 @@ watch(sequenceTheme, (value, oldValue) => {
   }
 })
 
-watch(() => preferencesStore.plantumlServer, (value, oldValue) => {
-  if (value !== oldValue && editor.value) {
-    editor.value.setOptions({ plantumlServer: value }, true)
+watch(
+  () => preferencesStore.plantumlServer,
+  (value, oldValue) => {
+    if (value !== oldValue && editor.value) {
+      editor.value.setOptions({ plantumlServer: value }, true)
+    }
   }
-})
+)
 
-watch(() => preferencesStore.drawioServer, (value, oldValue) => {
-  if (value !== oldValue && editor.value) {
-    editor.value.setOptions({ drawioServer: value }, true)
+watch(
+  () => preferencesStore.drawioServer,
+  (value, oldValue) => {
+    if (value !== oldValue && editor.value) {
+      editor.value.setOptions({ drawioServer: value }, true)
+    }
   }
-})
+)
 
 watch(listIndentation, (value, oldValue) => {
   if (value !== oldValue && editor.value) {
@@ -660,15 +679,14 @@ watch(hideQuickInsertHint, (value, oldValue) => {
   }
 })
 
-// M0 只读收口（视图模型 §6）：文/本之外一律只读——栏/表透镜在用户锁之外
+// M0 只读收口（视图模型 §6）：文/本之外一律只读——栏/表/码透镜在用户锁之外
 // 再加一层锁，离开透镜按用户锁复原，不得顺手解开用户自己上的锁。引擎三层
 // 强制（表面/事件/状态）不变，这里只翻选项；初始值仍由 buildMuyaViewOptions
 // 带入（含用户锁），挂载后再补一次（覆盖透镜初始值，如启动即恢复到栏/表）。
 // 值未变时跳过——setOptions({ readOnly }) 即便同值也触发整树重建
 // （contenteditable 派生自构造期选项，须重建才能翻转），不能白付。
-const READ_ONLY_LENSES = new Set(['column', 'table'])
-const isLensReadOnly = (): boolean =>
-  props.lens != null && READ_ONLY_LENSES.has(props.lens)
+const READ_ONLY_LENSES = new Set(['column', 'table', 'code'])
+const isLensReadOnly = (): boolean => props.lens != null && READ_ONLY_LENSES.has(props.lens)
 
 const applyReadOnlyLock = (): void => {
   const locked = editorStore.readOnly || isLensReadOnly()
@@ -1373,6 +1391,28 @@ const contentPathAt = (target: Element): (string | number)[] | null => {
   return content ? [...content.path] : null
 }
 
+// —— 码透镜点块定位（视图模型 §6.3）：单击代码块 → 执行窗打开并定位该块 ——
+// 取文本走 muya 块对象（与围栏 ▶ 的 detail.text 同源），面板侧 findFenceByCode
+// 按原文精确反查才不落空；高亮走 mdcode2run-select-fence——绝不 revealBlock，
+// 透镜里没有光标可扰。▶/复制按钮自带 stopPropagation，点它们不会进这里；
+// 双击仍由 handleLensDblClick 跳回编辑面（面板已开不碍事）。
+const handleLensCodeBlockClick = (event: MouseEvent): void => {
+  if (props.lens !== 'code') return
+  const target = event.target instanceof Element ? event.target : null
+  const container = getScrollContainer()
+  if (!target || !container || !container.contains(target)) return
+  let el: Element | null = target
+  while (el && el !== container && !getBlock(el)) el = el.parentElement
+  if (!el || el === container) return
+  const block = getBlock(el)
+  if (!block || !('firstContentInDescendant' in block || 'text' in block)) return
+  const content = 'firstContentInDescendant' in block ? block.firstContentInDescendant() : block
+  const text = (content as { text?: string } | null)?.text ?? ''
+  if (!text.trim()) return
+  execPanelStore.setOpen(true)
+  bus.emit('mdcode2run-select-fence', { text })
+}
+
 const handleLensDblClick = (event: MouseEvent): void => {
   if (!isLensReadOnly()) return
   const target = event.target instanceof Element ? event.target : null
@@ -1380,13 +1420,13 @@ const handleLensDblClick = (event: MouseEvent): void => {
   if (!target || !container || !container.contains(target)) return
 
   const blocks = contentBlocks(container)
-  const topEl = blocks.find(b => b.contains(target))
+  const topEl = blocks.find((b) => b.contains(target))
   const topIndex = topEl ? blocks.indexOf(topEl) : null
   const topText = topEl ? blockText(topEl) : undefined
   if (topIndex != null) writeDocAnchor({ topBlock: topIndex, text: topText, origin: 'scroll' })
 
   // 跳转目标（§6.3）：最近编辑面是本 → 经块首行表换算行号，锚写 topLine、
-  // 切顶级视图 code（挂载恢复落在该行）；否则走文（下述同实例路径）。
+  // 切顶级视图 source（挂载恢复落在该行）；否则走文（下述同实例路径）。
   if (topIndex != null && lastEditingSurface() === 'source') {
     const line = blockIndexToLine(props.markdown ?? '', topIndex)
     if (line != null) writeDocAnchor({ topLine: line, origin: 'reverse' })
@@ -1419,11 +1459,15 @@ let lineTableTimer = 0
 
 // 反向定位：只读面（栏右投影等）发来的锚 → 文/栏透镜就地滚到对应块（不落
 // 光标、不移焦点）。自己滚动写的锚（origin=scroll）不吃回声。
-const offDocAnchor = onDocAnchorChange(anchor => {
+const offDocAnchor = onDocAnchorChange((anchor) => {
   if (anchor?.origin !== 'reverse') return
   if (props.lens !== 'flow' && props.lens !== 'column') return
   requestAnimationFrame(() => {
-    scrollViewToAnchor(getScrollContainer(), { blockIndex: anchor.topBlock, text: anchor.text }, { behavior: 'smooth' })
+    scrollViewToAnchor(
+      getScrollContainer(),
+      { blockIndex: anchor.topBlock, text: anchor.text },
+      { behavior: 'smooth' }
+    )
   })
 })
 
@@ -1834,8 +1878,7 @@ const handleInsertColumns = (payload: unknown) => {
       editor.value.insertParagraph('after', '', true)
       continue
     }
-    if (!editor.value.insertColumnMarker(text))
-      editor.value.insertParagraph('after', text, true)
+    if (!editor.value.insertColumnMarker(text)) editor.value.insertParagraph('after', text, true)
   }
 }
 
@@ -2001,7 +2044,7 @@ onMounted(() => {
     autoCheck: autoCheck.value,
     // Matplotlib renders out-of-process: the main process runs the document's
     // Python snippet and hands back an image, which lands in `target`.
-    renderExternalDiagram: async(type, code, target) => {
+    renderExternalDiagram: async (type, code, target) => {
       const result = await window.diagram.renderExternal(type, code)
       if (!result.ok) throw new Error(result.error)
 
@@ -2210,6 +2253,9 @@ onMounted(() => {
   // M0 跳转编辑：只读透镜（栏/表）上双击 → 跳回文的对应块。原生 dblclick
   // 不受引擎 readOnly 事件闸影响；handler 自带透镜判据，文/页透镜零开销早退。
   container.addEventListener('dblclick', handleLensDblClick)
+  // 码透镜点块定位：单击代码块 → 执行窗打开并定位该块（§6.3）；handler
+  // 自带透镜判据，其余透镜/文零开销早退。
+  container.addEventListener('click', handleLensCodeBlockClick)
 
   // 视图切入（code/source 或占位视图 → document/page）：本组件由 `v-if` 重建，
   // tab 切换不会走到这里（那条路径由 file-changed 的 scrollTop 恢复），所以
@@ -2400,6 +2446,7 @@ onBeforeUnmount(() => {
     const container = getScrollContainer()
     container?.removeEventListener('scroll', scrollHandler)
     container?.removeEventListener('dblclick', handleLensDblClick)
+    container?.removeEventListener('click', handleLensCodeBlockClick)
   }
   scrollHandler = null
 
@@ -2408,7 +2455,8 @@ onBeforeUnmount(() => {
   // 瞬间的位置（TODO1 #4）。
   if (currentFile.value?.id) {
     const container = getScrollContainer()
-    if (container) flushDocAnchorWrite(() => ({ ...viewAnchorOf(container), origin: 'scroll' as const }))
+    if (container)
+      flushDocAnchorWrite(() => ({ ...viewAnchorOf(container), origin: 'scroll' as const }))
   }
   window.clearTimeout(lineTableTimer)
   offDocAnchor()
@@ -2503,11 +2551,32 @@ onBeforeUnmount(() => {
   display: none;
 }
 
+/* Lens: show only the document's code blocks (2026-11-08, view-model §1).
+   Same mechanism as the table lens — same live engine, CSS-only hiding, no
+   rebuild. Diagram blocks (`figure.mu-diagram-block`) do NOT carry
+   `mu-code-block`, so mermaid/echarts 等代码型图表自动归图、不进码透镜；
+   frontmatter / math / html 同理被藏。Buttons (▶/copy) are forced visible:
+   the hover-reveal depends on `mu-active` which a read-only lens rarely
+   triggers, and run/locate is this lens's whole point. */
+[data-lens='code'] .mu-container > *:not(.mu-code-block) {
+  display: none;
+}
+
+[data-lens='code'] .mu-code-run,
+[data-lens='code'] .mu-code-copy {
+  opacity: 1;
+}
+
 /* 打字机居中位同理：50vh 会把光标推到面板背后（面板越高越明显）。用实测视口
    的一半，max(0px, …) 防止面板拖到最大时算出负 padding。 */
 .typewriter .editor-component {
-  padding-top: max(0px, calc(var(--editorViewportHeight, var(--workspaceHeight, 100vh)) * 0.5 - 136px));
-  padding-bottom: max(0px, calc(var(--editorViewportHeight, var(--workspaceHeight, 100vh)) * 0.5 - 54px));
+  padding-top: max(
+    0px,
+    calc(var(--editorViewportHeight, var(--workspaceHeight, 100vh)) * 0.5 - 136px)
+  );
+  padding-bottom: max(
+    0px,
+    calc(var(--editorViewportHeight, var(--workspaceHeight, 100vh)) * 0.5 - 54px)
+  );
 }
-
 </style>
