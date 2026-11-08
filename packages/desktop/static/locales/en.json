@@ -460,7 +460,8 @@
       "spelling": "Spelling",
       "theme": "Theme",
       "image": "Image",
-      "keybindings": "Keybindings"
+      "keybindings": "Keybindings",
+      "account": "Account"
     },
     "general": {
       "title": "General",
@@ -1088,5 +1089,39 @@
     "resizeHint": "Drag to resize · Double-click to maximize",
     "noBlocks": "No runnable code blocks in this document",
     "close": "Close code run panel"
+  },
+  "account": {
+    "account": "Account",
+    "login": "Log in",
+    "logout": "Log out",
+    "notLoggedIn": "Not signed in",
+    "school": "School",
+    "username": "Username",
+    "password": "Password",
+    "oldPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "openTeaching": "Open teaching client",
+    "changePassword": "Change password",
+    "loginSuccess": "Signed in",
+    "loginFailed": "Sign-in failed",
+    "passwordChanged": "Password changed",
+    "tenantRequired": "Please select a school",
+    "fillRequired": "Please complete all fields",
+    "passwordMismatch": "Passwords do not match"
+  },
+  "teaching": {
+    "title": "Teaching",
+    "myCourses": "My courses",
+    "empty": "No published materials",
+    "loading": "Loading…",
+    "loadFailed": "Failed to load",
+    "purpose": {
+      "resource": "Reference",
+      "practice": "Lab practice",
+      "homework": "Homework",
+      "quiz": "Quiz",
+      "exam": "Exam"
+    }
   }
 }

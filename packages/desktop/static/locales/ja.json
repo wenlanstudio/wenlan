@@ -460,7 +460,8 @@
       "spelling": "スペルチェック",
       "theme": "テーマ",
       "image": "画像",
-      "keybindings": "キーバインド"
+      "keybindings": "キーバインド",
+      "account": "アカウント"
     },
     "general": {
       "title": "全般",
@@ -1088,5 +1089,39 @@
     "cursorPosition": "Cursor Position",
     "readOnlyLocked": "Read-only mode",
     "readOnlyUnlocked": "Editable mode"
+  },
+  "account": {
+    "account": "アカウント",
+    "login": "ログイン",
+    "logout": "ログアウト",
+    "notLoggedIn": "未ログイン",
+    "school": "学校",
+    "username": "ユーザー名",
+    "password": "パスワード",
+    "oldPassword": "現在のパスワード",
+    "newPassword": "新しいパスワード",
+    "confirmPassword": "新しいパスワード（確認）",
+    "openTeaching": "教学クライアントを開く",
+    "changePassword": "パスワード変更",
+    "loginSuccess": "ログインしました",
+    "loginFailed": "ログインに失敗しました",
+    "passwordChanged": "パスワードを変更しました",
+    "tenantRequired": "学校を選択してください",
+    "fillRequired": "すべての項目を入力してください",
+    "passwordMismatch": "パスワードが一致しません"
+  },
+  "teaching": {
+    "title": "教学クライアント",
+    "myCourses": "マイコース",
+    "empty": "公開された教材はありません",
+    "loading": "読み込み中…",
+    "loadFailed": "読み込みに失敗しました",
+    "purpose": {
+      "resource": "資料閲覧",
+      "practice": "実習",
+      "homework": "宿題",
+      "quiz": "テスト",
+      "exam": "試験"
+    }
   }
 }

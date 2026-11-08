@@ -460,7 +460,8 @@
       "spelling": "Rechtschreibung",
       "theme": "Design",
       "image": "Bild",
-      "keybindings": "Tastenkürzel"
+      "keybindings": "Tastenkürzel",
+      "account": "Konto"
     },
     "general": {
       "title": "Allgemein",
@@ -1088,5 +1089,39 @@
     "cursorPosition": "Cursor Position",
     "readOnlyLocked": "Read-only mode",
     "readOnlyUnlocked": "Editable mode"
+  },
+  "account": {
+    "account": "Konto",
+    "login": "Anmelden",
+    "logout": "Abmelden",
+    "notLoggedIn": "Nicht angemeldet",
+    "school": "Schule",
+    "username": "Benutzername",
+    "password": "Passwort",
+    "oldPassword": "Aktuelles Passwort",
+    "newPassword": "Neues Passwort",
+    "confirmPassword": "Passwort bestätigen",
+    "openTeaching": "Unterrichts-Client öffnen",
+    "changePassword": "Passwort ändern",
+    "loginSuccess": "Angemeldet",
+    "loginFailed": "Anmeldung fehlgeschlagen",
+    "passwordChanged": "Passwort geändert",
+    "tenantRequired": "Bitte Schule wählen",
+    "fillRequired": "Bitte alle Felder ausfüllen",
+    "passwordMismatch": "Passwörter stimmen nicht überein"
+  },
+  "teaching": {
+    "title": "Unterricht",
+    "myCourses": "Meine Kurse",
+    "empty": "Keine veröffentlichten Materialien",
+    "loading": "Wird geladen…",
+    "loadFailed": "Laden fehlgeschlagen",
+    "purpose": {
+      "resource": "Nachschlagewerk",
+      "practice": "Praktikum",
+      "homework": "Hausaufgabe",
+      "quiz": "Test",
+      "exam": "Prüfung"
+    }
   }
 }

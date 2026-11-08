@@ -20,6 +20,12 @@ import type {
   SaveDialogRequest
 } from '@shared/types/ipc'
 import type { Md2rEvent } from '@shared/types/mdcode2run'
+import type {
+  AuthLoginParams,
+  AuthRequestOptions,
+  AuthState,
+  TenantInfo
+} from '@shared/types/auth'
 
 type RendererEventListener<K extends keyof IpcMainEventChannels> = (
   event: IpcRendererEvent,
@@ -327,6 +333,21 @@ const mdcode2runAPI = {
     ipcWrapper.on('mt::mdcode2run::event', (_event, payload) => listener(payload))
 }
 
+// 教学客户端身份：token 只在 main，renderer 经 request 代理发请求。
+const authAPI = {
+  request: (opts: AuthRequestOptions) => invoke('auth::request', opts),
+  login: (params: AuthLoginParams) => invoke('auth::login', params),
+  logout: () => invoke('auth::logout'),
+  getState: () => invoke('auth::get-state'),
+  listTenants: (): Promise<TenantInfo[]> => invoke('auth::list-tenants'),
+  openTeaching: (): Promise<void> => invoke('auth::open-teaching-window'),
+  onStateChanged: (listener: (state: AuthState) => void): (() => void) => {
+    const sub = (_e: IpcRendererEvent, state: AuthState): void => listener(state)
+    ipcRenderer.on('auth::state-changed', sub)
+    return () => ipcRenderer.removeListener('auth::state-changed', sub)
+  }
+}
+
 try {
   contextBridge.exposeInMainWorld('electron', electronAPI)
   contextBridge.exposeInMainWorld('process', processShim)
@@ -341,6 +362,7 @@ try {
   contextBridge.exposeInMainWorld('diagram', diagramAPI)
   contextBridge.exposeInMainWorld('md2slides', md2slidesAPI)
   contextBridge.exposeInMainWorld('mdcode2run', mdcode2runAPI)
+  contextBridge.exposeInMainWorld('auth', authAPI)
 } catch (error) {
   console.error(error)
 }

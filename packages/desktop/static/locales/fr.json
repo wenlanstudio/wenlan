@@ -460,7 +460,8 @@
       "spelling": "Orthographe",
       "theme": "Thème",
       "image": "Image",
-      "keybindings": "Raccourcis clavier"
+      "keybindings": "Raccourcis clavier",
+      "account": "Compte"
     },
     "general": {
       "title": "Général",
@@ -1088,5 +1089,39 @@
     "cursorPosition": "Cursor Position",
     "readOnlyLocked": "Read-only mode",
     "readOnlyUnlocked": "Editable mode"
+  },
+  "account": {
+    "account": "Compte",
+    "login": "Se connecter",
+    "logout": "Se déconnecter",
+    "notLoggedIn": "Non connecté",
+    "school": "École",
+    "username": "Nom d'utilisateur",
+    "password": "Mot de passe",
+    "oldPassword": "Mot de passe actuel",
+    "newPassword": "Nouveau mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "openTeaching": "Ouvrir le client pédagogique",
+    "changePassword": "Changer le mot de passe",
+    "loginSuccess": "Connecté",
+    "loginFailed": "Échec de la connexion",
+    "passwordChanged": "Mot de passe modifié",
+    "tenantRequired": "Veuillez choisir une école",
+    "fillRequired": "Veuillez remplir tous les champs",
+    "passwordMismatch": "Les mots de passe ne correspondent pas"
+  },
+  "teaching": {
+    "title": "Client pédagogique",
+    "myCourses": "Mes cours",
+    "empty": "Aucun support publié",
+    "loading": "Chargement…",
+    "loadFailed": "Échec du chargement",
+    "purpose": {
+      "resource": "Consultation",
+      "practice": "Travaux pratiques",
+      "homework": "Devoir",
+      "quiz": "Test",
+      "exam": "Examen"
+    }
   }
 }

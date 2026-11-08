@@ -15,6 +15,7 @@ import { t } from './i18n'
 import { registerSandboxIpcHandlers } from './ipc'
 import { setPlantumlServerSource } from './ipc/diagram'
 import { setMatplotlibSource, warmUpPythonDetection } from './ipc/matplotlib'
+import { initAuthManager, getAuthManager } from './auth'
 
 // Set version strings into global and process.versions
 process.env.MARKTEXT_VERSION = MARKTEXT_VERSION
@@ -85,6 +86,10 @@ if (!process.mas && !import.meta.env.DEV) {
 
 // Register sandbox-safe IPC handlers used by the contextBridge preload
 registerSandboxIpcHandlers()
+
+// 教学客户端身份单例：token 只活在 main，经 safeStorage 落盘 userData。
+initAuthManager(appEnvironment.paths.userDataPath)
+void getAuthManager().init()
 
 // Windows-specific AppUserModelID
 electronApp.setAppUserModelId('io.github.quqingyuan.wenlan')

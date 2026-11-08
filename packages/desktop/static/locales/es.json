@@ -460,7 +460,8 @@
       "spelling": "Ortografía",
       "theme": "Tema",
       "image": "Imagen",
-      "keybindings": "Atajos de Teclado"
+      "keybindings": "Atajos de Teclado",
+      "account": "Cuenta"
     },
     "general": {
       "title": "General",
@@ -1088,5 +1089,39 @@
     "cursorPosition": "Cursor Position",
     "readOnlyLocked": "Read-only mode",
     "readOnlyUnlocked": "Editable mode"
+  },
+  "account": {
+    "account": "Cuenta",
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión",
+    "notLoggedIn": "No conectado",
+    "school": "Escuela",
+    "username": "Usuario",
+    "password": "Contraseña",
+    "oldPassword": "Contraseña actual",
+    "newPassword": "Nueva contraseña",
+    "confirmPassword": "Confirmar contraseña",
+    "openTeaching": "Abrir cliente de enseñanza",
+    "changePassword": "Cambiar contraseña",
+    "loginSuccess": "Conectado",
+    "loginFailed": "Error al iniciar sesión",
+    "passwordChanged": "Contraseña cambiada",
+    "tenantRequired": "Seleccione una escuela",
+    "fillRequired": "Complete todos los campos",
+    "passwordMismatch": "Las contraseñas no coinciden"
+  },
+  "teaching": {
+    "title": "Cliente de enseñanza",
+    "myCourses": "Mis cursos",
+    "empty": "No hay materiales publicados",
+    "loading": "Cargando…",
+    "loadFailed": "Error al cargar",
+    "purpose": {
+      "resource": "Consulta",
+      "practice": "Práctica",
+      "homework": "Tarea",
+      "quiz": "Prueba",
+      "exam": "Examen"
+    }
   }
 }

@@ -14,6 +14,7 @@ import { registerMatplotlibHandlers } from './matplotlib'
 import { registerLinkHtmlHandler } from './linkHtml'
 import { registerMd2slidesHandlers } from './md2slides'
 import { registerMdcode2runHandlers } from './mdcode2run'
+import { registerAuthHandlers } from './auth'
 
 export const registerSandboxIpcHandlers = (): void => {
   registerBootInfo()
@@ -32,4 +33,5 @@ export const registerSandboxIpcHandlers = (): void => {
   registerLinkHtmlHandler()
   registerMd2slidesHandlers()
   registerMdcode2runHandlers()
+  registerAuthHandlers()
 }

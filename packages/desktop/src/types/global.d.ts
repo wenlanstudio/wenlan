@@ -16,6 +16,14 @@ import type {
 import type { MenuTemplate, MenuPopupPosition, MenuStructureItem } from '@shared/types/menu'
 import type { SerializedStat } from '@shared/types/files'
 import type { Md2rEvent, Md2rJournalEntry, Md2rParseResult, Md2rRunResult } from '@shared/types/mdcode2run'
+import type {
+  AuthActionResult,
+  AuthLoginParams,
+  AuthRequestOptions,
+  AuthRequestResult,
+  AuthState,
+  TenantInfo
+} from '@shared/types/auth'
 
 declare global {
   // ---- Build-time defines (electron-vite `define`) ----
@@ -188,6 +196,16 @@ declare global {
     list(): Promise<string[]>
   }
 
+  interface AuthAPI {
+    request<T = unknown>(opts: AuthRequestOptions): Promise<AuthRequestResult<T>>
+    login(params: AuthLoginParams): Promise<AuthActionResult>
+    logout(): Promise<void>
+    getState(): Promise<AuthState>
+    listTenants(): Promise<TenantInfo[]>
+    openTeaching(): Promise<void>
+    onStateChanged(listener: (state: AuthState) => void): () => void
+  }
+
   interface ProcessShim {
     platform: NodeJS.Platform
     arch?: string
@@ -208,6 +226,7 @@ declare global {
     uploader: UploaderAPI
     fonts: FontsAPI
     diagram: DiagramAPI
+    auth: AuthAPI
     md2slides: {
       server(opts: { action: 'start' | 'stop'; allowRoots?: string[] }): Promise<
         { running: boolean; origin: string | null }

@@ -460,7 +460,8 @@
       "spelling": "맞춤법",
       "theme": "테마",
       "image": "이미지",
-      "keybindings": "키 바인딩"
+      "keybindings": "키 바인딩",
+      "account": "계정"
     },
     "general": {
       "title": "일반",
@@ -1088,5 +1089,39 @@
     "cursorPosition": "Cursor Position",
     "readOnlyLocked": "Read-only mode",
     "readOnlyUnlocked": "Editable mode"
+  },
+  "account": {
+    "account": "계정",
+    "login": "로그인",
+    "logout": "로그아웃",
+    "notLoggedIn": "로그인 안 됨",
+    "school": "학교",
+    "username": "사용자 이름",
+    "password": "비밀번호",
+    "oldPassword": "현재 비밀번호",
+    "newPassword": "새 비밀번호",
+    "confirmPassword": "새 비밀번호 확인",
+    "openTeaching": "강의 클라이언트 열기",
+    "changePassword": "비밀번호 변경",
+    "loginSuccess": "로그인됨",
+    "loginFailed": "로그인 실패",
+    "passwordChanged": "비밀번호 변경됨",
+    "tenantRequired": "학교를 선택하세요",
+    "fillRequired": "모든 항목을 입력하세요",
+    "passwordMismatch": "비밀번호가 일치하지 않습니다"
+  },
+  "teaching": {
+    "title": "강의 클라이언트",
+    "myCourses": "내 강의",
+    "empty": "게시된 강의가 없습니다",
+    "loading": "불러오는 중…",
+    "loadFailed": "불러오기 실패",
+    "purpose": {
+      "resource": "자료 열람",
+      "practice": "실습",
+      "homework": "과제",
+      "quiz": "퀴즈",
+      "exam": "시험"
+    }
   }
 }

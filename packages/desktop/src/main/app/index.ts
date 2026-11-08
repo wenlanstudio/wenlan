@@ -22,6 +22,8 @@ import { scheduleStartupUpdateCheck } from '../updateStartup'
 import { WindowType } from '../windows/base'
 import EditorWindow from '../windows/editor'
 import SettingWindow from '../windows/setting'
+import TeachingWindow from '../windows/teaching'
+import { setOpenTeachingWindowHandler } from '../auth'
 import { setLanguage } from '../i18n'
 import { matchSupportedLanguage } from 'common/i18n'
 import { getNativeThemeSource, isDarkApplicationTheme } from './nativeTheme'
@@ -63,6 +65,9 @@ class App {
     this._listenForIpcMain()
     // Initialize theme listener
     this._themeListenerRegistered = false
+
+    // 教学客户端窗口：IPC 通道注册早于 App 构造，这里把回调接到 auth 单例。
+    setOpenTeachingWindowHandler(() => this._createTeachingWindow())
   }
 
   /**
@@ -476,6 +481,18 @@ class App {
     this._windowManager.add(setting)
     if (this._windowManager.windowCount === 1) {
       this._accessor.menu.setActiveWindow(setting.id!)
+    }
+  }
+
+  /**
+   * Create the teaching client window (edu-client E2).
+   */
+  private _createTeachingWindow(): void {
+    const teaching = new TeachingWindow(this._accessor)
+    teaching.createWindow()
+    this._windowManager.add(teaching)
+    if (this._windowManager.windowCount === 1) {
+      this._accessor.menu.setActiveWindow(teaching.id!)
     }
   }
 

@@ -23,6 +23,7 @@
       />
       <toc v-else-if="sidebarTab === 'toc'" />
     </div>
+    <account-bar />
     <div
       ref="dragBar"
       class="drag-bar"
@@ -41,6 +42,7 @@ import { isMac } from '@/util'
 
 import Tree from './tree.vue'
 import Toc from './toc.vue'
+import AccountBar from '../accountBar/index.vue'
 import { storeToRefs } from 'pinia'
 
 /** 沉浸式放映时由 app.vue 传入：只隐藏显示层，不改 showSideBar 用户偏好。 */

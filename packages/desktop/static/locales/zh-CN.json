@@ -460,7 +460,8 @@
       "spelling": "拼写",
       "theme": "主题",
       "image": "图片",
-      "keybindings": "快捷键"
+      "keybindings": "快捷键",
+      "account": "账户"
     },
     "general": {
       "title": "通用",
@@ -1088,5 +1089,39 @@
     "resizeHint": "拖动调整高度 · 双击最大化/还原",
     "noBlocks": "文档中没有可运行的代码块",
     "close": "关闭执行窗"
+  },
+  "account": {
+    "account": "账户",
+    "login": "登录",
+    "logout": "退出登录",
+    "notLoggedIn": "未登录",
+    "school": "学校",
+    "username": "账号",
+    "password": "密码",
+    "oldPassword": "原密码",
+    "newPassword": "新密码",
+    "confirmPassword": "确认新密码",
+    "openTeaching": "打开教学客户端",
+    "changePassword": "修改密码",
+    "loginSuccess": "登录成功",
+    "loginFailed": "登录失败",
+    "passwordChanged": "密码已修改",
+    "tenantRequired": "请选择学校",
+    "fillRequired": "请填写完整信息",
+    "passwordMismatch": "两次输入的密码不一致"
+  },
+  "teaching": {
+    "title": "教学客户端",
+    "myCourses": "我的课程",
+    "empty": "暂无发布的讲义",
+    "loading": "加载中…",
+    "loadFailed": "加载失败",
+    "purpose": {
+      "resource": "资料查阅",
+      "practice": "机房实训",
+      "homework": "作业",
+      "quiz": "测试",
+      "exam": "考试"
+    }
   }
 }

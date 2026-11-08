@@ -40,6 +40,14 @@ import type {
   Md2rParseResult,
   Md2rRunResult
 } from './mdcode2run'
+import type {
+  AuthLoginParams,
+  AuthRequestOptions,
+  AuthRequestResult,
+  AuthActionResult,
+  AuthState,
+  TenantInfo
+} from './auth'
 
 export interface SaveDialogRequest {
   title?: string
@@ -60,6 +68,15 @@ export type ExternalDiagramResult =
   | { ok: false; error: string }
 
 export interface IpcInvokeChannels {
+  // ===== 教学客户端身份（edu-client E1）=====
+  // 请求代理：renderer 永不接触 token，经 main 注入 Authorization + tenant-id。
+  'auth::request': { args: [opts: AuthRequestOptions]; ret: AuthRequestResult }
+  'auth::login': { args: [params: AuthLoginParams]; ret: AuthActionResult }
+  'auth::logout': { args: []; ret: void }
+  'auth::get-state': { args: []; ret: AuthState }
+  'auth::list-tenants': { args: []; ret: TenantInfo[] }
+  // 打开教学客户端窗口（E2 壳）
+  'auth::open-teaching-window': { args: []; ret: void }
   'mt::ask-for-image-path': { args: []; ret: string[] }
   'mt::boot-info-async': { args: []; ret: BootInfo }
   'mt::clipboard::guess-file-path': { args: []; ret: string | null }
@@ -311,6 +328,8 @@ export interface IpcSyncChannels {
 // =================================================================
 
 export interface IpcMainEventChannels {
+  // 登录态变化推送（main → 所有 renderer 窗口，含教学客户端窗口）
+  'auth::state-changed': [state: AuthState]
   'language-changed': [language: string]
   'mt::UPDATE_AVAILABLE': [info?: unknown]
   'mt::UPDATE_DOWNLOADED': [info?: unknown]

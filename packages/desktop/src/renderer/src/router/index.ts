@@ -4,6 +4,7 @@ import type { RouteRecordRaw } from 'vue-router'
 // runtime, but vue-tsc needs the suffix.
 import App from '@/pages/app.vue'
 import Preference from '@/pages/preference.vue'
+import Teaching from '@/pages/teaching.vue'
 import General from '@/prefComponents/general/index.vue'
 import Editor from '@/prefComponents/editor/index.vue'
 import Markdown from '@/prefComponents/markdown/index.vue'
@@ -11,6 +12,7 @@ import SpellChecker from '@/prefComponents/spellchecker/index.vue'
 import Theme from '@/prefComponents/theme/index.vue'
 import Image from '@/prefComponents/image/index.vue'
 import Keybindings from '@/prefComponents/keybindings/index.vue'
+import Account from '@/prefComponents/account/index.vue'
 
 const parseSettingsPage = (type: string | null | undefined): string => {
   let pageUrl = '/preference'
@@ -23,11 +25,16 @@ const parseSettingsPage = (type: string | null | undefined): string => {
 const routes = (type: string | null | undefined): RouteRecordRaw[] => [
   {
     path: '/',
-    redirect: type === 'editor' ? '/editor' : parseSettingsPage(type)
+    redirect:
+      type === 'editor' ? '/editor' : type === 'teaching' ? '/teaching' : parseSettingsPage(type)
   },
   {
     path: '/editor',
     component: App
+  },
+  {
+    path: '/teaching',
+    component: Teaching
   },
   {
     path: '/preference',
@@ -71,6 +78,11 @@ const routes = (type: string | null | undefined): RouteRecordRaw[] => [
         path: 'keybindings',
         component: Keybindings,
         name: 'keybindings'
+      },
+      {
+        path: 'account',
+        component: Account,
+        name: 'account'
       }
     ]
   }

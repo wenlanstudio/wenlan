@@ -460,7 +460,8 @@
       "spelling": "Spelling",
       "theme": "Thema",
       "image": "Afbeelding",
-      "keybindings": "Sneltoetsen"
+      "keybindings": "Sneltoetsen",
+      "account": "Account"
     },
     "general": {
       "title": "Algemeen",
@@ -1088,5 +1089,39 @@
     "cursorPosition": "Cursor Position",
     "readOnlyLocked": "Read-only mode",
     "readOnlyUnlocked": "Editable mode"
+  },
+  "account": {
+    "account": "Account",
+    "login": "Inloggen",
+    "logout": "Uitloggen",
+    "notLoggedIn": "Niet aangemeld",
+    "school": "School",
+    "username": "Gebruikersnaam",
+    "password": "Wachtwoord",
+    "oldPassword": "Huidig wachtwoord",
+    "newPassword": "Nieuw wachtwoord",
+    "confirmPassword": "Wachtwoord bevestigen",
+    "openTeaching": "Onderwijsclient openen",
+    "changePassword": "Wachtwoord wijzigen",
+    "loginSuccess": "Aangemeld",
+    "loginFailed": "Aanmelden mislukt",
+    "passwordChanged": "Wachtwoord gewijzigd",
+    "tenantRequired": "Kies een school",
+    "fillRequired": "Vul alle velden in",
+    "passwordMismatch": "Wachtwoorden komen niet overeen"
+  },
+  "teaching": {
+    "title": "Onderwijsclient",
+    "myCourses": "Mijn cursussen",
+    "empty": "Geen gepubliceerd materiaal",
+    "loading": "Laden…",
+    "loadFailed": "Laden mislukt",
+    "purpose": {
+      "resource": "Naslagwerk",
+      "practice": "Praktijk",
+      "homework": "Huiswerk",
+      "quiz": "Toets",
+      "exam": "Examen"
+    }
   }
 }

@@ -460,7 +460,8 @@
       "spelling": "Орфография",
       "theme": "Тема",
       "image": "Изображения",
-      "keybindings": "Горячие клавиши"
+      "keybindings": "Горячие клавиши",
+      "account": "Учётная запись"
     },
     "general": {
       "title": "Общие",
@@ -1088,5 +1089,39 @@
     "cursorPosition": "Cursor Position",
     "readOnlyLocked": "Read-only mode",
     "readOnlyUnlocked": "Editable mode"
+  },
+  "account": {
+    "account": "Учётная запись",
+    "login": "Войти",
+    "logout": "Выйти",
+    "notLoggedIn": "Не вошли",
+    "school": "Школа",
+    "username": "Имя пользователя",
+    "password": "Пароль",
+    "oldPassword": "Текущий пароль",
+    "newPassword": "Новый пароль",
+    "confirmPassword": "Подтвердите пароль",
+    "openTeaching": "Открыть учебный клиент",
+    "changePassword": "Сменить пароль",
+    "loginSuccess": "Вход выполнен",
+    "loginFailed": "Ошибка входа",
+    "passwordChanged": "Пароль изменён",
+    "tenantRequired": "Выберите школу",
+    "fillRequired": "Заполните все поля",
+    "passwordMismatch": "Пароли не совпадают"
+  },
+  "teaching": {
+    "title": "Учебный клиент",
+    "myCourses": "Мои курсы",
+    "empty": "Нет опубликованных материалов",
+    "loading": "Загрузка…",
+    "loadFailed": "Ошибка загрузки",
+    "purpose": {
+      "resource": "Справочный материал",
+      "practice": "Практика",
+      "homework": "Домашнее задание",
+      "quiz": "Тест",
+      "exam": "Экзамен"
+    }
   }
 }

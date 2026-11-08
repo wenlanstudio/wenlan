@@ -460,7 +460,8 @@
       "spelling": "Yazım",
       "theme": "Tema",
       "image": "Görsel",
-      "keybindings": "Kısayol Tuşları"
+      "keybindings": "Kısayol Tuşları",
+      "account": "Hesap"
     },
     "general": {
       "title": "Genel",
@@ -1088,5 +1089,39 @@
     "cursorPosition": "Cursor Position",
     "readOnlyLocked": "Read-only mode",
     "readOnlyUnlocked": "Editable mode"
+  },
+  "account": {
+    "account": "Hesap",
+    "login": "Giriş yap",
+    "logout": "Çıkış yap",
+    "notLoggedIn": "Giriş yapılmadı",
+    "school": "Okul",
+    "username": "Kullanıcı adı",
+    "password": "Şifre",
+    "oldPassword": "Mevcut şifre",
+    "newPassword": "Yeni şifre",
+    "confirmPassword": "Şifreyi onayla",
+    "openTeaching": "Öğretim istemcisini aç",
+    "changePassword": "Şifreyi değiştir",
+    "loginSuccess": "Giriş yapıldı",
+    "loginFailed": "Giriş başarısız",
+    "passwordChanged": "Şifre değiştirildi",
+    "tenantRequired": "Lütfen okul seçin",
+    "fillRequired": "Lütfen tüm alanları doldurun",
+    "passwordMismatch": "Şifreler eşleşmiyor"
+  },
+  "teaching": {
+    "title": "Öğretim istemcisi",
+    "myCourses": "Kurslarım",
+    "empty": "Yayınlanmış materyal yok",
+    "loading": "Yükleniyor…",
+    "loadFailed": "Yükleme başarısız",
+    "purpose": {
+      "resource": "Kaynak",
+      "practice": "Uygulama",
+      "homework": "Ödev",
+      "quiz": "Test",
+      "exam": "Sınav"
+    }
   }
 }

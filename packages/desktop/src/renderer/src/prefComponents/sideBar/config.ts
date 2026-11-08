@@ -5,7 +5,8 @@ import {
   Brush as ThemeIcon,
   Picture as ImageIcon,
   Reading as SpellIcon,
-  Operation as KeyBindingIcon
+  Operation as KeyBindingIcon,
+  User as AccountIcon
 } from '@element-plus/icons-vue'
 
 import preferences from '../../../../main/preferences/schema.json'
@@ -107,6 +108,12 @@ export const getCategory = (): PrefCategory[] => [
     label: 'keybindings',
     icon: KeyBindingIcon,
     path: '/preference/keybindings'
+  },
+  {
+    name: t('preferences.categories.account'),
+    label: 'account',
+    icon: AccountIcon,
+    path: '/preference/account'
   }
 ]
 
