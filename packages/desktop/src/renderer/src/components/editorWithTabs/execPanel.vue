@@ -147,10 +147,9 @@ import { codeSlice, findFenceByCode } from '@/util/fenceRun'
 /**
  * mdcode2run 底部执行面板（M3 最小闭环）：**只渲染 body**。
  *
- * JetBrains 式分工：底部工具窗口横跨整个窗口宽度（挂在 app.vue 的
- * .editor-container 上，不在编辑器列里），左侧栏只占它上方的区域，所以侧栏
- * 展开/收起不会压缩面板；开关是右下角视图按钮组里的「码」（viewSwitcher），
- * 这里只渲染 body，没有 header。
+ * JetBrains 式分工：底部工具窗口挂在 app.vue 的 .main-col（侧栏右侧那一列）
+ * 上，天然只占侧栏右侧的宽度——侧栏展开/收起会压缩面板宽度，但不会盖住它；
+ * 开关是右下角视图按钮组里的「码」（viewSwitcher），这里只渲染 body，没有 header。
  *
  * 组件常驻挂载、由 isCodeRunSurface + panel.open 控制 body 显隐——不随视图
  * 切换卸载，引擎事件订阅和进行中的输出缓存才不会丢。isCodeRunSurface 只在

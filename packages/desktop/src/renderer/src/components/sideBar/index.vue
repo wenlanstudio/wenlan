@@ -124,9 +124,9 @@ const handleTabClick = (id: SidebarTab): void => {
   flex-shrink: 0;
   flex-grow: 0;
   width: 280px;
-  /* 高度跟着 `.workspace` 走（= 视口 − 状态栏 − 底部工具窗口），不要用
-     100vh：裸 100vh 会连状态栏与底部面板一起算进来，侧栏就会一直伸到窗口
-     底部、被后面的面板盖住（issue #2）。右侧栏接入时沿用同一条规则。 */
+  /* 高度跟着 `.body-row` 走（= 视口 − title-bar），不要用 100vh：裸 100vh 会连
+     title-bar 一起算进来。侧栏是 .body-row 的贯穿列，天然从 title-bar 下方一路
+     伸到窗口底边（覆盖 status-bar / exec-panel 的左侧），无需再溢出或缩进。 */
   height: 100%;
   min-height: 0;
   min-width: 220px;

@@ -2,7 +2,6 @@
   <div
     class="editor-with-tabs"
     :style="{
-      'max-width': `calc(100vw - ${sideBarOffset}px)`,
       '--editor-zoom': zoom
     }"
   >
@@ -118,7 +117,6 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useLayoutStore } from '@/store/layout'
 import { usePreferencesStore } from '@/store/preferences'
 import { useEditorViewStore } from '@/store/editorView'
 import { storeToRefs } from 'pinia'
@@ -155,18 +153,13 @@ watch(
   { immediate: true }
 )
 
-const { effectiveSideBarWidth } = storeToRefs(useLayoutStore())
 const { zoom } = storeToRefs(usePreferencesStore())
 const editorViewStore = useEditorViewStore()
 const { topView, isSplit, leftLeaf, rightLeaf, activeLeaf, editorLens, rightRatio } =
   storeToRefs(editorViewStore)
 // 全屏/独占形态的判据收口在 store（底部执行面板挪到 app.vue 全宽层后，
 // 两处要用同一条判据，别再在这里复制一遍）。
-const { isPaperFullscreen, isPresentFullscreen, presentImmersive } = storeToRefs(editorViewStore)
-// 沉浸式放映时侧栏被显示层收起，宽度补偿要跟着归零，否则放映区右侧留白。
-const sideBarOffset = computed<number>(() =>
-  presentImmersive.value ? 0 : effectiveSideBarWidth.value
-)
+const { isPaperFullscreen, isPresentFullscreen } = storeToRefs(editorViewStore)
 // Actions 不经 storeToRefs（它只包 state/getter）。
 const { setRightRatio } = editorViewStore
 

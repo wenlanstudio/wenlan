@@ -1,40 +1,5 @@
 <template>
   <div class="status-bar">
-    <div class="status-left">
-      <!-- 窗口级开关（JetBrains 状态栏最左的做法）：侧栏。
-           底部执行窗不经状态栏开关：入口在围栏 ▶ 与「码」透镜（2026-11-08）。 -->
-      <button
-        class="status-btn"
-        :title="t('sideBar.toggle')"
-        @click="toggleSideBar"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          width="15"
-          height="15"
-        >
-          <rect
-            x="3"
-            y="4.5"
-            width="18"
-            height="15"
-            rx="2"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.6"
-          />
-          <line
-            x1="9.5"
-            y1="4.5"
-            x2="9.5"
-            y2="19.5"
-            stroke="currentColor"
-            stroke-width="1.6"
-          />
-        </svg>
-      </button>
-    </div>
-
     <!-- 文档级指示器：放映/全屏时整组隐藏；「映」激活时只留换叶入口。 -->
     <div
       v-if="!isWindowFullScreen && !presentExclusive"
@@ -109,11 +74,12 @@ import ViewSwitcher from '@/components/viewSwitcher/index.vue'
 import WordCount from '@/components/wordCount/index.vue'
 
 /**
- * 底部状态栏（JetBrains 式）：窗口最底一行，横跨全宽，从不参与编辑区布局竞争。
+ * 底部状态栏（JetBrains 式）：窗口最底一行，挂在 .main-col（侧栏右侧那一列），
+ * 天然只占侧栏右侧的宽度，不横贯全宽。从不参与编辑区布局竞争。
  *
- * 左段只放侧栏开关；右段放「文档级指示器」：光标位置、视图切换（表/图/码/本）、
- * 读写锁、字数——从右往左逐级细化，右侧三组位置
- * 固定。状态栏本身不随工具窗口开合移动。
+ * 左段原侧栏开关（status-btn）已移除，入口挪进菜单栏汉堡 / View 菜单；右段放
+ * 「文档级指示器」：光标位置、视图切换（表/图/码/本）、读写锁、字数——从右往左
+ * 逐级细化，右侧三组位置固定。状态栏本身不随工具窗口开合移动。
  */
 
 const editorStore = useEditorStore()
@@ -147,11 +113,6 @@ onBeforeUnmount(() => bus.off('cursor-position', onCursorPosition))
 // 放映/全屏下只保留换叶入口：编辑姿态控件（光标/读写锁/字数）隐藏
 const presentActive = computed(() => leafSelection.value.includes('present'))
 
-// 侧栏开关走 View 菜单同一条入口，原生菜单的勾选态才能同步
-const toggleSideBar = (): void => {
-  bus.emit('view:toggle-layout-entry', 'showSideBar')
-}
-
 const toggleReadOnly = (): void => {
   editorStore.TOGGLE_READ_ONLY()
 }
@@ -163,7 +124,7 @@ const toggleReadOnly = (): void => {
   height: var(--statusBarHeight);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 8px;
   padding: 0 6px;
   border-top: 1px solid var(--editorColor10);
@@ -173,35 +134,10 @@ const toggleReadOnly = (): void => {
   user-select: none;
 }
 
-.status-left,
 .status-right {
   display: flex;
   align-items: center;
   gap: 6px;
-}
-
-.status-btn {
-  height: 20px;
-  min-width: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 0 4px;
-  border: none;
-  border-radius: 3px;
-  background: transparent;
-  color: var(--iconColor);
-  font-size: 11px;
-  cursor: pointer;
-  transition:
-    color 0.15s ease,
-    background 0.15s ease;
-}
-
-.status-btn:hover {
-  color: var(--editorColor);
-  background: var(--itemBgColor);
 }
 
 .cursor-position {

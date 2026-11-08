@@ -7,60 +7,65 @@
       '--bottomPanelHeight': `${bottomPanelHeight}px`
     }"
   >
-    <!-- 工作区（JetBrains 三段式）：左右侧栏 + 编辑器列占满「状态栏与底部工具
-         窗口以上」的空间。它本身是 .editor-container 的 flex:1 子项，底部面板
-         变高它就等量变矮；三列都是它的子项、靠 align-items:stretch 取同一高度，
-         右侧栏后续接入时与 side-bar 对称即可，不必再算一次高度。
-         高度不在这里用 100vh 减常量重算，而是由 ResizeObserver 实测后写进
-         CSS 变量（见脚本），所有子区域统一消费同一个真值。 -->
-    <div
-      ref="workspaceEl"
-      class="workspace"
-    >
+    <!-- 工作区（JetBrains 三段式）：左右侧栏 + 编辑器列。侧栏是贯穿到底的
+         左侧竖条（.body-row 的子项，从 title-bar 下方一路到窗口底边），右侧
+         .main-col 是 flex column，依次容纳编辑器列（.workspace）、底部工具
+         窗口（exec-panel）、状态栏（status-bar）。这样 exec-panel 与 status-bar
+         天然只占侧栏右侧的宽度，无需各自再写 margin 缩进。
+         高度不在这里用 100vh 减常量重算，而是由 ResizeObserver 实测 .workspace
+         与 .exec-panel 后写进 CSS 变量（见脚本），所有子区域统一消费同一个真值。 -->
+    <div class="body-row">
       <side-bar
         v-if="init"
         :hidden="presentImmersive"
       />
 
-      <div class="editor-middle">
-        <title-bar
-          v-show="!presentImmersive"
-          :project="projectTree"
-          :filename="filename"
-          :active="windowActive"
-          :is-saved="isSaved"
-        />
-
+      <div class="main-col">
         <div
-          v-if="!init"
-          class="editor-placeholder"
-        />
-        <recent v-if="!hasCurrentFile && init" />
-        <editor-with-tabs
-          v-if="hasCurrentFile && init"
+          ref="workspaceEl"
+          class="workspace"
+        >
+          <div class="editor-middle">
+            <title-bar
+              v-show="!presentImmersive"
+              :project="projectTree"
+              :filename="filename"
+              :active="windowActive"
+              :is-saved="isSaved"
+            />
+
+            <div
+              v-if="!init"
+              class="editor-placeholder"
+            />
+            <recent v-if="!hasCurrentFile && init" />
+            <editor-with-tabs
+              v-if="hasCurrentFile && init"
+              :markdown="markdown"
+              :cursor="cursor"
+              :muya-index-cursor="muyaIndexCursor"
+              :text-direction="textDirection"
+              :platform="platform"
+            />
+            <command-palette />
+            <about-dialog />
+            <export-setting-dialog />
+            <rename />
+            <import-modal />
+          </div>
+        </div>
+        <!-- 底部工具窗口（JetBrains 式）：.main-col 的 flex:none 兄弟项而非浮层。
+             它占多少高度，.workspace 就少多少高度；不是把等高的内容区盖住。
+             组件常驻（不随视图切换卸载，引擎事件订阅/输出缓存不丢）；body 由
+             execPanel 按 isCodeRunSurface + open 控制，只在「文」独占、面板
+             展开时出现。 -->
+        <exec-panel
+          v-if="init && hasCurrentFile"
           :markdown="markdown"
-          :cursor="cursor"
-          :muya-index-cursor="muyaIndexCursor"
-          :text-direction="textDirection"
-          :platform="platform"
         />
-        <command-palette />
-        <about-dialog />
-        <export-setting-dialog />
-        <rename />
-        <import-modal />
+        <status-bar v-if="!presentImmersive" />
       </div>
     </div>
-    <!-- 底部工具窗口（JetBrains 式）：横跨整个窗口宽度，是 .editor-container
-         的 flex:none 兄弟项而非浮层。它占多少高度，.workspace（及其三列）就
-         少多少高度；不是把等高的内容区盖住。组件常驻（不随视图切换卸载，
-         引擎事件订阅/输出缓存不丢）；body 由 execPanel 按 isCodeRunSurface
-         + open 控制，只在「文」独占、面板展开时出现。 -->
-    <exec-panel
-      v-if="init && hasCurrentFile"
-      :markdown="markdown"
-    />
-    <status-bar v-if="!presentImmersive" />
   </div>
 </template>
 
@@ -343,11 +348,28 @@ onBeforeUnmount(() => {
   left: -10000px;
 }
 
-/* 工作区 = 左右侧栏 + 编辑器列（JetBrains 三段式）。右侧栏接入时与 side-bar
-   对称即可：宽度交给 flex（不再用 calc(100vw - sidebarWidth) 硬算），高度由
-   align-items:stretch 自动跟 .workspace 一致。它是 .editor-container 的 flex:1
-   子项，底部工具窗口（flex:none）占多少它就少多少——三列共享这个真值，谁都不
-   按 100vh 自称满高。 */
+/* 主行 = 侧栏（贯穿到底）+ 右侧主列。侧栏是左侧竖条、从 title-bar 下方一路
+   伸到窗口底边；右侧 .main-col 是 flex column，向下依次是编辑器列、底部工具
+   窗口、状态栏。宽度交给 flex（不再用 calc(100vw - sidebarWidth) 硬算），谁
+   都不按 100vh 自称满高。 */
+.body-row {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+}
+
+.main-col {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* 工作区 = 编辑器列。它占 .main-col 里「底部工具窗口 + 状态栏以上」的空间，
+   flex:1 让底部变高它就等量变矮。 */
 .workspace {
   display: flex;
   flex-direction: row;
@@ -356,7 +378,7 @@ onBeforeUnmount(() => {
   min-height: 0;
 }
 
-/* 任何直接子列都不得用 min-height:auto 顶破这个收缩链（第三列同理）。 */
+/* 任何直接子列都不得用 min-height:auto 顶破这个收缩链。 */
 .workspace > * {
   min-height: 0;
 }

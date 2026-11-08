@@ -6,13 +6,13 @@
   >
     <!-- Hibernate state: only the burger stays in the title bar. Hovering the
          bar — no click needed — reveals the flat entries beside it, the way the
-         JetBrains new UI does it. Clicking the burger opens the first menu,
-         which is what the hamburger used to do with the old popup menu.
-         Pressing Alt alone does the same reveal + open (#8, Word convention:
-         Alt lands on 「文件」). -->
+         JetBrains new UI does it. Clicking the burger toggles the side bar
+         (same entry as the View menu). Pressing Alt alone reveals + opens the
+         first menu (#8, Word convention: Alt lands on 「文件」). -->
     <div
       class="menu-bar-burger"
       :class="{ 'is-open': openIndex !== -1 }"
+      :title="t('sideBar.toggle')"
       @click.stop="handleBurgerClick"
     >
       <svg
@@ -70,6 +70,8 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { MenuStructureItem } from '@shared/types/menu'
 import MenuDropdown from './menuDropdown.vue'
+import bus from '@/bus'
+import { t } from '@/i18n'
 
 const menus = ref<MenuStructureItem[]>([])
 const openIndex = ref(-1)
@@ -137,14 +139,9 @@ const handleBarLeave = (): void => {
   hovered.value = false
 }
 
-const handleBurgerClick = async (): Promise<void> => {
-  if (openIndex.value !== -1) {
-    close()
-    return
-  }
-  await load()
-  if (!menus.value.length) return
-  openIndex.value = 0
+const handleBurgerClick = (): void => {
+  // 汉堡按钮 = 侧边栏开关（走 View 菜单同一条入口，原生菜单勾选态才能同步）。
+  bus.emit('view:toggle-layout-entry', 'showSideBar')
 }
 
 const run = (item: MenuStructureItem): void => {
