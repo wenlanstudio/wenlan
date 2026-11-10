@@ -4,6 +4,10 @@ import { delay, isMac } from '@/util'
 import { isUpdatable } from './utils'
 import getCommandDescriptionById from './descriptions'
 import { t } from '../i18n'
+import { ElMessage } from 'element-plus'
+import { useTeachingStore } from '@/store/teaching'
+import { useAuthStore } from '@/store/auth'
+import { useEditorStore } from '@/store/editor'
 
 export { default as FileEncodingCommand } from './fileEncoding'
 export { default as LineEndingCommand } from './lineEnding'
@@ -29,6 +33,8 @@ export interface CommandDescriptor {
   subcommands?: CommandSubcommand[]
   execute?: () => void | Promise<void>
   executeSubcommand?: (commandId: string, value?: unknown) => void | Promise<void>
+  /** Optional gate: the command palette lists the command only while this returns true. */
+  isVisible?: () => boolean
 }
 
 export class RootCommand {
@@ -710,6 +716,65 @@ const commands: CommandDescriptor[] = [
     id: 'tabs.cycleBackward',
     execute: async() => {
       bus.emit('mt::tabs-cycle-left')
+    }
+  },
+
+  // --------------------------------------------------------------------------
+  // Teaching (edu-client E5): open the publish dialog from the command palette.
+  // Logged-out instances show no teaching surface (N1), so the command is both
+  // hidden from the palette and inert when triggered by id.
+  {
+    id: 'teaching.publish',
+    isVisible: () => {
+      const auth = useAuthStore()
+      return auth.state.loggedIn && !auth.isStudent
+    },
+    execute: async() => {
+      const auth = useAuthStore()
+      // 菜单按 id 触发时不走命令面板的 isVisible 门控，学生态在这里兜底拦下。
+      if (!auth.state.loggedIn || auth.isStudent) return
+      useTeachingStore().openPublish()
+    }
+  },
+  // 课堂：状态栏入口之外的可发现路径（菜单 / 命令面板）。在课堂中则下课，
+  // 否则按当前文档最近一次发布的第一个班开班；一个班都没发过就提示先发布。
+  {
+    id: 'teaching.classroom',
+    isVisible: () => {
+      const auth = useAuthStore()
+      return auth.state.loggedIn && !auth.isStudent
+    },
+    execute: async() => {
+      const auth = useAuthStore()
+      if (!auth.state.loggedIn || auth.isStudent) return
+      const teaching = useTeachingStore()
+      if (teaching.classroom.role === 'host') {
+        await teaching.endClassroom()
+        return
+      }
+      const path = useEditorStore().currentFile?.pathname ?? ''
+      const target = path ? teaching.releasesFor(path)[0] : undefined
+      if (!target) {
+        // 没有发布物：直接开打发布对话框，这比一句"请先发布"更省一步。
+        teaching.openPublish()
+        return
+      }
+      await teaching.startClassroom(target)
+    }
+  },
+  // 发题控制台：只在课堂进行中可用（发题需要 host 会话，服务端也按 sessionId
+  // 反查房间）。没开课就提示先开班，不去猜一个班。
+  {
+    id: 'teaching.quiz',
+    isVisible: () => {
+      const auth = useAuthStore()
+      return auth.state.loggedIn && !auth.isStudent
+    },
+    execute: async() => {
+      const auth = useAuthStore()
+      if (!auth.state.loggedIn || auth.isStudent) return
+      const error = useTeachingStore().openQuizConsole()
+      if (error) ElMessage.warning(error)
     }
   }
 ]

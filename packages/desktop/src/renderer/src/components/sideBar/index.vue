@@ -7,7 +7,7 @@
   >
     <div class="side-bar-tabs">
       <div
-        v-for="entry of sideBarTabs"
+        v-for="entry of visibleTabs"
         :key="entry.id"
         class="tab"
         :class="{ active: entry.id === sidebarTab }"
@@ -22,6 +22,7 @@
         :project-tree="projectTree"
       />
       <toc v-else-if="sidebarTab === 'toc'" />
+      <teaching-tree v-else-if="sidebarTab === 'teaching' && authState.loggedIn" />
     </div>
     <account-bar />
     <div
@@ -32,16 +33,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useLayoutStore, type SidebarTab } from '@/store/layout'
 import { usePreferencesStore } from '@/store/preferences'
 import { useProjectStore } from '@/store/project'
+import { useAuthStore } from '@/store/auth'
 import { shouldShowInAppTitleBar } from '@/components/titleBar/visibility'
 import { t } from '@/i18n'
 import { isMac } from '@/util'
 
 import Tree from './tree.vue'
 import Toc from './toc.vue'
+import TeachingTree from './teachingTree.vue'
 import AccountBar from '../accountBar/index.vue'
 import { storeToRefs } from 'pinia'
 
@@ -73,8 +76,27 @@ const topInset = computed<string>(() =>
 // there is no icon strip left to switch panels or open the settings window.
 const sideBarTabs: { id: SidebarTab; label: () => string }[] = [
   { id: 'files', label: () => t('sideBar.tabs.files') },
-  { id: 'toc', label: () => t('sideBar.tabs.outline') }
+  { id: 'toc', label: () => t('sideBar.tabs.outline') },
+  { id: 'teaching', label: () => t('teaching.tab') }
 ]
+
+// 未登录的实例表面零教学概念（N1）：「教学」tab 只在登录后出现。
+const { state: authState, ready: authReady } = storeToRefs(useAuthStore())
+const visibleTabs = computed(() =>
+  sideBarTabs.filter((entry) => entry.id !== 'teaching' || authState.value.loggedIn)
+)
+
+// 确知未登录（登录态已恢复完）时，把停在「教学」上的选中态落回「文件」。
+// 恢复完成前不动，免得重启时持久化的「教学」被抢先改掉。
+watch(
+  () => [authReady.value, authState.value.loggedIn, sidebarTab.value] as const,
+  ([ready, loggedIn, tab]) => {
+    if (ready && !loggedIn && tab === 'teaching') {
+      layoutStore.SET_LAYOUT({ sidebarTab: 'files' })
+    }
+  },
+  { immediate: true }
+)
 
 const finalSideBarWidth = computed<number>(() => {
   if (!showSideBar.value || props.hidden) return 0

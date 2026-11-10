@@ -1,5 +1,7 @@
 import * as contextMenu from './actions'
 import { t } from '../../i18n'
+import { useTeachingStore } from '@/store/teaching'
+import { useAuthStore } from '@/store/auth'
 
 // NOTE: This are mutable fields that may change at runtime.
 
@@ -99,6 +101,16 @@ export const getShowInFolder = () => ({
   id: 'showInFolderMenuItem',
   click(_menuItem: unknown, _browserWindow: unknown) {
     contextMenu.showInFolder()
+  }
+})
+
+/** 教育版叠加项：把侧栏当前激活的 md 送进发布对话框（E5 步骤 1）。 */
+export const getPublishToWenshu = () => ({
+  label: t('teaching.publish'),
+  id: 'publishToWenshuMenuItem',
+  click(_menuItem: unknown, _browserWindow: unknown) {
+    if (useAuthStore().isStudent) return
+    useTeachingStore().openPublish()
   }
 })
 

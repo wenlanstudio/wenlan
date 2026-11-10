@@ -4,7 +4,7 @@ import bus from '../bus'
 import { usePreferencesStore } from './preferences'
 import { debouncedSendBufferedState } from './bufferedState'
 
-export type SidebarTab = 'files' | 'toc'
+export type SidebarTab = 'files' | 'toc' | 'teaching'
 
 export interface LayoutPartial {
   sidebarTab?: SidebarTab
@@ -23,7 +23,12 @@ const normalizeSideBarWidth = (width: unknown): number => {
 
 // Legacy buffered states may still carry the pre-rename tab names ('search'
 // panel is gone, and the empty string meant the old icon strip).
-const normalizeSidebarTab = (tab: unknown): SidebarTab => (tab === 'toc' ? 'toc' : 'files')
+const normalizeSidebarTab = (tab: unknown): SidebarTab => {
+  if (tab === 'toc') return 'toc'
+  // 教学 tab 必须显式放行：默认落到 'files' 会让持久化后的选中态在重开时丢失。
+  if (tab === 'teaching') return 'teaching'
+  return 'files'
+}
 
 interface BufferedLayout {
   sidebarTab: SidebarTab

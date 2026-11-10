@@ -4,7 +4,6 @@ import type { RouteRecordRaw } from 'vue-router'
 // runtime, but vue-tsc needs the suffix.
 import App from '@/pages/app.vue'
 import Preference from '@/pages/preference.vue'
-import Teaching from '@/pages/teaching.vue'
 import General from '@/prefComponents/general/index.vue'
 import Editor from '@/prefComponents/editor/index.vue'
 import Markdown from '@/prefComponents/markdown/index.vue'
@@ -33,8 +32,10 @@ const routes = (type: string | null | undefined): RouteRecordRaw[] => [
     component: App
   },
   {
+    // D10 / ADR-22：教育版实例与通用文览复用同一套 app.vue 完整壳，
+    // 不另写第二套 UI 布局。教学入口由 app.vue 按路由默认切到「教学」tab。
     path: '/teaching',
-    component: Teaching
+    component: App
   },
   {
     path: '/preference',

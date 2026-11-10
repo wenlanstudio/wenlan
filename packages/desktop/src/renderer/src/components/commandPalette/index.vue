@@ -88,6 +88,7 @@ interface CommandItem {
   executeSubcommand?: (commandId: string, value?: unknown) => void
   placeholder?: string
   value?: unknown
+  isVisible?: () => boolean
   [key: string]: unknown
 }
 
@@ -281,11 +282,13 @@ const updateCommands = () => {
     return
   }
 
-  // Default handler
+  // Default handler. Commands with a visibility gate (e.g. teaching commands
+  // while logged out) stay out of the list.
+  const visible = (cmd.subcommands ?? []).filter((c) => !c.isVisible || c.isVisible())
   if (!queryString) {
-    availableCommands.value = cmd.subcommands ?? []
+    availableCommands.value = visible
   } else {
-    availableCommands.value = (cmd.subcommands ?? []).filter(
+    availableCommands.value = visible.filter(
       (c) => (c.description ?? '').toLowerCase().includes(queryString.toLowerCase())
     )
   }

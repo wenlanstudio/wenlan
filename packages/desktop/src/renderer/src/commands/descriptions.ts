@@ -237,7 +237,14 @@ const COMMAND_KEY_MAP: Record<string, string> = {
   // ============================================
   // # Spell Checker
   // ============================================
-  'spellchecker.switch-language': 'commands.spellchecker.switchLanguage'
+  'spellchecker.switch-language': 'commands.spellchecker.switchLanguage',
+
+  // ============================================
+  // # Teaching (edu-client E5)
+  // ============================================
+  'teaching.publish': 'teaching.commandPublish',
+  'teaching.classroom': 'teaching.commandClassroom',
+  'teaching.quiz': 'teaching.commandQuiz'
 }
 
 /**

@@ -30,6 +30,15 @@
       </div>
       <template #dropdown>
         <el-dropdown-menu>
+          <el-dropdown-item
+            v-if="!auth.isStudent"
+            command="publish"
+          >
+            {{ t('teaching.publish') }}
+          </el-dropdown-item>
+          <el-dropdown-item command="teaching-tab">
+            {{ t('teaching.tab') }}
+          </el-dropdown-item>
           <el-dropdown-item command="teaching">
             {{ t('account.openTeaching') }}
           </el-dropdown-item>
@@ -50,6 +59,8 @@ import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { t } from '@/i18n'
 import { useAuthStore } from '@/store/auth'
+import { useTeachingStore } from '@/store/teaching'
+import { useLayoutStore } from '@/store/layout'
 import LoginDialog from './loginDialog.vue'
 
 const auth = useAuthStore()
@@ -78,6 +89,11 @@ function onCommand(command: string): void {
     void window.auth.openTeaching()
   } else if (command === 'logout') {
     void window.auth.logout()
+  } else if (command === 'publish') {
+    if (auth.isStudent) return
+    useTeachingStore().openPublish()
+  } else if (command === 'teaching-tab') {
+    useLayoutStore().SET_LAYOUT({ sidebarTab: 'teaching', showSideBar: true })
   }
 }
 </script>

@@ -8,6 +8,7 @@ import { updateSidebarMenu } from '../menu/actions/edit'
 import { updateFormatMenu } from '../menu/actions/format'
 import { updateSelectionMenus, type SelectionState } from '../menu/actions/paragraph'
 import { onInternalChannel } from '../utils/internalIpc'
+import { onAuthStateChange } from '../auth'
 import { viewLayoutChanged } from '../menu/actions/view'
 import configureMenu, { configSettingMenu } from '../menu/templates'
 import {
@@ -274,6 +275,19 @@ class AppMenu {
   }
 
   /**
+   * The editor menu of the given window, or null. Format / sidebar / selection
+   * sync messages only apply to editor menus; a window that runs the editor
+   * shell under the fallback menu (the teaching window, edu-client D10) has
+   * none of those items — its menu is null off macOS and a settings menu on it.
+   *
+   * @param windowId The window id.
+   */
+  private editorMenuOf(windowId: number): Menu | null {
+    const entry = this.windowMenus.get(windowId)
+    return entry?.type === MenuType.EDITOR ? entry.menu : null
+  }
+
+  /**
    * Set the given window as last active.
    *
    * @param windowId The window id.
@@ -374,7 +388,8 @@ class AppMenu {
    * @param lineEnding Either >lf< or >crlf<.
    */
   updateLineEndingMenu(windowId: number, lineEnding: string): void {
-    const menus = this.getWindowMenuById(windowId)
+    const menus = this.editorMenuOf(windowId)
+    if (!menus) return
     const crlfMenu = menus.getMenuItemById('crlfLineEndingMenuEntry')
     const lfMenu = menus.getMenuItemById('lfLineEndingMenuEntry')
     if (lineEnding === 'crlf') {
@@ -391,8 +406,8 @@ class AppMenu {
    * @param flag Always on top.
    */
   updateAlwaysOnTopMenu(windowId: number, flag: boolean): void {
-    const menus = this.getWindowMenuById(windowId)
-    const menu = menus.getMenuItemById('alwaysOnTopMenuItem')
+    const menus = this.editorMenuOf(windowId)
+    const menu = menus?.getMenuItemById('alwaysOnTopMenuItem')
     if (menu) menu.checked = flag
   }
 
@@ -557,6 +572,11 @@ class AppMenu {
   }
 
   _listenForIpcMain(): void {
+    // The teaching menu exists only while logged in (edu-client N1). Its
+    // template reads the login state at build time, so rebuild the editor
+    // menus whenever that state changes.
+    onAuthStateChange(() => this.updateAppMenu())
+
     // In-window (Typora-style) menu bar: the renderer draws the entries and
     // asks us to run one by id. The window is taken from the sender so it
     // always matches the menu that window actually has.
@@ -586,7 +606,8 @@ class AppMenu {
           log.error(`UpdateApplicationMenu: Cannot find window menu for window id ${windowId}.`)
           return
         }
-        updateFormatMenu(this.getWindowMenuById(windowId), formats)
+        const menu = this.editorMenuOf(windowId)
+        if (menu) updateFormatMenu(menu, formats)
       }
     )
     ipcMain.on('mt::update-sidebar-menu', (_e, windowId: number, value: unknown) => {
@@ -594,7 +615,8 @@ class AppMenu {
         log.error(`UpdateApplicationMenu: Cannot find window menu for window id ${windowId}.`)
         return
       }
-      updateSidebarMenu(this.getWindowMenuById(windowId), value)
+      const menu = this.editorMenuOf(windowId)
+      if (menu) updateSidebarMenu(menu, value)
     })
     ipcMain.on(
       'mt::view-layout-changed',
@@ -603,7 +625,8 @@ class AppMenu {
           log.error(`UpdateApplicationMenu: Cannot find window menu for window id ${windowId}.`)
           return
         }
-        viewLayoutChanged(this.getWindowMenuById(windowId), viewSettings)
+        const menu = this.editorMenuOf(windowId)
+        if (menu) viewLayoutChanged(menu, viewSettings)
       }
     )
     ipcMain.on('mt::editor-selection-changed', (_e, windowId: number, changes: SelectionState) => {
@@ -611,15 +634,16 @@ class AppMenu {
         log.error(`UpdateApplicationMenu: Cannot find window menu for window id ${windowId}.`)
         return
       }
-      updateSelectionMenus(this.getWindowMenuById(windowId), changes)
+      const menu = this.editorMenuOf(windowId)
+      if (menu) updateSelectionMenus(menu, changes)
     })
 
     // In source-code mode the Paragraph and Format commands act on the hidden
     // WYSIWYG engine, so grey them out; on return to WYSIWYG they are re-enabled
     // and the next selection change refines them (#3531).
     ipcMain.on('mt::set-editor-format-menus-enabled', (_e, windowId: number, enabled: boolean) => {
-      if (!this.has(windowId)) return
-      const menu = this.getWindowMenuById(windowId)
+      const menu = this.editorMenuOf(windowId)
+      if (!menu) return
       for (const id of ['paragraphMenuEntry', 'formatMenuItem']) {
         const entry = menu.getMenuItemById(id)
         entry?.submenu?.items.forEach((item) => (item.enabled = enabled))

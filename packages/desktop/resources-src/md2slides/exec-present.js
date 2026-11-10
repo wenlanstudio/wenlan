@@ -25,6 +25,9 @@
  *            / md2s:exec-error { reqId, error }
  *   页→宿主  md2s:exec-stop { reqId, docPath, jobId } / md2s:exec-cancel { reqId }
  *   宿主→页  md2s:export（已有）→ 顺手关浮层，别让结果条留在出片里
+ *   宿主→页  md2s:follow { page, locked } —— 课堂跟随：对齐到老师那一页；
+ *            locked 时吃掉导航键（学生端只读跟随）。与 ▶ 桥同源：跨源宿主
+ *            只有本文件能直调 window.deckFull.getPlayer()。
  *
  * 安全：▶ 等于在本机执行任意代码。首次对某文档点 ▶ 先在浮层里确认一次，
  * 确认结果按 docPath 记在 sessionStorage（本次会话有效）；未保存文档由宿主
@@ -590,6 +593,56 @@
     overlay.applyLayout();
   };
 
+  // ── 课堂跟随（学生端）──────────────────────────────────────────────────
+  // 宿主 deckPane 收到 ws 的 teaching.session.page 后发 md2s:follow；本层直调
+  // player.go(1 基页号)。跨源宿主碰不到 iframe DOM，能直调 player 的只有这里
+  // ——与 ▶ 桥同一条理由（见文件头），所以跟随也落在本文件，不进 deck-full.js。
+  //
+  // locked = 服务端 followLocked（课堂锁定跟随）：
+  //   锁 → 导航键在 capture 阶段吃掉，学生翻不走，页永跟老师；
+  //   不锁 → 只跟不锁，学生可自己翻，老师下次翻页再对齐。
+  // 回弹由宿主做（它有 md2s:change），本层只管对齐与拦键。
+
+  var follow = { page: 0, locked: false };
+
+  var deckPlayer = function () {
+    try {
+      return window.deckFull && window.deckFull.getPlayer ? window.deckFull.getPlayer() : null;
+    } catch (e) { return null; }
+  };
+
+  /** 返回是否真的对齐了。播放器还没起来（build 未完成）就返回 false，等下次 ready。 */
+  var followTo = function (page) {
+    if (!page || page < 1) return false;
+    var player = deckPlayer();
+    if (!player || typeof player.go !== "function") return false;
+    if (player.index === page) return true;
+    try { player.go(page); return true; } catch (e) { return false; }
+  };
+
+  var NAV_KEYS = {
+    ArrowLeft: 1, ArrowRight: 1, ArrowUp: 1, ArrowDown: 1,
+    PageUp: 1, PageDown: 1, Home: 1, End: 1, " ": 1, Spacebar: 1
+  };
+
+  /* player 的 keyTarget 是 #deck，事件从 window 捕获下来先到本层；stopPropagation
+     后它收不到。结果浮层也会 capture 拦 Enter/Esc，但那是另一个键集，互不遮挡。 */
+  var onFollowKey = function (ev) {
+    if (!follow.locked) return;
+    if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    if (!NAV_KEYS[ev.key]) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+  };
+  document.addEventListener("keydown", onFollowKey, true);
+
+  var applyFollow = function (d) {
+    follow.locked = d.locked === true;
+    var page = Number(d.page) || 0;
+    if (page) follow.page = page;
+    followTo(follow.page);
+  };
+
   // ── 消息入口 ────────────────────────────────────────────────────────────
 
   window.addEventListener("message", function (ev) {
@@ -610,6 +663,9 @@
         break;
       case "md2s:exec-error":
         handleError(d.reqId, d.error);
+        break;
+      case "md2s:follow":
+        applyFollow(d);
         break;
       case "md2s:export":
         // 出片前收掉结果条（▶ 本身由既有 [data-md2s-activatable] 规则排除）。

@@ -1,5 +1,89 @@
 <template>
   <div class="status-bar">
+    <!-- 教育版叠加指示：发布成功后显示锚定的版本与发布班数，可点开重新发布。
+         未登录不显示（N1）：本地元数据还在，但登出的实例表面不留教学概念。 -->
+    <button
+      v-if="lastPublish && authState.loggedIn && !isStudent && !isWindowFullScreen && !presentExclusive"
+      class="status-teaching"
+      :title="t('teaching.publish')"
+      @click="teachingStore.openPublish()"
+    >
+      v{{ lastPublish.versionNo }} {{ t('teaching.statusPublished') }} · {{ lastPublish.releaseCount }} {{ t('teaching.statusClass') }}
+    </button>
+    <!-- 教师端课堂入口（叠加态，不占新面板）：未开课时列出可开班的发布物，
+         开课后显示页号与在线人数，并提供结束课堂 / 跟随锁。 -->
+    <el-dropdown
+      v-if="canTeach && !isWindowFullScreen && !presentExclusive"
+      class="classroom-entry"
+      trigger="click"
+      @command="onClassroomCommand"
+    >
+      <button
+        class="status-teaching classroom"
+        :class="{ live: classroomActive }"
+        :title="classroom.error || t('teaching.classroomHint')"
+      >
+        <template v-if="classroomActive">
+          ● {{ t('teaching.classroomLive') }} {{ classroom.className }} · {{ t('teaching.classroomPage', { page: classroom.page ?? 1 }) }}
+          <template v-if="classroom.online">
+            · {{ classroom.online }}
+          </template>
+        </template>
+        <template v-else>
+          {{ t('teaching.classroomStart') }} ▾
+        </template>
+      </button>
+      <template #dropdown>
+        <el-dropdown-menu>
+          <template v-if="classroomActive">
+            <el-dropdown-item command="quiz">
+              {{ t('teaching.quizMenu') }}
+            </el-dropdown-item>
+            <el-dropdown-item command="lock">
+              {{ classroom.followLocked ? t('teaching.classroomUnlock') : t('teaching.classroomLock') }}
+            </el-dropdown-item>
+            <el-dropdown-item
+              command="end"
+              divided
+            >
+              {{ t('teaching.classroomEnd') }}
+            </el-dropdown-item>
+          </template>
+          <template v-else-if="releases.length">
+            <el-dropdown-item
+              v-for="rel in releases"
+              :key="rel.releaseId"
+              :command="`start:${rel.releaseId}`"
+            >
+              {{ rel.className }}
+            </el-dropdown-item>
+          </template>
+          <el-dropdown-item
+            v-else
+            disabled
+          >
+            {{ t('teaching.classroomNoRelease') }}
+          </el-dropdown-item>
+        </el-dropdown-menu>
+      </template>
+    </el-dropdown>
+    <!-- 学生端：只读投影的来源与课堂跟随状态。不提供发布动作；课堂进行中时可点
+         进入放映跟随（「映」叶全屏，Esc 退回），不在课堂里则只是一条静态指示。 -->
+    <button
+      v-else-if="isStudent && openedRelease && authState.loggedIn && !isWindowFullScreen && !presentExclusive"
+      class="status-teaching readonly"
+      :class="{ followable: classroom.connected }"
+      :title="classroom.error || (openedRelease.slotCount ? `${t('teaching.quizSlotWaiting')} · ${openedRelease.slotCount}` : t('teaching.readOnlyProjection'))"
+      @click="followClassroom"
+    >
+      {{ openedRelease.materialName }} · {{ t('teaching.readOnlyProjection') }} · {{ t('teaching.synced') }}
+      <template v-if="classroom.connected">
+        · {{ t('teaching.classroomFollowing') }} · {{ t('teaching.classroomPage', { page: classroom.page ?? 1 }) }}
+      </template>
+      <template v-else>
+        · {{ t('teaching.classroomWaiting') }}
+      </template>
+    </button>
     <!-- 文档级指示器：放映/全屏时整组隐藏；「映」激活时只留换叶入口。 -->
     <div
       v-if="!isWindowFullScreen && !presentExclusive"
@@ -21,7 +105,8 @@
         v-if="!presentActive"
         class="read-only-btn"
         :class="{ locked: readOnly }"
-        :title="readOnly ? t('view.readOnlyLocked') : t('view.readOnlyUnlocked')"
+        :title="isStudent ? t('teaching.readOnlyProjection') : readOnly ? t('view.readOnlyLocked') : t('view.readOnlyUnlocked')"
+        :disabled="isStudent"
         @click="toggleReadOnly"
       >
         <svg
@@ -66,10 +151,13 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import { ElMessage } from 'element-plus'
 import { t } from '@/i18n'
 import bus from '@/bus'
 import { useEditorStore } from '@/store/editor'
 import { useEditorViewStore } from '@/store/editorView'
+import { useTeachingStore } from '@/store/teaching'
+import { useAuthStore } from '@/store/auth'
 import ViewSwitcher from '@/components/viewSwitcher/index.vue'
 import WordCount from '@/components/wordCount/index.vue'
 
@@ -84,11 +172,50 @@ import WordCount from '@/components/wordCount/index.vue'
 
 const editorStore = useEditorStore()
 const editorViewStore = useEditorViewStore()
+const teachingStore = useTeachingStore()
+const { lastPublish, openedRelease, classroom } = storeToRefs(teachingStore)
+const { state: authState, isStudent } = storeToRefs(useAuthStore())
 
 const { currentFile, selectionWordCount, readOnly } = storeToRefs(editorStore)
 const { isWindowFullScreen, leafSelection, presentExclusive } = storeToRefs(editorViewStore)
 
 const wordCount = computed(() => currentFile.value?.wordCount)
+
+// —— 教师端课堂入口 ——
+// 能开班的发布物挂在当前文档的本地元数据上（发布时记下 releaseId + 班名）。
+// 这里只读不写：开班由 store 走 main 的 ws 通道，状态栏不持有连接。
+const releases = computed(() => {
+  const path = currentFile.value?.pathname
+  return path ? teachingStore.releasesFor(path) : []
+})
+const classroomActive = computed(
+  () => classroom.value.role === 'host' && classroom.value.sessionId != null
+)
+// 未登录或学生态不出现课堂入口（N1：通用实例表面零教学概念）。
+const canTeach = computed(() => authState.value.loggedIn && !isStudent.value)
+
+const onClassroomCommand = (command: string): void => {
+  if (command === 'end') {
+    void teachingStore.endClassroom()
+    return
+  }
+  if (command === 'lock') {
+    teachingStore.setFollowLocked(!classroom.value.followLocked)
+    return
+  }
+  if (command === 'quiz') {
+    const error = teachingStore.openQuizConsole()
+    if (error) ElMessage.warning(error)
+    return
+  }
+  if (!command.startsWith('start:')) return
+  const releaseId = Number(command.slice('start:'.length))
+  const target = releases.value.find((item) => item.releaseId === releaseId)
+  if (!target) return
+  void teachingStore.startClassroom(target).then((error) => {
+    if (error) ElMessage.error(`${t('teaching.errorPrefix')}：${error}`)
+  })
+}
 
 // 光标位置（line:column）——编辑视图可见时才显示
 const cursorPosition = ref<{ line: number; ch: number } | null>(null)
@@ -114,7 +241,16 @@ onBeforeUnmount(() => bus.off('cursor-position', onCursorPosition))
 const presentActive = computed(() => leafSelection.value.includes('present'))
 
 const toggleReadOnly = (): void => {
+  // 学生端只读投影由教学树打开讲义时置位，不允许在界面上解锁。
+  if (isStudent.value) return
   editorStore.TOGGLE_READ_ONLY()
+}
+
+/** 学生端：课堂进行中时进入「映」叶全屏跟随（Esc 退回）。
+ *  不在课堂里（没进行中的会话）就什么都不做——读讲义不被打断。 */
+const followClassroom = (): void => {
+  if (!isStudent.value || !classroom.value.connected) return
+  editorViewStore.enterPresentImmersive()
 }
 </script>
 
@@ -132,6 +268,68 @@ const toggleReadOnly = (): void => {
   color: var(--editorColor60);
   font-size: 11px;
   user-select: none;
+}
+
+.status-teaching {
+  margin-right: auto;
+  padding: 2px 6px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #854f0b;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.status-teaching:hover {
+  background: var(--sideBarItemHoverBg, rgba(0, 0, 0, 0.05));
+}
+
+.status-teaching.readonly {
+  cursor: default;
+}
+
+.status-teaching.readonly:hover {
+  background: transparent;
+}
+
+/* 课堂进行中：指示变成「进入放映跟随」的入口，恢复可点态。 */
+.status-teaching.readonly.followable {
+  cursor: pointer;
+}
+
+.status-teaching.readonly.followable:hover {
+  background: var(--sideBarItemHoverBg, rgba(0, 0, 0, 0.05));
+}
+
+/* 教师端课堂入口：el-dropdown 会包一层 div，压平以免状态栏多出一行高度。 */
+.classroom-entry {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.status-teaching.classroom {
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  padding: 0 6px;
+  cursor: pointer;
+}
+
+.status-teaching.classroom.live {
+  color: var(--editorColor);
+  font-weight: 600;
+}
+
+.status-teaching.classroom:hover {
+  background: var(--sideBarItemHoverBg, rgba(0, 0, 0, 0.05));
+}
+
+.read-only-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .status-right {

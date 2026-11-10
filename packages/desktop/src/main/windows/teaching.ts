@@ -70,6 +70,20 @@ class TeachingWindow extends BaseWindow {
 
     this.id = win.id
 
+    // D10：/teaching 复用完整 App 壳，壳的 init 旗标要靠这条 bootstrap 才置位
+    //（编辑器窗口在 did-finish-load 里发；精简壳时代没有这条，改为 App 后空屏）。
+    // 教学窗口永远不自动开文档：addBlankTab=true 只给一个空白工作区。
+    win.webContents.once('did-finish-load', () => {
+      const { sideBarVisibility, restoreLayoutState, sourceCodeModeEnabled } = preferences.getAll()
+      win?.webContents.send('mt::bootstrap-editor', {
+        addBlankTab: true,
+        markdownList: [],
+        lineEnding: preferences.getPreferredEol(),
+        sideBarVisibility: restoreLayoutState ? !!sideBarVisibility : true,
+        sourceCodeModeEnabled
+      })
+    })
+
     win.once('ready-to-show', () => {
       this.lifecycle = WindowLifecycle.READY
       this.emit('window-ready')

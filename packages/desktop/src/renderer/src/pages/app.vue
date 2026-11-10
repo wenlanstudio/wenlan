@@ -52,6 +52,8 @@
             <export-setting-dialog />
             <rename />
             <import-modal />
+            <publish-dialog />
+            <quiz-console />
           </div>
         </div>
         <!-- 底部工具窗口（JetBrains 式）：.main-col 的 flex:none 兄弟项而非浮层。
@@ -71,6 +73,7 @@
 
 <script setup lang="ts">
 import { computed, watch, nextTick, onMounted, onBeforeUnmount, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { useMainStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import { addStyles, addThemeStyle, addCustomStyle, setEditorWidth, type AddStylesOptions } from '@/util/theme'
@@ -85,6 +88,8 @@ import CommandPalette from '@/components/commandPalette/index.vue'
 import ExportSettingDialog from '@/components/exportSettings/index.vue'
 import Rename from '@/components/rename/index.vue'
 import ImportModal from '@/components/import/index.vue'
+import PublishDialog from '@/components/teaching/publishDialog.vue'
+import QuizConsole from '@/components/teaching/quizConsole.vue'
 import bus from '@/bus'
 import { DEFAULT_STYLE } from '@/config'
 import { listenForScrollbarReveal } from '@/util/scrollbarReveal'
@@ -98,11 +103,13 @@ import { useAutoUpdatesStore } from '@/store/autoUpdates'
 import { useNotificationStore } from '@/store/notification'
 import { useEditorViewStore } from '@/store/editorView'
 import { useExecPanelStore } from '@/store/execPanel'
+import { useAuthStore } from '@/store/auth'
 
 const mainStore = useMainStore()
 const editorStore = useEditorStore()
 const preferencesStore = usePreferencesStore()
 const layoutStore = useLayoutStore()
+const route = useRoute()
 const projectStore = useProjectStore()
 const listenForMainStore = useListenForMainStore()
 const autoUpdateStore = useAutoUpdatesStore()
@@ -250,6 +257,17 @@ onMounted(async () => {
   mainStore.LISTEN_WIN_STATUS()
   await commandCenterStore.LISTEN_COMMAND_CENTER_BUS()
   layoutStore.LISTEN_FOR_LAYOUT()
+  // 教学入口按登录态显隐（N1）：登录态在壳层就初始化，不等侧栏里的账号栏挂载。
+  const authStore = useAuthStore()
+  void authStore.init()
+  authStore.listen()
+  // 教育版实例复用本壳：默认落在「教学」tab。延后一拍设置，避免被 main 侧
+  // 稍后送达的 buffered layout 事件覆盖；用户随后手动切 tab 仍会被正常持久化。
+  window.setTimeout(() => {
+    if (route.path === '/teaching' && layoutStore.sidebarTab !== 'teaching') {
+      layoutStore.SET_LAYOUT({ sidebarTab: 'teaching', showSideBar: true })
+    }
+  }, 300)
   listenForMainStore.LISTEN_FOR_EDIT()
   preferencesStore.LISTEN_FOR_VIEW()
   listenForMainStore.LISTEN_FOR_SHOW_DIALOG()
