@@ -6,6 +6,7 @@ import {
     diagramLangs,
     diagramTypeOfLang,
 } from '../fence';
+import loadRenderer from '../index';
 
 // Every diagram type is reachable through the fence language a user types, so
 // adding a renderer without wiring its language in (or vice versa) must fail
@@ -28,6 +29,14 @@ describe('diagram fence language → type', () => {
         expect(diagramTypeOfLang('abc')).toBe('abc');
         expect(diagramTypeOfLang('drawio')).toBe('drawio');
         expect(diagramTypeOfLang('matplotlib')).toBe('matplotlib');
+        expect(diagramTypeOfLang('svg')).toBe('svg');
+    });
+
+    // An `svg` fence carries the drawing as markup: there is no library to
+    // import, but the renderer must still claim the type or `renderDiagram`
+    // throws "Unknown diagram name svg" before the host callback is reached.
+    it('claims svg as a library-free renderer', async () => {
+        await expect(loadRenderer('svg')).resolves.toBeNull();
     });
 
     it('keeps code languages out of the diagram path', () => {
@@ -55,6 +64,7 @@ describe('diagram fence language → type', () => {
         expect(createDiagramState('wavedrom').meta.lang).toBe('json');
         expect(createDiagramState('drawio').meta.lang).toBe('json');
         expect(createDiagramState('matplotlib').meta.lang).toBe('python');
+        expect(createDiagramState('svg').meta.lang).toBe('markup');
         expect(createDiagramState('graphviz').meta.lang).toBe('yaml');
         expect(createDiagramState('abc').meta.lang).toBe('yaml');
 

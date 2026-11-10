@@ -55,6 +55,9 @@ const DIAGRAM_ICONS = {
     'abc': abcIcon,
     'drawio': drawioIcon,
     'matplotlib': matplotlibIcon,
+    // An `svg` fence is hand-written markup; reuse the HTML icon rather than
+    // adding a one-off asset for a type that has no renderer library.
+    'svg': htmlIcon,
 };
 
 export function getIcon(block: Parent) {

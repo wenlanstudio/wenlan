@@ -165,6 +165,13 @@
           :on-change="(value) => onSelectChange('matplotlibPythonPath', value)"
           :default-value="''"
         />
+        <text-box
+          :description="t('preferences.markdown.diagrams.graphviz.dotPath.title')"
+          :notes="t('preferences.markdown.diagrams.graphviz.dotPath.notes')"
+          :input="graphvizDotPath"
+          :on-change="(value) => onSelectChange('graphvizDotPath', value)"
+          :default-value="''"
+        />
       </template>
     </compound>
 
@@ -231,7 +238,8 @@ const {
   plantumlServer,
   drawioServer,
   matplotlibEnabled,
-  matplotlibPythonPath
+  matplotlibPythonPath,
+  graphvizDotPath
 } = storeToRefs(preferenceStore)
 
 const onSelectChange = (type: keyof PreferencesState, value: unknown): void => {

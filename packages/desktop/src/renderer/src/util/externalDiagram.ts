@@ -1,19 +1,50 @@
 import type { IMuyaOptions } from '@muyajs/core'
+import { renderGraphvizWithExe } from './graphvizRender'
+import { rasterizeSvgFence } from './svgFence'
 
 /**
- * Matplotlib (and any future out-of-process diagram type) renders in the main
- * process: the document's Python snippet runs there and comes back as an image.
+ * Out-of-process diagram rendering, shared by every Muya instance through
+ * `buildMuyaViewOptions`. Matplotlib runs the document's Python; Graphviz
+ * prefers the installed `dot.exe` over the bundled WASM compiler; an `svg`
+ * fence is frozen into a bitmap on a local canvas.
  *
- * Every Muya instance shares this one callback through `buildMuyaViewOptions`
- * — a projection that renders without it shows the "enable them in the
- * preferences" error card where the diagram belongs, which is how the page
- * view shipped. The live editor used to carry its own identical copy.
+ * A Graphviz failure throws on purpose: muya catches it and draws the same
+ * diagram with WASM, so a machine without Graphviz never shows an error card.
  */
 export const renderExternalDiagram: NonNullable<IMuyaOptions['renderExternalDiagram']> = async(
   type,
   code,
   target
 ) => {
+  // An `svg` fence carries the whole drawing as markup. Freeze it to a 2x PNG
+  // here so every Muya instance (文 / 栏 / 页) measures real pixels, and the
+  // export chain receives a media file python-pptx can actually insert.
+  if (type === 'svg') {
+    const dataUrl = await rasterizeSvgFence(code)
+    target.innerHTML = ''
+    const img = document.createElement('img')
+    img.src = dataUrl
+    img.alt = type
+    img.dataset.diagramEngine = 'svg'
+    target.appendChild(img)
+    return
+  }
+
+  if (type === 'graphviz') {
+    const result = await renderGraphvizWithExe(code)
+    if (!result.ok) throw new Error(result.error)
+
+    target.innerHTML = ''
+    const img = document.createElement('img')
+    img.src = result.dataUrl
+    img.alt = type
+    // Export and the media viewer use this to tell a dot.exe bitmap apart from
+    // the WASM `<svg>` that takes its place on machines without Graphviz.
+    img.dataset.graphvizEngine = 'exe'
+    target.appendChild(img)
+    return
+  }
+
   const result = await window.diagram.renderExternal(type, code)
   if (!result.ok) throw new Error(result.error)
 

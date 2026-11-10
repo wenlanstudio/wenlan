@@ -271,6 +271,36 @@ export async function renderDiagram({
     renderExternalDiagram,
     vector,
 }: IRenderOptions) {
+    // Wenlan prefers the installed Graphviz binary over the bundled WASM
+    // compiler. The host callback is optional (muya standalone has no IPC),
+    // and a failure is not fatal: fall through to the WASM renderer below.
+    // Keeping this ahead of `loadRenderer` also means the WASM module is not
+    // imported at all on machines where dot.exe does the drawing.
+    let graphvizFallback = false;
+    if (type === 'graphviz' && renderExternalDiagram) {
+        try {
+            await renderExternalDiagram(type, code, target);
+            return;
+        }
+        catch {
+            graphvizFallback = true;
+        }
+    }
+
+    // An `svg` fence carries the complete drawing as markup. Like matplotlib
+    // it needs a host facility — here a canvas to freeze the vector into a
+    // bitmap — so muya itself owns no rasteriser. Ahead of `loadRenderer` so
+    // the type is fully handled by the host before any renderer is looked up.
+    if (type === 'svg') {
+        if (!renderExternalDiagram) {
+            throw new Error(
+                'SVG diagrams need a host renderer (canvas rasterisation).',
+            );
+        }
+        await renderExternalDiagram(type, code, target);
+        return;
+    }
+
     const render = await loadRenderer(type as TDiagramType);
     const options = {};
     if (type === 'vega-lite') {
@@ -320,7 +350,15 @@ export async function renderDiagram({
         const { instance } = render;
         const viz = await instance();
         target.innerHTML = '';
-        target.appendChild(viz.renderSVGElement(code));
+        const svg = viz.renderSVGElement(code);
+        if (graphvizFallback) {
+            // Light-touch notice: a tooltip on hover, never an error card.
+            svg.setAttribute('data-graphviz-engine', 'wasm-fallback');
+            const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+            title.textContent = 'Rendered with the built-in WASM engine - dot.exe was unavailable';
+            svg.insertBefore(title, svg.firstChild);
+        }
+        target.appendChild(svg);
     }
     else if (type === 'wavedrom') {
         const { options, value } = parseJsonBlock(code);

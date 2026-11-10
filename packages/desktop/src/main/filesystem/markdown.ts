@@ -5,7 +5,7 @@ import log from 'electron-log'
 import iconv from 'iconv-lite'
 import { LINE_ENDING_REG, LF_LINE_ENDING_REG, CRLF_LINE_ENDING_REG } from '../config'
 import { isDirectory2 } from 'common/filesystem'
-import { hasMarkdownExtension, isMarkdownFile } from 'common/filesystem/paths'
+import { hasMarkdownExtension, hasHtmlSlideExtension, isMarkdownFile } from 'common/filesystem/paths'
 import { normalizeAndResolvePath, writeFile } from '../filesystem'
 import { guessEncoding } from './encoding'
 import type { Encoding } from 'common/encoding'
@@ -55,6 +55,27 @@ export const normalizeMarkdownPath = (
 ): { isDir: boolean; path: string } | null => {
   const isDir = isDirectory2(pathname)
   if (isDir || isMarkdownFile(pathname)) {
+    const resolved = normalizeAndResolvePath(pathname)
+    if (resolved) {
+      return { isDir, path: resolved }
+    } else {
+      console.error(`[ERROR] Cannot resolve "${pathname}".`)
+    }
+  }
+  return null
+}
+
+/**
+ * 同 normalizeMarkdownPath，但额外接纳第三方 HTML 放映稿（html/htm）。
+ * 文览「打开文件」把这类文件交给映视图按 player.js 契约放映，不做 muya 编辑
+ * （见 docs/design/html-slide.md）。HTML 以纯文本读入，落到 currentFile.markdown，
+ * 由 deckPane 检测扩展名后改走 html 分支。
+ */
+export const normalizeOpenPath = (
+  pathname: string
+): { isDir: boolean; path: string } | null => {
+  const isDir = isDirectory2(pathname)
+  if (isDir || isMarkdownFile(pathname) || hasHtmlSlideExtension(pathname)) {
     const resolved = normalizeAndResolvePath(pathname)
     if (resolved) {
       return { isDir, path: resolved }

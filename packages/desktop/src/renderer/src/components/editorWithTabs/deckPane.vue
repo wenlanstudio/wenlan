@@ -8,9 +8,38 @@
       class="deck-error"
     >
       <p class="error-title">
-        幻灯片构建失败
+        {{ contractError ? '文稿不符合 HTML 放映稿契约 v1' : '幻灯片构建失败' }}
       </p>
-      <pre class="error-detail">{{ error }}</pre>
+      <div
+        v-if="contractIssues.length"
+        class="error-issues"
+      >
+        <div
+          v-for="(issue, n) in contractIssues"
+          :key="`${issue.rule}-${issue.code}-${n}`"
+          class="error-issue"
+          :class="{ warn: issue.severity === 'warn' }"
+        >
+          <div class="issue-head">
+            <span class="issue-rule">{{ issue.rule }} / {{ issue.code }}</span>
+            <span
+              v-if="(issue.count ?? 0) > 1"
+              class="issue-count"
+            >×{{ issue.count }}</span>
+            <span class="issue-where">{{ issue.where }}</span>
+          </div>
+          <p class="issue-message">
+            {{ issue.message }}
+          </p>
+          <p class="issue-fix">
+            → {{ issue.fix }}
+          </p>
+        </div>
+      </div>
+      <pre
+        v-else
+        class="error-detail"
+      >{{ error }}</pre>
       <button
         class="error-retry"
         @click="retry"
@@ -45,22 +74,24 @@
         >
           独占
         </button>
-        <button
-          class="bar-button"
-          :disabled="exporting || total === 0"
-          title="导出为图片型 PPTX（逐像素保真，文字不可编辑）"
-          @click="onExport('image')"
-        >
-          {{ exporting ? '导出中…' : '导出PPTX' }}
-        </button>
-        <button
-          class="bar-button"
-          :disabled="exporting || total === 0"
-          title="导出为可编辑 PPTX（母版原生，可改字 / 换配色；需 Python + python-pptx）"
-          @click="onExport('editable')"
-        >
-          {{ exporting ? '导出中…' : '导出可编辑PPTX' }}
-        </button>
+        <template v-if="!isHtml">
+          <button
+            class="bar-button"
+            :disabled="exporting || total === 0"
+            title="导出为图片型 PPTX（逐像素保真，文字不可编辑）"
+            @click="onExport('image')"
+          >
+            {{ exporting ? '导出中…' : '导出PPTX' }}
+          </button>
+          <button
+            class="bar-button"
+            :disabled="exporting || total === 0"
+            title="导出为可编辑 PPTX（母版原生，可改字 / 换配色；需 Python + python-pptx）"
+            @click="onExport('editable')"
+          >
+            {{ exporting ? '导出中…' : '导出可编辑PPTX' }}
+          </button>
+        </template>
       </template>
       <button
         class="exit-button"
@@ -100,6 +131,18 @@ import { useTeachingStore } from '@/store/teaching'
 import { followTargetOf, shouldSnapBack } from '@/util/classroomFollow'
 import { renderGraphvizToDataUrl, renderPlantumlToDataUrl, renderMatplotlibToDataUrl } from '@/util/md2slidesDiagram'
 
+/**
+ * 渲染进程不能引 common/filesystem/paths（会拽入 node 的 fs/fs-extra，浏览器端
+ * 打包 externalize 即崩）。只判路径末段扩展名，纯字符串，不依赖 window.path mock。
+ */
+const isHtmlSlidePath = (pathname: string): boolean => {
+  const name = String(pathname || '').split(/[\\/]/).pop() ?? ''
+  const dot = name.lastIndexOf('.')
+  if (dot < 0) return false
+  const ext = name.slice(dot + 1).toLowerCase()
+  return ext === 'html' || ext === 'htm'
+}
+
 const props = defineProps<{
   /** 映支的叶：present 放映 / slide 页览。 */
   leaf: 'present' | 'slide'
@@ -127,6 +170,19 @@ const deckFrame = ref<HTMLIFrameElement | null>(null)
 const origin = ref<string | null>(null)
 const error = ref('')
 const missingWarn = ref('')
+
+/** 契约校验拒绝时的结构化诊断（core/htmlDeck/validate.js 的 Issue[]）。 */
+interface ContractIssue {
+  rule: string
+  code: string
+  severity: 'error' | 'warn'
+  where: string
+  message: string
+  fix: string
+  count?: number
+}
+const contractIssues = ref<ContractIssue[]>([])
+const contractError = computed(() => contractIssues.value.length > 0)
 const status = ref('正在启动放映服务…')
 const index = ref(0)
 const total = ref(0)
@@ -162,6 +218,14 @@ const pathname = computed(
 const mdDir = computed(() => (pathname.value ? window.path.dirname(pathname.value) : ''))
 const frameSrc = computed(() => (origin.value ? `${origin.value}/deck.html` : ''))
 
+/** 文档是第三方 HTML 放映稿（html/htm）：交给 deck 页面按 player.js 契约播放，
+ *  不走 muya、不改写源码（docs/design/html-slide.md）。 */
+const isHtml = computed(() => isHtmlSlidePath(pathname.value))
+
+// 画布尺寸不再在渲染进程解析：契约 v1 的 `wenlan-deck:canvas` meta 由宿主在
+// 校验阶段（core/htmlDeck/validate.js）解析，随 md2s:ready 回传。单一真源，避免
+// 两处正则漂移。
+
 /** 发给 deck 页面（跨源，目标源钉死为服务源）。 */
 const postToDeck = (msg: Record<string, unknown>): void => {
   deckFrame.value?.contentWindow?.postMessage(msg, origin.value ?? '*')
@@ -179,8 +243,13 @@ const sendBuild = (preservePage = false): void => {
       : undefined
   postToDeck({
     type: 'md2s:build',
-    md: props.markdown,
     mdDir: mdDir.value,
+    ...(isHtml.value
+      ? {
+          // 第三方 HTML：宿主按契约 v1 校验后提取 #deck 子树注入；不合规会结构化拒绝。
+          html: props.markdown
+        }
+      : { md: props.markdown }),
     runOpts: {
       view: props.leaf === 'slide' ? 'list' : 'present',
       ...(startIndex !== undefined ? { startIndex } : {})
@@ -378,6 +447,7 @@ const exit = (): void => {
 
 const retry = (): void => {
   error.value = ''
+  contractIssues.value = []
   void startServer()
 }
 
@@ -394,6 +464,7 @@ const onMessage = (ev: MessageEvent): void => {
       break
     case 'md2s:ready':
       error.value = ''
+      contractIssues.value = []
       status.value = ''
       index.value = Number(data.index) || 1
       total.value = Number(data.total) || 0
@@ -408,7 +479,8 @@ const onMessage = (ev: MessageEvent): void => {
       // 面板态不抢焦点——编辑器必须保住键盘（视图模型 §3）。
       if (!isPanel.value) deckFrame.value?.contentWindow?.focus()
       // DOM 已分页、player 已就绪：此刻装饰 ▶ 才能进 refreshSteps 的步进表。
-      void sendExecCapability()
+      // 第三方 HTML 放映稿无文览源码，没有可跑代码块，跳过 ▶ 下发。
+      if (!isHtml.value) void sendExecCapability()
       // 跟随必须在 ready 之后发：重建/首帧之前 player 还不存在，消息会被丢弃。
       sendFollow()
       break
@@ -436,10 +508,19 @@ const onMessage = (ev: MessageEvent): void => {
       // 缺图占位等非致命提示：不挡演示，常驻展示到下次构建/出错
       missingWarn.value = String(data.message ?? '')
       break
-    case 'md2s:error':
+    case 'md2s:error': {
       missingWarn.value = ''
       error.value = String(data.message ?? '未知错误')
+      // 契约校验拒绝：结构化逐条展示（rule/code/where/message/fix），而非单句。
+      const raw = data.issues
+      contractIssues.value = Array.isArray(raw)
+        ? raw.filter((i): i is ContractIssue =>
+            !!i && typeof i === 'object' &&
+            typeof i.rule === 'string' && typeof i.message === 'string'
+          )
+        : []
       break
+    }
     case 'md2s:esc':
       exit()
       break
@@ -492,6 +573,11 @@ const waitExportResult = (timeoutMs = 600000): Promise<Record<string, unknown>> 
 
 const onExport = async (kind: 'image' | 'editable'): Promise<void> => {
   if (!origin.value || !deckInfo.value || exporting.value) return
+  // 第三方 HTML 放映稿不经过 compose/IR，导出可编辑/图片型 PPTX 不适用。
+  if (isHtml.value) {
+    error.value = 'HTML 放映稿不支持导出 PPTX——它并非由文览生成，缺少排版中间表示。'
+    return
+  }
   if (!pathname.value) {
     error.value = '文档尚未保存——先保存（Ctrl+S）再导出。'
     return
@@ -734,6 +820,70 @@ onBeforeUnmount(() => {
   font-size: 12px;
   line-height: 1.6;
   white-space: pre-wrap;
+}
+
+.error-issues {
+  width: min(760px, 100%);
+  max-height: calc(var(--workspaceHeight, 100vh) * 0.55);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+
+.error-issue {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border-left: 3px solid #f87171;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.error-issue.warn {
+  border-left-color: #fbbf24;
+}
+
+.issue-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+
+.issue-rule {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  color: #fca5a5;
+  font-weight: 600;
+}
+
+.issue-count {
+  padding: 0 6px;
+  border-radius: 8px;
+  background: rgba(248, 113, 113, 0.2);
+  color: #fecaca;
+}
+
+.issue-where {
+  color: #bbb;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
+.issue-message {
+  margin: 2px 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #eee;
+}
+
+.issue-fix {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #a7d3b0;
+  overflow-wrap: anywhere;
 }
 
 .error-retry {

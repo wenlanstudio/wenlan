@@ -4,8 +4,9 @@
  * deck 页面（deck-full）里 compose 自己跑，mermaid / echarts 由页面侧渲染；但
  * graphviz(dot) / plantuml / matplotlib 页面里画不了，经 postMessage 托**本进程**离屏出图：
  *
- *   graphviz → `@viz-js/viz`（WASM，与 muya 编辑器同款依赖——编辑器里长什么样，
- *              deck 里就是什么样，同库同版本）→ SVG → PNG（2x，画白底）
+ *   graphviz → 优先系统 dot.exe（-Tpng -Gdpi=192，直接冻结位图）；没装或失败
+ *              才回退 `@viz-js/viz`（WASM，与 muya 编辑器同款依赖）→ SVG → PNG
+ *              （2x，画白底）。与「文」视图共用 graphvizRender 的同一决策。
  *   plantuml → 既有 `mt::diagram::fetch-plantuml` IPC（main 进程 net.fetch 到
  *              plantuml server）→ PNG 字节 → data URL
  *   matplotlib → 既有 `mt::diagram::render-external` IPC（main 进程 spawn Python，
@@ -17,6 +18,7 @@
  */
 
 import { serializeSvg, type SerializedSvg } from './diagramExport'
+import { renderGraphvizWithExe } from './graphvizRender'
 import type { instance as vizInstance } from '@viz-js/viz'
 
 const PNG_SCALE = 2
@@ -61,8 +63,17 @@ const rasterizeToDataUrl = (svg: SerializedSvg): Promise<string> =>
     image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg.markup)}`
   })
 
-/** dot 源码 → PNG data URL（离屏；viz 的 SVG 自带表现属性，不需内联样式补偿）。 */
+/**
+ * dot 源码 → PNG data URL（离屏）。
+ *
+ * 优先用系统的 dot.exe：`-Tpng -Gdpi=192` 已经是冻结位图，正好是 deck 要的
+ * 那一份字节，直接注入即可，不必再经 SVG 栅格。没装或跑不通时静默回退 viz
+ * WASM → SVG → 2x 栅格（原链路），保证讲义在任何机器上都能放映。
+ */
 export const renderGraphvizToDataUrl = async(source: string): Promise<string> => {
+  const exe = await renderGraphvizWithExe(source)
+  if (exe.ok) return exe.dataUrl
+
   const viz = await getViz()
   if (!viz) throw new Error('dot 图渲染失败：viz WASM 实例未就绪')
   const element = viz.renderSVGElement(source)

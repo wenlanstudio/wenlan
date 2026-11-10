@@ -93,6 +93,7 @@ export interface PreferencesState {
   drawioServer: string
   matplotlibEnabled: boolean
   matplotlibPythonPath: string
+  graphvizDotPath: string
 
   // ----- Theme -----
   theme: string
@@ -217,6 +218,8 @@ export const usePreferencesStore = defineStore('preferences', {
     // machines can answer without being told where Python lives.
     matplotlibEnabled: true,
     matplotlibPythonPath: '',
+    // Empty = auto-detect dot; the WASM renderer covers machines without it.
+    graphvizDotPath: '',
 
     theme: 'typora',
     followSystemTheme: true,

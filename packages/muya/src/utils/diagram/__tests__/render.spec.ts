@@ -2,6 +2,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { finalizeRenderedDiagram, renderDiagram, withMermaidInit } from '../render';
 
+// The WASM compiler is the fallback engine: stub it so the exe-first and
+// fallback paths can be asserted without instantiating WebAssembly.
+vi.mock('@viz-js/viz', () => ({
+    instance: async () => ({
+        renderSVGElement: (code: string) => {
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('data-code', code);
+            return svg;
+        },
+    }),
+}));
+
 const hosts: HTMLElement[] = [];
 
 afterEach(() => {
@@ -216,6 +228,55 @@ describe('renderDiagram — types with no bundled renderer', () => {
         expect(fetchMock).toHaveBeenCalled();
 
         vi.unstubAllGlobals();
+    });
+});
+
+describe('renderDiagram — Graphviz exe first, WASM as backup', () => {
+    const graphvizOptions = (target: HTMLElement, renderExternalDiagram?: (...args: never[]) => Promise<void>) => ({
+        type: 'graphviz',
+        code: 'digraph G { A -> B }',
+        target,
+        vegaTheme: '',
+        mermaidTheme: 'default',
+        plantumlServer: '',
+        sequenceTheme: 'simple',
+        drawioServer: '',
+        renderExternalDiagram,
+    });
+
+    it('uses the host dot renderer and never loads the WASM module on success', async () => {
+        const target = makeTarget();
+        const external = vi.fn(async (_type: string, _code: string, host: HTMLElement) => {
+            host.innerHTML = '<img data-graphviz-engine="exe" src="data:image/png;base64,AA">';
+        });
+
+        await renderDiagram(graphvizOptions(target, external) as never);
+
+        expect(external).toHaveBeenCalledWith('graphviz', 'digraph G { A -> B }', target);
+        expect(target.querySelector('img[data-graphviz-engine="exe"]')).not.toBeNull();
+        expect(target.querySelector('svg')).toBeNull();
+    });
+
+    it('falls back to WASM with a hover-only notice when dot.exe fails', async () => {
+        const target = makeTarget();
+
+        await renderDiagram(graphvizOptions(target, async () => {
+            throw new Error('no dot');
+        }) as never);
+
+        const svg = target.querySelector('svg');
+        expect(svg).not.toBeNull();
+        expect(svg!.getAttribute('data-graphviz-engine')).toBe('wasm-fallback');
+        expect(svg!.querySelector('title')?.textContent).toMatch(/WASM/);
+    });
+
+    it('still renders graphviz with WASM when no host renderer is injected', async () => {
+        const target = makeTarget();
+
+        await renderDiagram(graphvizOptions(target) as never);
+
+        expect(target.querySelector('svg')).not.toBeNull();
+        expect(target.querySelector('svg')!.getAttribute('data-graphviz-engine')).toBeNull();
     });
 });
 

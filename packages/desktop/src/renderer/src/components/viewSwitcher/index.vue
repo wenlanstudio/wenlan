@@ -27,8 +27,10 @@
     <div class="leaves">
       <!-- 「本」（Markdown 源码，topView 'source'）在「文」左边：与文同属
            编辑组（2026-11-08 重排，b.1）——点击切源码视图（叶选择挂起），
-           与叶按钮同款样式；active 与 topView 挂钩而非 leafSelection。 -->
+           与叶按钮同款样式；active 与 topView 挂钩而非 leafSelection。
+           HTML 放映稿为纯放映，无源码编辑面，隐藏「本」。 -->
       <button
+        v-if="!isHtmlDoc"
         class="leaf-btn"
         :class="{ active: topView === 'source' }"
         title="本——Markdown 源码（编辑组）"
@@ -51,8 +53,12 @@
     <!-- 顶级正交视图：表 / 图 / 码（不进文映树）。「本」已并入左侧编辑组
          （2026-11-08 重排）。「码」= 全文代码块只读透镜（2026-11-08 起，键
          'code'）——旧版这里曾是底部执行窗开关，执行窗入口已迁往围栏 ▶ 与
-         码透镜点块定位，面板右上角自带关闭钮。 -->
-    <div class="main-views">
+         码透镜点块定位，面板右上角自带关闭钮。HTML 放映稿纯放映，隐藏这些
+         依赖 muya/compose 的透镜入口。 -->
+    <div
+      v-if="!isHtmlDoc"
+      class="main-views"
+    >
       <button
         v-for="tv in mainTopViews"
         :key="tv"
@@ -76,7 +82,7 @@ import { t } from '@/i18n'
 
 const editorViewStore = useEditorViewStore()
 const preferencesStore = usePreferencesStore()
-const { leafSelection, topView, hasColumns, sliderDuty, presentImmersive } =
+const { leafSelection, topView, hasColumns, isHtmlDoc, sliderDuty, presentImmersive } =
   storeToRefs(editorViewStore)
 const { toggleLeaf, toggleTopView, enterPresentImmersive, exitPresentImmersive } = editorViewStore
 const { editorLineWidth } = storeToRefs(preferencesStore)
@@ -112,7 +118,7 @@ const TOP_VIEW_META: Record<string, { icon: string; title: string }> = {
   code: { icon: '码', title: '码——全文代码块总览（只读透镜；点块定位执行窗）' }
 }
 
-const visibleLeaves = computed<Leaf[]>(() => visibleLeafList(hasColumns.value))
+const visibleLeaves = computed<Leaf[]>(() => visibleLeafList(hasColumns.value, isHtmlDoc.value))
 
 // TODO1 #5 — the slider is shared by all views; the active view's duty decides
 // whether it renders and what it adjusts. `slide-zoom` (slide 列表缩放) 接线时

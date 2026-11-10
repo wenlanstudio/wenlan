@@ -450,7 +450,8 @@
         "imageRelativeDirectoryName": "El nombre de la carpeta de imagen relativa",
         "fileSortOrder": "El orden de clasificación de los archivos en las carpetas abiertas: ascendente o descendente",
         "openedFilesInSidebar": "Si mostrar los archivos abiertos en la barra lateral",
-        "showPandocConvert": "Mostrar el menú de conversión de Pandoc. Requiere tener Pandoc instalado."
+        "showPandocConvert": "Mostrar el menú de conversión de Pandoc. Requiere tener Pandoc instalado.",
+        "graphvizDotPath": "Graphviz dot executable path"
       }
     },
     "categories": {
@@ -700,6 +701,12 @@
           },
           "pythonPath": {
             "title": "Ruta del ejecutable de Python"
+          }
+        },
+        "graphviz": {
+          "dotPath": {
+            "title": "Graphviz dot Executable Path",
+            "notes": "Leave empty to auto-detect dot (GRAPHVIZ_DOT, the usual install folders, PATH). Wenlan prefers it over the built-in WASM renderer and falls back automatically when dot is unavailable."
           }
         }
       },

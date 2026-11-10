@@ -74,6 +74,7 @@ Preferences can be controlled and modified in the settings window or via the `pr
 | isHtmlEnabled          | Boolean | `true`  | Enable inline HTML rendering.                                                                                                                                                                                                                                                 |
 | softNewlineAsSpace     | Boolean | `false` | Treat a soft line break (a single bare newline within a paragraph) as a space instead of a line break.                                                                                                                                                                        |
 | sequenceTheme          | String  | `hand`  | Theme for [js-sequence-diagrams](https://bramp.github.io/js-sequence-diagrams/): `hand` or `simple`.                                                                                                                                                                          |
+| graphvizDotPath        | String  | `""`    | Path to the Graphviz `dot` executable used to render `dot` / `graphviz` fences (192 dpi PNG). Empty auto-detects it via `GRAPHVIZ_DOT`, the usual install folders and `PATH`; when it is missing or fails, the built-in WASM renderer draws the diagram instead.              |
 
 #### Theme
 

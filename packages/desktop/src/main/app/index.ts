@@ -10,7 +10,7 @@ import type { IUserPreferences } from '@shared/types/preferences'
 import { isLinux, isOsx, isWindows } from '../config'
 import parseArgs from '../cli/parser'
 import { normalizeAndResolvePath } from '../filesystem'
-import { normalizeCliMarkdownPath, normalizeMarkdownPath } from '../filesystem/markdown'
+import { normalizeCliMarkdownPath, normalizeMarkdownPath, normalizeOpenPath } from '../filesystem/markdown'
 import { confirmAndTrashItem } from '../filesystem/trash'
 import { registerKeyboardListeners } from '../keyboard'
 import { selectTheme } from '../menu/actions/theme'
@@ -725,7 +725,7 @@ class App {
         if (editor) {
           editor.openTabsFromPaths(
             fileList
-              .map((p) => normalizeMarkdownPath(p))
+              .map((p) => normalizeOpenPath(p))
               .filter((i): i is PathInfo => i !== null && !i.isDir)
               .map((i) => i.path)
           )

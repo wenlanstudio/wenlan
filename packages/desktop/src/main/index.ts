@@ -15,6 +15,7 @@ import { t } from './i18n'
 import { registerSandboxIpcHandlers } from './ipc'
 import { setPlantumlServerSource } from './ipc/diagram'
 import { setMatplotlibSource, warmUpPythonDetection } from './ipc/matplotlib'
+import { setGraphvizSource } from './ipc/graphviz'
 import { initAuthManager, getAuthManager } from './auth'
 
 // Set version strings into global and process.versions
@@ -131,6 +132,9 @@ setMatplotlibSource(() => ({
   pythonPath: accessor.preferences.getItem<string>('matplotlibPythonPath') ?? ''
 }))
 warmUpPythonDetection()
+// Empty = detect dot automatically; a configured path wins. Read on every
+// render so changing the preference needs no restart.
+setGraphvizSource(() => accessor.preferences.getItem<string>('graphvizDotPath') ?? '')
 
 const appController = new App(accessor, args as unknown as { _: string[] })
 appController.init()

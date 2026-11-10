@@ -30,6 +30,10 @@ export const IMAGE_EXTENSIONS: readonly string[] = Object.freeze([
   'webp'
 ])
 
+// 第三方 HTML 放映稿（映视图可直接播放，见 docs/design/html-slide.md）：每页须是
+// <section data-slide>，按固定画布排版。文览「打开文件」与路径归一化都接纳它。
+export const HTML_SLIDE_EXTENSIONS: readonly string[] = Object.freeze(['html', 'htm'])
+
 // Extensions the OS shell will execute rather than open in an application.
 // Opening one of these via shell.openPath runs code, so a markdown link
 // pointing at a co-located script/executable must be confirmed first (#3575).
@@ -104,6 +108,15 @@ export const isDangerousExecutableFile = (filepath: string): boolean => {
 export const hasMarkdownExtension = (filename: string): boolean => {
   if (!filename || typeof filename !== 'string') return false
   return MARKDOWN_EXTENSIONS.some((ext) => filename.toLowerCase().endsWith(`.${ext}`))
+}
+
+/**
+ * Returns true if the filename matches one of the HTML slide deck extensions
+ * (html/htm). 文览可打开这类文件，交由映视图按 md2slides player.js 契约放映。
+ */
+export const hasHtmlSlideExtension = (filename: string): boolean => {
+  if (!filename || typeof filename !== 'string') return false
+  return HTML_SLIDE_EXTENSIONS.some((ext) => filename.toLowerCase().endsWith(`.${ext}`))
 }
 
 /**

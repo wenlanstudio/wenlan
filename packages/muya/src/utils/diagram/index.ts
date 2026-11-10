@@ -69,12 +69,14 @@ async function loadRenderer(name: TDiagramType) {
                 rendererCache.set(name, m.default ?? m);
                 break;
 
-            // drawio renders in a remote embed and matplotlib runs the
-            // document's Python in the host process: neither has a library to
-            // import. Claiming them here is what keeps `renderDiagram` from
-            // rejecting both before their branch is reached.
+            // drawio renders in a remote embed, matplotlib runs the document's
+            // Python in the host process, and an `svg` fence carries the whole
+            // drawing as markup: none has a library to import. Claiming them
+            // here is what keeps `renderDiagram` from rejecting them before
+            // their branch is reached.
             case 'drawio':
             case 'matplotlib':
+            case 'svg':
                 rendererCache.set(name, null);
                 break;
 

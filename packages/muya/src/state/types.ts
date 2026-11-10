@@ -183,7 +183,8 @@ export type TDiagramType
         | 'chart'
         | 'abc'
         | 'drawio'
-        | 'matplotlib';
+        | 'matplotlib'
+        | 'svg';
 
 export interface IDiagramMeta {
     lang: string; // 'yaml' | 'json' | 'dot' | ...

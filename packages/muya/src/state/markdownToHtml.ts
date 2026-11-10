@@ -122,6 +122,7 @@ export class MarkdownToHtml {
             'plantuml',
             'flowchart',
             'sequence',
+            'dot',
             'graphviz',
             'wavedrom',
             'echarts',
@@ -129,6 +130,7 @@ export class MarkdownToHtml {
             'chartjs',
             'abc',
             'matplotlib',
+            'svg',
         ];
         const selector = languages.map(lang => `code.language-${lang}`).join(', ');
         const codes = this._exportContainer!.querySelectorAll(selector);

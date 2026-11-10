@@ -3,6 +3,7 @@ import { existsSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { ipcMain } from 'electron'
 import type { ExternalDiagramResult } from '@shared/types/ipc'
+import { graphvizDotPath, renderGraphvizWithDot } from './graphviz'
 
 // Matplotlib has no browser implementation: the code has to run under a real
 // Python. The main process runs the document's snippet in a short-lived
@@ -302,10 +303,15 @@ export const registerMatplotlibHandlers = (): void => {
   ipcMain.handle(
     'mt::diagram::render-external',
     async(_e, type: string, code: string): Promise<ExternalDiagramResult> => {
-      if (type !== 'matplotlib') return { ok: false, error: `No external renderer for ${type}` }
       if (typeof code !== 'string' || !code.trim()) {
         return { ok: false, error: 'The diagram code is empty' }
       }
+      // Graphviz prefers the installed dot binary. A failure here is not fatal:
+      // the renderer falls back to the bundled WASM compiler.
+      if (type === 'graphviz') {
+        return renderGraphvizWithDot(code, graphvizDotPath())
+      }
+      if (type !== 'matplotlib') return { ok: false, error: `No external renderer for ${type}` }
       if (!configuredSource) return { ok: false, error: 'Invalid matplotlib request' }
 
       const { enabled, pythonPath } = configuredSource()

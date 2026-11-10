@@ -357,15 +357,42 @@ const fragment = (): void => {
  *  交叠，过期 fragment 会在前一次分片搬空容器后才量测（读 0 块）。 */
 let rebuildGen = 0
 
+/** 图表 preview 是异步渲染的：先填 "Loading..."，再等 host / WASM 出图。
+ *  不落地就量测，页高会按占位文字记账（```svg 的栅格尤其明显）。 */
+const DIAGRAM_SETTLE_POLL_MS = 50
+const DIAGRAM_SETTLE_TIMEOUT_MS = 1200
+
+const diagramsSettled = (root: HTMLElement): boolean => {
+  const previews = root.querySelectorAll<HTMLElement>('.mu-diagram-preview')
+  // 错误卡也算落地，否则一张渲染失败的图会把纸叶永远卡在等待里。
+  return [...previews].every(p => p.querySelector('img, svg, canvas, .mu-diagram-error'))
+}
+
+/** 有界等待：超时也照常分片，宁可账目略偏，不可把纸叶卡死。
+ *  世代号保证过期的 rAF / timer 链不会在搬空容器后再量测。 */
+const fragmentWhenDiagramsSettle = (gen: number, deadline: number): void => {
+  if (gen !== rebuildGen) return
+  const root = muya.value?.domNode as HTMLElement | undefined
+  const pending = root ? !diagramsSettled(root) : false
+  if (pending && Date.now() < deadline) {
+    window.setTimeout(() => fragmentWhenDiagramsSettle(gen, deadline), DIAGRAM_SETTLE_POLL_MS)
+    return
+  }
+  fragment()
+}
+
 const rebuild = (): void => {
   const gen = ++rebuildGen
   const muyaInst = muya.value
   if (!muyaInst) return
   muyaInst.setContent(props.markdown ?? '')
-  // 双 rAF：等 muya 渲染提交布局后再量测分片。
+  // 双 rAF：等 muya 渲染提交布局后再量测分片；再等图表位图落地，
+  // 否则分页账目记的是 "Loading..." 的行高。
   requestAnimationFrame(() =>
     requestAnimationFrame(() => {
-      if (gen === rebuildGen) fragment()
+      if (gen === rebuildGen) {
+        fragmentWhenDiagramsSettle(gen, Date.now() + DIAGRAM_SETTLE_TIMEOUT_MS)
+      }
     })
   )
 }

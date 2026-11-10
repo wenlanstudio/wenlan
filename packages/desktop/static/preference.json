@@ -67,6 +67,7 @@
   "drawioServer": "https://embed.diagrams.net",
   "matplotlibEnabled": true,
   "matplotlibPythonPath": "",
+  "graphvizDotPath": "",
 
   "theme": "light",
   "followSystemTheme": true,

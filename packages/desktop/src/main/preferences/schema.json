@@ -343,6 +343,11 @@
     "type": "string",
     "default": ""
   },
+  "graphvizDotPath": {
+    "description": "Markdown--Graphviz dot executable used to render Graphviz diagrams (empty: detect it automatically; the built-in WASM renderer is used when dot is unavailable)",
+    "type": "string",
+    "default": ""
+  },
   "theme": {
     "description": "Theme--Select the theme used in Wenlan",
     "type": "string",

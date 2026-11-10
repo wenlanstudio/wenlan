@@ -450,7 +450,8 @@
         "imageRelativeDirectoryName": "相对图片文件夹名称",
         "fileSortOrder": "打开文件夹中文件的排序顺序：升序或降序",
         "openedFilesInSidebar": "是否在侧边栏中显示已打开文件",
-        "showPandocConvert": "显示 Pandoc 转换菜单。需要先安装 Pandoc。"
+        "showPandocConvert": "显示 Pandoc 转换菜单。需要先安装 Pandoc。",
+        "graphvizDotPath": "Graphviz dot 可执行文件路径"
       }
     },
     "categories": {
@@ -700,6 +701,12 @@
           },
           "pythonPath": {
             "title": "Python 可执行文件路径"
+          }
+        },
+        "graphviz": {
+          "dotPath": {
+            "title": "Graphviz dot 可执行文件路径",
+            "notes": "留空则自动探测（环境变量 GRAPHVIZ_DOT、常见安装目录、PATH）。优先使用 exe 渲染，找不到或执行失败时自动回退内置 WASM。"
           }
         }
       },

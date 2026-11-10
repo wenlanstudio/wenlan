@@ -1,4 +1,6 @@
 import { exportDrawio, renderDiagramForExport } from '@muyajs/core'
+import { renderGraphvizWithExe } from './graphvizRender'
+import { normalizeSvgFence, rasterizeSvgFence } from './svgFence'
 
 export type ExportFormat = 'svg' | 'png'
 
@@ -253,7 +255,9 @@ const exportExternalImage = async(
   if (format === 'svg' && isSvg) return { ...decoded, extension: 'svg' }
   if (format === 'png' && !isSvg) return { ...decoded, extension: 'png' }
 
-  const image = await loadSvgImage(src)
+  // `src` is already a data URL (SVG or PNG); wrapping it as SVG markup would
+  // turn it into an unreadable `data:image/svg+xml,...data%3Aimage...` string.
+  const image = await loadImage(src)
   const canvas = document.createElement('canvas')
   canvas.width = Math.max(1, image.naturalWidth * PNG_SCALE)
   canvas.height = Math.max(1, image.naturalHeight * PNG_SCALE)
@@ -355,12 +359,27 @@ export const renderDiagramCodeToPngDataUrl = async(
   code: string,
   themes: DiagramThemes
 ): Promise<string> => {
+  if (type === 'svg') {
+    // The fence already carries the finished drawing. Rasterise it directly:
+    // renderDiagramForExport deliberately has no external callback injected,
+    // so going through the generic path below would find no renderer.
+    return rasterizeSvgFence(code)
+  }
+
   if (type === 'matplotlib') {
     // The main process runs the Python and hands back a finished SVG whose pt
     // dimensions become the pixel size the image loads at.
     const result = await window.diagram.renderExternal(type, code)
     if (!result.ok) throw new Error(result.error)
     return rasterizeToPngDataUrl(await loadImage(`data:${result.mime};base64,${result.data}`))
+  }
+
+  if (type === 'graphviz') {
+    // Same exe-first decision as the preview: a 192 dpi PNG is already the
+    // pixels pandoc needs. Without dot.exe, fall through to the WASM render
+    // below (renderDiagramForExport has no external callback injected).
+    const exe = await renderGraphvizWithExe(code)
+    if (exe.ok) return rasterizeToPngDataUrl(await loadImage(exe.dataUrl))
   }
 
   const host = document.createElement('figure')
@@ -423,21 +442,41 @@ export const exportDiagram = async(
 ): Promise<ExportedImage> => {
   if (source.type === 'plantuml') return exportPlantuml(source, format)
   if (source.type === 'matplotlib') return exportExternalImage(source, format)
+  if (source.type === 'svg') {
+    // A vector export keeps the author's markup (normalised to explicit
+    // numeric dimensions); a PNG export reuses the bitmap in the live preview.
+    if (format === 'svg') {
+      return {
+        data: toBytes(normalizeSvgFence(source.code).markup),
+        mime: 'image/svg+xml',
+        extension: 'svg'
+      }
+    }
+    return exportExternalImage(source, format)
+  }
+  // dot.exe draws a finished bitmap: the live preview holds an <img> instead
+  // of the <svg> the WASM fallback produces. PNG exports decode that image;
+  // an SVG request is re-rendered with WASM below so the file stays vector.
+  const exeBitmap = source.type === 'graphviz'
+    && !!source.preview.querySelector('img[data-graphviz-engine="exe"]')
+  if (exeBitmap && format !== 'svg') return exportExternalImage(source, format)
   if (source.type === 'drawio') return exportDrawioDiagram(source, format)
   if (source.type === 'chart' || source.type === 'echarts') {
     return exportCanvas(source, format, background)
   }
 
-  const live = source.preview.querySelector('svg')
-  if (!live) throw new Error('The diagram has not rendered')
-
   const options = { inlineStyles: NEEDS_INLINE_STYLES.has(source.type), background }
-  // Mermaid's `<foreignObject>` labels need the re-render; every other vector
-  // diagram is serialised from what is already on screen.
-  const svg =
-    source.type === 'mermaid'
-      ? await renderForExport(source, options)
-      : serializeSvg(live as SVGSVGElement, options)
+  // Mermaid's `<foreignObject>` labels need the re-render; so does a vector
+  // export of a dot.exe bitmap, which has no SVG source to serialise.
+  let svg: SerializedSvg
+  if (source.type === 'mermaid' || (exeBitmap && format === 'svg')) {
+    svg = await renderForExport(source, options)
+  }
+  else {
+    const live = source.preview.querySelector('svg')
+    if (!live) throw new Error('The diagram has not rendered')
+    svg = serializeSvg(live as SVGSVGElement, options)
+  }
 
   if (format === 'svg') {
     return { data: toBytes(svg.markup), mime: 'image/svg+xml', extension: 'svg' }

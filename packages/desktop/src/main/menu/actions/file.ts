@@ -11,7 +11,7 @@ import {
 } from 'electron'
 import log from 'electron-log'
 import { isDirectory, isFile, exists } from 'common/filesystem'
-import { MARKDOWN_EXTENSIONS, isDangerousExecutableFile, isMarkdownFile } from 'common/filesystem/paths'
+import { MARKDOWN_EXTENSIONS, HTML_SLIDE_EXTENSIONS, isDangerousExecutableFile, isMarkdownFile } from 'common/filesystem/paths'
 import { checkUpdates, userSetting } from './marktext'
 import { COMMANDS } from '../../commands'
 import type { CommandManager } from '../../commands'
@@ -870,6 +870,11 @@ export const openFile = async(win: BrowserWindow | null): Promise<void> => {
       {
         name: 'Markdown document',
         extensions: [...MARKDOWN_EXTENSIONS]
+      },
+      {
+        // 第三方 HTML 放映稿：映视图按 md2slides player.js 契约直接播放（html/htm）。
+        name: 'HTML slide deck',
+        extensions: [...HTML_SLIDE_EXTENSIONS]
       }
     ]
   })

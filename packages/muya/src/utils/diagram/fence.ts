@@ -20,6 +20,7 @@ const DIAGRAM_LANGS: Readonly<Record<string, IDiagramMeta['type']>> = {
     'abc': 'abc',
     'drawio': 'drawio',
     'matplotlib': 'matplotlib',
+    'svg': 'svg',
 };
 
 /**
@@ -35,6 +36,7 @@ const DIAGRAM_GRAMMARS: Readonly<Record<string, string>> = {
     'chart': 'json',
     'drawio': 'json',
     'matplotlib': 'python',
+    'svg': 'markup',
 };
 
 /**

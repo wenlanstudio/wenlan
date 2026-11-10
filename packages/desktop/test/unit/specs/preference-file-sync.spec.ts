@@ -46,3 +46,19 @@ describe('static/preference.json stays in sync with the preference schema', () =
     expect(defaults[KEY]).toEqual(schema[KEY]?.default)
   })
 })
+
+describe('graphvizDotPath preference stays in sync', () => {
+  const GRAPHVIZ_KEY = 'graphvizDotPath'
+
+  it('is shipped in the defaults so Preference.init() does not prune it', () => {
+    expect(defaults, `add ${GRAPHVIZ_KEY} to static/preference.json`).toHaveProperty(GRAPHVIZ_KEY)
+  })
+
+  it('has the type the schema declares', () => {
+    expect(typeOf(defaults[GRAPHVIZ_KEY])).toBe(schema[GRAPHVIZ_KEY]?.type)
+  })
+
+  it('has the value the schema calls its default (empty = auto-detect dot)', () => {
+    expect(defaults[GRAPHVIZ_KEY]).toEqual(schema[GRAPHVIZ_KEY]?.default)
+  })
+})

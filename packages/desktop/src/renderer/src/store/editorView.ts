@@ -5,6 +5,19 @@ import { usePreferencesStore } from './preferences'
 import { useEditorStore } from './editor'
 
 /**
+ * 渲染进程不能引 common/filesystem/paths（会拽入 node 的 fs/fs-extra，浏览器端
+ * 打包 externalize 即崩）。这里只判路径末段扩展名，纯字符串即可——不需要
+ * window.path，也不依赖 preload 在单测环境里的 mock 完整度。
+ */
+const isHtmlSlidePath = (pathname: string): boolean => {
+  const name = String(pathname || '').split(/[\\/]/).pop() ?? ''
+  const dot = name.lastIndexOf('.')
+  if (dot < 0) return false
+  const ext = name.slice(dot + 1).toLowerCase()
+  return ext === 'html' || ext === 'htm'
+}
+
+/**
  * 视图模型（docs/design/view-model.md）：二组五叶选择，UI 刻度「文 栏│页 览 映」。
  *
  * 编辑组（写作姿态，muya 进程内）= { flow 全文, column 分栏 }；
@@ -30,9 +43,13 @@ export type Leaf = 'flow' | 'column' | 'page' | 'slide' | 'present'
 export const LEAVES = ['flow', 'column', 'page', 'slide', 'present'] as const
 
 /** 切换器上真正出现的叶：栏格随文档有无 begin 标记显隐。
- *  收口进 store，避免 viewSwitcher 与单测各写一份过滤条件后漂移。 */
-export const visibleLeafList = (hasColumns: boolean): Leaf[] =>
-  LEAVES.filter((leaf) => leaf !== 'column' || hasColumns)
+ *  收口进 store，避免 viewSwitcher 与单测各写一份过滤条件后漂移。
+ *  HTML 放映稿（isHtmlDoc）只给放映型叶（览/映）——其余叶依赖 muya/compose，
+ *  对纯放映文档无意义（docs/design/html-slide.md）。 */
+export const visibleLeafList = (hasColumns: boolean, isHtmlDoc = false): Leaf[] =>
+  isHtmlDoc
+    ? LEAVES.filter((leaf) => leaf === 'slide' || leaf === 'present')
+    : LEAVES.filter((leaf) => leaf !== 'column' || hasColumns)
 
 const SHOW_LEAVES: readonly Leaf[] = ['slide', 'present']
 
@@ -132,6 +149,15 @@ export const useEditorViewStore = defineStore('editorView', () => {
   const hasColumns = computed<boolean>(() =>
     currentMarkdown.value ? hasColumnMarkers(currentMarkdown.value) : false
   )
+
+  /** 当前文档路径（HTML 放映稿判定源）。 */
+  const currentPathname = computed<string>(
+    () => (editorStore.currentFile as { pathname?: string } | null)?.pathname ?? ''
+  )
+
+  /** 当前文档是第三方 HTML 放映稿（html/htm）：交映视图按 player.js 契约播放，
+   *  不进 muya/compose（docs/design/html-slide.md）。 */
+  const isHtmlDoc = computed<boolean>(() => isHtmlSlidePath(currentPathname.value))
 
   /** 分屏中的两叶按按钮序（左右 pane）。 */
   const orderedLeaves = computed<Leaf[]>(() =>
@@ -357,6 +383,8 @@ export const useEditorViewStore = defineStore('editorView', () => {
    *  （先摘一片才能换）；最后一片不可摘。 */
   const toggleLeaf = (leaf: Leaf): void => {
     topView.value = null // 顶级视图与叶互斥：点叶即回叶
+    // HTML 放映稿：锁定到放映型叶（览/映），其余叶依赖 muya/compose，不可选。
+    if (isHtmlDoc.value && leaf !== 'slide' && leaf !== 'present') return
     const sel = leafSelection.value
     if (sel.includes(leaf)) {
       if (sel.length === 1) return // 最后一片点不掉
@@ -387,18 +415,27 @@ export const useEditorViewStore = defineStore('editorView', () => {
     syncToPreferences()
   }
 
-  /** 回编辑面（放映/列表全屏态 Esc 用）：文侧 flow 全屏。 */
+  /** 回编辑面（放映/列表全屏态 Esc 用）：文侧 flow 全屏。
+   *  HTML 放映稿没有编辑面，回编辑面即回放映（纯放映，docs/design/html-slide.md）。 */
   const focusEditor = (): void => {
     topView.value = null
-    leafSelection.value = ['flow']
+    leafSelection.value = isHtmlDoc.value ? ['present'] : ['flow']
     persist()
     syncToPreferences()
   }
 
   /** 跳转编辑的目标态（视图模型 §6.3）：让「文」接管编辑面——清顶级视图；
    * 叶选择已含文则保持，否则左叶（全屏即唯一叶）换成文、右叶保留
-   * （栏×页 → 文×页、览×映 → 文×映）。与 focusEditor 的区别：不折叠分屏。 */
+   * （栏×页 → 文×页、览×映 → 文×映）。与 focusEditor 的区别：不折叠分屏。
+   *  HTML 放映稿无编辑面，跳过文接管，直接落到 present（纯放映）。 */
   const enterFlowEditor = (): void => {
+    if (isHtmlDoc.value) {
+      topView.value = null
+      leafSelection.value = ['present']
+      persist()
+      syncToPreferences()
+      return
+    }
     topView.value = null
     const sel = [...leafSelection.value]
     if (!sel.includes('flow')) {
@@ -441,6 +478,20 @@ export const useEditorViewStore = defineStore('editorView', () => {
     { immediate: true }
   )
 
+  // HTML 放映稿打开即锁定到放映叶：无 muya/compose，编辑/分页类叶不可用
+  // （docs/design/html-slide.md）。immediate 让首屏若直接载入 HTML 也落到 present。
+  watch(
+    isHtmlDoc,
+    (html) => {
+      if (html) {
+        topView.value = null
+        leafSelection.value = ['present']
+        persist()
+      }
+    },
+    { immediate: true }
+  )
+
   // When preferencesStore.sourceCode changes from outside (e.g. main-process
   // menu), reconcile so the UI stays consistent.
   watch(
@@ -462,6 +513,7 @@ export const useEditorViewStore = defineStore('editorView', () => {
     topView,
     rightRatio,
     hasColumns,
+    isHtmlDoc,
     orderedLeaves,
     isSplit,
     leftLeaf,

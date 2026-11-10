@@ -62,7 +62,8 @@ describe('editorView selection model', () => {
   it('labels page as 页 in the switcher', () => {
     const src = readFileSync(switcherPath, 'utf8')
     expect(src).toMatch(/page:\s*\{ label: '页'/)
-    expect(src).toContain('visibleLeafList(hasColumns.value)')
+    // HTML 放映稿锁定放映型叶：切换器把 isHtmlDoc 一并传给 visibleLeafList。
+    expect(src).toContain('visibleLeafList(hasColumns.value, isHtmlDoc.value)')
   })
 
   it('defaults to flow fullscreen with the width slider', () => {
@@ -304,6 +305,57 @@ describe('editorView selection model', () => {
     store.toggleLeaf('flow')
     expect(store.leafSelection).toEqual(['column'])
     expect(store.editorLens).toBe('column')
+  })
+})
+
+// HTML 放映稿（契约 v1）：按扩展名锁定到放映型叶，编辑类叶一律不可选。
+// 判定必须纯字符串，不依赖 preload 的 window.path（单测只 mock 了 sep）。
+describe('editorView HTML deck lock', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+  })
+
+  const withPath = (pathname: string) => {
+    setActivePinia(createPinia())
+    useEditorStore().currentFile = { markdown: '', pathname } as never
+    return useEditorViewStore()
+  }
+
+  it('detects html/htm case-insensitively on Windows paths', () => {
+    expect(withPath('D:\\讲义\\YARN.HTML').isHtmlDoc).toBe(true)
+    expect(withPath('C:/slides/deck.htm').isHtmlDoc).toBe(true)
+    expect(withPath('C:/docs/note.md').isHtmlDoc).toBe(false)
+    expect(withPath('').isHtmlDoc).toBe(false)
+    expect(visibleLeafList(false, true)).toEqual(['slide', 'present'])
+  })
+
+  it('opens an HTML doc straight into present fullscreen', () => {
+    const store = withPath('C:/slides/deck.html')
+    expect(store.isHtmlDoc).toBe(true)
+    expect(store.leafSelection).toEqual(['present'])
+    expect(store.topView).toBeNull()
+    expect(store.editorLens).toBeNull() // 绝不进 muya
+  })
+
+  it('forbids editing leaves but still allows the deck leaves', () => {
+    const store = withPath('C:/slides/deck.html')
+    store.toggleLeaf('flow')
+    expect(store.leafSelection).toEqual(['present'])
+    store.toggleLeaf('page')
+    expect(store.leafSelection).toEqual(['present'])
+    store.toggleLeaf('slide')
+    expect(store.leafSelection).toEqual(['present', 'slide'])
+    store.focusEditor()
+    expect(store.leafSelection).toEqual(['present'])
+    store.enterFlowEditor()
+    expect(store.leafSelection).toEqual(['present'])
+  })
+
+  it('markdown docs are unaffected', () => {
+    const store = withPath('C:/docs/note.md')
+    expect(store.isHtmlDoc).toBe(false)
+    expect(store.leafSelection).toEqual(['flow'])
   })
 })
 

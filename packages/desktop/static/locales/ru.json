@@ -450,7 +450,8 @@
         "autoNormalizeLineEndings": "Автоматически нормализовать концы строк при открытии файлов. Если отключено, файлы открываются как есть.",
         "fileSortOrder": "Порядок сортировки файлов в открытых папках: по возрастанию или убыванию.",
         "openedFilesInSidebar": "Показывать открытые файлы на боковой панели.",
-        "showPandocConvert": "Показывать меню конвертации Pandoc. Требуется установленный Pandoc."
+        "showPandocConvert": "Показывать меню конвертации Pandoc. Требуется установленный Pandoc.",
+        "graphvizDotPath": "Graphviz dot executable path"
       }
     },
     "categories": {
@@ -700,6 +701,12 @@
           },
           "pythonPath": {
             "title": "Путь к исполняемому файлу Python"
+          }
+        },
+        "graphviz": {
+          "dotPath": {
+            "title": "Graphviz dot Executable Path",
+            "notes": "Leave empty to auto-detect dot (GRAPHVIZ_DOT, the usual install folders, PATH). Wenlan prefers it over the built-in WASM renderer and falls back automatically when dot is unavailable."
           }
         }
       },
