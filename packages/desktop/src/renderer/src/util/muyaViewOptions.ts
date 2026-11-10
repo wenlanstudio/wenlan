@@ -2,6 +2,7 @@ import type { IMuyaOptions } from '@muyajs/core'
 import { DEFAULT_CODE_FONT_FAMILY, DEFAULT_EDITOR_FONT_FAMILY } from '@/config'
 import { usePreferencesStore } from '@/store/preferences'
 import { useEditorStore } from '@/store/editor'
+import { renderExternalDiagram } from './externalDiagram'
 
 export const resolveEditorFont = (family: string): string =>
   family ? `${family}, ${DEFAULT_EDITOR_FONT_FAMILY}` : DEFAULT_EDITOR_FONT_FAMILY
@@ -96,6 +97,11 @@ export function buildMuyaViewOptions(): Partial<IMuyaOptions> {
     mermaidTheme: isDark ? 'dark' : 'default',
     vegaTheme: isDark ? 'dark' : 'latimes',
     plantumlServer,
-    drawioServer
+    drawioServer,
+    // Out-of-process diagram rendering (matplotlib runs the document's Python
+    // in the main process). Shared here so every engine instance — the live
+    // editor, the read-only projections and the teaching reader alike — draws
+    // the same diagram instead of a "enable them in the preferences" error.
+    renderExternalDiagram
   }
 }

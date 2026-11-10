@@ -22,6 +22,7 @@ import { useLayoutStore } from './layout'
 import { useMainStore } from '.'
 import { t } from '../i18n'
 import { debouncedSendBufferedState, sendBufferedState } from './bufferedState'
+import { substituteDiagramFences } from '@/util/pandocDiagramExport'
 import type {
   IFileState,
   FileNotification,
@@ -200,6 +201,11 @@ export const useEditorStore = defineStore('editor', {
 
     TOGGLE_READ_ONLY(): void {
       this.readOnly = !this.readOnly
+    },
+
+    /** 学生端只读投影：显式置位，避免用 toggle 猜当前状态。 */
+    SET_READ_ONLY(value: boolean): void {
+      this.readOnly = value
     },
 
     updateTabIdToIndex(): void {
@@ -1600,15 +1606,26 @@ export const useEditorStore = defineStore('editor', {
 
     // Reads `currentFile.markdown` after a flush, the way `FILE_SAVE` does: in source-code
     // mode CodeMirror writes straight to it, so `engine.getMarkdown()` would be stale (#5379).
-    EXPORT_PANDOC(target: string): void {
+    async EXPORT_PANDOC(target: string): Promise<void> {
       if (this.currentFile === null) return
 
       this.flushActiveEditor()
       const { pathname, markdown } = this.currentFile
       const preferencesStore = usePreferencesStore()
+      // pandoc reads the document as text and cannot draw a diagram fence — it
+      // would arrive as a code block. Render the fences here, where the drawing
+      // engines live, and hand pandoc images instead (a fence that fails to
+      // render stays a code block). Light themes, like the HTML export.
+      const exportMarkdown = await substituteDiagramFences(markdown, {
+        mermaidTheme: 'default',
+        vegaTheme: 'latimes',
+        plantumlServer: preferencesStore.plantumlServer,
+        sequenceTheme: preferencesStore.sequenceTheme as 'hand' | 'simple',
+        drawioServer: preferencesStore.drawioServer
+      })
       window.electron.ipcRenderer.send('mt::response-pandoc-export', {
         target,
-        markdown,
+        markdown: exportMarkdown,
         superSubScript: preferencesStore.superSubScript === true,
         footnote: preferencesStore.footnote === true,
         texMathDollars: preferencesStore.texMathDollars === true,

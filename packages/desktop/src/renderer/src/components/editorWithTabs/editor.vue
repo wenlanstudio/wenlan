@@ -2042,18 +2042,6 @@ onMounted(() => {
     hideQuickInsertHint: hideQuickInsertHint.value,
     hideLinkPopup: hideLinkPopup.value,
     autoCheck: autoCheck.value,
-    // Matplotlib renders out-of-process: the main process runs the document's
-    // Python snippet and hands back an image, which lands in `target`.
-    renderExternalDiagram: async (type, code, target) => {
-      const result = await window.diagram.renderExternal(type, code)
-      if (!result.ok) throw new Error(result.error)
-
-      target.innerHTML = ''
-      const img = document.createElement('img')
-      img.src = `data:${result.mime};base64,${result.data}`
-      img.alt = type
-      target.appendChild(img)
-    },
     spellcheckEnabled: spellcheckerEnabled.value,
     spellcheckHideMarks: spellcheckerNoUnderline.value,
     // Resolve the OS clipboard to a local file path on paste (image-from-file).

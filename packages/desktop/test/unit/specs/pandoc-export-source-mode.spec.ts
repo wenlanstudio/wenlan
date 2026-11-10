@@ -80,9 +80,9 @@ describe('pandoc export payload (#5379)', () => {
     detach = undefined
   })
 
-  it('sends the tab markdown, the source pathname and the target', () => {
+  it('sends the tab markdown, the source pathname and the target', async() => {
     detach = onFlushCommit(store)
-    store.EXPORT_PANDOC('docx')
+    await store.EXPORT_PANDOC('docx')
 
     expect(sentPayload(sendSpy)).toBeDefined()
     expect(sentPayload(sendSpy)).toMatchObject({
@@ -94,7 +94,7 @@ describe('pandoc export payload (#5379)', () => {
 
   // Only the renderer knows these: `gfm` enables footnotes itself, so it must be told to stop,
   // and the math delimiters the editor reads are preferences pandoc does not know (#5566).
-  it('reports the reader preferences to the main process', () => {
+  it('reports the reader preferences to the main process', async() => {
     usePreferencesStore().superSubScript = true
     usePreferencesStore().footnote = false
     usePreferencesStore().texMathDollars = false
@@ -102,7 +102,7 @@ describe('pandoc export payload (#5379)', () => {
     usePreferencesStore().texMathSingleBackslash = true
     usePreferencesStore().texMathDoubleBackslash = true
 
-    store.EXPORT_PANDOC('docx')
+    await store.EXPORT_PANDOC('docx')
 
     expect(sentPayload(sendSpy)).toMatchObject({
       superSubScript: true,
@@ -114,9 +114,9 @@ describe('pandoc export payload (#5379)', () => {
     })
   })
 
-  it('does nothing when no tab is open', () => {
+  it('does nothing when no tab is open', async() => {
     store.currentFile = null
-    store.EXPORT_PANDOC('docx')
+    await store.EXPORT_PANDOC('docx')
 
     expect(sentPayload(sendSpy)).toBeUndefined()
   })

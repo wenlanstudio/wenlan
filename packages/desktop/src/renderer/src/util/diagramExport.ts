@@ -137,15 +137,28 @@ export const serializeSvg = (svg: SVGSVGElement, options: SerializeOptions): Ser
 
 const toBytes = (text: string): Uint8Array => new TextEncoder().encode(text)
 
-const loadSvgImage = (markup: string): Promise<HTMLImageElement> =>
+const loadImage = (src: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
     const image = new Image()
     image.onload = () => resolve(image)
     image.onerror = () => reject(new Error('The diagram could not be read back as an image'))
     // A `blob:` URL would be blocked: the renderer's CSP lists `data:` and
     // `file:` under img-src, and `*` matches neither scheme.
-    image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`
+    image.src = src
   })
+
+const loadSvgImage = (markup: string): Promise<HTMLImageElement> =>
+  loadImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`)
+
+// `String.fromCharCode` takes a spread, and a multi-megabyte PNG would blow
+// the call stack — feed it the bytes in slices.
+const bytesToBase64 = (bytes: Uint8Array): string => {
+  let binary = ''
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+  }
+  return btoa(binary)
+}
 
 const rasterize = async(svg: SerializedSvg, background: string): Promise<Uint8Array> => {
   const scale = Math.min(PNG_SCALE, Math.sqrt(MAX_PIXELS / (svg.width * svg.height)))
@@ -306,6 +319,100 @@ const exportDrawioDiagram = async(
     data: decoded.data,
     mime: decoded.mime,
     extension: decoded.mime.includes('svg') ? 'svg' : 'png'
+  }
+}
+
+// A text export (pandoc) carries the drawing inside the markdown as pixels:
+// rasterise at the natural size, where a 2x raster would land in the document
+// twice as large. White behind the drawing — the exported file has no editor.
+const PANDOC_BACKGROUND = '#ffffff'
+
+const rasterizeToPngDataUrl = (image: HTMLImageElement): string => {
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, image.naturalWidth)
+  canvas.height = Math.max(1, image.naturalHeight)
+
+  const context = canvas.getContext('2d')
+  if (!context) throw new Error('The diagram could not be rasterised')
+  context.fillStyle = PANDOC_BACKGROUND
+  context.fillRect(0, 0, canvas.width, canvas.height)
+  context.drawImage(image, 0, 0, canvas.width, canvas.height)
+
+  return canvas.toDataURL('image/png')
+}
+
+/**
+ * Run `code` as a `type` diagram and return a PNG data URL at its natural
+ * size — the text-export counterpart of `exportDiagram`, which works from a
+ * live preview instead of a fence's source.
+ *
+ * Throws when the diagram cannot be drawn (matplotlib disabled, no Python, no
+ * PlantUML server); the caller falls back to exporting the fence as the code
+ * block it always exported as.
+ */
+export const renderDiagramCodeToPngDataUrl = async(
+  type: string,
+  code: string,
+  themes: DiagramThemes
+): Promise<string> => {
+  if (type === 'matplotlib') {
+    // The main process runs the Python and hands back a finished SVG whose pt
+    // dimensions become the pixel size the image loads at.
+    const result = await window.diagram.renderExternal(type, code)
+    if (!result.ok) throw new Error(result.error)
+    return rasterizeToPngDataUrl(await loadImage(`data:${result.mime};base64,${result.data}`))
+  }
+
+  const host = document.createElement('figure')
+  host.className = 'mu-diagram-block'
+  host.setAttribute('aria-hidden', 'true')
+  host.style.cssText = 'position:fixed;left:-99999px;top:0'
+  const target = document.createElement('div')
+  target.className = 'mu-diagram-preview'
+  host.appendChild(target)
+  document.body.appendChild(host)
+
+  try {
+    await renderDiagramForExport({
+      type,
+      code,
+      target,
+      htmlLabels: false,
+      mermaidTheme: themes.mermaidTheme,
+      vegaTheme: themes.vegaTheme,
+      plantumlServer: themes.plantumlServer,
+      sequenceTheme: themes.sequenceTheme,
+      drawioServer: themes.drawioServer
+    })
+
+    if (type === 'plantuml') {
+      // The server drew it, not the browser: the render is an `<img>` pointing
+      // at the (server, encoded) pair, and the same diagram is fetched as PNG.
+      const img = target.querySelector('img')
+      const parts = img?.src ? splitPlantumlSrc(img.src) : null
+      if (!parts) throw new Error('The PlantUML diagram has no render URL')
+
+      const result = await window.diagram.fetchPlantuml(parts.server, parts.encoded, 'png')
+      if (!result.ok) throw new Error(result.error)
+      return `data:${result.mime};base64,${bytesToBase64(result.data)}`
+    }
+
+    const svg = target.querySelector('svg')
+    if (svg) {
+      const serialized = serializeSvg(svg, {
+        inlineStyles: NEEDS_INLINE_STYLES.has(type),
+        background: PANDOC_BACKGROUND
+      })
+      return rasterizeToPngDataUrl(await loadSvgImage(serialized.markup))
+    }
+
+    // Chart.js only draws onto a bitmap canvas; there is no svg to serialise.
+    const canvas = target.querySelector('canvas')
+    if (canvas) return canvas.toDataURL('image/png')
+
+    throw new Error('The diagram did not render into an image')
+  } finally {
+    host.remove()
   }
 }
 
