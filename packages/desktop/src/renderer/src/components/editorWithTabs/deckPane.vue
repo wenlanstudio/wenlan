@@ -96,6 +96,8 @@ import type { Md2rEvent } from '@shared/types/mdcode2run'
 import { useEditorStore } from '@/store/editor'
 import { useEditorViewStore } from '@/store/editorView'
 import { usePreferencesStore } from '@/store/preferences'
+import { useTeachingStore } from '@/store/teaching'
+import { followTargetOf, shouldSnapBack } from '@/util/classroomFollow'
 import { renderGraphvizToDataUrl, renderPlantumlToDataUrl, renderMatplotlibToDataUrl } from '@/util/md2slidesDiagram'
 
 const props = defineProps<{
@@ -109,8 +111,10 @@ const props = defineProps<{
 const editorStore = useEditorStore()
 const editorViewStore = useEditorViewStore()
 const preferencesStore = usePreferencesStore()
+const teachingStore = useTeachingStore()
 const { plantumlServer } = storeToRefs(preferencesStore)
 const { isSplit, presentExclusive, presentImmersive } = storeToRefs(editorViewStore)
+const { classroom } = storeToRefs(teachingStore)
 
 // 独占开关只属于分屏中的 present pane（LEAVES 序保证 present 恒为右叶）。
 const canToggleExclusive = computed(() => isPanel.value && isSplit.value && props.leaf === 'present')
@@ -183,6 +187,36 @@ const sendBuild = (preservePage = false): void => {
     }
   })
 }
+
+// —— 课堂跟随（学生端 M2b）——
+// deck 页面与本组件跨源，能直调 player.go 的只有页面侧的 exec-present.js，
+// 所以跟随只有一条消息 md2s:follow；判定（进没进会话、角色、锁不锁）抽在
+// util/classroomFollow 里单测。教师端虽然也 join 房间（要上报页码），但 role=host
+// 时判定恒给「不跟随」，老师翻页不会被自己广播的页号拉回。
+const followTarget = computed(() =>
+  followTargetOf({
+    sessionId: classroom.value.sessionId,
+    page: classroom.value.page,
+    followLocked: classroom.value.followLocked,
+    role: classroom.value.role
+  })
+)
+
+/** 上次发 follow 的时刻：md2s:change 回弹要一个冷却窗口，否则会抖成死循环。 */
+let followSentAt = 0
+
+const sendFollow = (): void => {
+  // 只对放映（present）有意义：slide 是整堆物理页的列表态，没有"当前页"。
+  if (props.leaf !== 'present') return
+  followSentAt = Date.now()
+  postToDeck({
+    type: 'md2s:follow',
+    page: followTarget.value.page,
+    locked: followTarget.value.locked
+  })
+}
+
+watch([() => followTarget.value.page, () => followTarget.value.locked], () => sendFollow())
 
 // —— 放映执行桥（只有 present 叶启用）——
 // 页面侧 exec-present.js 是跨源 iframe 里的纯 postMessage 客户端，碰不到 IPC；
@@ -375,11 +409,29 @@ const onMessage = (ev: MessageEvent): void => {
       if (!isPanel.value) deckFrame.value?.contentWindow?.focus()
       // DOM 已分页、player 已就绪：此刻装饰 ▶ 才能进 refreshSteps 的步进表。
       void sendExecCapability()
+      // 跟随必须在 ready 之后发：重建/首帧之前 player 还不存在，消息会被丢弃。
+      sendFollow()
       break
-    case 'md2s:change':
+    case 'md2s:change': {
       index.value = Number(data.index) || index.value
       total.value = Number(data.total) || total.value
+      // 教师端上课：翻到哪页就把哪页报给服务端（内部按页号去重，只在 host 角色下发）。
+      // 必须在回弹判定之前——老师翻页是「源」，回弹只对学生成立。
+      teachingStore.reportPage(index.value)
+      // 锁定跟随：学生自己翻走了就拉回老师那页。goto 本身也会触发一次 change
+      // （此时 index === 老师页），所以只在「不等 + 过了冷却」时才回弹。
+      if (
+        shouldSnapBack(
+          index.value,
+          followTarget.value.page,
+          followTarget.value.locked,
+          Date.now() - followSentAt
+        )
+      ) {
+        sendFollow()
+      }
       break
+    }
     case 'md2s:warn':
       // 缺图占位等非致命提示：不挡演示，常驻展示到下次构建/出错
       missingWarn.value = String(data.message ?? '')

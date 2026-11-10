@@ -264,3 +264,73 @@
 
 /* 续表外壳：执行器给克隆 figure 加 mu-paper-table-cont 类（e2e 验「续表
    表头内容与首页一致」用）；样式继承 .mu-table 规则，无额外声明。 */
+
+/* —— 分栏组：纸面按 begin/split/end 真排成左右双栏 ——
+ * 编辑面（文/本）里 .mu-columns/.mu-column 是 display:contents 的摊平包装；
+ * 纸面是成品态，必须与打印链 exportStyle.css 的 .mdcols-group 同构（flex 行）。
+ * 这里同时盖住量测宿主（.paper-projection-muya）与页卡两个作用域，屏测几何
+ * 与最终所见才同源。栏视图靠 .mu-editor.mu-columns-layout，与此互不干扰。
+ * min-width 取 0 而非栏叶的 18em：纸面内容宽钉死 180mm，@media print 同样
+ * 把 18em 地板去掉，三栏也不许折行堆叠。 */
+[data-lens='page'] .mu-columns,
+.paper-projection .mu-columns {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 1em;
+  align-items: stretch;
+}
+
+[data-lens='page'] .mu-column,
+.paper-projection .mu-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* 栏宽比例是 Columns 块写进 .mu-column 的内联 flex-grow，优先级高于此简写。 */
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+}
+
+[data-lens='page'] .mu-column > blockquote,
+[data-lens='page'] .mu-column > figure.mu-table,
+[data-lens='page'] .mu-column > ol,
+[data-lens='page'] .mu-column > pre.mu-code-block,
+[data-lens='page'] .mu-column > ul,
+.paper-projection .mu-column > blockquote,
+.paper-projection .mu-column > figure.mu-table,
+.paper-projection .mu-column > ol,
+.paper-projection .mu-column > pre.mu-code-block,
+.paper-projection .mu-column > ul {
+  align-self: stretch;
+  text-align: left;
+}
+
+[data-lens='page'] .mu-column > *:first-child,
+.paper-projection .mu-column > *:first-child {
+  /* gh-css 给 > * 的顶距在栏顶会变成一道凭空的空白，与打印链同款收口。 */
+  margin-top: 0;
+}
+
+/* 徽标是编辑态 affordance：纸面是成品态，begin/split/end 一律消失（边界即
+   布局本身）。注意 `begin` 标记在块树里留在组**外**（markdownToState
+   _buildColumnGroups），所以不能只收 .mu-columns 内的；孤立/非法标记同样不
+   露出徽标，诊断由栏叶的 columnsDiagnostics 承担。pagebreak 徽标必须保留——
+   它是屏测强制缝的识别依据（measurePaperBlocksV2 读 .mu-mdcols-pagebreak）。 */
+.paper-projection .mu-mdcols-marker:not([data-kind='pagebreak']) {
+  display: none;
+}
+
+.paper-projection .mu-html-block:has(.mu-mdcols-marker:not([data-kind='pagebreak'])) {
+  display: none;
+}
+
+/* 超页栏组的横带裁切：窗固定高 + 溢出隐藏，窗内的组按累计偏移上移；续片
+   是深克隆，故每页都能看到同一组两栏的对应横带。 */
+.paper-projection .mu-paper-band-clip {
+  overflow: hidden;
+}
+
+.paper-projection .mu-paper-band {
+  margin: 0 !important;
+}

@@ -44,6 +44,19 @@ describe('paper lens basis mirrors the print chain (view-model §5 / M1)', () =>
     expect(paperLens).toContain('min-height: var(--paper-page-height) !important')
   })
 
+  it('renders column groups as real side-by-side columns on paper', () => {
+    // 页叶不再把 .mu-columns 摊平：与打印链 .mdcols-group 同构（flex 行），
+    // 且纸面宽度钉死，三栏也不许像栏叶那样 18em 折行。
+    expect(paperLens).toContain('.paper-projection .mu-columns {')
+    expect(paperLens).toContain('flex-wrap: nowrap')
+    expect(paperLens).toContain('.paper-projection .mu-column {')
+    expect(paperLens).toContain('min-width: 0')
+    // begin 标记留在组外，故徽标隐藏不能只收 .mu-columns 内；pagebreak 必留。
+    expect(paperLens).toContain(".mu-mdcols-marker:not([data-kind='pagebreak'])")
+    // 超页栏组按横带裁切。
+    expect(paperLens).toContain('.paper-projection .mu-paper-band-clip')
+  })
+
   it('keeps the layout basis spare-free (the logical-page leaf is gone)', () => {
     // 旧逻辑页叶（spare）已整体移除：版式基不得再给它留选择器分支。
     expect(paperLens).not.toContain("data-lens='spare'")

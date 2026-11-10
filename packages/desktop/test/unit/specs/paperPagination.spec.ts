@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   paginateBlocks,
   paginateBlocksV2,
+  measurePaperBlocksV2,
+  lineBandOffsets,
   parsePaperGeometry,
   parseDeclaredPaperSize,
   parsePaperTheme,
@@ -325,6 +327,120 @@ describe('paginateBlocksV2 (line-level fragmentation)', () => {
       { y: 176, crossed: false, split: { block: 1, kind: 'lines', keep: 3 } }
     ])
     expect(r.pageCount).toBe(2)
+  })
+})
+
+// 裁剪窗的行带累计表：末段 to === n 必须取得到块底，否则窗高变 NaNpx
+// 退回 auto（整块高），下一页多出一整截空白（代码块跨页空白回归）。
+describe('lineBandOffsets (fragmentLines window heights)', () => {
+  it('长度 n+1，末项 = 全部行带之和', () => {
+    const lines = [26, 20, 20, 20, 26]
+    const offsets = lineBandOffsets(lines)
+    expect(offsets).toEqual([0, 26, 46, 66, 86, 112])
+    expect(offsets).toHaveLength(lines.length + 1)
+    expect(offsets[lines.length]).toBe(112)
+  })
+
+  it('末段窗高与续片位移都由同一张表给出（不产生 NaN）', () => {
+    const lines = [26, 20, 20, 20, 26]
+    const offsets = lineBandOffsets(lines)
+    const keep = 3
+    const start = offsets[keep]
+    const end = offsets[lines.length]
+    expect(start).toBe(66) // 续片 translateY(-66px)
+    expect(end).toBe(112) // 末段的 to === n 也取得到块底
+    expect((end ?? 0) - (start ?? 0)).toBe(46) // 末窗 46px
+    expect(Number.isNaN((end ?? 0) - (start ?? 0))).toBe(false)
+  })
+
+  it('空行带序列仍给出 [0]', () => {
+    expect(lineBandOffsets([])).toEqual([0])
+  })
+})
+
+// 量测端：纸面 CSS 给列组出 flex（不是 display:contents），组必须作为一个
+// band 块整体进分页，而不是被 flowBlocksOf 展开或被零高跳过。
+it('measurePaperBlocksV2 keeps a real column group as one band block', () => {
+  const container = document.createElement('div')
+  container.className = 'mu-container'
+  const group = document.createElement('div')
+  group.className = 'mu-columns'
+  group.style.display = 'flex' // paperLens.css 在量测宿主/页卡上给的计算值
+  const column = document.createElement('div')
+  column.className = 'mu-column'
+  column.style.display = 'flex'
+  column.appendChild(document.createElement('p'))
+  group.appendChild(column)
+  container.appendChild(group)
+  document.body.appendChild(container)
+  const box = (top: number, bottom: number) =>
+    ({ top, bottom, height: bottom - top }) as unknown as DOMRect
+  Object.defineProperty(container, 'getBoundingClientRect', { value: () => box(0, 1000) })
+  Object.defineProperty(group, 'getBoundingClientRect', { value: () => box(20, 320) })
+
+  const m = measurePaperBlocksV2(container)
+  const first = m.blocks[0]
+  expect(m.blocks).toHaveLength(1)
+  expect(first?.tag).toBe('div')
+  expect(first?.band).toEqual({ height: 300 })
+  container.remove()
+})
+
+// 分栏组（纸面真双栏）：并排的栏不能拆成顺序块流，按垂直横带逐页裁切。
+describe('paginateBlocksV2 column bands (paper leaf renders real columns)', () => {
+  const v2 = (
+    tag: string,
+    top: number,
+    bottom: number,
+    extra: Partial<PaperBlockBoxV2> = {}
+  ): PaperBlockBoxV2 => ({ tag, top, bottom, ...extra })
+  const H = 200
+
+  it('一页放得下的栏组整块落地，不产生碎带', () => {
+    const r = paginateBlocksV2([v2('div', 0, 150, { band: { height: 150 } })], H)
+    expect(r.seams).toEqual([])
+    expect(r.pageCount).toBe(1)
+  })
+
+  it('未超页但本页余量不足 → 整组推下页（缝落块间，非横带切）', () => {
+    const r = paginateBlocksV2(
+      [v2('p', 0, 100), v2('div', 110, 260, { band: { height: 150 } })],
+      H
+    )
+    expect(r.seams).toEqual([{ y: 105, crossed: false, split: undefined }])
+    expect(r.pageCount).toBe(2)
+  })
+
+  it('超页栏组逐页切横带，split.keep 记累计视觉 px', () => {
+    const r = paginateBlocksV2([v2('div', 0, 450, { band: { height: 450 } })], H)
+    expect(r.seams).toEqual([
+      { y: 200, crossed: false, split: { block: 0, kind: 'band', keep: 200 } },
+      { y: 400, crossed: false, split: { block: 0, kind: 'band', keep: 400 } }
+    ])
+    expect(r.pageCount).toBe(3)
+  })
+
+  it('超页栏组前有内容 → 先整组让到新页，首片吃满一页', () => {
+    const r = paginateBlocksV2(
+      [v2('p', 0, 50), v2('div', 60, 510, { band: { height: 450 } })],
+      H
+    )
+    expect(r.seams).toEqual([
+      { y: 55, crossed: false, split: undefined },
+      { y: 260, crossed: false, split: { block: 1, kind: 'band', keep: 200 } },
+      { y: 460, crossed: false, split: { block: 1, kind: 'band', keep: 400 } }
+    ])
+    expect(r.pageCount).toBe(4)
+  })
+
+  it('末带余量进入后续块账目（续带从页顶 0 起）', () => {
+    const band = paginateBlocksV2([v2('div', 0, 450, { band: { height: 450 } })], H)
+    const withTail = paginateBlocksV2(
+      [v2('div', 0, 450, { band: { height: 450 } }), v2('p', 460, 510)],
+      H
+    )
+    expect(withTail.seams).toEqual(band.seams)
+    expect(withTail.pageCount).toBe(band.pageCount)
   })
 })
 

@@ -107,6 +107,15 @@ column  → 依次输出自己的 children
 | `flat`（默认） | page 视图 | `.mu-columns` / `.mu-column` 都是 `display: contents` ⇒ 视觉上与「没有分栏结构」完全一致 |
 | `columns` | columns 视图 | `.mu-columns` 是 flex 行，`.mu-column` 是 flex 列，按 `meta.ratio` 给 `flex-grow`；徽标隐藏 |
 
+> **第三态：页叶 / A4 纸面投影（桌面端，2026-11-10）**。上表只描述 muya 引擎
+> 的两种姿态；「页」叶不是编辑面，也**不切 `columnsLayout`**（那个类连
+> `<!-- pagebreak -->` 徽标一起隐藏，屏测的强制缝依据会消失）。纸面由
+> `desktop/.../assets/styles/paperLens.css` 在 `.paper-projection` 作用域内给
+> `.mu-columns/.mu-column` 直出 flex，并隐藏 begin/split/end 徽标——因为打印链
+> `exportStyle.css` 的 `.mdcols-group` 本就是 flex 行，摊平会让页叶与 PDF
+> 不一致。超页栏组由 `util/paperPagination.ts` 的 `band` 分支 +
+> `paperProjection.vue::fragmentBand` 按垂直横带逐页裁切。见视图模型 §5。
+
 模式由 muya 选项 `columnsLayout` 决定（每个引擎实例一份）：
 
 - 选项定义：`src/types.ts` 的 `IMuyaOptions`、默认 `'flat'`（`config/index.ts` 的

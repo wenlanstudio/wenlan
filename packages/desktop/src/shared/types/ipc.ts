@@ -77,6 +77,26 @@ export interface IpcInvokeChannels {
   'auth::list-tenants': { args: []; ret: TenantInfo[] }
   // 打开教学客户端窗口（E2 壳）
   'auth::open-teaching-window': { args: []; ret: void }
+  // 课堂 ws：连接只存在于 main 进程，renderer 只能拿到脱敏后的事件帧。
+  'teaching::ws-join': {
+    args: [releaseId: number]
+    ret: { ok: boolean; sessionId?: number; error?: string }
+  }
+  // 教师开班（复用进行中的会话）+ 进房。权限不足时 error 为服务端原话。
+  'teaching::ws-host': {
+    args: [releaseId: number]
+    ret: { ok: boolean; sessionId?: number; error?: string }
+  }
+  // 教师翻页 / 跟随锁：sessionId 由 main 记住，renderer 不传（防越权指定房间）。
+  'teaching::ws-page': { args: [page: number]; ret: void }
+  'teaching::ws-follow': { args: [locked: boolean]; ret: void }
+  'teaching::ws-end': { args: [sessionId: number | null]; ret: void }
+  'teaching::ws-leave': { args: []; ret: void }
+  // 竞答（发题/收卷/作废）：上行为 fire-and-forget，结果一律由 `teaching::ws-message` 广播回来。
+  'teaching::ws-race-questions': { args: []; ret: void }
+  'teaching::ws-race-open': { args: [questionId: number, limitSec: number]; ret: void }
+  'teaching::ws-race-close': { args: [openId: number]; ret: void }
+  'teaching::ws-race-void': { args: [openId: number]; ret: void }
   'mt::ask-for-image-path': { args: []; ret: string[] }
   'mt::boot-info-async': { args: []; ret: BootInfo }
   'mt::clipboard::guess-file-path': { args: []; ret: string | null }
@@ -330,6 +350,9 @@ export interface IpcSyncChannels {
 export interface IpcMainEventChannels {
   // 登录态变化推送（main → 所有 renderer 窗口，含教学客户端窗口）
   'auth::state-changed': [state: AuthState]
+  // 课堂 ws 下行帧：content 已在 main 反序列化，绝不含 token。
+  'teaching::ws-message': [message: { type: string; content: Record<string, unknown> }]
+  'teaching::ws-status': [status: { connected: boolean; sessionId: number | null }]
   'language-changed': [language: string]
   'mt::UPDATE_AVAILABLE': [info?: unknown]
   'mt::UPDATE_DOWNLOADED': [info?: unknown]

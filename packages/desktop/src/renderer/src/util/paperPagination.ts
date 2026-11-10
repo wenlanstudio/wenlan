@@ -247,13 +247,22 @@ export interface PaperBlockBoxV2 extends PaperBlockBox {
    * 整个搬移，跨段（超页子单元）的做裁剪手术。
    */
   kidOwners?: number[]
+  /**
+   * 分栏组（`.mu-columns`，纸面按 begin/split/end 真排成左右双栏）：一个
+   * 「横带」块，可见高 = 最高的那一栏。纸面无法把并排的栏拆成顺序块流，
+   * 故按垂直窗口整带裁切（每页一片，片内两栏仍在），由 fragmentBand 用
+   * overflow:hidden + translateY 落地。height 与 bottom−top 同值，单列出来
+   * 是为了让纯层单测不必再伪造 DOM 盒。
+   */
+  band?: { height: number }
 }
 
 export interface PaperSeamV2 {
   y: number
   crossed: boolean
-  /** 缝落在块内部时的切点（纸叶真分片的渲染依据；页叶只用 y）。 */
-  split?: { block: number; kind: 'lines' | 'table-rows' | 'kids'; keep: number }
+  /** 缝落在块内部时的切点（纸叶真分片的渲染依据；页叶只用 y）。
+   *  `keep` 在 lines/table-rows/kids 里是单元计数，在 band 里是累计视觉 px。 */
+  split?: { block: number; kind: 'lines' | 'table-rows' | 'kids' | 'band'; keep: number }
 }
 
 export interface PaperLayoutV2 {
@@ -263,6 +272,24 @@ export interface PaperLayoutV2 {
 }
 
 const sum = (xs: number[]): number => xs.reduce((a, c) => a + c, 0)
+
+/**
+ * 行带累计偏移（长度 = n+1）：offsets[k] = 第 k 条行带的顶（相对块顶），
+ * offsets[n] = 全部行带之和 = 块高。fragmentLines 的裁剪窗高度与续片位移
+ * 都取这张表；**末尾那一项不能省**——末段的 `to === n`，取不到
+ * offsets[n] 就会算出 `NaNpx`，浏览器把窗高退回 auto（= 整块高 + margin），
+ * 下一页于是多出一整截空白（2026-11-10 代码块跨页空白修复）。
+ */
+export const lineBandOffsets = (lines: number[]): number[] => {
+  const offsets: number[] = []
+  let acc = 0
+  for (const h of lines) {
+    offsets.push(acc)
+    acc += h
+  }
+  offsets.push(acc)
+  return offsets
+}
 
 /**
  * 行级贪心分页（v2 纯函数；块序按文档序，top/bottom 以内容盒顶为 0）。
@@ -282,6 +309,9 @@ const sum = (xs: number[]): number => xs.reduce((a, c) => a + c, 0)
  *     碎片化里兄弟边界任意可断、无 orphan/widow 约束）；超页子单元的
  *     内部已并入行级切点（测量端边界②），故「超页单元整块穿缝」只剩
  *     「单行 > 整页」的不可能分支；
+ *   - BAND（`band` 给了：分栏组）→ 并排的栏不能拆成顺序块流，按垂直横带
+ *     任意高度切（无 orphan/widow）：首片吃本页余量，其后每片吃满一页，
+ *     缝 y = 块顶 + 累计高；split.keep 记累计视觉 px 而非单元数；
  *   - 其余块（标题/图…无子结构）照 v1：keep-together、超页穿缝。
  */
 export const paginateBlocksV2 = (
@@ -529,6 +559,47 @@ export const paginateBlocksV2 = (
       prevBottom = b.bottom
       if (b.isPagebreak) pendingForcedBreak = true
       else contentOnPage = true
+      continue
+    }
+
+    // —— 分栏组：按垂直横带逐页裁切（并排的栏不能拆成顺序块流）——
+    // 与打印链同源：exportStyle.css 的 .mdcols-group 是 flex 行，Chromium
+    // 碎片化按 fragmentainer 高度把它切成一段段横带，段内两栏仍并排。
+    if (b.band && b.band.height > 0 && room > 0) {
+      const total = b.band.height
+      if (total <= pageContentHeight && startLocal + total > pageContentHeight) {
+        // 未超页但本页余量不足 → 整组推下页（v1 keep-together 同款），
+        // 不切出几十像素的碎带；Chromium 也宁可整块挪到新页。
+        if (prevBottom !== null) pushSeam((prevBottom + b.top) / 2, false)
+        local = total
+        firstOnPage = false
+      } else {
+        const slices: number[] = []
+        let remaining = total
+        let avail = room
+        // 超页组不落在半途：先整组让到新页，首片才能吃满一页（否则页尾
+        // 只剩几十像素的碎带，续片却从下页开始，视觉与打印都对不上）。
+        if (total > pageContentHeight && !firstOnPage && startLocal > 0) {
+          if (prevBottom !== null) pushSeam((prevBottom + b.top) / 2, false)
+          avail = pageContentHeight
+        }
+        while (remaining > 0.01) {
+          const take = Math.min(avail, remaining)
+          slices.push(take)
+          remaining -= take
+          avail = pageContentHeight // 续带从页顶起，无块间间隙
+        }
+        let acc = 0
+        for (let s = 0; s < slices.length - 1; s++) {
+          acc += slices[s]!
+          pushSeam(b.top + acc, false, { block: i, kind: 'band', keep: acc })
+        }
+        // 单带未切时须把本页已耗的间隙算回来；跨页续带从页顶 0 起。
+        local = slices.length === 1 ? startLocal + total : (slices.at(-1) ?? 0)
+        firstOnPage = false
+      }
+      prevBottom = b.bottom
+      contentOnPage = true
       continue
     }
 
@@ -811,6 +882,29 @@ const kidCutPoints = (
  * - 引用（blockquote.mu-block-quote）：直接子块顶为切点 → kids（≥ 2 个
  *   子块；超页子块同上并入行级切点）。
  */
+/**
+ * 顶层「有效流块」：display:contents 的包装盒就地展开，取其子块。
+ *
+ * 列组（.mu-columns/.mu-column）在**文/编辑面**正是这样的包装盒——
+ * blockSyntax.css 用 display:contents 让组内块按「未分栏的同文」排版。包装盒
+ * 自身的 getBoundingClientRect 是全零矩形，若混进顶层块序列会被下面的零高
+ * 跳过**整组丢弃**（组内段落与图表从此不在纸面出现），所以先展开再量。
+ * 纸面投影不同：paperLens.css 给 .paper-projection 里的列组出 flex（真双栏），
+ * 此时包装盒有真实矩形、不会被展开——它作为一个 band 块整体参与分页。
+ */
+const flowBlocksOf = (container: HTMLElement): HTMLElement[] => {
+  const out: HTMLElement[] = []
+  for (const child of Array.from(container.children)) {
+    if (!(child instanceof HTMLElement)) continue
+    if (getComputedStyle(child).display === 'contents') {
+      out.push(...flowBlocksOf(child))
+      continue
+    }
+    out.push(child)
+  }
+  return out
+}
+
 export const measurePaperBlocksV2 = (
   container: HTMLElement,
   geometry: PaperGeometry = PAPER_SIZES_MM.a4
@@ -822,7 +916,7 @@ export const measurePaperBlocksV2 = (
   const pageContentHeight = (geometry.pageHeightMm - 40) * MM_TO_PX * zoom
 
   const blocks: PaperBlockBoxV2[] = []
-  for (const child of Array.from(container.children)) {
+  for (const child of flowBlocksOf(container)) {
     if (!(child instanceof HTMLElement)) continue
     if (child.matches(EXCLUDED_SELECTOR)) continue
     const r = child.getBoundingClientRect()
@@ -834,6 +928,9 @@ export const measurePaperBlocksV2 = (
       isPagebreak: child.querySelector('.mu-mdcols-pagebreak') !== null,
       el: child
     }
+    // 分栏组（纸面真双栏）：包装盒有真实矩形 → 记为 band，按横带跨页裁切。
+    // flat 布局（display:contents）下它已被 flowBlocksOf 展开，不会走到这里。
+    if (child.classList.contains('mu-columns')) box.band = { height: r.height }
     if (child.tagName === 'P') {
       const lines = measureLineHeights(child)
       if (lines.length > 1) box.lines = lines

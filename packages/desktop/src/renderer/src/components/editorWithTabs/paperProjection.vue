@@ -27,6 +27,13 @@
  *
  * muya 宿主 visibility:hidden（保布局——量测需要真实几何）而非 display:none；
  * 被搬出的块成为 deck（可见子树）的子节点，正常渲染。
+ *
+ * 分栏（2026-11-10）：纸面按 `<!-- begin/split/end -->` 真排成左右双栏，而不是
+ * 像编辑面那样用 display:contents 摊平——打印链 exportStyle.css 的
+ * .mdcols-group 本来就是 flex 行，摊平会让「屏显所见 = 打印所得」破功。布局
+ * 由 paperLens.css 在 .paper-projection 作用域内直给 .mu-columns（量测宿主与
+ * 页卡同规则），**不切引擎的 columnsLayout**：那个类会把 pagebreak 徽标一并
+ * 隐藏，屏测的强制缝依据就没了。超页的栏组按横带逐页裁切（fragmentBand）。
  */
 import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -37,6 +44,7 @@ import { getMuyaLocale } from '@/util/muyaLocale'
 import {
   measurePaperBlocksV2,
   paginateBlocksV2,
+  lineBandOffsets,
   parsePaperGeometry,
   parsePaperTheme,
   type PaperBlockBoxV2,
@@ -81,12 +89,9 @@ const fragmentLines = (
   boundaries: number[],
   zoom: number
 ): void => {
-  const lineStarts: number[] = []
-  let acc = 0
-  for (const h of b.lines!) {
-    lineStarts.push(acc)
-    acc += h
-  }
+  // 长度 n+1：末段的 to === n 必须取得到「块底」这个累计值，否则窗高变成
+  // NaNpx 退回 auto（整块高），下一页多出一截空白（见 lineBandOffsets）。
+  const lineStarts = lineBandOffsets(b.lines!)
   const segs = [0, ...seams.map((s) => s.split!.keep), b.lines!.length]
   const cs = getComputedStyle(b.el!)
   const mt = (Number.parseFloat(cs.marginTop) || 0) * zoom
@@ -109,6 +114,40 @@ const fragmentLines = (
       win.appendChild(clone)
     }
     win.style.marginBottom = `${mb}px`
+    page.appendChild(win)
+  }
+}
+
+/**
+ * 分栏组横带裁切（纸面真双栏）：组是 flex 行、两栏并排，无法拆成顺序块流，
+ * 故整组当作一条可任意高度切的「横带」——每页一个裁剪窗，窗内是同一个组
+ * （续片为深克隆）按累计偏移上移，窗高 = 该片吃到的页容量。段内两栏仍并排，
+ * 与打印链 Chromium 对 .mdcols-group 的碎片化同构。
+ *
+ * seams 的 split.keep 是**累计视觉 px**（不是单元计数），segs 因此直接就是
+ * 横带切点；transform 只动视觉位置，不改组内部布局与栏宽。
+ */
+const fragmentBand = (
+  b: PaperBlockBoxV2,
+  seams: PaperSeamV2[],
+  cards: HTMLElement[],
+  boundaries: number[]
+): void => {
+  const el = b.el as HTMLElement
+  const height = b.band?.height ?? el.getBoundingClientRect().height
+  const segs = [0, ...seams.map((s) => s.split!.keep), height]
+  for (let s = 0; s < segs.length - 1; s++) {
+    const from = segs[s]!
+    const to = segs[s + 1]!
+    if (to <= from) continue
+    const page = cards[pageIndexOf(boundaries, b.top + from)]!
+    const win = document.createElement('div')
+    win.className = 'mu-paper-band-clip'
+    win.style.height = `${to - from}px`
+    const group = (s === 0 ? el : el.cloneNode(true)) as HTMLElement
+    group.classList.add('mu-paper-band')
+    group.style.transform = `translateY(${-from}px)`
+    win.appendChild(group)
     page.appendChild(win)
   }
 }
@@ -302,6 +341,8 @@ const fragment = (): void => {
       fragmentTable(b, seams, cards, boundaries)
     } else if (b.kids && seams.some((s) => s.split!.kind === 'kids')) {
       fragmentKids(b, seams, cards, boundaries)
+    } else if (b.band && seams.some((s) => s.split!.kind === 'band')) {
+      fragmentBand(b, seams, cards, boundaries)
     } else if (b.lines) {
       fragmentLines(b, seams, cards, boundaries, zoom)
     } else {
@@ -345,6 +386,8 @@ onMounted(() => {
     locale: getMuyaLocale(language.value),
     readOnly: true,
     focusMode: false,
+    // 引擎保持 flat：分栏布局是纸面投影自己的版式（paperLens.css），切
+    // columnsLayout 会连 pagebreak 徽标一起隐藏，强制分页符就量不到了。
     columnsLayout: 'flat'
   }
   const instance = new Muya(host.value, options)
