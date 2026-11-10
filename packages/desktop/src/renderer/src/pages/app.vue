@@ -54,6 +54,7 @@
             <import-modal />
             <publish-dialog />
             <quiz-console />
+            <student-quiz />
           </div>
         </div>
         <!-- 底部工具窗口（JetBrains 式）：.main-col 的 flex:none 兄弟项而非浮层。
@@ -90,6 +91,7 @@ import Rename from '@/components/rename/index.vue'
 import ImportModal from '@/components/import/index.vue'
 import PublishDialog from '@/components/teaching/publishDialog.vue'
 import QuizConsole from '@/components/teaching/quizConsole.vue'
+import StudentQuiz from '@/components/teaching/studentQuiz.vue'
 import bus from '@/bus'
 import { DEFAULT_STYLE } from '@/config'
 import { listenForScrollbarReveal } from '@/util/scrollbarReveal'

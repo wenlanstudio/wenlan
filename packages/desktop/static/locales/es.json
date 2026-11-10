@@ -1204,6 +1204,24 @@
     "quizOnline": "{online} en línea",
     "quizDone": "Cerrar",
     "commandQuiz": "Docencia: preguntar",
-    "quizDisconnected": "La conexión de clase se ha perdido: reconectando…"
+    "quizDisconnected": "La conexión de clase se ha perdido: reconectando…",
+    "studentQuizTitle": "Pregunta de clase",
+    "studentQuizEntry": "Pregunta activa · Responder",
+    "studentQuizResultEntry": "Ver resultado",
+    "studentQuizSubmit": "Enviar",
+    "studentQuizSelectFirst": "Elige una opción primero",
+    "studentQuizSubmitted": "Enviado",
+    "studentQuizWaitingReveal": "Esperando la respuesta",
+    "studentQuizTimeLeft": "Quedan {seconds}s",
+    "studentQuizExpired": "Tiempo agotado",
+    "studentQuizRevealed": "Respuesta revelada",
+    "studentQuizCorrect": "Correcto",
+    "studentQuizWrong": "Incorrecto",
+    "studentQuizMyAnswer": "Mía",
+    "studentQuizCorrectAnswer": "Respuesta",
+    "studentQuizScore": "Puntos",
+    "studentQuizRank": "Puesto",
+    "studentQuizVoided": "Esta pregunta fue anulada — puntos borrados",
+    "studentQuizClose": "Cerrar"
   }
 }

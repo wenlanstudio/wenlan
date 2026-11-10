@@ -1204,6 +1204,24 @@
     "quizOnline": "{online} online",
     "quizDone": "Close",
     "commandQuiz": "Teaching: ask a question",
-    "quizDisconnected": "The classroom connection is down — reconnecting…"
+    "quizDisconnected": "The classroom connection is down — reconnecting…",
+    "studentQuizTitle": "Class question",
+    "studentQuizEntry": "Question live · Answer",
+    "studentQuizResultEntry": "View result",
+    "studentQuizSubmit": "Submit",
+    "studentQuizSelectFirst": "Choose an option first",
+    "studentQuizSubmitted": "Submitted",
+    "studentQuizWaitingReveal": "Waiting for the reveal",
+    "studentQuizTimeLeft": "{seconds}s left",
+    "studentQuizExpired": "Time is up",
+    "studentQuizRevealed": "Answer revealed",
+    "studentQuizCorrect": "Correct",
+    "studentQuizWrong": "Incorrect",
+    "studentQuizMyAnswer": "Mine",
+    "studentQuizCorrectAnswer": "Answer",
+    "studentQuizScore": "Score",
+    "studentQuizRank": "Rank",
+    "studentQuizVoided": "This question was voided — scores cleared",
+    "studentQuizClose": "Close"
   }
 }

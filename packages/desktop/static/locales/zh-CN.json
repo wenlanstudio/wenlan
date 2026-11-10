@@ -1204,6 +1204,24 @@
     "quizOnline": "在线 {online} 人",
     "quizDone": "关闭",
     "commandQuiz": "教学：课堂发题",
-    "quizDisconnected": "课堂连接已断开，正在重连…"
+    "quizDisconnected": "课堂连接已断开，正在重连…",
+    "studentQuizTitle": "课堂题",
+    "studentQuizEntry": "课堂题进行中 · 点击作答",
+    "studentQuizResultEntry": "查看结果",
+    "studentQuizSubmit": "提交答案",
+    "studentQuizSelectFirst": "请先选择一个选项",
+    "studentQuizSubmitted": "已提交",
+    "studentQuizWaitingReveal": "等待教师收卷揭晓",
+    "studentQuizTimeLeft": "剩余 {seconds} 秒",
+    "studentQuizExpired": "答题时间已结束",
+    "studentQuizRevealed": "本题已揭晓",
+    "studentQuizCorrect": "回答正确",
+    "studentQuizWrong": "回答错误",
+    "studentQuizMyAnswer": "我的作答",
+    "studentQuizCorrectAnswer": "正确答案",
+    "studentQuizScore": "得分",
+    "studentQuizRank": "排名",
+    "studentQuizVoided": "本题已作废，得分清零",
+    "studentQuizClose": "关闭"
   }
 }

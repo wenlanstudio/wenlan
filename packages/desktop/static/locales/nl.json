@@ -1204,6 +1204,24 @@
     "quizOnline": "{online} online",
     "quizDone": "Sluiten",
     "commandQuiz": "Onderwijs: vraag stellen",
-    "quizDisconnected": "De klasverbinding is weg — opnieuw verbinden…"
+    "quizDisconnected": "De klasverbinding is weg — opnieuw verbinden…",
+    "studentQuizTitle": "Klasvraag",
+    "studentQuizEntry": "Vraag actief · Beantwoorden",
+    "studentQuizResultEntry": "Resultaat bekijken",
+    "studentQuizSubmit": "Verzenden",
+    "studentQuizSelectFirst": "Kies eerst een optie",
+    "studentQuizSubmitted": "Verzonden",
+    "studentQuizWaitingReveal": "Wachten op onthulling",
+    "studentQuizTimeLeft": "Nog {seconds}s",
+    "studentQuizExpired": "Tijd voorbij",
+    "studentQuizRevealed": "Antwoord onthuld",
+    "studentQuizCorrect": "Goed",
+    "studentQuizWrong": "Fout",
+    "studentQuizMyAnswer": "Mijn antwoord",
+    "studentQuizCorrectAnswer": "Antwoord",
+    "studentQuizScore": "Score",
+    "studentQuizRank": "Rang",
+    "studentQuizVoided": "Deze vraag is vervallen — scores gewist",
+    "studentQuizClose": "Sluiten"
   }
 }

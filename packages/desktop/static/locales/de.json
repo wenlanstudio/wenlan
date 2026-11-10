@@ -1204,6 +1204,24 @@
     "quizOnline": "{online} online",
     "quizDone": "Schließen",
     "commandQuiz": "Unterricht: Frage stellen",
-    "quizDisconnected": "Die Unterrichtsverbindung ist getrennt – Neuverbindung läuft…"
+    "quizDisconnected": "Die Unterrichtsverbindung ist getrennt – Neuverbindung läuft…",
+    "studentQuizTitle": "Klassenfrage",
+    "studentQuizEntry": "Frage läuft · Antworten",
+    "studentQuizResultEntry": "Ergebnis ansehen",
+    "studentQuizSubmit": "Absenden",
+    "studentQuizSelectFirst": "Zuerst eine Option wählen",
+    "studentQuizSubmitted": "Abgesendet",
+    "studentQuizWaitingReveal": "Warten auf Auflösung",
+    "studentQuizTimeLeft": "{seconds}s verbleibend",
+    "studentQuizExpired": "Zeit abgelaufen",
+    "studentQuizRevealed": "Antwort aufgelöst",
+    "studentQuizCorrect": "Richtig",
+    "studentQuizWrong": "Falsch",
+    "studentQuizMyAnswer": "Meine",
+    "studentQuizCorrectAnswer": "Antwort",
+    "studentQuizScore": "Punkte",
+    "studentQuizRank": "Rang",
+    "studentQuizVoided": "Diese Frage wurde annulliert – Punkte gelöscht",
+    "studentQuizClose": "Schließen"
   }
 }

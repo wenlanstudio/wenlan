@@ -1204,6 +1204,24 @@
     "quizOnline": "온라인 {online}명",
     "quizDone": "닫기",
     "commandQuiz": "수업: 문제 출제",
-    "quizDisconnected": "수업 연결이 끊어졌습니다. 다시 연결하는 중…"
+    "quizDisconnected": "수업 연결이 끊어졌습니다. 다시 연결하는 중…",
+    "studentQuizTitle": "수업 문제",
+    "studentQuizEntry": "출제 중 · 답하기",
+    "studentQuizResultEntry": "결과 보기",
+    "studentQuizSubmit": "제출",
+    "studentQuizSelectFirst": "먼저 선택지를 고르세요",
+    "studentQuizSubmitted": "제출됨",
+    "studentQuizWaitingReveal": "정답 공개 대기 중",
+    "studentQuizTimeLeft": "{seconds}초 남음",
+    "studentQuizExpired": "시간 종료",
+    "studentQuizRevealed": "정답 공개",
+    "studentQuizCorrect": "정답",
+    "studentQuizWrong": "오답",
+    "studentQuizMyAnswer": "내 답",
+    "studentQuizCorrectAnswer": "정답",
+    "studentQuizScore": "점수",
+    "studentQuizRank": "순위",
+    "studentQuizVoided": "이 문제는 무효 처리되었습니다 — 점수 초기화",
+    "studentQuizClose": "닫기"
   }
 }

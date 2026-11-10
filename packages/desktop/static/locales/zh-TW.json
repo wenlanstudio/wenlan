@@ -1204,6 +1204,24 @@
     "quizOnline": "線上 {online} 人",
     "quizDone": "關閉",
     "commandQuiz": "教學：課堂發題",
-    "quizDisconnected": "課堂連線已斷開，正在重連…"
+    "quizDisconnected": "課堂連線已斷開，正在重連…",
+    "studentQuizTitle": "課堂題",
+    "studentQuizEntry": "課堂題進行中 · 點擊作答",
+    "studentQuizResultEntry": "查看結果",
+    "studentQuizSubmit": "提交答案",
+    "studentQuizSelectFirst": "請先選擇一個選項",
+    "studentQuizSubmitted": "已提交",
+    "studentQuizWaitingReveal": "等待教師收卷揭曉",
+    "studentQuizTimeLeft": "剩餘 {seconds} 秒",
+    "studentQuizExpired": "答題時間已結束",
+    "studentQuizRevealed": "本題已揭曉",
+    "studentQuizCorrect": "回答正確",
+    "studentQuizWrong": "回答錯誤",
+    "studentQuizMyAnswer": "我的作答",
+    "studentQuizCorrectAnswer": "正確答案",
+    "studentQuizScore": "得分",
+    "studentQuizRank": "排名",
+    "studentQuizVoided": "本題已作廢，得分清零",
+    "studentQuizClose": "關閉"
   }
 }

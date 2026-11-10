@@ -1204,6 +1204,24 @@
     "quizOnline": "{online} çevrimiçi",
     "quizDone": "Kapat",
     "commandQuiz": "Öğretim: soru sor",
-    "quizDisconnected": "Sınıf bağlantısı koptu — yeniden bağlanılıyor…"
+    "quizDisconnected": "Sınıf bağlantısı koptu — yeniden bağlanılıyor…",
+    "studentQuizTitle": "Sınıf sorusu",
+    "studentQuizEntry": "Soru aktif · Cevapla",
+    "studentQuizResultEntry": "Sonucu gör",
+    "studentQuizSubmit": "Gönder",
+    "studentQuizSelectFirst": "Önce bir seçenek seçin",
+    "studentQuizSubmitted": "Gönderildi",
+    "studentQuizWaitingReveal": "Cevap bekleniyor",
+    "studentQuizTimeLeft": "{seconds} sn kaldı",
+    "studentQuizExpired": "Süre doldu",
+    "studentQuizRevealed": "Cevap açıklandı",
+    "studentQuizCorrect": "Doğru",
+    "studentQuizWrong": "Yanlış",
+    "studentQuizMyAnswer": "Benim cevabım",
+    "studentQuizCorrectAnswer": "Cevap",
+    "studentQuizScore": "Puan",
+    "studentQuizRank": "Sıra",
+    "studentQuizVoided": "Bu soru iptal edildi — puanlar sıfırlandı",
+    "studentQuizClose": "Kapat"
   }
 }

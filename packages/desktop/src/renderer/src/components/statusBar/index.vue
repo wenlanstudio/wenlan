@@ -84,6 +84,15 @@
         · {{ t('teaching.classroomWaiting') }}
       </template>
     </button>
+    <!-- 学生端课堂题入口：只读讲义里的题目卡是引用块、点不了，
+         独立浮层承载作答与揭晓结果；不抢占上面的放映跟随入口。 -->
+    <button
+      v-if="studentQuizAvailable && !isWindowFullScreen && !presentExclusive"
+      class="status-teaching quiz-entry"
+      @click="teachingStore.openStudentQuiz()"
+    >
+      ● {{ studentQuizResultReady ? t('teaching.studentQuizResultEntry') : t('teaching.studentQuizEntry') }}
+    </button>
     <!-- 文档级指示器：放映/全屏时整组隐藏；「映」激活时只留换叶入口。 -->
     <div
       v-if="!isWindowFullScreen && !presentExclusive"
@@ -173,7 +182,7 @@ import WordCount from '@/components/wordCount/index.vue'
 const editorStore = useEditorStore()
 const editorViewStore = useEditorViewStore()
 const teachingStore = useTeachingStore()
-const { lastPublish, openedRelease, classroom } = storeToRefs(teachingStore)
+const { lastPublish, openedRelease, classroom, race, studentQuiz } = storeToRefs(teachingStore)
 const { state: authState, isStudent } = storeToRefs(useAuthStore())
 
 const { currentFile, selectionWordCount, readOnly } = storeToRefs(editorStore)
@@ -193,6 +202,15 @@ const classroomActive = computed(
 )
 // 未登录或学生态不出现课堂入口（N1：通用实例表面零教学概念）。
 const canTeach = computed(() => authState.value.loggedIn && !isStudent.value)
+// 学生端课堂题入口：发题中可作答，揭晓/作废后可看结果。
+const studentQuizAvailable = computed(
+  () =>
+    isStudent.value &&
+    (!!classroom.value.question || !!race.value.reveal || studentQuiz.value.voided)
+)
+const studentQuizResultReady = computed(
+  () => !!race.value.reveal || studentQuiz.value.voided
+)
 
 const onClassroomCommand = (command: string): void => {
   if (command === 'end') {

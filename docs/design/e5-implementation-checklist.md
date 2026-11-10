@@ -187,8 +187,13 @@
       进行中倒计时与已答进度、收卷揭晓、作废、揭晓面板（正确答案 / 分布条形 / 最快 /
       排行榜前 8）。倒计时用本地 `openedAt` 推算，不解析服务端无时区时间串。
       **RBAC**：`openQuizConsole()` 非 host 直接返回提示，学生端看不到入口。
-- [ ] 学生端作答提交（`teaching.race.answer`）与揭晓态渲染：现在学生收到 `revealed`
-      只把题目卡退回占位，答案与得分不下发到界面。
+- [x] 学生端作答提交（`teaching.race.answer`）与揭晓态渲染。
+      **客户端已实现（2026-11-10）**：只读讲义里的题目卡是 muya 引用块、点不了，
+      作答放在独立 `studentQuiz.vue` 浮层——状态栏「课堂题」入口（有题/揭晓/作废时才出现）
+      → 点选【本班显示序】选项 → `teaching::ws-race-answer` 上行（main 白名单，token 仍不出 main）
+      → `accepted` 回执进入等待态 → `revealed` 显示正确答案（字母 + 文本）、对错、得分与名次，
+      `voided` 显示作废。`util/studentQuiz.ts` 抽纯函数锁住 phase / result / 倒计时口径（单测 10 例），
+      12 语言 i18n 齐。真机：真实 Electron 学生端 12 断言全绿（点选 → 提交 → 揭晓高亮正确选项）。
       **服务端乱序 bug 已修（2026-11-10，wenshu-server `1530673`）**：
       `RaceServiceImpl#revealedContent` 原按讲义原始序下发 `options` / `answer` /
       `distribution`，而 `opened` 按本班 `option_order` 打乱，`shuffle=yes`（默认）时会出现

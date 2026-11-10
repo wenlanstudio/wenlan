@@ -1204,6 +1204,24 @@
     "quizOnline": "{online} онлайн",
     "quizDone": "Закрыть",
     "commandQuiz": "Обучение: задать вопрос",
-    "quizDisconnected": "Соединение с классом потеряно — переподключение…"
+    "quizDisconnected": "Соединение с классом потеряно — переподключение…",
+    "studentQuizTitle": "Вопрос класса",
+    "studentQuizEntry": "Вопрос активен · Ответить",
+    "studentQuizResultEntry": "Показать результат",
+    "studentQuizSubmit": "Отправить",
+    "studentQuizSelectFirst": "Сначала выберите вариант",
+    "studentQuizSubmitted": "Отправлено",
+    "studentQuizWaitingReveal": "Ожидание ответа",
+    "studentQuizTimeLeft": "Осталось {seconds} с",
+    "studentQuizExpired": "Время вышло",
+    "studentQuizRevealed": "Ответ показан",
+    "studentQuizCorrect": "Верно",
+    "studentQuizWrong": "Неверно",
+    "studentQuizMyAnswer": "Мой ответ",
+    "studentQuizCorrectAnswer": "Ответ",
+    "studentQuizScore": "Баллы",
+    "studentQuizRank": "Место",
+    "studentQuizVoided": "Вопрос отменён — баллы обнулены",
+    "studentQuizClose": "Закрыть"
   }
 }

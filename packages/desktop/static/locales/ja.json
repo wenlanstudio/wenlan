@@ -1204,6 +1204,24 @@
     "quizOnline": "オンライン {online} 人",
     "quizDone": "閉じる",
     "commandQuiz": "授業：クラス出題",
-    "quizDisconnected": "授業との接続が切れています。再接続中…"
+    "quizDisconnected": "授業との接続が切れています。再接続中…",
+    "studentQuizTitle": "クラス問題",
+    "studentQuizEntry": "出題中 · 解答する",
+    "studentQuizResultEntry": "結果を見る",
+    "studentQuizSubmit": "送信",
+    "studentQuizSelectFirst": "先に選択肢を選んでください",
+    "studentQuizSubmitted": "送信済み",
+    "studentQuizWaitingReveal": "正解発表を待機中",
+    "studentQuizTimeLeft": "残り {seconds} 秒",
+    "studentQuizExpired": "時間切れ",
+    "studentQuizRevealed": "正解発表",
+    "studentQuizCorrect": "正解",
+    "studentQuizWrong": "不正解",
+    "studentQuizMyAnswer": "自分の解答",
+    "studentQuizCorrectAnswer": "正解",
+    "studentQuizScore": "得点",
+    "studentQuizRank": "順位",
+    "studentQuizVoided": "この問題は無効になりました（得点クリア）",
+    "studentQuizClose": "閉じる"
   }
 }
