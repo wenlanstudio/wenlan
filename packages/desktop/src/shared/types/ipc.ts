@@ -97,6 +97,8 @@ export interface IpcInvokeChannels {
   'teaching::ws-race-open': { args: [questionId: number, limitSec: number]; ret: void }
   'teaching::ws-race-close': { args: [openId: number]; ret: void }
   'teaching::ws-race-void': { args: [openId: number]; ret: void }
+  // 学生作答：choice 为本班显示序下标；accepted 回执与 revealed 广播另走事件通道。
+  'teaching::ws-race-answer': { args: [openId: number, choice: number]; ret: void }
   'mt::ask-for-image-path': { args: []; ret: string[] }
   'mt::boot-info-async': { args: []; ret: BootInfo }
   'mt::clipboard::guess-file-path': { args: []; ret: string | null }

@@ -364,6 +364,8 @@ const teachingSocketAPI = {
     invoke('teaching::ws-race-open', questionId, limitSec),
   raceClose: (openId: number): Promise<void> => invoke('teaching::ws-race-close', openId),
   raceVoid: (openId: number): Promise<void> => invoke('teaching::ws-race-void', openId),
+  raceAnswer: (openId: number, choice: number): Promise<void> =>
+    invoke('teaching::ws-race-answer', openId, choice),
   onMessage: (listener: (message: WsMessage) => void): (() => void) => {
     const sub = (_e: IpcRendererEvent, message: WsMessage): void => listener(message)
     ipcRenderer.on('teaching::ws-message', sub)

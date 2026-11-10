@@ -227,6 +227,7 @@ declare global {
     raceOpen(questionId: number, limitSec: number): Promise<void>
     raceClose(openId: number): Promise<void>
     raceVoid(openId: number): Promise<void>
+    raceAnswer(openId: number, choice: number): Promise<void>
     onMessage(listener: (message: TeachingSocketWsMessage) => void): () => void
     onStatus(listener: (status: TeachingSocketWsStatus) => void): () => void
   }

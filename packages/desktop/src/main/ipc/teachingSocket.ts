@@ -42,4 +42,11 @@ export const registerTeachingSocketHandlers = (): void => {
   ipcMain.handle('teaching::ws-race-void', (_event, openId: number) => {
     teachingSocket.sendRaceVoid(openId)
   })
+  // 学生作答：choice 是本班显示序下标，服务端负责还原与判分。
+  ipcMain.handle(
+    'teaching::ws-race-answer',
+    (_event, openId: number, choice: number) => {
+      teachingSocket.sendRaceAnswer(openId, choice)
+    }
+  )
 }

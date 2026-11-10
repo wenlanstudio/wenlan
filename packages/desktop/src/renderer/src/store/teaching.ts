@@ -123,6 +123,20 @@ export interface RaceState {
   error: string
 }
 
+/**
+ * 学生端答题浮层状态（E5 步 4）。
+ *
+ * `selected` / `submitted` 都是【本班显示序】下标：服务端按 option_order
+ * 还原成原始下标判分，客户端不需要也不应该知道讲义原始顺序。
+ */
+export interface StudentQuizState {
+  visible: boolean
+  selected: number | null
+  submitted: number | null
+  voided: boolean
+  error: string
+}
+
 /** 轻量内容指纹（FNV-1a 32 位）。只用于「内容是否变化」的本地判断，不参与服务端校验。 */
 export const hashContent = (text: string): string => {
   let hash = 0x811c9dc5
@@ -199,6 +213,22 @@ const emptyRace = (): RaceState => ({
   error: ''
 })
 
+const emptyStudentQuiz = (): StudentQuizState => ({
+  visible: false,
+  selected: null,
+  submitted: null,
+  voided: false,
+  error: ''
+})
+
+/** 新一轮发题：只重置本轮作答痕迹，浮层保持打开让学生直接看到新题。 */
+const resetStudentQuizRound = (state: StudentQuizState): void => {
+  state.selected = null
+  state.submitted = null
+  state.voided = false
+  state.error = ''
+}
+
 /** `teaching.race.question-list` → 发题用的题目精简列表。 */
 const parseQuestionList = (raw: unknown): RaceQuestion[] => {
   if (!Array.isArray(raw)) return []
@@ -264,6 +294,7 @@ export const useTeachingStore = defineStore('teaching', () => {
   const openedRelease = ref<OpenedRelease | null>(null)
   const classroom = ref<ClassroomState>(emptyClassroom())
   const race = ref<RaceState>(emptyRace())
+  const studentQuiz = ref<StudentQuizState>(emptyStudentQuiz())
   /** 教师端上次上报的页号：md2s:change 每翻一页都会来，去重后再发。 */
   let reportedPage = 0
 
@@ -331,6 +362,9 @@ export const useTeachingStore = defineStore('teaching', () => {
         } else if (role === 'student') {
           classroom.value.role = 'student'
           classroom.value.question = parseQuestion(content.race)
+          // 重连时服务端只给当前轮快照，不记得本端是否提交过；按新轮处理，
+          // 重复提交会被 uk_open_student 挡成「已提交，不能修改」。
+          resetStudentQuizRound(studentQuiz.value)
           void refreshStudentDocument()
         }
         break
@@ -357,7 +391,16 @@ export const useTeachingStore = defineStore('teaching', () => {
         race.value.answered = 0
         race.value.reveal = null
         race.value.error = ''
-        if (classroom.value.role === 'student') void refreshStudentDocument()
+        if (classroom.value.role === 'student') {
+          resetStudentQuizRound(studentQuiz.value)
+          void refreshStudentDocument()
+        }
+        break
+      }
+      case 'teaching.race.accepted': {
+        // 只发给提交者：确认服务端已受理，浮层进入「等待揭晓」态。
+        studentQuiz.value.submitted = asNumber(content.choice, studentQuiz.value.selected ?? 0)
+        studentQuiz.value.error = ''
         break
       }
       case 'teaching.race.answered':
@@ -371,14 +414,25 @@ export const useTeachingStore = defineStore('teaching', () => {
         race.value.openId = null
         race.value.questionId = null
         classroom.value.question = null
-        if (classroom.value.role === 'student') void refreshStudentDocument()
+        if (classroom.value.role === 'student') {
+          // 保留 submitted：揭晓面板要用「我选了什么」对照正确答案。
+          studentQuiz.value.voided = false
+          studentQuiz.value.error = ''
+          void refreshStudentDocument()
+        }
         break
       case 'teaching.race.voided':
         race.value.openId = null
         race.value.questionId = null
         race.value.answered = 0
+        race.value.reveal = null
         classroom.value.question = null
-        if (classroom.value.role === 'student') void refreshStudentDocument()
+        if (classroom.value.role === 'student') {
+          studentQuiz.value.voided = true
+          studentQuiz.value.submitted = null
+          studentQuiz.value.selected = null
+          void refreshStudentDocument()
+        }
         break
       case 'teaching.session.closed':
         // 会话结束：教师端整块复位，学生端只退回占位、保留只读讲义
@@ -389,12 +443,16 @@ export const useTeachingStore = defineStore('teaching', () => {
           break
         }
         classroom.value.question = null
+        resetStudentQuizRound(studentQuiz.value)
+        race.value.reveal = null
         void refreshStudentDocument()
         break
       case 'teaching.error':
         classroom.value.error = asString(content.message)
         if (race.value.visible) race.value.loading = false
         race.value.error = asString(content.message)
+        // 重复提交 / 观战 / 越时等都以 teaching.error 回来，学生浮层要看得见。
+        studentQuiz.value.error = asString(content.message)
         break
       default:
         break
@@ -564,6 +622,38 @@ export const useTeachingStore = defineStore('teaching', () => {
     return ''
   }
 
+  // ==================== 学生作答（E5 步 4） ====================
+
+  const openStudentQuiz = (): void => {
+    if (classroom.value.role !== 'student') return
+    studentQuiz.value.visible = true
+  }
+
+  const closeStudentQuiz = (): void => {
+    studentQuiz.value.visible = false
+  }
+
+  const selectStudentOption = (index: number): void => {
+    if (studentQuiz.value.submitted != null) return
+    studentQuiz.value.selected = index
+  }
+
+  /** 提交的是本班显示序下标；服务端还原并判分，回执走 teaching.race.accepted。 */
+  const submitStudentAnswer = (choice?: number): void => {
+    if (classroom.value.role !== 'student') return
+    const openId = race.value.openId
+    if (openId == null) return
+    if (studentQuiz.value.submitted != null) return
+    const target = choice ?? studentQuiz.value.selected
+    if (target == null || target < 0 || target > 5) {
+      studentQuiz.value.error = t('teaching.studentQuizSelectFirst')
+      return
+    }
+    studentQuiz.value.selected = target
+    studentQuiz.value.error = ''
+    void window.teachingSocket.raceAnswer(openId, target)
+  }
+
   // localStorage 不是响应式的：每次写元数据递增，让读元数据的 computed 重新求值
   const metaRev = ref(0)
 
@@ -622,6 +712,11 @@ export const useTeachingStore = defineStore('teaching', () => {
     openedRelease,
     classroom,
     race,
+    studentQuiz,
+    openStudentQuiz,
+    closeStudentQuiz,
+    selectStudentOption,
+    submitStudentAnswer,
     openPublish,
     closePublish,
     openStudentRelease,

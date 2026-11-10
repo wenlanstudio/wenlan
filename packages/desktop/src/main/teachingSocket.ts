@@ -142,6 +142,18 @@ class TeachingSocket {
     this.send('teaching.race.void', { openId })
   }
 
+  /**
+   * 学生：提交答案。choice 是【本班显示序】的下标，服务端按 option_order 还原
+   * 成原始下标判分；一题一提交由 uk_open_student 保证。回执走
+   * `teaching.race.accepted`（只发给提交者），错误走 `teaching.error`。
+   */
+  sendRaceAnswer(openId: number, choice: number): void {
+    if (this.sessionId == null) return
+    if (!Number.isInteger(openId) || openId <= 0) return
+    if (!Number.isInteger(choice) || choice < 0 || choice > 5) return
+    this.send('teaching.race.answer', { openId, choice })
+  }
+
   /** 关闭会话并退房（不退出登录、不影响其他窗口）。 */
   async end(sessionId?: number | null): Promise<void> {
     const target = sessionId ?? this.sessionId
