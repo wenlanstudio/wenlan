@@ -67,13 +67,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import type { MenuStructureItem } from '@shared/types/menu'
 import MenuDropdown from './menuDropdown.vue'
 import bus from '@/bus'
 import { t } from '@/i18n'
 import { useLayoutStore } from '@/store/layout'
+import { useAuthStore } from '@/store/auth'
 
 const menus = ref<MenuStructureItem[]>([])
 const openIndex = ref(-1)
@@ -188,6 +189,16 @@ onMounted(async () => {
   document.addEventListener('keyup', onKeyup)
   window.addEventListener('blur', close)
 })
+
+// 「教学」菜单随登录态显隐（main 侧已按新登录态重建菜单）：缓存的结构跟着刷新，
+// 免得悬停揭示时还露出登出前的「教学」（N1）。
+watch(
+  () => useAuthStore().state.loggedIn,
+  () => {
+    close()
+    void load()
+  }
+)
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', onDocumentClick)

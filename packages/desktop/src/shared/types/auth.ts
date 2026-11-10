@@ -20,6 +20,8 @@ export interface AuthState {
   loggedIn: boolean
   tenantId: number | null
   user: WenshuUser | null
+  /** 服务端角色标识（`/system/auth/get-permission-info` 的 roles），可能为空。 */
+  roles: string[]
 }
 
 /** 登录前的学校（租户）选项 */

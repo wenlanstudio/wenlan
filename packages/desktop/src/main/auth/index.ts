@@ -10,7 +10,7 @@
  * `userData/auth.json`），renderer 经 `auth::request` 代理发请求，永不接触 token。
  * 401 时自动用 refresh_token 换新并重试一次，多窗口共享同一登录态（单例）。
  */
-import { BrowserWindow, safeStorage } from 'electron'
+import { app, BrowserWindow, safeStorage } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import log from 'electron-log'
@@ -59,14 +59,38 @@ class AuthManager {
   private expiresAt: string | null = null
   private tenantId: number | null = null
   private user: WenshuUser | null = null
+  private roles: string[] = []
+
+  private initPromise: Promise<void> | null = null
+  private listeners = new Set<(state: AuthState) => void>()
 
   constructor(userDataPath: string) {
     this.userDataPath = userDataPath
     this.baseUrl = process.env.WENSHU_BASE_URL || DEFAULT_BASE_URL
   }
 
-  /** 启动时从磁盘恢复登录态（safeStorage 解密），失败 = 未登录。 */
-  async init(): Promise<void> {
+  /**
+   * 启动时从磁盘恢复登录态（safeStorage 解密），失败 = 未登录。
+   *
+   * 幂等，可在 app ready 之前调用：Windows 上 safeStorage 要等 ready 之后才可用，
+   * ready 前判可用性恒为 false 会让每次重启都丢登录，所以内部先等 ready。
+   * 依赖登录态的入口（getState 通道、login/logout/request）都先 await 本方法。
+   */
+  init(): Promise<void> {
+    if (!this.initPromise) {
+      this.initPromise = this.restore()
+    }
+    return this.initPromise
+  }
+
+  /** main 侧订阅登录态变化（renderer 走 `auth::state-changed` 广播）。 */
+  onStateChange(listener: (state: AuthState) => void): () => void {
+    this.listeners.add(listener)
+    return () => this.listeners.delete(listener)
+  }
+
+  private async restore(): Promise<void> {
+    await app.whenReady()
     if (!safeStorage.isEncryptionAvailable()) {
       log.warn('[auth] safeStorage 不可用，token 仅存内存、不落盘')
       return
@@ -80,6 +104,9 @@ class AuthManager {
       this.tenantId = persisted.tenantId
       this.user = persisted.user
       log.info('[auth] 已恢复登录态 userId=%s', this.user?.id)
+      this.broadcast()
+      // 角色不落盘：每次恢复后异步补一次，避免旧缓存与服务端授权不一致。
+      void this.refreshRoles()
     } catch {
       // 无文件 / 损坏 / 解密失败 → 未登录，静默
     }
@@ -89,11 +116,40 @@ class AuthManager {
     return {
       loggedIn: this.accessToken != null,
       tenantId: this.tenantId,
-      user: this.user
+      user: this.user,
+      roles: [...this.roles]
+    }
+  }
+
+  /** 仅 main 内部使用：ws 握手 URL 需要 access_token，绝不暴露给 renderer。 */
+  getAccessToken(): string | null {
+    return this.accessToken
+  }
+
+  getBaseUrl(): string {
+    return this.baseUrl
+  }
+
+  private async refreshRoles(): Promise<void> {
+    try {
+      const resp = await this.rawRequest(
+        '/system/auth/get-permission-info',
+        'GET',
+        undefined,
+        {}
+      )
+      if (!resp.ok) return
+      const info = resp.data as { roles?: string[] } | null
+      this.roles = Array.isArray(info?.roles) ? info.roles : []
+      this.broadcast()
+    } catch {
+      // 角色只用于 UI 裁剪，拉取失败保持空数组，不阻塞登录态。
     }
   }
 
   async login(params: AuthLoginParams): Promise<AuthActionResult> {
+    // 先等启动恢复结束，免得恢复出的旧 token 覆盖这次新登录
+    await this.init()
     const resp = await this.rawRequest('/system/auth/login', 'POST', params, {
       tenantId: params.tenantId,
       anonymous: true
@@ -109,9 +165,11 @@ class AuthManager {
     this.user = null
 
     // 拉用户资料（昵称 / 头像）
+    this.roles = []
     const profile = await this.rawRequest('/system/auth/get-permission-info', 'GET', undefined, {})
     if (profile.ok) {
-      const u = (profile.data as { user?: PermissionUser }).user
+      const info = profile.data as { user?: PermissionUser; roles?: string[] } | null
+      const u = info?.user
       if (u) {
         this.user = {
           id: u.id,
@@ -120,6 +178,7 @@ class AuthManager {
           avatar: u.avatar
         }
       }
+      this.roles = Array.isArray(info?.roles) ? info.roles : []
     }
     await this.persist()
     this.broadcast()
@@ -127,6 +186,7 @@ class AuthManager {
   }
 
   async logout(): Promise<void> {
+    await this.init()
     try {
       await this.rawRequest('/system/auth/logout', 'POST', undefined, {})
     } catch {
@@ -136,6 +196,7 @@ class AuthManager {
     this.refreshToken = null
     this.expiresAt = null
     this.user = null
+    this.roles = []
     this.tenantId = null
     try {
       await fs.promises.unlink(this.authFilePath())
@@ -157,6 +218,7 @@ class AuthManager {
 
   /** renderer 请求代理：带 token 发请求，401 自动刷新重试一次。 */
   async request<T = unknown>(opts: AuthRequestOptions): Promise<AuthRequestResult<T>> {
+    await this.init()
     const method = opts.method ?? 'GET'
     const extra: RawRequestExtra = { params: opts.params, anonymous: opts.anonymous }
     const result = await this.rawRequest(opts.url, method, opts.data, extra)
@@ -242,11 +304,12 @@ class AuthManager {
       if (!res.ok) {
         return { ok: false, status, data: payload.data, error: (payload.msg as string) || `HTTP ${status}` }
       }
-      // yudao CommonResult：code === 0 成功
+      // yudao CommonResult：code === 0 成功。token 失效也是 HTTP 200 + code 401，
+      // 统一成 status 401，request() 的「刷新后重试一次」才会生效。
       if (typeof payload.code === 'number' && payload.code !== 0) {
         return {
           ok: false,
-          status,
+          status: payload.code === 401 ? 401 : status,
           data: payload.data,
           error: (payload.msg as string) || `业务错误 ${payload.code}`
         }
@@ -273,6 +336,9 @@ class AuthManager {
     for (const win of BrowserWindow.getAllWindows()) {
       win.webContents.send('auth::state-changed', state)
     }
+    for (const listener of this.listeners) {
+      listener(state)
+    }
   }
 }
 
@@ -289,6 +355,16 @@ export function getAuthManager(): AuthManager {
     throw new Error('AuthManager 未初始化，请先调用 initAuthManager')
   }
   return instance
+}
+
+/** 当前是否已登录（菜单模板等构建期读取）；单例未初始化时视为未登录。 */
+export function isLoggedIn(): boolean {
+  return instance?.getState().loggedIn ?? false
+}
+
+/** main 侧订阅登录态变化；单例未初始化（如单测里单独构造菜单）时为空操作。 */
+export function onAuthStateChange(listener: (state: AuthState) => void): () => void {
+  return instance ? instance.onStateChange(listener) : () => undefined
 }
 
 // 打开教学客户端窗口的回调由 App 注入（IPC handler 注册早于 App 构造）。

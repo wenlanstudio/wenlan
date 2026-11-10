@@ -17,7 +17,11 @@ export const registerAuthHandlers = (): void => {
 
   ipcMain.handle('auth::logout', () => auth().logout())
 
-  ipcMain.handle('auth::get-state', () => auth().getState())
+  // 初始快照要等启动恢复（init）结束，否则重启后 renderer 先拿到「未登录」。
+  ipcMain.handle('auth::get-state', async() => {
+    await auth().init()
+    return auth().getState()
+  })
 
   ipcMain.handle('auth::list-tenants', () => auth().listTenants())
 
