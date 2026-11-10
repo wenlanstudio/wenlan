@@ -188,10 +188,14 @@
       排行榜前 8）。倒计时用本地 `openedAt` 推算，不解析服务端无时区时间串。
       **RBAC**：`openQuizConsole()` 非 host 直接返回提示，学生端看不到入口。
 - [ ] 学生端作答提交（`teaching.race.answer`）与揭晓态渲染：现在学生收到 `revealed`
-      只把题目卡退回占位，答案与得分不下发到界面。**已知服务端待修**：
-      `RaceServiceImpl#revealedContent` 的 `options` / `answer` / `distribution` 用的是
-      原始序，而 `opened` 按 `option_order` 打乱下发 —— `shuffle=yes`（默认）时学生看到的
-      字母会错位，需按 `option_order` 还原后再算答案位次。
+      只把题目卡退回占位，答案与得分不下发到界面。
+      **服务端乱序 bug 已修（2026-11-10，wenshu-server `1530673`）**：
+      `RaceServiceImpl#revealedContent` 原按讲义原始序下发 `options` / `answer` /
+      `distribution`，而 `opened` 按本班 `option_order` 打乱，`shuffle=yes`（默认）时会出现
+      「学生选 D 判对、揭晓却宣布答案是 B」。现把揭晓**展示层**按 `option_order` 投影到
+      显示序（落库 `submitted_answer` 与判分仍保持原始序，跨班统计口径不变），发题与揭晓
+      共用 `projectToDisplayOrder`；新增 `RaceRevealOrderTest` 6 例与 `m2b-race-check.js`
+      的「选项顺序一致 / 答案字母指向正确文本」回归断言。
 - [x] 翻页/步进与 wenshu 放映页行为对齐（deck 播放器已具备，只需接会话状态）；教师放映不依赖浏览器，学生 H5 与任意浏览器查阅不变。
       **已实现（2026-11-10）**：教师 `md2s:change` → `teaching.session.page`；学生
       `teaching.session.page` → `md2s:follow` → `player.go(page)`，锁定时空的学生导航键、
