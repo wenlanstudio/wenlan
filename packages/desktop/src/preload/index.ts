@@ -348,6 +348,34 @@ const authAPI = {
   }
 }
 
+type WsMessage = { type: string; content: Record<string, unknown> }
+type WsStatus = { connected: boolean; sessionId: number | null }
+
+// 课堂 ws：renderer 只发语义动作，token 与连接句柄留在 main。
+const teachingSocketAPI = {
+  join: (releaseId: number) => invoke('teaching::ws-join', releaseId),
+  host: (releaseId: number) => invoke('teaching::ws-host', releaseId),
+  page: (page: number): Promise<void> => invoke('teaching::ws-page', page),
+  follow: (locked: boolean): Promise<void> => invoke('teaching::ws-follow', locked),
+  end: (sessionId: number | null): Promise<void> => invoke('teaching::ws-end', sessionId),
+  leave: (): Promise<void> => invoke('teaching::ws-leave'),
+  raceQuestions: (): Promise<void> => invoke('teaching::ws-race-questions'),
+  raceOpen: (questionId: number, limitSec: number): Promise<void> =>
+    invoke('teaching::ws-race-open', questionId, limitSec),
+  raceClose: (openId: number): Promise<void> => invoke('teaching::ws-race-close', openId),
+  raceVoid: (openId: number): Promise<void> => invoke('teaching::ws-race-void', openId),
+  onMessage: (listener: (message: WsMessage) => void): (() => void) => {
+    const sub = (_e: IpcRendererEvent, message: WsMessage): void => listener(message)
+    ipcRenderer.on('teaching::ws-message', sub)
+    return () => ipcRenderer.removeListener('teaching::ws-message', sub)
+  },
+  onStatus: (listener: (status: WsStatus) => void): (() => void) => {
+    const sub = (_e: IpcRendererEvent, status: WsStatus): void => listener(status)
+    ipcRenderer.on('teaching::ws-status', sub)
+    return () => ipcRenderer.removeListener('teaching::ws-status', sub)
+  }
+}
+
 try {
   contextBridge.exposeInMainWorld('electron', electronAPI)
   contextBridge.exposeInMainWorld('process', processShim)
@@ -363,6 +391,7 @@ try {
   contextBridge.exposeInMainWorld('md2slides', md2slidesAPI)
   contextBridge.exposeInMainWorld('mdcode2run', mdcode2runAPI)
   contextBridge.exposeInMainWorld('auth', authAPI)
+  contextBridge.exposeInMainWorld('teachingSocket', teachingSocketAPI)
 } catch (error) {
   console.error(error)
 }

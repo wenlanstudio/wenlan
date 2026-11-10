@@ -15,6 +15,7 @@ import { registerLinkHtmlHandler } from './linkHtml'
 import { registerMd2slidesHandlers } from './md2slides'
 import { registerMdcode2runHandlers } from './mdcode2run'
 import { registerAuthHandlers } from './auth'
+import { registerTeachingSocketHandlers } from './teachingSocket'
 
 export const registerSandboxIpcHandlers = (): void => {
   registerBootInfo()
@@ -34,4 +35,5 @@ export const registerSandboxIpcHandlers = (): void => {
   registerMd2slidesHandlers()
   registerMdcode2runHandlers()
   registerAuthHandlers()
+  registerTeachingSocketHandlers()
 }

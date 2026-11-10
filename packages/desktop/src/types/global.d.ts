@@ -206,6 +206,31 @@ declare global {
     onStateChanged(listener: (state: AuthState) => void): () => void
   }
 
+  interface TeachingSocketWsMessage {
+    type: string
+    content: Record<string, unknown>
+  }
+
+  interface TeachingSocketWsStatus {
+    connected: boolean
+    sessionId: number | null
+  }
+
+  interface TeachingSocketAPI {
+    join(releaseId: number): Promise<{ ok: boolean; sessionId?: number; error?: string }>
+    host(releaseId: number): Promise<{ ok: boolean; sessionId?: number; error?: string }>
+    page(page: number): Promise<void>
+    follow(locked: boolean): Promise<void>
+    end(sessionId: number | null): Promise<void>
+    leave(): Promise<void>
+    raceQuestions(): Promise<void>
+    raceOpen(questionId: number, limitSec: number): Promise<void>
+    raceClose(openId: number): Promise<void>
+    raceVoid(openId: number): Promise<void>
+    onMessage(listener: (message: TeachingSocketWsMessage) => void): () => void
+    onStatus(listener: (status: TeachingSocketWsStatus) => void): () => void
+  }
+
   interface ProcessShim {
     platform: NodeJS.Platform
     arch?: string
@@ -227,6 +252,7 @@ declare global {
     fonts: FontsAPI
     diagram: DiagramAPI
     auth: AuthAPI
+    teachingSocket: TeachingSocketAPI
     md2slides: {
       server(opts: { action: 'start' | 'stop'; allowRoots?: string[] }): Promise<
         { running: boolean; origin: string | null }
