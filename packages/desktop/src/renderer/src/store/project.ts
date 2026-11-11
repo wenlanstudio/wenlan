@@ -114,9 +114,12 @@ export const useProjectStore = defineStore('project', () => {
     }
   )
 
-  // Typora-style file panel: the tree root tracks the folder of the currently
-  // edited file. When the active tab changes, ask the main process to re-watch
-  // the new folder; `mt::open-directory` then rebuilds the tree via OPEN_PROJECT.
+  // Typora-style file panel: opening a file fixes the tree root to that file's
+  // folder. Navigating *inside* the tree must not re-root it — clicking a file
+  // in a subfolder only switches the active tab. Only a file outside the current
+  // root (open dialog / CLI / a tab from another folder) re-roots the panel.
+  // Keeping the root also keeps the main-process watcher on the original folder,
+  // which watches the whole subtree recursively. See issue #26.
   const editorStoreForTree = useEditorStore()
   watch(
     () => editorStoreForTree.currentFile?.pathname,
@@ -124,13 +127,14 @@ export const useProjectStore = defineStore('project', () => {
       if (!pathname) return
       const dirname = window.path.dirname(pathname)
       if (!dirname) return
-      // No-op when the root already matches (also guards the main-process
-      // isSamePathSync early-return and the bootstrap re-open).
-      if (
-        projectTree.value &&
-        window.fileUtils.isSamePathSync(projectTree.value.pathname, dirname)
-      ) {
-        return
+      const root = projectTree.value?.pathname
+      if (root) {
+        // No-op when the root already matches (also guards the main-process
+        // isSamePathSync early-return and the bootstrap re-open).
+        if (window.fileUtils.isSamePathSync(root, dirname)) return
+        // A file below the current root is tree-internal navigation; leave both
+        // the visible root and its recursive watcher untouched.
+        if (window.fileUtils.isChildOfDirectory(root, dirname)) return
       }
       window.electron.ipcRenderer.send('mt::switch-directory', dirname)
     }
