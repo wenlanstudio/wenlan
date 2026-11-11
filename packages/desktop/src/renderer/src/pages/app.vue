@@ -119,8 +119,27 @@ const commandCenterStore = useCommandCenterStore()
 const notificationStore = useNotificationStore()
 const editorViewStore = useEditorViewStore()
 const execPanelStore = useExecPanelStore()
+const authStore = useAuthStore()
 
 const timer = ref<ReturnType<typeof setTimeout> | null>(null)
+
+/**
+ * 教育实例首次登录/启动：文件 tab 默认落在课程工作区（projectsRoot）。
+ * activateTab=false 保住「教学」tab 的默认落点；树已有根（上次会话恢复）时
+ * 不抢，用户手动切去别的文件夹后也不会被反复拉回。
+ */
+const openTeachingWorkspace = async (): Promise<void> => {
+  if (route.path !== '/teaching' || !authStore.state.loggedIn) return
+  if (projectStore.projectTree) return
+  await window.teachingWorkspace.openProjectsRoot({ activateTab: false })
+}
+
+watch(
+  () => authStore.state.loggedIn,
+  (loggedIn) => {
+    if (loggedIn) void openTeachingWorkspace()
+  }
+)
 
 // —— 布局高度的唯一真值（issue #2）——
 // 旧代码在内容层按 100vh / 50vh / calc(100vh - 状态栏) 算高度：那是「整窗」，
@@ -260,13 +279,14 @@ onMounted(async () => {
   await commandCenterStore.LISTEN_COMMAND_CENTER_BUS()
   layoutStore.LISTEN_FOR_LAYOUT()
   // 教学入口按登录态显隐（N1）：登录态在壳层就初始化，不等侧栏里的账号栏挂载。
-  const authStore = useAuthStore()
   void authStore.init()
   authStore.listen()
   // 教育版实例复用本壳：默认落在「教学」tab。延后一拍设置，避免被 main 侧
   // 稍后送达的 buffered layout 事件覆盖；用户随后手动切 tab 仍会被正常持久化。
-  window.setTimeout(() => {
-    if (route.path === '/teaching' && layoutStore.sidebarTab !== 'teaching') {
+  window.setTimeout(async () => {
+    if (route.path !== '/teaching') return
+    await openTeachingWorkspace()
+    if (layoutStore.sidebarTab !== 'teaching') {
       layoutStore.SET_LAYOUT({ sidebarTab: 'teaching', showSideBar: true })
     }
   }, 300)

@@ -381,8 +381,11 @@ class EditorWindow extends BaseWindow {
 
   /**
    * Open a (new) directory and replaces the old one.
+   *
+   * `activateTab` 为 false 时只换文件树根，不把侧栏切到「文件」tab——教学窗口
+   * 首次自动打开课程工作区时用，保留它默认的「教学」tab。
    */
-  openFolder(pathname: string): void {
+  openFolder(pathname: string, activateTab = true): void {
     // TODO: Don't allow new files if quitting.
     if (
       !pathname ||
@@ -404,7 +407,7 @@ class EditorWindow extends BaseWindow {
       appMenu.addRecentlyUsedDocument(pathname)
       this._openedRootDirectory = pathname
       ipcMain.emit('watcher-watch-directory', browserWindow, pathname)
-      browserWindow!.webContents.send('mt::open-directory', pathname)
+      browserWindow!.webContents.send('mt::open-directory', pathname, { activateTab })
     } else {
       this._directoryToOpen = pathname
     }

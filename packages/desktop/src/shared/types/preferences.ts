@@ -18,6 +18,7 @@ export interface IUserPreferences {
   fileSortOrder?: string
   startUpAction?: string
   defaultDirectoryToOpen?: string
+  projectsRoot?: string
   language?: string
   editorFontFamily?: string
   fontSize?: number

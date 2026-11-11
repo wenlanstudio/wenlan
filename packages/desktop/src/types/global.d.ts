@@ -232,6 +232,12 @@ declare global {
     onStatus(listener: (status: TeachingSocketWsStatus) => void): () => void
   }
 
+  interface TeachingWorkspaceAPI {
+    getProjectsRoot(): Promise<string>
+    openProjectsRoot(options?: { activateTab?: boolean }): Promise<string>
+    chooseProjectsRoot(): Promise<string | null>
+  }
+
   interface ProcessShim {
     platform: NodeJS.Platform
     arch?: string
@@ -254,6 +260,7 @@ declare global {
     diagram: DiagramAPI
     auth: AuthAPI
     teachingSocket: TeachingSocketAPI
+    teachingWorkspace: TeachingWorkspaceAPI
     md2slides: {
       server(opts: { action: 'start' | 'stop'; allowRoots?: string[] }): Promise<
         { running: boolean; origin: string | null }

@@ -77,6 +77,10 @@ export interface IpcInvokeChannels {
   'auth::list-tenants': { args: []; ret: TenantInfo[] }
   // 打开教学客户端窗口（E2 壳）
   'auth::open-teaching-window': { args: []; ret: void }
+  // 课程工作区（E3.0）：位置存 main 偏好，renderer 只拿路径/触发打开。
+  'teaching::get-projects-root': { args: []; ret: string }
+  'teaching::open-projects-root': { args: [options?: { activateTab?: boolean }]; ret: string }
+  'teaching::choose-projects-root': { args: []; ret: string | null }
   // 课堂 ws：连接只存在于 main 进程，renderer 只能拿到脱敏后的事件帧。
   'teaching::ws-join': {
     args: [releaseId: number]
@@ -391,7 +395,7 @@ export interface IpcMainEventChannels {
   'mt::mdcode2run::event': [payload: Md2rEvent]
   'mt::new-untitled-tab': [selected?: boolean, markdown?: string]
   'mt::sidebar::new-file-in-project': [templateKind: string]
-  'mt::open-directory': [directoryPath: string]
+  'mt::open-directory': [directoryPath: string, options?: { activateTab?: boolean }]
   'mt::open-new-tab': [
     markdownDocument: MarkdownDocument | null,
     options?: TabOptions,

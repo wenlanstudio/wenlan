@@ -1,6 +1,10 @@
 import type { BrowserWindow, MenuItemConstructorOptions } from 'electron'
 import { t } from '../../i18n'
 import { isLoggedIn } from '../../auth'
+import {
+  chooseProjectsRootForWindow,
+  openProjectsRootForWindow
+} from '../../teaching/projectsRoot'
 
 /**
  * 教育版「教学」菜单（D10 叠加态）。
@@ -38,6 +42,22 @@ export default function(): MenuItemConstructorOptions {
         click(_menuItem, browserWindow) {
           const win = browserWindow as BrowserWindow | undefined
           win?.webContents.send('mt::execute-command-by-id', 'teaching.quiz')
+        }
+      },
+      { type: 'separator' },
+      {
+        // 文件 tab 默认落在课程工作区；用户切去别的文件夹后可从这里切回。
+        label: t('teaching.workspaceOpen'),
+        click(_menuItem, browserWindow) {
+          const win = browserWindow as BrowserWindow | undefined
+          if (win) openProjectsRootForWindow(win)
+        }
+      },
+      {
+        label: t('teaching.workspaceChoose'),
+        click(_menuItem, browserWindow) {
+          const win = browserWindow as BrowserWindow | undefined
+          if (win) void chooseProjectsRootForWindow(win)
         }
       }
     ]

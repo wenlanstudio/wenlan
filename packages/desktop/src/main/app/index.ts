@@ -747,12 +747,17 @@ class App {
 
     onInternalChannel(
       'app-open-directory-by-id',
-      (windowId: number, pathname: string, openInSameWindow: boolean) => {
+      (
+        windowId: number,
+        pathname: string,
+        openInSameWindow: boolean,
+        activateTab: boolean = true
+      ) => {
         const { openFolderInNewWindow } = this._accessor.preferences.getAll()
         if (openInSameWindow || !openFolderInNewWindow) {
           const editor = this._windowManager.get(windowId) as EditorWindow | undefined
           if (editor) {
-            editor.openFolder(pathname)
+            editor.openFolder(pathname, activateTab)
             return
           }
         }

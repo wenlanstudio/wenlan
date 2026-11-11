@@ -378,6 +378,14 @@ const teachingSocketAPI = {
   }
 }
 
+// 课程工作区：根目录位置与目录选择都在 main（偏好 + 原生对话框）。
+const teachingWorkspaceAPI = {
+  getProjectsRoot: (): Promise<string> => invoke('teaching::get-projects-root'),
+  openProjectsRoot: (options?: { activateTab?: boolean }): Promise<string> =>
+    invoke('teaching::open-projects-root', options),
+  chooseProjectsRoot: (): Promise<string | null> => invoke('teaching::choose-projects-root')
+}
+
 try {
   contextBridge.exposeInMainWorld('electron', electronAPI)
   contextBridge.exposeInMainWorld('process', processShim)
@@ -394,6 +402,7 @@ try {
   contextBridge.exposeInMainWorld('mdcode2run', mdcode2runAPI)
   contextBridge.exposeInMainWorld('auth', authAPI)
   contextBridge.exposeInMainWorld('teachingSocket', teachingSocketAPI)
+  contextBridge.exposeInMainWorld('teachingWorkspace', teachingWorkspaceAPI)
 } catch (error) {
   console.error(error)
 }

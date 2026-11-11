@@ -17,6 +17,7 @@ import { setPlantumlServerSource } from './ipc/diagram'
 import { setMatplotlibSource, warmUpPythonDetection } from './ipc/matplotlib'
 import { setGraphvizSource } from './ipc/graphviz'
 import { initAuthManager, getAuthManager } from './auth'
+import { initTeachingProjects } from './teaching/projectsRoot'
 
 // Set version strings into global and process.versions
 process.env.MARKTEXT_VERSION = MARKTEXT_VERSION
@@ -135,6 +136,9 @@ warmUpPythonDetection()
 // Empty = detect dot automatically; a configured path wins. Read on every
 // render so changing the preference needs no restart.
 setGraphvizSource(() => accessor.preferences.getItem<string>('graphvizDotPath') ?? '')
+
+// 课程工作区根目录：安装器交接文件在此采用一次，偏好就绪后才能解析。
+initTeachingProjects(accessor.preferences, appEnvironment.paths.userDataPath)
 
 const appController = new App(accessor, args as unknown as { _: string[] })
 appController.init()

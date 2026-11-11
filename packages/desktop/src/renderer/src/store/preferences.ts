@@ -34,6 +34,7 @@ export interface PreferencesState {
   startUpAction: StartUpAction | string
   restoreLayoutState: boolean
   defaultDirectoryToOpen: string
+  projectsRoot: string
   lastOpenedFolder: string
   treePathExcludePatterns: string[]
   language: string
@@ -159,6 +160,8 @@ export const usePreferencesStore = defineStore('preferences', {
     startUpAction: 'restoreAll',
     restoreLayoutState: true,
     defaultDirectoryToOpen: '',
+    // Empty means "resolve to ~/WenlanProjects on the first teaching login".
+    projectsRoot: '',
     lastOpenedFolder: '',
     treePathExcludePatterns: [],
     language: 'en',

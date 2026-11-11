@@ -154,10 +154,16 @@
 
 ### 步骤 3 · 课程工作区骨架（E3.0）
 
-- [ ] `projectsRoot` 配置项（默认 `~/WenlanProjects`），登录后校验存在性 → 缺失弹引导选择/创建；非教育用户默认跳过。
-- [ ] 根锚点 `{projectsRoot}/.wenlan/workspace.json` `{ schemaVersion:1, kind:'course-workspace' }`。
+> 状态（2026-11-11）：**根目录链路已实现**——安装器「课程工作区位置」页（可自定义，
+> 默认 `~/WenlanProjects`，UTF-16LE 交接文件首次启动采用一次）、`projectsRoot` 偏好、
+> 登录后建目录 + 根锚点、「文件」tab 默认打开 projects（教学窗口默认 tab 仍为「教学」，
+> 仍可切其他文件夹）、「教学」菜单的「打开课程工作区 / 更换位置…」。课程级惰性
+> `doc/ code/` 与只读锁仍待实施。
+
+- [x] `projectsRoot` 配置项（默认 `~/WenlanProjects`），安装器可预置、登录后校验并在缺失时创建；非教育用户不触发。
+- [x] 根锚点 `{projectsRoot}/.wenlan/workspace.json` `{ schemaVersion:1, kind:'course-workspace' }`。
 - [ ] 首次进入课程惰性创建 `{course}/doc/`、`{course}/code/`，课程名 `course.code` 优先、回退 name slug；图片落 `img/{materialName}/`。
-- [ ] `projects` 根可进常规文件树（`openFolder`）；`doc/` 学生侧挂只读锁。
+- [x] `projects` 根可进常规文件树（`openFolder`）；`doc/` 学生侧只读锁仍待随课程目录一并实施。
 
 **验收**：目录结构与 `course-workspace-design.md` §2 一致；学生侧 `doc/` 连同 `img/` 只读；`code/` 可写；根锚点可用于重定位。
 

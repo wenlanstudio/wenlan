@@ -63,6 +63,8 @@ const createBufferedProjectState = (state: unknown): BufferedProjectState => {
 
 interface OpenProjectOptions {
   scheduleBufferUpdate?: boolean
+  /** 教育窗口首次落在「教学」tab 时，只换树根、不抢当前 tab。 */
+  activateTab?: boolean
 }
 
 interface CreateCacheEntry {
@@ -136,7 +138,7 @@ export const useProjectStore = defineStore('project', () => {
 
   function OPEN_PROJECT(
     pathname: string,
-    { scheduleBufferUpdate = true }: OpenProjectOptions = {}
+    { scheduleBufferUpdate = true, activateTab = true }: OpenProjectOptions = {}
   ): void {
     const layoutStore = useLayoutStore()
     const tree = createProjectRoot(pathname)
@@ -147,12 +149,14 @@ export const useProjectStore = defineStore('project', () => {
     activeItem.value = {}
     CLEAR_NAME_INPUT_STATE()
 
-    const layout: LayoutPartial = {
-      sidebarTab: 'files',
-      showSideBar: true
+    if (activateTab) {
+      const layout: LayoutPartial = {
+        sidebarTab: 'files',
+        showSideBar: true
+      }
+      layoutStore.SET_LAYOUT(layout, { scheduleBufferUpdate })
+      layoutStore.DISPATCH_LAYOUT_MENU_ITEMS()
     }
-    layoutStore.SET_LAYOUT(layout, { scheduleBufferUpdate })
-    layoutStore.DISPATCH_LAYOUT_MENU_ITEMS()
 
     // Process pending events that arrived before projectTree was initialized.
     for (const event of pendingTreeEvents.value) {
@@ -185,9 +189,12 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   function LISTEN_FOR_LOAD_PROJECT(): void {
-    window.electron.ipcRenderer.on('mt::open-directory', (_e, pathname) => {
-      OPEN_PROJECT(String(pathname))
-    })
+    window.electron.ipcRenderer.on(
+      'mt::open-directory',
+      (_e, pathname, options?: { activateTab?: boolean }) => {
+        OPEN_PROJECT(String(pathname), { activateTab: options?.activateTab !== false })
+      }
+    )
   }
 
   function LISTEN_FOR_UPDATE_PROJECT(): void {

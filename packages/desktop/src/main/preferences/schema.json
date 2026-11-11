@@ -66,6 +66,10 @@
     "description": "General--The default directory that should be opened on startup when startUp=folder.",
     "type": "string"
   },
+  "projectsRoot": {
+    "description": "Teaching--Local course workspace root (each course keeps doc/ and code/ below it). Empty: resolved to ~/WenlanProjects on the first teaching login. The installer may seed a custom location.",
+    "type": "string"
+  },
   "language": {
     "description": "General--The language Wenlan uses. No default on purpose: the language is auto-detected from the system locale on first start (after app ready), so a schema default would always win over detection.",
     "type": "string"

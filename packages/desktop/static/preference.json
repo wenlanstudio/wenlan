@@ -12,6 +12,7 @@
   "startUpAction": "restoreAll",
   "restoreLayoutState": true,
   "defaultDirectoryToOpen": "",
+  "projectsRoot": "",
   "lastOpenedFolder": "",
   "treePathExcludePatterns": [],
   "language": "en",
