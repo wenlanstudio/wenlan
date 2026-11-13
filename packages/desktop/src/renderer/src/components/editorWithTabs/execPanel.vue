@@ -613,10 +613,13 @@ const jobDurationLabel = computed(() => {
   return `${Math.round(ms / 100) / 10}s`
 })
 
-/** counters 摘要：跳过组名/裸名别名键（不含 / 的代表键），截前 6 条。 */
+/** counters 摘要：只取枚举名键（全大写/下划线/冒号）——引擎同时存了展示名与组名别名，
+ *  都列会同一计数出现两遍；没有枚举名形态时退回全部非组名键。截前 6 条。 */
 const counterSummary = computed(() => {
   const c = mrReport.value?.job?.counters ?? {}
-  const keys = Object.keys(c).filter((k) => !k.includes('/'))
+  const plain = Object.keys(c).filter((k) => !k.includes('/'))
+  const enums = plain.filter((k) => /^[A-Z0-9_:]+$/.test(k))
+  const keys = enums.length ? enums : plain
   const head = keys
     .slice(0, 6)
     .map((k) => `${k}=${c[k]}`)
