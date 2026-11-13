@@ -207,8 +207,71 @@
     状态；逐步执行、逐步「提交」→ `t_step_record`；**锁序**：前步无通过记录时下一步
     灰锁（状态由服务端回传）。
   - **project 档 TODO 块**：占位块带 ▶，点击回填学生工程代码（块实时替换、工程变更
-    标 stale）；提交时由回填结果拼出**实验报告 md**（讲义 + 学生代码）一并上送。
+    标 stale）；提交时由回填结果拼出**实验报告 md**（讲义 + 学生代码）一并上送留存。
   - 判分展示沿用「只报事实」：+point / -failsPoint / 豁免 3 次由服务端计算回显。
+  - **档位**：`todo` 回填仅 project 档（只有它有外部学生工程可作回填源）；body / method /
+    class 三档的片段块、以及 mr 文档里的普通代码块，学生直接在块内填写、块内 ▶ 执行，
+    由主引擎 `expect=` 核对，零新语法。
+  - **提前做守卫**（提交第 i 步时往后查第 i+1..n 步是否已被做）：① 学生工程里出现
+    后续 TODO 声明的类，② 本地 trace / journal 里出现后续块的执行记录——命中由
+    引擎端诊断拦下；未声明的类只标「可疑」不拦。守卫只查「做过没有」的事实，
+    不比对代码内容、也不比对 md 文本。与**锁序**互补：锁序往前看（前步没过不给
+    下一步），守卫往后看（后面的步别提前做掉）。
+  - **骨架依赖前置检查**（project 档，TEACHING-SPEC §3.6）：实验 1 学生自建骨架；
+    实验 2+ 讲义用 `requires` 显式声明依赖，`runDocument` 前置精确检查，缺失则
+    诊断「回到实验 1 初始化骨架」，不进编译提交。
+
+mr-job 实验全链路时序（教师录制 → 骨架检查 → 逐步执行与提交 → 报告留存）：
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant T as 教师（文览·发布与录制）
+    participant S as 文枢（编排 · t_step_record · 计分）
+    participant Stu as 学生·文览教学客户端（文视图 + 执行面板）
+    participant E as 文运（mdcode2run · runDocument）
+
+    Note over T,S: 阶段① 课前：录制 trace 与发布
+    T->>E: 按实验手册跑通（教师侧录制 trace sidecar）
+    E-->>T: trace（合法步骤序列，可乱序可重复）
+    T->>S: 发布实验（讲义 + trace + requires 骨架依赖）
+    S->>S: 发布校验（problems → 拒发）
+
+    Note over Stu,E: 阶段② 拉取与骨架前置检查
+    Stu->>S: 登录 · 拉取发布物
+    S-->>Stu: 学生版讲义 + trace 步骤序列
+    Stu->>E: runDocument（project 档）
+    E->>E: 精确检查 requires（class=… / file=…）
+    alt 骨架缺失
+        E-->>Stu: 诊断「回到实验 1 初始化骨架」，不进编译
+    else 骨架齐备
+        E-->>Stu: 允许进入执行
+    end
+
+    Note over Stu,S: 阶段③ 逐步执行与提交（每步 i）
+    loop 按 trace 序逐步
+        Note over Stu: 面板列步骤 · 前步未通过则下一步灰锁（锁序）
+        Stu->>Stu: 块内填写（非 project 档）或 todo 块回填（project 档）
+        Stu->>E: 块内 ▶ 执行 · expect= 核对
+        E->>E: journal / trace 记账 · 聚合 RunReport.steps（只报事实）
+        E-->>Stu: steps：断言 / 执行记录 / 输出摘要
+        Stu->>E: 提交第 i 步
+        E->>E: 提前做守卫：往后查第 i+1..n 步是否已被做
+        alt 命中（后续 TODO 类或后续块执行记录）
+            E-->>Stu: 引擎端诊断拦下（未声明的类只标可疑）
+        else 未命中
+            E-->>Stu: 事实组合：断言全过 且 本步有成功执行记录
+            Stu->>S: 步骤证据写入 t_step_record
+            S->>S: 锁序校验 · 判分只对比结果（+point / -failsPoint / 豁免 / 逾期重练）
+            S-->>Stu: 通过 / 得分 · 解锁下一步
+        end
+    end
+
+    Note over Stu,S: 阶段④ 实验报告留存
+    Stu->>Stu: TODO 块回填学生工程代码（工程变更标 stale）· 拼实验报告 md
+    Stu->>S: 上送报告（讲义 + 学生代码）仅留存，不参与判分
+    S->>S: 成绩汇入成绩册（分数只来自结果）
+```
 
 ### 5.4 教育能力入口（最小叠加，D9/D10，E6）
 
