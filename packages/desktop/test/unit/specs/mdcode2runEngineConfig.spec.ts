@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   engineConfigPath,
   loadEngineProfile,
+  loadMrProfile,
   resolveEngineConfig
 } from '../../../src/main/mdcode2run/registry'
 
@@ -89,5 +90,28 @@ describe('mdcode2run 引擎配置文件', () => {
     expect(merged.hive.SSH_HOST).toBe('node0')
     // Python 解释器由 detectPython 自动探测；有结果时不应被文件配置抹掉
     if (merged.python.PYTHON_PATH) expect(typeof merged.python.PYTHON_PATH).toBe('string')
+  })
+
+  // mr 执行器（runDocument）的机器三路径：只从 mr 键读，空串按缺省（引擎回落环境变量）。
+  it('mr 段：三路径原样透出，空串/非字符串按缺省', () => {
+    vi.stubEnv(
+      'MD2R_CONFIG_FILE',
+      writeConfig(
+        JSON.stringify({
+          mr: { jdkHome: 'D:/jdk8', hadoopHome: 'D:/hadoop-3.1.3', winutilsHome: '   ' }
+        })
+      )
+    )
+    expect(loadMrProfile()).toEqual({
+      jdkHome: 'D:/jdk8',
+      hadoopHome: 'D:/hadoop-3.1.3',
+      winutilsHome: undefined
+    })
+    vi.stubEnv('MD2R_CONFIG_FILE', writeConfig(JSON.stringify({ hive: {} })))
+    expect(loadMrProfile()).toEqual({
+      jdkHome: undefined,
+      hadoopHome: undefined,
+      winutilsHome: undefined
+    })
   })
 })
