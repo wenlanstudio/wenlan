@@ -1095,7 +1095,22 @@
     "output": "Output",
     "resizeHint": "Drag to resize · Double-click to maximize",
     "noBlocks": "No runnable code blocks in this document",
-    "close": "Close code run panel"
+    "close": "Close code run panel",
+    "runJob": "Run whole job",
+    "jobRunning": "Job running…",
+    "jobHint": "weave → validate → build → submit → asserts (mr-job doc)",
+    "mrOwned": "consumed by the job pipeline",
+    "reportOk": "Job passed",
+    "reportFail": "Job failed",
+    "reportStage": "stage",
+    "reportDiagnostics": "Diagnostics",
+    "reportAsserts": "Asserts",
+    "reportJob": "Observation",
+    "reportDuration": "duration",
+    "reportExit": "exit",
+    "reportCounters": "counters",
+    "reportOutput": "output",
+    "reportWorkdir": "workdir"
   },
   "account": {
     "account": "Account",

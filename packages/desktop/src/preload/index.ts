@@ -322,6 +322,12 @@ const mdcode2runAPI = {
     replay?: boolean
     timeout?: number
   }) => invoke('mt::mdcode2run::run', opts),
+  runDocument: (opts: {
+    docPath: string
+    md: string
+    timeoutMs?: number
+    compileOnly?: boolean
+  }) => invoke('mt::mdcode2run::run-document', opts),
   resetSession: (opts: { docPath: string; md: string; line: number }) =>
     invoke('mt::mdcode2run::reset-session', opts),
   journal: (opts: { docPath: string; chapterLine: number }) =>

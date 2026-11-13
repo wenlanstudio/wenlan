@@ -54,80 +54,195 @@
       >
         {{ parseError }}
       </div>
-      <div
-        v-else
-        class="block-list"
-      >
-        <div
-          v-for="b in blocks"
-          :key="b.line"
-          class="block-row"
-          :class="{ active: selectedLine === b.line, disabled: !b.runnable }"
-          :title="reasonOf(b)"
-          @click="select(b.line)"
-        >
-          <span
-            class="lang-badge"
-            :data-family="b.family ?? ''"
-          >{{ b.lang || b.role }}</span>
-          <span class="loc">L{{ b.line + 1 }}</span>
-          <span class="snippet">{{ snippetOf(b) }}</span>
-          <span
-            v-if="resultOf(b.line) && staleOf(b.line)"
-            class="stale"
-          >{{
-            t('execPanel.stale')
-          }}</span>
-          <span
-            v-if="seqOf(b.line) !== null"
-            class="seq"
-          >#{{ seqOf(b.line) }}</span>
-          <span
-            v-if="resultOf(b.line)?.ok === false"
-            class="failed"
-          >{{
-            t('execPanel.failed')
-          }}</span>
-          <button
-            class="run-btn"
-            :disabled="!b.runnable || isRunning(b.line)"
-            :title="isRunning(b.line) ? t('execPanel.running') : t('execPanel.run')"
-            @click.stop="runBlock(b.line)"
+      <template v-else>
+        <!-- 左栏：mr 文档的整份作业入口 + 块清单（JetBrains 式两栏：左块表、右输出） -->
+        <div class="left-col">
+          <!-- mr 体裁（kind="mr"）：文档级「运行整份作业」入口。体裁是加法不是减法——
+               普通块 ▶ 照旧，这里只是多一条作业管线入口（docs/MR-EXECUTOR.md §2）。 -->
+          <div
+            v-if="docKind === 'mr'"
+            class="job-bar"
           >
-            <svg
-              viewBox="0 0 24 24"
-              width="12"
-              height="12"
-              fill="currentColor"
+            <button
+              class="job-run-btn"
+              :disabled="mrRunning || !docPath"
+              @click="runWholeJob"
             >
-              <path d="M8 5l12 7-12 7z" />
-            </svg>
-          </button>
+              {{ mrRunning ? t('execPanel.jobRunning') : t('execPanel.runJob') }}
+            </button>
+            <span class="job-hint">{{ t('execPanel.jobHint') }}</span>
+          </div>
+          <div class="block-list">
+            <div
+              v-for="b in blocks"
+              :key="b.line"
+              class="block-row"
+              :class="{ active: selectedLine === b.line, disabled: !b.runnable }"
+              :title="reasonOf(b)"
+              @click="select(b.line)"
+            >
+              <span
+                class="lang-badge"
+                :data-family="b.family ?? ''"
+              >{{ badgeOf(b) }}</span>
+              <span class="loc">L{{ b.line + 1 }}</span>
+              <span class="snippet">{{ snippetOf(b) }}</span>
+              <span
+                v-if="resultOf(b.line) && staleOf(b.line)"
+                class="stale"
+              >{{
+                t('execPanel.stale')
+              }}</span>
+              <span
+                v-if="seqOf(b.line) !== null"
+                class="seq"
+              >#{{ seqOf(b.line) }}</span>
+              <span
+                v-if="resultOf(b.line)?.ok === false"
+                class="failed"
+              >{{
+                t('execPanel.failed')
+              }}</span>
+              <button
+                class="run-btn"
+                :disabled="!b.runnable || isRunning(b.line)"
+                :title="isRunning(b.line) ? t('execPanel.running') : t('execPanel.run')"
+                @click.stop="runBlock(b.line)"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="12"
+                  height="12"
+                  fill="currentColor"
+                >
+                  <path d="M8 5l12 7-12 7z" />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-      <div
-        v-if="visible && docPath && !parseError && selectedLine !== null"
-        class="output-area"
-      >
-        <div class="output-toolbar">
-          <span class="output-label">
-            {{ t('execPanel.output') }} · {{ langOf(selectedLine) }} L{{ selectedLine + 1 }}
-          </span>
-          <button
-            v-if="isRunning(selectedLine)"
-            class="stop-btn"
-            @click="stopSelected"
+        <div class="right-col">
+          <div
+            v-if="visible && docPath && !parseError && selectedLine !== null"
+            class="output-area"
           >
-            {{ t('execPanel.stop') }}
-          </button>
-        </div>
-        <pre
-          class="output-text"
-          :class="{ error: resultOf(selectedLine)?.ok === false }"
-        >{{
+            <div class="output-toolbar">
+              <span class="output-label">
+                {{ t('execPanel.output') }} · {{ langOf(selectedLine) }} L{{ selectedLine + 1 }}
+              </span>
+              <button
+                v-if="isRunning(selectedLine)"
+                class="stop-btn"
+                @click="stopSelected"
+              >
+                {{ t('execPanel.stop') }}
+              </button>
+            </div>
+            <pre
+              class="output-text"
+              :class="{ error: resultOf(selectedLine)?.ok === false }"
+            >{{
           finalOutputOf(selectedLine)
-        }}</pre>
-      </div>
+            }}</pre>
+          </div>
+          <!-- mr 整份作业的 RunReport 卡：流式日志 + 诊断（学生行号）/ 断言 / 运行观测 / 产物 -->
+          <div
+            v-if="docKind === 'mr' && (mrRunning || mrReport)"
+            class="mr-report"
+          >
+            <div
+              class="mr-report-head"
+              :class="mrRunning ? 'busy' : mrReport && mrReport.ok ? 'ok' : 'fail'"
+            >
+              {{
+                mrRunning
+                  ? t('execPanel.jobRunning')
+                  : mrReport && mrReport.ok
+                    ? t('execPanel.reportOk')
+                    : t('execPanel.reportFail')
+              }}
+              <template v-if="mrReport">
+                · {{ t('execPanel.reportStage') }}: {{ mrReport.stage }}
+              </template>
+            </div>
+            <pre
+              v-if="mrOutput"
+              class="output-text mr-stream"
+            >{{ mrOutput }}</pre>
+            <template v-if="mrReport">
+              <div
+                v-if="mrReport.diagnostics.length"
+                class="mr-section"
+              >
+                <div class="mr-section-title">
+                  {{ t('execPanel.reportDiagnostics') }} ({{ mrReport.diagnostics.length }})
+                </div>
+                <div
+                  v-for="(d, i) in mrReport.diagnostics"
+                  :key="i"
+                  class="mr-diag"
+                  :class="d.level"
+                >
+                  {{ d.message }}
+                </div>
+              </div>
+              <div
+                v-if="mrReport.asserts.length"
+                class="mr-section"
+              >
+                <div class="mr-section-title">
+                  {{ t('execPanel.reportAsserts') }}
+                </div>
+                <div
+                  v-for="(a, i) in mrReport.asserts"
+                  :key="i"
+                  class="mr-assert"
+                >
+                  <span :class="a.passed ? 'pass' : 'fail'">{{ a.passed ? '✓' : '✗' }}</span>
+                  {{ a.kind }}<template v-if="a.expected">
+                    · {{ a.expected }}
+                  </template><template v-if="!a.passed && a.actual">
+                    — {{ a.actual }}
+                  </template>
+                </div>
+              </div>
+              <div
+                v-if="mrReport.job"
+                class="mr-section"
+              >
+                <div class="mr-section-title">
+                  {{ t('execPanel.reportJob') }}
+                </div>
+                <div class="mr-kv">
+                  <span>{{ t('execPanel.reportDuration') }}</span><span>{{ jobDurationLabel }}</span>
+                </div>
+                <div
+                  v-if="mrReport.job.code !== undefined && mrReport.job.code !== null"
+                  class="mr-kv"
+                >
+                  <span>{{ t('execPanel.reportExit') }}</span><span>{{ mrReport.job.code }}</span>
+                </div>
+                <div
+                  v-if="counterSummary"
+                  class="mr-kv"
+                >
+                  <span>{{ t('execPanel.reportCounters') }}</span><span>{{ counterSummary }}</span>
+                </div>
+                <div
+                  v-if="mrReport.artifacts.output || mrReport.artifacts.workdir"
+                  class="mr-kv"
+                >
+                  <span>{{ mrReport.artifacts.output ? t('execPanel.reportOutput') : t('execPanel.reportWorkdir') }}</span>
+                  <span
+                    class="mr-path"
+                    :title="mrReport.artifacts.output || mrReport.artifacts.workdir"
+                  >{{ mrReport.artifacts.output || mrReport.artifacts.workdir }}</span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -140,7 +255,7 @@ import bus from '@/bus'
 import { useEditorStore } from '@/store/editor'
 import { useEditorViewStore } from '@/store/editorView'
 import { useExecPanelStore, PANEL_MIN_HEIGHT, PANEL_DEFAULT_HEIGHT } from '@/store/execPanel'
-import type { Md2rBlockInfo, Md2rEvent, Md2rRunResult } from '@shared/types/mdcode2run'
+import type { Md2rBlockInfo, Md2rEvent, Md2rRunReport, Md2rRunResult } from '@shared/types/mdcode2run'
 import { diagramTypeOfLang } from '@muyajs/core'
 import { codeSlice, findFenceByCode } from '@/util/fenceRun'
 
@@ -186,6 +301,14 @@ const running = ref<Record<number, string | true>>({})
 const ranCode = ref<Record<number, string>>({})
 /** jobId → 块行号（job-done 事件找回头）。 */
 const jobLine = new Map<string, number>()
+
+// —— mr 体裁（kind="mr"）：文档级整份作业运行（docs/MR-EXECUTOR.md）——
+const docKind = ref<'mr' | 'generic'>('generic')
+const mrRunning = ref(false)
+/** 整份作业的流式日志（family="hadoop" 的 chunk，独立于块级 outputs 表）。 */
+const mrOutput = ref('')
+/** RunReport 终值（runDocument invoke 返回；事件 done 只负责熄运行灯）。 */
+const mrReport = ref<Md2rRunReport | null>(null)
 
 /** 累计输出上限：截尾保留尾部（尾部才是最新进展）。 */
 const MAX_OUTPUT_CHARS = 1_000_000
@@ -248,6 +371,7 @@ const refresh = async (): Promise<void> => {
     // 「语法事实」（渲染端要画图），而 code run 是「可执行代码」的语义面，
     // 图表既不可跑也不该以置灰块的形式占位——它根本不属于这个工具窗口。
     blocks.value = parsed.blocks.filter((b) => !isDiagramLang(fenceLangOf(b.lang)))
+    docKind.value = parsed.kind
     // stale 重算：行号锚定的块若代码快照变了 → 旧结果标 stale；块没了 → 丢结果
     const byLine = new Map(blocks.value.map((b) => [b.line, b]))
     for (const line of Object.keys(results.value).map(Number)) {
@@ -300,6 +424,19 @@ const appendChunk = (line: number, text: string): void => {
 
 const handleEvent = (event: Md2rEvent): void => {
   if (event.docPath !== docPath.value) return
+  // mr 整份作业事件（family="hadoop"，line=-1）：走独立通道，不进块级输出表
+  if (event.type !== 'job-done' && event.family === 'hadoop') {
+    if (event.type === 'started') {
+      mrRunning.value = true
+      mrOutput.value = ''
+    } else if (event.type === 'chunk') {
+      const next = mrOutput.value + event.text
+      mrOutput.value = next.length > MAX_OUTPUT_CHARS ? next.slice(-MAX_OUTPUT_CHARS) : next
+    } else if (event.type === 'done') {
+      mrRunning.value = false
+    }
+    return
+  }
   switch (event.type) {
     case 'chunk': {
       // 只喂给在跑的块：done 之后的迟到 chunk 丢弃（重跑已清场）
@@ -436,6 +573,57 @@ const stopSelected = (): void => {
   delete running.value[line]
 }
 
+// —— mr 整份作业（runDocument）：终值 = invoke 返回的 RunReport ——
+const runWholeJob = async (): Promise<void> => {
+  const path = docPath.value
+  if (!path || mrRunning.value) return
+  mrRunning.value = true
+  mrOutput.value = ''
+  mrReport.value = null
+  try {
+    mrReport.value = await window.mdcode2run.runDocument({
+      docPath: path,
+      md: props.markdown
+    })
+  } catch (err) {
+    mrReport.value = {
+      ok: false,
+      stage: 'spec',
+      id: '',
+      scaffold: '',
+      mode: '',
+      diagnostics: [
+        {
+          level: 'error',
+          kind: 'ipc',
+          message: err instanceof Error ? err.message : String(err)
+        }
+      ],
+      asserts: [],
+      job: null,
+      artifacts: {}
+    }
+  } finally {
+    mrRunning.value = false
+  }
+}
+
+const jobDurationLabel = computed(() => {
+  const ms = mrReport.value?.job?.durationMs ?? 0
+  return `${Math.round(ms / 100) / 10}s`
+})
+
+/** counters 摘要：跳过组名/裸名别名键（不含 / 的代表键），截前 6 条。 */
+const counterSummary = computed(() => {
+  const c = mrReport.value?.job?.counters ?? {}
+  const keys = Object.keys(c).filter((k) => !k.includes('/'))
+  const head = keys
+    .slice(0, 6)
+    .map((k) => `${k}=${c[k]}`)
+    .join(' · ')
+  return keys.length > 6 ? `${head} …` : head
+})
+
 // —— 视图辅助 ——
 /** 让编辑区滚到该块的围栏内容首行（空围栏退回围栏行）——所见即所跑。 */
 const revealBlock = (line: number): void => {
@@ -462,10 +650,18 @@ const snippetOf = (b: Md2rBlockInfo): string => {
 
 const resultOf = (line: number): Md2rRunResult | undefined => results.value[line]
 
+/** 块徽章：mr 片段显示阶段名（作业管线的消费单位），其余显示语言标签。 */
+const badgeOf = (b: Md2rBlockInfo): string => {
+  if (b.stage) return b.stage
+  if (b.mrOwned && b.job) return 'job'
+  return b.lang || b.role
+}
+
 /** 不可跑块的原因（悬停提示）：标注问题 + 角色 + 语言支持，三选一拼。 */
 const reasonOf = (b: Md2rBlockInfo): string => {
   if (b.runnable) return t('execPanel.run')
   const bits = [...b.problems]
+  if (b.mrOwned) bits.push(t('execPanel.mrOwned'))
   if (b.role !== 'code') bits.push(`role: ${b.role}`)
   if (!b.supported) bits.push(`unsupported: ${b.lang || '?'}`)
   return bits.join(' · ')
@@ -693,11 +889,28 @@ onBeforeUnmount(() => {
   min-height: 0;
 }
 
-.block-list {
+/* 两栏：左 = 块表（mr 文档多一条作业入口条），右 = 输出 / RunReport 卡 */
+.left-col {
   flex: none;
   width: 340px;
-  overflow: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   border-right: 1px solid var(--editorColor10);
+}
+
+.right-col {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.block-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 .block-row {
@@ -847,6 +1060,116 @@ onBeforeUnmount(() => {
   font-family: var(--editorFontMono, monospace);
   white-space: pre-wrap;
   word-break: break-all;
+  user-select: text;
+}
+
+/* ── mr 体裁：文档级整份作业入口 + RunReport 卡（docs/MR-EXECUTOR.md）── */
+.job-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 34px 4px 10px;
+  border-bottom: 1px solid var(--editorColor10);
+}
+
+.job-run-btn {
+  padding: 2px 12px;
+  border: none;
+  border-radius: 3px;
+  background: var(--themeColor);
+  color: var(--editorBgColor);
+  cursor: pointer;
+}
+
+.job-run-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.job-hint {
+  color: var(--editorColor50);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mr-report {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  border-top: 1px solid var(--editorColor10);
+}
+
+.mr-report-head {
+  padding: 4px 10px;
+  font-weight: 600;
+}
+
+.mr-report-head.busy {
+  color: var(--warningColor, #e6a23c);
+}
+
+.mr-report-head.ok {
+  color: var(--successColor, #6ad08b);
+}
+
+.mr-report-head.fail {
+  color: var(--dangerColor, #eb4d4d);
+}
+
+.mr-stream {
+  max-height: 30vh;
+  padding: 4px 10px;
+}
+
+.mr-section {
+  padding: 4px 10px;
+  border-top: 1px dashed var(--editorColor10);
+}
+
+.mr-section-title {
+  color: var(--editorColor50);
+  margin-bottom: 2px;
+}
+
+.mr-diag {
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: text;
+}
+
+.mr-diag.error {
+  color: var(--dangerColor, #eb4d4d);
+}
+
+.mr-diag.warn {
+  color: var(--warningColor, #e6a23c);
+}
+
+.mr-assert .pass {
+  color: var(--successColor, #6ad08b);
+}
+
+.mr-assert .fail {
+  color: var(--dangerColor, #eb4d4d);
+}
+
+.mr-kv {
+  display: flex;
+  gap: 8px;
+}
+
+.mr-kv > span:first-child {
+  color: var(--editorColor50);
+  flex: none;
+}
+
+.mr-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
   user-select: text;
 }
 

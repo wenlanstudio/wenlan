@@ -15,7 +15,7 @@ export interface Md2rBlockInfo {
   family: string | null
   /** 语言是否受支持（family 非空）。 */
   supported: boolean
-  /** 可执行（支持语言 + 可跑角色 + 无标注冲突）。 */
+  /** 可执行（支持语言 + 可跑角色 + 无标注冲突；mr 文档的管线自营块恒 false）。 */
   runnable: boolean
   /** 围栏开启行（0 基）。 */
   line: number
@@ -29,6 +29,10 @@ export interface Md2rBlockInfo {
   file: string | undefined
   /** 标注问题（未知/重复/冲突）；非空块只展示不执行。 */
   problems: string[]
+  /** mr 文档：stage 片段的阶段名（map/reduce/combine/partition/driver），非片段恒 null。 */
+  stage: string | null
+  /** mr 文档：管线自营块（stage 片段 / job 提交块）——由 runDocument 消费，块级 ▶ 收口。 */
+  mrOwned: boolean
 }
 
 /** 章（h1 = 会话边界 = 重放范围）。 */
@@ -50,6 +54,8 @@ export interface Md2rParseResult {
   blocks: Md2rBlockInfo[]
   chapters: Md2rChapterInfo[]
   fm: Md2rFrontMatter
+  /** 文档体裁：mr = front-matter 带 mr-job: 段的 MapReduce 作业文档（docs/MR-EXECUTOR.md）。 */
+  kind: 'mr' | 'generic'
 }
 
 /** 章会话 HUD：同章同 family 共享会话，seq 是章内执行序号（▶ ran #N）。 */
@@ -99,6 +105,61 @@ export interface Md2rJobOutcome {
   killed?: boolean
   durationMs?: number
   error?: string
+}
+
+/**
+ * mr 执行器（runDocument）的 RunReport——文档级结果契约，原样过 IPC（全 JSON 安全）。
+ * 形状权威 = mdcode2run docs/MR-EXECUTOR.md §4.3；stage ∈ spec|collect|scaffold|validate|
+ * build|submit|assert + 成功终态 done。
+ */
+export interface Md2rDiagnostic {
+  level: 'error' | 'warn' | 'info'
+  kind: string
+  message: string
+  file?: string
+  line?: number
+  /** 回映后的学生行号（织入产物的 file/line 之外的面向作者坐标）。 */
+  studentLine?: number
+}
+
+export interface Md2rAssertRecord {
+  kind: string
+  passed: boolean
+  expected?: string
+  actual?: string
+}
+
+export interface Md2rRunReport {
+  ok: boolean
+  stage: string
+  id: string
+  scaffold: string
+  mode: string
+  diagnostics: Md2rDiagnostic[]
+  asserts: Md2rAssertRecord[]
+  job: {
+    counters: Record<string, number>
+    durationMs: number
+    outputFiles: string[]
+    bytes: number
+    code?: number
+    stdout?: string
+    stderr?: string
+  } | null
+  artifacts: {
+    workdir?: string
+    sources?: string[]
+    jar?: string | null
+    output?: string
+  }
+}
+
+/** runDocument 的 invoke 参数（事件流走既有 mt::mdcode2run::event，family="hadoop"）。 */
+export interface Md2rRunDocumentOpts {
+  docPath: string
+  md: string
+  timeoutMs?: number
+  compileOnly?: boolean
 }
 
 /**

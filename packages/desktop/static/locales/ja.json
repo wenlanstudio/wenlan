@@ -1087,7 +1087,22 @@
     "output": "Output",
     "resizeHint": "ドラッグで高さ変更・ダブルクリックで最大化",
     "noBlocks": "実行可能なコードブロックがありません",
-    "close": "実行パネルを閉じる"
+    "close": "実行パネルを閉じる",
+    "runJob": "Run whole job",
+    "jobRunning": "Job running…",
+    "jobHint": "weave → validate → build → submit → asserts (mr-job doc)",
+    "mrOwned": "consumed by the job pipeline",
+    "reportOk": "Job passed",
+    "reportFail": "Job failed",
+    "reportStage": "stage",
+    "reportDiagnostics": "Diagnostics",
+    "reportAsserts": "Asserts",
+    "reportJob": "Observation",
+    "reportDuration": "duration",
+    "reportExit": "exit",
+    "reportCounters": "counters",
+    "reportOutput": "output",
+    "reportWorkdir": "workdir"
   },
   "view": {
     "slidesView": "Slides View",

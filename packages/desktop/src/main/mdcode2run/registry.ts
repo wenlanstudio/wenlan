@@ -133,6 +133,28 @@ export const resolveEngineConfig = (): Record<string, Record<string, unknown>> =
   return merged
 }
 
+/**
+ * mr 执行器（runDocument）的机器配置：配置文件 `mr` 键下的三路径，例：
+ * { "mr": { "jdkHome": "D:/Program Files/Java/jdk1.8.0_471",
+ *           "hadoopHome": "D:/bigdata/hadoop/hadoop-3.1.3",
+ *           "winutilsHome": "D:/bigdata/hadoop/hadoop-3.1.0" } }
+ * 空值/缺键 → 引擎回落环境变量（MDX_JDK_HOME / MDX_HADOOP_HOME / MDX_WINUTILS_HOME）。
+ */
+export interface Md2rMrProfile {
+  jdkHome?: string
+  hadoopHome?: string
+  winutilsHome?: string
+}
+
+export const loadMrProfile = (): Md2rMrProfile => {
+  const raw = loadEngineProfile().mr
+  const pick = (key: string): string | undefined => {
+    const v = raw?.[key]
+    return typeof v === 'string' && v.trim() ? v.trim() : undefined
+  }
+  return { jdkHome: pick('jdkHome'), hadoopHome: pick('hadoopHome'), winutilsHome: pick('winutilsHome') }
+}
+
 const wireEvents = (entry: EngineEntry): void => {
   if (entry.wired) return
   entry.wired = true

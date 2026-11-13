@@ -1095,7 +1095,22 @@
     "output": "输出",
     "resizeHint": "拖动调整高度 · 双击最大化/还原",
     "noBlocks": "文档中没有可运行的代码块",
-    "close": "关闭执行窗"
+    "close": "关闭执行窗",
+    "runJob": "运行整份作业",
+    "jobRunning": "作业运行中…",
+    "jobHint": "织入 → 校验 → 编译 → 提交 → 断言（mr-job 文档）",
+    "mrOwned": "由整份作业管线消费",
+    "reportOk": "作业通过",
+    "reportFail": "作业未通过",
+    "reportStage": "阶段",
+    "reportDiagnostics": "诊断",
+    "reportAsserts": "断言",
+    "reportJob": "运行观测",
+    "reportDuration": "耗时",
+    "reportExit": "退出码",
+    "reportCounters": "计数器",
+    "reportOutput": "产物",
+    "reportWorkdir": "工作目录"
   },
   "account": {
     "account": "账户",

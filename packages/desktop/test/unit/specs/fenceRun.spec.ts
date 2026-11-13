@@ -17,6 +17,8 @@ const block = (over: Partial<Md2rBlockInfo> = {}): Md2rBlockInfo => ({
   job: false,
   file: undefined,
   problems: [],
+  stage: null,
+  mrOwned: false,
   ...over
 })
 

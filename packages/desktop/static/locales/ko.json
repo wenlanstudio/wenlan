@@ -1087,7 +1087,22 @@
     "output": "Output",
     "resizeHint": "끌어서 크기 조절 · 더블클릭으로 최대화",
     "noBlocks": "실행 가능한 코드 블록이 없습니다",
-    "close": "실행 패널 닫기"
+    "close": "실행 패널 닫기",
+    "runJob": "Run whole job",
+    "jobRunning": "Job running…",
+    "jobHint": "weave → validate → build → submit → asserts (mr-job doc)",
+    "mrOwned": "consumed by the job pipeline",
+    "reportOk": "Job passed",
+    "reportFail": "Job failed",
+    "reportStage": "stage",
+    "reportDiagnostics": "Diagnostics",
+    "reportAsserts": "Asserts",
+    "reportJob": "Observation",
+    "reportDuration": "duration",
+    "reportExit": "exit",
+    "reportCounters": "counters",
+    "reportOutput": "output",
+    "reportWorkdir": "workdir"
   },
   "view": {
     "slidesView": "Slides View",

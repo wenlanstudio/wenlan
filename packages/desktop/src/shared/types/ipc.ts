@@ -38,6 +38,8 @@ import type {
   Md2rEvent,
   Md2rJournalEntry,
   Md2rParseResult,
+  Md2rRunDocumentOpts,
+  Md2rRunReport,
   Md2rRunResult
 } from './mdcode2run'
 import type {
@@ -131,6 +133,12 @@ export interface IpcInvokeChannels {
   'mt::mdcode2run::reset-session': {
     args: [opts: { docPath: string; md: string; line: number }]
     ret: boolean
+  }
+  // 运行整份 mr-job 文档（体裁 kind="mr"）：织入 → 校验 → unit/local 后端 → asserts
+  // → RunReport。流式日志走 mt::mdcode2run::event（family="hadoop"），终值以 invoke 为准。
+  'mt::mdcode2run::run-document': {
+    args: [opts: Md2rRunDocumentOpts]
+    ret: Md2rRunReport
   }
   // 章执行日志（▶ 序列，供渲染端显示 ran #N / stale）。
   'mt::mdcode2run::journal': {

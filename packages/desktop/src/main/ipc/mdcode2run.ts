@@ -20,24 +20,29 @@ import type {
   Md2rEvent,
   Md2rJournalEntry,
   Md2rParseResult,
+  Md2rRunDocumentOpts,
+  Md2rRunReport,
   Md2rRunResult
 } from '@shared/types/mdcode2run'
 import {
   attachJob,
   disposeAllEngines,
   disposeEngine,
+  loadMrProfile,
   setEventSink,
   stopJob,
   unwatchAllFor,
   watchEngine
 } from '../mdcode2run/registry'
 
-/** parse 结果的序列化投影：剥离 fences（含 code 正文）、章只留围栏行号。 */
+/** parse 结果的序列化投影：剥离 fences（含 code 正文）、章只留围栏行号，体裁透传。 */
 const serializeParse = (parsed: {
+  kind: 'mr' | 'generic'
   blocks: unknown[]
   chapters: Array<{ title: string; line: number; fences: Array<{ line: number }> }>
   fm: { codeExec: Record<string, unknown>; top: Record<string, string> }
 }): Md2rParseResult => ({
+  kind: parsed.kind,
   blocks: parsed.blocks as unknown as Md2rParseResult['blocks'],
   chapters: parsed.chapters.map(
     (c): Md2rChapterInfo => ({
@@ -96,18 +101,41 @@ const runHandler = async(
   return attachJob(entry, raw)
 }
 
+/**
+ * 运行整份 mr-job 文档（体裁 kind="mr"）：织入 → 校验 → unit/local 后端 → asserts
+ * → RunReport。流式日志走既有事件推送（family="hadoop"，registry wireEvents 原样转发），
+ * 终值以 invoke 返回的 RunReport 为准。机器三路径从配置文件 `mr` 键读（空则引擎回落
+ * 环境变量）；docDir 不传——引擎实例已锚定文档目录，教学窗 projectsRoot 落位天然成立。
+ */
+const runDocumentHandler = async(
+  e: IpcMainInvokeEvent,
+  opts: Md2rRunDocumentOpts
+): Promise<Md2rRunReport> => {
+  if (!opts || typeof opts.docPath !== 'string' || typeof opts.md !== 'string') {
+    throw new Error('Invalid mdcode2run run-document request')
+  }
+  const { entry } = watchEngine(opts.docPath, e.sender.id)
+  const mr = loadMrProfile()
+  return entry.engine.runDocument(opts.md, {
+    timeoutMs: opts.timeoutMs,
+    compileOnly: opts.compileOnly,
+    jdkHome: mr.jdkHome,
+    hadoopHome: mr.hadoopHome,
+    winutilsHome: mr.winutilsHome
+  })
+}
+
 const resetSessionHandler = (
   e: IpcMainInvokeEvent,
   opts: { docPath: string; md: string; line: number }
-): boolean => {
-  if (!opts || typeof opts.docPath !== 'string' || typeof opts.md !== 'string') {
-    throw new Error('Invalid mdcode2run reset-session request')
-  }
-  const { entry } = watchEngine(opts.docPath, e.sender.id)
-  const ctx = entry.engine.locate(opts.md, { line: opts.line ?? 0 })
-  if (!ctx) return false
-  entry.engine.resetSession(ctx)
-  return true
+): boolean => {  if (!opts || typeof opts.docPath !== 'string' || typeof opts.md !== 'string') {
+  throw new Error('Invalid mdcode2run reset-session request')
+}
+const { entry } = watchEngine(opts.docPath, e.sender.id)
+const ctx = entry.engine.locate(opts.md, { line: opts.line ?? 0 })
+if (!ctx) return false
+entry.engine.resetSession(ctx)
+return true
 }
 
 const journalHandler = (
@@ -151,6 +179,7 @@ export const registerMdcode2runHandlers = (): void => {
 
   ipcMain.handle('mt::mdcode2run::parse', parseHandler)
   ipcMain.handle('mt::mdcode2run::run', runHandler)
+  ipcMain.handle('mt::mdcode2run::run-document', runDocumentHandler)
   ipcMain.handle('mt::mdcode2run::reset-session', resetSessionHandler)
   ipcMain.handle('mt::mdcode2run::journal', journalHandler)
   ipcMain.handle('mt::mdcode2run::dispose', disposeHandler)

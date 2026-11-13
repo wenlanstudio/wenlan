@@ -10,6 +10,8 @@
 declare module 'mdcode2run' {
   import type {
     Md2rJournalEntry,
+    Md2rRunDocumentOpts,
+    Md2rRunReport,
     Md2rRunResult,
     Md2rSessionInfo
   } from '@shared/types/mdcode2run'
@@ -50,6 +52,19 @@ declare module 'mdcode2run' {
     src?: 'run' | 'replay' | 'trace'
   }
 
+  /** runDocument 的引擎侧选项（lib/mr runDoc 的透传；docDir 缺省引擎的 documentDir）。 */
+  export interface MdcodeRunDocumentOptions {
+    docDir?: string
+    workdir?: string
+    compileOnly?: boolean
+    jdkHome?: string
+    hadoopHome?: string
+    winutilsHome?: string
+    timeoutMs?: number
+    id?: string
+    onChunk?: (info: { stream: string; text: string }) => void
+  }
+
   /** run() 的原始结果——job 字段含函数，过 IPC 前须投影成 { id }。 */
   export interface MdcodeRunResultRaw extends Md2rRunResult {
     job?: { id: string; stop: () => void; done: Promise<MdcodeJobDone> }
@@ -75,6 +90,8 @@ declare module 'mdcode2run' {
       chapters: Array<{ title: string; line: number; fences: MdcodeFence[] }>
       fm: { codeExec: Record<string, unknown>; top: Record<string, string> }
       fences: MdcodeFence[]
+      /** 文档体裁：mr = front-matter 带 mr-job: 段（docs/MR-EXECUTOR.md）。 */
+      kind: 'mr' | 'generic'
     }
     locate(
       md: string,
@@ -82,6 +99,8 @@ declare module 'mdcode2run' {
       opts?: { anyRole?: boolean }
     ): MdcodeCtx | null
     run(ctx: MdcodeCtx, opts?: MdcodeRunOptions): Promise<MdcodeRunResultRaw>
+    /** 运行整份 mr-job 文档（M5a）：RunReport 原样返回，事件流照发（family="hadoop"）。 */
+    runDocument(md: string, opts?: MdcodeRunDocumentOptions): Promise<Md2rRunReport>
     resetSession(target: MdcodeCtx | { family?: string; key?: string } | string): void
     /** 宿主关文档时回收全部常驻会话（JVM/解释器管道撑着事件循环）。 */
     dispose(): void

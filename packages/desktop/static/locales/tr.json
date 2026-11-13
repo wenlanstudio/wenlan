@@ -1087,7 +1087,22 @@
     "output": "Output",
     "resizeHint": "Yüksekliği sürükleyerek ayarlayın · Çift tıklayarak büyütün",
     "noBlocks": "Bu belgede çalıştırılabilir kod bloğu yok",
-    "close": "Kod çalıştırma panelini kapat"
+    "close": "Kod çalıştırma panelini kapat",
+    "runJob": "Run whole job",
+    "jobRunning": "Job running…",
+    "jobHint": "weave → validate → build → submit → asserts (mr-job doc)",
+    "mrOwned": "consumed by the job pipeline",
+    "reportOk": "Job passed",
+    "reportFail": "Job failed",
+    "reportStage": "stage",
+    "reportDiagnostics": "Diagnostics",
+    "reportAsserts": "Asserts",
+    "reportJob": "Observation",
+    "reportDuration": "duration",
+    "reportExit": "exit",
+    "reportCounters": "counters",
+    "reportOutput": "output",
+    "reportWorkdir": "workdir"
   },
   "view": {
     "slidesView": "Slides View",

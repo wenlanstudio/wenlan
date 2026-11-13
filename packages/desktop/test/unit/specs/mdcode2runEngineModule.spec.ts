@@ -49,7 +49,7 @@ describe('mdcode2run 引擎模块形状（git 依赖契约）', () => {
 
   it('engine 暴露 main 进程消费的全部方法', () => {
     const engine = createEngine({ documentPath: docPath(), documentDir: tmpdir() })
-    for (const fn of ['parse', 'locate', 'run', 'resetSession', 'dispose', 'journalOf', 'traceOf']) {
+    for (const fn of ['parse', 'locate', 'run', 'resetSession', 'dispose', 'journalOf', 'traceOf', 'runDocument']) {
       expect(
         typeof (engine as unknown as Record<string, unknown>)[fn],
         `engine.${fn}`
@@ -95,6 +95,60 @@ describe('mdcode2run 引擎模块形状（git 依赖契约）', () => {
     expect(result.ok).toBe(false)
     expect(typeof result.error).toBe('string')
     expect(result.error!.length).toBeGreaterThan(0)
+    engine.dispose()
+  })
+
+  // mr 体裁（docs/MR-EXECUTOR.md）：kind 与块字段是渲染端建「运行整份作业」入口的依据；
+  // runDocument 的 RunReport 形状是 execPanel 结果卡的消费契约。
+  it('parse：普通文档 kind=generic；mr-job 文档 kind=mr 且管线自营块收口', () => {
+    const engine = createEngine({ documentPath: docPath(), documentDir: tmpdir() })
+    expect(engine.parse(MD).kind).toBe('generic')
+
+    const MR = [
+      '---',
+      'mr-job:',
+      '  name: T',
+      '  mode: unit',
+      '  types:',
+      '    in: LongWritable, Text',
+      '    map-out: Text, IntWritable',
+      '    out: Text, IntWritable',
+      '  input: d.txt',
+      '  output: out/',
+      '---',
+      '',
+      '```bash', // 12
+      'hdfs dfs -ls /',
+      '```',
+      '',
+      '```java map', // 16
+      'x;',
+      '```'
+    ].join('\n')
+    const parsed = engine.parse(MR)
+    expect(parsed.kind).toBe('mr')
+    const blocks = parsed.blocks as Array<Record<string, unknown>>
+    const bash = blocks.find(b => b['lang'] === 'bash')!
+    const map = blocks.find(b => b['stage'] === 'map')!
+    expect(bash['runnable']).toBe(true) // 混合体：普通块照旧可执行
+    expect(map['mrOwned']).toBe(true)
+    expect(map['runnable']).toBe(false) // 管线自营块收口
+    engine.dispose()
+  })
+
+  it('runDocument：fm 校验失败返回 RunReport（stage=spec），不抛异常', async() => {
+    const engine: MdcodeEngine = createEngine({
+      documentPath: docPath(),
+      documentDir: tmpdir()
+    })
+    const bad = ['---', 'mr-job:', '  nam: T', '---', ''].join('\n')
+    const report = await engine.runDocument(bad)
+    expect(report.ok).toBe(false)
+    expect(report.stage).toBe('spec')
+    expect(Array.isArray(report.diagnostics)).toBe(true)
+    expect(report.diagnostics.length).toBeGreaterThan(0)
+    expect(Array.isArray(report.asserts)).toBe(true)
+    expect(report.job).toBeNull()
     engine.dispose()
   })
 })

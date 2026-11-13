@@ -15,7 +15,13 @@ import type {
 } from '@shared/types/ipc'
 import type { MenuTemplate, MenuPopupPosition, MenuStructureItem } from '@shared/types/menu'
 import type { SerializedStat } from '@shared/types/files'
-import type { Md2rEvent, Md2rJournalEntry, Md2rParseResult, Md2rRunResult } from '@shared/types/mdcode2run'
+import type {
+  Md2rEvent,
+  Md2rJournalEntry,
+  Md2rParseResult,
+  Md2rRunReport,
+  Md2rRunResult
+} from '@shared/types/mdcode2run'
 import type {
   AuthActionResult,
   AuthLoginParams,
@@ -290,6 +296,12 @@ declare global {
         replay?: boolean
         timeout?: number
       }): Promise<Md2rRunResult>
+      runDocument(opts: {
+        docPath: string
+        md: string
+        timeoutMs?: number
+        compileOnly?: boolean
+      }): Promise<Md2rRunReport>
       resetSession(opts: { docPath: string; md: string; line: number }): Promise<boolean>
       journal(opts: {
         docPath: string

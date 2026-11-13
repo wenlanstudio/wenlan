@@ -1087,7 +1087,22 @@
     "output": "Output",
     "resizeHint": "Sleep om te vergroten · Dubbelklik om te maximaliseren",
     "noBlocks": "Geen uitvoerbare codeblokken in dit document",
-    "close": "Uitvoeringspaneel sluiten"
+    "close": "Uitvoeringspaneel sluiten",
+    "runJob": "Run whole job",
+    "jobRunning": "Job running…",
+    "jobHint": "weave → validate → build → submit → asserts (mr-job doc)",
+    "mrOwned": "consumed by the job pipeline",
+    "reportOk": "Job passed",
+    "reportFail": "Job failed",
+    "reportStage": "stage",
+    "reportDiagnostics": "Diagnostics",
+    "reportAsserts": "Asserts",
+    "reportJob": "Observation",
+    "reportDuration": "duration",
+    "reportExit": "exit",
+    "reportCounters": "counters",
+    "reportOutput": "output",
+    "reportWorkdir": "workdir"
   },
   "view": {
     "slidesView": "Slides View",

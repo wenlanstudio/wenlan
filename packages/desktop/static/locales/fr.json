@@ -1087,7 +1087,22 @@
     "output": "Output",
     "resizeHint": "Glisser pour redimensionner · Double-clic pour agrandir",
     "noBlocks": "Aucun bloc de code exécutable dans ce document",
-    "close": "Fermer le panneau d'exécution"
+    "close": "Fermer le panneau d'exécution",
+    "runJob": "Run whole job",
+    "jobRunning": "Job running…",
+    "jobHint": "weave → validate → build → submit → asserts (mr-job doc)",
+    "mrOwned": "consumed by the job pipeline",
+    "reportOk": "Job passed",
+    "reportFail": "Job failed",
+    "reportStage": "stage",
+    "reportDiagnostics": "Diagnostics",
+    "reportAsserts": "Asserts",
+    "reportJob": "Observation",
+    "reportDuration": "duration",
+    "reportExit": "exit",
+    "reportCounters": "counters",
+    "reportOutput": "output",
+    "reportWorkdir": "workdir"
   },
   "view": {
     "slidesView": "Slides View",
