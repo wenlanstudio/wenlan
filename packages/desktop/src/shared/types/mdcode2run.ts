@@ -21,12 +21,18 @@ export interface Md2rBlockInfo {
   line: number
   /** 围栏闭合后的下一行（0 基、不含）。 */
   end: number
-  /** 块角色：code | demo | setup | file | invalid。 */
-  role: 'code' | 'demo' | 'setup' | 'file' | 'invalid'
+  /** 块角色：code | demo | setup | file | invalid | todo（mr-job project 档占位块）。 */
+  role: 'code' | 'demo' | 'setup' | 'file' | 'invalid' | 'todo'
   /** job 执行模式（异步启动 + 日志流 + 可终止）。 */
   job: boolean
   /** file= 物化的相对路径（file 角色时）。 */
   file: string | undefined
+  /** 块级断言标注（expect=），非断言块为 undefined。 */
+  expect: string | undefined
+  /** mr-job project 档的 TODO 定位标注：{ class?, file?, method? }。 */
+  todo: Md2rTodoSpec | null
+  /** 该 TODO 块可回填（mr 体裁 + role=todo + 标注无冲突）。 */
+  fillable: boolean
   /** 标注问题（未知/重复/冲突）；非空块只展示不执行。 */
   problems: string[]
   /** mr 文档：stage 片段的阶段名（map/reduce/combine/partition/driver），非片段恒 null。 */
@@ -152,6 +158,8 @@ export interface Md2rRunReport {
     jar?: string | null
     output?: string
   }
+  /** P1：按教师录制 trace 序聚合的步骤事实（attachSteps 在 runDocument 返回前附上）。 */
+  steps?: Md2rStepRecord[]
 }
 
 /** runDocument 的 invoke 参数（事件流走既有 mt::mdcode2run::event，family="hadoop"）。 */
@@ -187,3 +195,181 @@ export type Md2rEvent =
     error?: string
   }
   | { docPath: string; type: 'job-done'; id: string; outcome: Md2rJobOutcome }
+
+// =================================================================
+// P1 教学接线：双源分离（教师录制 trace 定序 / 学生执行记录给事实）
+// 形状权威 = mdcode2run docs/MR-EXECUTOR.md §11、DESIGN.md §11
+// =================================================================
+
+/** TODO 占位块的定位标注（仅 mr-job project 档）。 */
+export interface Md2rTodoSpec {
+  class?: string
+  file?: string
+  method?: string
+}
+
+/** 学生工程文件（宿主可直接传入，免 main 重复读目录）。 */
+export interface Md2rProjectFile {
+  path: string
+  content: string
+}
+
+/** journal / trace 的扁平条目：ch=-1 是文档级整份作业运行（src="document"）。 */
+export interface Md2rTraceEntry {
+  ch: number
+  n: number
+  family: string
+  line: number
+  hash: string
+  ok: boolean
+  ts: number
+  /** run | replay | trace | document。 */
+  src: string
+}
+
+/** 步骤执行事实摘要（runs/okCount 是记录条数，不是块数）。 */
+export interface Md2rStepOutputSummary {
+  runs: number
+  okCount: number
+  lastTs: number
+}
+
+/** RunReport.steps / steps 查询的单条步骤事实（只报事实，不算分）。 */
+export interface Md2rStepRecord {
+  stepId: string
+  name: string
+  point: number
+  blockLines: number[]
+  todoLines: number[]
+  asserts: Md2rAssertRecord[]
+  /** 学生本地执行记录里该步存在 ok:true 条目；教师录制 trace 不点亮它。 */
+  executed: boolean
+  outputSummary: Md2rStepOutputSummary
+}
+
+export interface Md2rStepsResult {
+  steps: Md2rStepRecord[]
+  problems: string[]
+}
+
+/** 通过判定：断言全过 **且** 有成功执行记录（参考布尔，引擎不计分）。 */
+export interface Md2rStepVerdict {
+  stepId: string
+  assertsTotal: number
+  assertsPassed: number
+  executed: boolean
+  passed: boolean
+  reasons: string[]
+}
+
+export interface Md2rGuardDiagnostic {
+  kind: 'guard-project' | 'guard-trace' | string
+  message: string
+}
+
+export interface Md2rGuardSuspicious {
+  kind: 'todo-no-class' | 'extra-class' | string
+  line?: number
+  file?: string | null
+  name?: string
+  path?: string
+  message?: string
+}
+
+/** 提前做守卫结果：往后看第 i+1..n 步是否已被做掉（只查事实，不比代码/md 文本）。 */
+export interface Md2rGuardResult {
+  blocked: boolean
+  laterStepIds: string[]
+  diagnostics: Md2rGuardDiagnostic[]
+  suspicious: Md2rGuardSuspicious[]
+  verdict: Md2rStepVerdict | null
+  problems: string[]
+}
+
+/** TODO 回填一条：status 四种，missing/invalid 不带 path/sourceHash/code。 */
+export interface Md2rTodoFill {
+  line: number
+  path?: string
+  status: 'filled' | 'fallback' | 'missing' | 'invalid'
+  sourceHash?: string
+  stale: boolean
+  todo: Md2rTodoSpec
+  code?: string
+}
+
+/** fillTodos 结果：回填后的讲义（仅留存，不参与判分）+ 填充清单 + 工程目录。 */
+export interface Md2rFillResult {
+  md: string
+  fills: Md2rTodoFill[]
+  problems: string[]
+  dir: string
+}
+
+/** 实验报告 = 讲义 + 全部 TODO 回填后的自包含 md。 */
+export interface Md2rLabReport {
+  md: string
+  problems: string[]
+}
+
+/** setTeacherTrace 的装载回执。 */
+export interface Md2rTeacherTraceResult {
+  ok: boolean
+  count: number
+  bad?: number
+  error?: string
+}
+
+/** 双源只读视图：teacher=教师录制序列，local=学生执行事实，all=整条 journal 时间线。 */
+export interface Md2rTraceState {
+  teacher: Md2rTraceEntry[]
+  local: Md2rTraceEntry[]
+  all: Md2rTraceEntry[]
+}
+
+// —— 六个 P1 查询的 invoke 参数 ——
+
+export interface Md2rSetTeacherTraceOpts {
+  docPath: string
+  /** JSONL 文本、条目数组，或 null/空串清除。教师机与学生机路径不同，不做归属校验。 */
+  source: string | Md2rTraceEntry[] | null
+}
+
+export interface Md2rTraceStateOpts {
+  docPath: string
+  chapterLine?: number
+}
+
+/** 单次可覆盖两源（离线回放/单测用）；日常不传，用引擎实例里的状态。 */
+export interface Md2rStepSourceOverride {
+  teacherTrace?: Md2rTraceEntry[]
+  localRuns?: Md2rTraceEntry[]
+  assertsByStep?: Record<string, Md2rAssertRecord[]>
+}
+
+export interface Md2rStepsOpts extends Md2rStepSourceOverride {
+  docPath: string
+  md: string
+}
+
+export interface Md2rGuardOpts extends Md2rStepSourceOverride {
+  docPath: string
+  md: string
+  stepId: string
+  /** 宿主已读过工程时直接传，免 main 再扫一遍目录。 */
+  projectFiles?: Md2rProjectFile[]
+}
+
+export interface Md2rFillTodosOpts {
+  docPath: string
+  md: string
+  /** 上次回填的 fills，用于把工程文件变更标 stale。 */
+  previous?: Md2rTodoFill[]
+  projectFiles?: Md2rProjectFile[]
+}
+
+export interface Md2rLabReportOpts {
+  docPath: string
+  md: string
+  previous?: Md2rTodoFill[]
+  projectFiles?: Md2rProjectFile[]
+}

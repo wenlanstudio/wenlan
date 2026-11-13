@@ -9,11 +9,19 @@
 
 declare module 'mdcode2run' {
   import type {
+    Md2rFillResult,
+    Md2rGuardResult,
     Md2rJournalEntry,
-    Md2rRunDocumentOpts,
+    Md2rLabReport,
+    Md2rProjectFile,
     Md2rRunReport,
     Md2rRunResult,
-    Md2rSessionInfo
+    Md2rSessionInfo,
+    Md2rStepSourceOverride,
+    Md2rStepsResult,
+    Md2rTeacherTraceResult,
+    Md2rTodoFill,
+    Md2rTraceEntry
   } from '@shared/types/mdcode2run'
 
   /** 引擎内部围栏对象（含 code 正文，不可过 IPC）。 */
@@ -43,6 +51,8 @@ declare module 'mdcode2run' {
     documentDir: string
     /** trace sidecar 路径；给了则启动时自动加载、每次 ▶ 自动追加。单写者。 */
     tracePath?: string
+    /** 教师录制 trace（发布物下发）：只读定序序列，不写 journal / sidecar（§11 双源分离）。 */
+    teacherTrace?: string | Md2rTraceEntry[] | null
   }
 
   export interface MdcodeRunOptions {
@@ -106,8 +116,35 @@ declare module 'mdcode2run' {
     dispose(): void
     journalOf(chapterLine: number): Md2rJournalEntry[]
     traceOf(): string
+    /** 只加载**自己的**执行记录；教师录制 trace 必须走 setTeacherTrace。 */
     traceLoad(text: string): unknown
     replayTrace(opts?: unknown): unknown
+    /** 章序扁平执行记录（含 src="document" 的文档级整份作业运行）。 */
+    traceEntries(chapterLine?: number | null): Md2rTraceEntry[]
+    /** 📥 装载教师录制序列（JSONL / 数组 / null 清除），绝不并入 journal。 */
+    setTeacherTrace(source: string | Md2rTraceEntry[] | null): Md2rTeacherTraceResult
+    /** 教师序列只读副本（只定序，不是学生做过的事实）。 */
+    teacherTraceOf(): Md2rTraceEntry[]
+    /** 学生本地执行事实（journal 里排除 src="document"）。 */
+    localRuns(chapterLine?: number | null): Md2rTraceEntry[]
+    /** 按教师 trace 序聚合步骤 + 按学生执行记录点亮 executed。 */
+    stepsOf(md: string, opts?: Md2rStepSourceOverride): Md2rStepsResult
+    /** 提交某步前查「提前做」两形态 + 通过判定（只查事实）。 */
+    guardStep(
+      md: string,
+      stepId: string,
+      opts?: Md2rStepSourceOverride & { projectFiles?: Md2rProjectFile[] }
+    ): Md2rGuardResult
+    /** TODO 回填（仅 project 档）：只读学生工程，生成留存用讲义。 */
+    fillTodos(
+      md: string,
+      opts?: { previous?: Md2rTodoFill[]; projectFiles?: Md2rProjectFile[] }
+    ): Md2rFillResult
+    /** 实验报告 = 讲义 + 全部 TODO 回填后的自包含 md（仅留存，不参与判分）。 */
+    labReportOf(
+      md: string,
+      opts?: { previous?: Md2rTodoFill[]; projectFiles?: Md2rProjectFile[] }
+    ): Md2rLabReport
     tracePath?: string
     config?: Record<string, Record<string, unknown>>
   }

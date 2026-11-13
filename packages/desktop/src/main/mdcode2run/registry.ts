@@ -16,12 +16,13 @@
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import {
-  createEngine,
-  type MdcodeEngine,
-  type MdcodeRunResultRaw
-} from 'mdcode2run'
-import type { Md2rEvent, Md2rRunResult } from '@shared/types/mdcode2run'
+import { createEngine, type MdcodeEngine, type MdcodeRunResultRaw } from 'mdcode2run'
+import type {
+  Md2rEvent,
+  Md2rRunResult,
+  Md2rTeacherTraceResult,
+  Md2rTraceEntry
+} from '@shared/types/mdcode2run'
 
 /** 无 watcher 后延迟回收（毫秒）——覆盖 dev 模式渲染端 reload 的窗口期。 */
 export const ENGINE_DISPOSE_DELAY_MS = 60_000
@@ -39,6 +40,15 @@ interface EngineEntry {
 }
 
 const entries = new Map<string, EngineEntry>()
+
+/** 教师录制 trace 的下发源（JSONL 文本 / 条目数组）。只读定序，绝不进 journal / sidecar。 */
+export type Md2rTeacherTraceSource = string | Md2rTraceEntry[] | null
+/**
+ * 按文档锚定的教师序列。引擎实例有 60s 宽限回收：重建时必须把发布物下发的
+ * 定序序列再注回去，否则学生一关窗再打开，步骤顺序就退回「自己的执行记录」——
+ * 双源分离会静默失效。显式关文档则清掉（发布物换了不该沿用旧序列）。
+ */
+const teacherTraces = new Map<string, Md2rTeacherTraceSource>()
 
 /** 由 IPC 层注入：把事件推给 watcher 列表（id 列表由注册表随事件给出）。 */
 type EventSink = (event: Md2rEvent, watcherIds: number[]) => void
@@ -152,7 +162,11 @@ export const loadMrProfile = (): Md2rMrProfile => {
     const v = raw?.[key]
     return typeof v === 'string' && v.trim() ? v.trim() : undefined
   }
-  return { jdkHome: pick('jdkHome'), hadoopHome: pick('hadoopHome'), winutilsHome: pick('winutilsHome') }
+  return {
+    jdkHome: pick('jdkHome'),
+    hadoopHome: pick('hadoopHome'),
+    winutilsHome: pick('winutilsHome')
+  }
 }
 
 const wireEvents = (entry: EngineEntry): void => {
@@ -166,10 +180,10 @@ const wireEvents = (entry: EngineEntry): void => {
     const { family, line } = d as { family?: string; line?: number }
     return { family: family ?? '', line: line ?? -1 }
   }
-  entry.engine.events.on('started', d => {
+  entry.engine.events.on('started', (d) => {
     emit({ docPath: entry.docPath, type: 'started', ...detail(d) })
   })
-  entry.engine.events.on('chunk', d => {
+  entry.engine.events.on('chunk', (d) => {
     const { stream, text } = d as { stream?: string; text?: string }
     emit({
       docPath: entry.docPath,
@@ -179,7 +193,7 @@ const wireEvents = (entry: EngineEntry): void => {
       text: text ?? ''
     })
   })
-  entry.engine.events.on('done', d => {
+  entry.engine.events.on('done', (d) => {
     const { ok, duration, error } = d as {
       ok?: boolean
       duration?: number
@@ -213,9 +227,18 @@ export const acquireEngine = (docPath: string): EngineEntry => {
       documentPath: key,
       documentDir: path.dirname(key),
       // trace sidecar：存在则自动加载，每次 ▶ 自动追加（单写者=本注册表单实例）。
-      tracePath: `${key}.trace`
+      tracePath: `${key}.trace`,
+      // 发布物下发的教师录制序列：只定序，不写 journal（重建实例时原样注回）。
+      teacherTrace: teacherTraces.get(key) ?? null
     })
-    entry = { engine, docPath: key, jobs: new Map(), watchers: new Set(), disposeTimer: null, wired: false }
+    entry = {
+      engine,
+      docPath: key,
+      jobs: new Map(),
+      watchers: new Set(),
+      disposeTimer: null,
+      wired: false
+    }
     entries.set(key, entry)
   }
   cancelDisposeTimer(entry)
@@ -237,6 +260,36 @@ export const watchEngine = (
   return { entry, added }
 }
 
+/**
+ * 📥 装载教师录制 trace（发布物下发，双源分离 MR-EXECUTOR §11）。
+ *
+ * 只进引擎的只读 teacherSeq：不写 journal、不落 sidecar、不参与 Replay Trace。
+ * 同时按 docPath 记住下发源，供 60s 宽限回收后重建的实例原样注入。装载失败
+ * （版本不符 / 首行坏掉）清掉旧序列，避免留一份过期的定序源。
+ */
+export const setTeacherTrace = (
+  docPath: string,
+  source: Md2rTeacherTraceSource
+): Md2rTeacherTraceResult => {
+  const key = normalize(docPath)
+  const entry = acquireEngine(key)
+  const result = entry.engine.setTeacherTrace(source)
+  if (result.ok) {
+    teacherTraces.set(key, source)
+  } else {
+    // 引擎装载失败时只返回 ok:false，内存里的旧 teacherSeq 还在（它的语义是
+    // 「这次替换没生效」）。宿主这里必须兜底清掉：发布物已经换了，留一份过期
+    // 定序源不如没有定序源（后者至少退回旧宿主的兼容行为）。
+    teacherTraces.delete(key)
+    entry.engine.setTeacherTrace(null)
+  }
+  return result
+}
+
+/** 教师序列只读副本（不建引擎；面板核对清单用）。 */
+export const teacherTraceOf = (docPath: string): Md2rTraceEntry[] =>
+  entries.get(normalize(docPath))?.engine.teacherTraceOf() ?? []
+
 /** watcher 离场（webContents destroyed）。最后一个 watcher 走 → 延迟回收。 */
 export const unwatchEngine = (docPath: string, webContentsId: number): void => {
   const entry = entries.get(normalize(docPath))
@@ -245,7 +298,8 @@ export const unwatchEngine = (docPath: string, webContentsId: number): void => {
   if (entry.watchers.size === 0 && !entry.disposeTimer) {
     entry.disposeTimer = setTimeout(() => {
       entry.disposeTimer = null
-      disposeEngine(entry.docPath)
+      // 无人观看的宽限回收不是「关文档」：教师序列要留给下次重建的实例。
+      disposeEngine(entry.docPath, { keepTeacherTrace: true })
     }, ENGINE_DISPOSE_DELAY_MS)
   }
 }
@@ -257,12 +311,19 @@ export const unwatchAllFor = (webContentsId: number): void => {
   }
 }
 
-/** 显式回收（关文档）：立即 dispose 并移除注册（运行中的 stop 句柄一并丢弃）。 */
-export const disposeEngine = (docPath: string): boolean => {
+/**
+ * 显式回收（关文档）：立即 dispose 并移除注册（运行中的 stop 句柄一并丢弃）。
+ * @param opts.keepTeacherTrace 宽限回收内部用：只回收引擎实例，保留发布物的定序序列。
+ */
+export const disposeEngine = (
+  docPath: string,
+  opts: { keepTeacherTrace?: boolean } = {}
+): boolean => {
   const key = normalize(docPath)
   const entry = entries.get(key)
   if (!entry) return false
   cancelDisposeTimer(entry)
+  if (!opts.keepTeacherTrace) teacherTraces.delete(key)
   entry.watchers.clear()
   entry.jobs.clear()
   try {
@@ -288,12 +349,11 @@ export const attachJob = (entry: EngineEntry, result: MdcodeRunResultRaw): Md2rR
   const { id, stop, done } = result.job
   entry.jobs.set(id, { stop })
   done
-    .then(outcome => {
+    .then((outcome) => {
       entry.jobs.delete(id)
-      eventSink?.(
-        { docPath: entry.docPath, type: 'job-done', id, outcome: outcome ?? {} },
-        [...entry.watchers]
-      )
+      eventSink?.({ docPath: entry.docPath, type: 'job-done', id, outcome: outcome ?? {} }, [
+        ...entry.watchers
+      ])
     })
     .catch(() => {
       entry.jobs.delete(id)

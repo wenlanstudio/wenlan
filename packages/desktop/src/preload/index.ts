@@ -19,7 +19,15 @@ import type {
   BootInfo,
   SaveDialogRequest
 } from '@shared/types/ipc'
-import type { Md2rEvent } from '@shared/types/mdcode2run'
+import type {
+  Md2rEvent,
+  Md2rFillTodosOpts,
+  Md2rGuardOpts,
+  Md2rLabReportOpts,
+  Md2rSetTeacherTraceOpts,
+  Md2rStepsOpts,
+  Md2rTraceStateOpts
+} from '@shared/types/mdcode2run'
 import type {
   AuthLoginParams,
   AuthRequestOptions,
@@ -335,6 +343,14 @@ const mdcode2runAPI = {
   dispose: (opts: { docPath: string }) => invoke('mt::mdcode2run::dispose', opts),
   stopJob: (opts: { docPath: string; jobId: string }) =>
     invoke('mt::mdcode2run::job-stop', opts),
+  // ── P1 教学接线：教师录制 trace 定序，学生执行记录给事实（两源绝不混）──
+  setTeacherTrace: (opts: Md2rSetTeacherTraceOpts) =>
+    invoke('mt::mdcode2run::set-teacher-trace', opts),
+  traceState: (opts: Md2rTraceStateOpts) => invoke('mt::mdcode2run::trace-state', opts),
+  steps: (opts: Md2rStepsOpts) => invoke('mt::mdcode2run::steps', opts),
+  guard: (opts: Md2rGuardOpts) => invoke('mt::mdcode2run::guard', opts),
+  fillTodos: (opts: Md2rFillTodosOpts) => invoke('mt::mdcode2run::fill-todos', opts),
+  labReport: (opts: Md2rLabReportOpts) => invoke('mt::mdcode2run::lab-report', opts),
   onEvent: (listener: (event: Md2rEvent) => void): (() => void) =>
     ipcWrapper.on('mt::mdcode2run::event', (_event, payload) => listener(payload))
 }

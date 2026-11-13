@@ -36,11 +36,23 @@ import type { MenuTemplate, MenuPopupPosition, MenuStructureItem } from './menu'
 import type { PandocCommandInfo } from './pandoc'
 import type {
   Md2rEvent,
+  Md2rFillResult,
+  Md2rFillTodosOpts,
+  Md2rGuardOpts,
+  Md2rGuardResult,
   Md2rJournalEntry,
+  Md2rLabReport,
+  Md2rLabReportOpts,
   Md2rParseResult,
   Md2rRunDocumentOpts,
   Md2rRunReport,
-  Md2rRunResult
+  Md2rRunResult,
+  Md2rSetTeacherTraceOpts,
+  Md2rStepsOpts,
+  Md2rStepsResult,
+  Md2rTeacherTraceResult,
+  Md2rTraceState,
+  Md2rTraceStateOpts
 } from './mdcode2run'
 import type {
   AuthLoginParams,
@@ -58,16 +70,14 @@ export interface SaveDialogRequest {
 }
 
 export type PlantumlFetchResult =
-  | { ok: true; mime: string; data: Uint8Array }
-  | { ok: false; error: string }
+  { ok: true; mime: string; data: Uint8Array } | { ok: false; error: string }
 
 // =================================================================
 // Invoke channels (renderer → main, returns Promise<T>)
 // =================================================================
 
 export type ExternalDiagramResult =
-  | { ok: true; mime: string; data: string }
-  | { ok: false; error: string }
+  { ok: true; mime: string; data: string } | { ok: false; error: string }
 
 export interface IpcInvokeChannels {
   // ===== 教学客户端身份（edu-client E1）=====
@@ -124,9 +134,7 @@ export interface IpcInvokeChannels {
   // 跑一块（或章重放）：结果契约返回；stdout/stderr 实时流走
   // mt::mdcode2run::event 推送（invoke 返回值没法流式）。
   'mt::mdcode2run::run': {
-    args: [
-      opts: { docPath: string; md: string; line: number; replay?: boolean; timeout?: number }
-    ]
+    args: [opts: { docPath: string; md: string; line: number; replay?: boolean; timeout?: number }]
     ret: Md2rRunResult
   }
   // ⟳ 销毁第 line 行所在块的章会话（下次运行重建）。
@@ -154,6 +162,36 @@ export interface IpcInvokeChannels {
   'mt::mdcode2run::job-stop': {
     args: [opts: { docPath: string; jobId: string }]
     ret: boolean
+  }
+  // ── P1 教学接线：双源分离（MR-EXECUTOR §11）────────────────────────────
+  // 教师录制 trace 随发布物下发：只读定序，不写 journal / sidecar / Replay。
+  'mt::mdcode2run::set-teacher-trace': {
+    args: [opts: Md2rSetTeacherTraceOpts]
+    ret: Md2rTeacherTraceResult
+  }
+  // 两源只读视图：teacher=定序序列，local=学生执行事实，all=整条执行日志。
+  'mt::mdcode2run::trace-state': {
+    args: [opts: Md2rTraceStateOpts]
+    ret: Md2rTraceState
+  }
+  // 步骤面板：按教师 trace 序聚合，executed 只认学生执行记录。
+  'mt::mdcode2run::steps': {
+    args: [opts: Md2rStepsOpts]
+    ret: Md2rStepsResult
+  }
+  // 提交某步前的提前做守卫 + 通过判定（只查事实，锁序/计分归服务端）。
+  'mt::mdcode2run::guard': {
+    args: [opts: Md2rGuardOpts]
+    ret: Md2rGuardResult
+  }
+  // TODO 回填（仅 project 档）与实验报告留存：只产出证据，不参与判分。
+  'mt::mdcode2run::fill-todos': {
+    args: [opts: Md2rFillTodosOpts]
+    ret: Md2rFillResult
+  }
+  'mt::mdcode2run::lab-report': {
+    args: [opts: Md2rLabReportOpts]
+    ret: Md2rLabReport
   }
   // M2 一键导出的出片半边（取数在 renderer 经 deck 页面完成）。大位图走服务旁路
   // 落盘（/x），IPC 只传目录路径——数百 MB 过 invoke 会把进程挂死（真机教训）。
@@ -275,7 +313,9 @@ export interface IpcSendChannels {
   'mt::open-file-by-window-id': [windowId: number, filePath: string, options?: unknown]
   'mt::open-keybindings-config': []
   'mt::open-setting-window': []
-  'mt::rename': [payload: { id: string; pathname: string; newPathname: string; currentFile?: unknown }]
+  'mt::rename': [
+    payload: { id: string; pathname: string; newPathname: string; currentFile?: unknown }
+  ]
   'mt::request-keybindings': []
   'mt::set-editor-format-menus-enabled': [windowId: number, enabled: boolean]
   'mt::switch-directory': [directoryPath: string]

@@ -210,6 +210,12 @@
     **只读定序序列**（`setTeacherTrace()` 装载，不并入学生本地 journal / sidecar）；
     `steps[].executed` 与提前做守卫形态②只认学生自己的执行记录（`localRuns()`）。
     两源混用会让教师每条都 ok 的记录把步骤全点亮、学生提交任何一步都被守卫误拦。
+  - **第 0 层宿主侧通水（文览，2026-11-14）**：`types/mdcode2run.d.ts`、
+    `shared/types/mdcode2run.ts`、`global.d.ts` 声明 P1 全部形状（含
+    `RunReport.steps`）；main 注册表按 docPath 持久化教师序列，引擎 60s 宽限回收
+    后重建仍原样注回；新增 `set-teacher-trace` / `trace-state` / `steps` /
+    `guard` / `fill-todos` / `lab-report` 六个 invoke 通道，preload 桥与类型契约
+    已对齐。**E4 执行面板、文枢 `t_step_record` / 锁序 / 计分 / trace 下发仍未实现。**
   - **project 档 TODO 块**：占位块带 ▶，点击回填学生工程代码（块实时替换、工程变更
     标 stale）；提交时由回填结果拼出**实验报告 md**（讲义 + 学生代码）一并上送留存。
   - 判分展示沿用「只报事实」：+point / -failsPoint / 豁免 3 次由服务端计算回显。
@@ -244,6 +250,8 @@ sequenceDiagram
     Note over Stu,E: 阶段② 拉取与骨架前置检查
     Stu->>S: 登录 · 拉取发布物
     S-->>Stu: 学生版讲义 + trace 步骤序列
+    Stu->>E: set-teacher-trace（只读定序序列，不进 journal）
+    E-->>Stu: trace-state / steps（教师定序 · 学生执行事实）
     Stu->>E: runDocument（project 档）
     E->>E: 精确检查 requires（class=… / file=…）
     alt 骨架缺失

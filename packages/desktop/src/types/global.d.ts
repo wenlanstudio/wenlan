@@ -17,10 +17,22 @@ import type { MenuTemplate, MenuPopupPosition, MenuStructureItem } from '@shared
 import type { SerializedStat } from '@shared/types/files'
 import type {
   Md2rEvent,
+  Md2rFillResult,
+  Md2rFillTodosOpts,
+  Md2rGuardOpts,
+  Md2rGuardResult,
   Md2rJournalEntry,
+  Md2rLabReport,
+  Md2rLabReportOpts,
   Md2rParseResult,
   Md2rRunReport,
-  Md2rRunResult
+  Md2rRunResult,
+  Md2rSetTeacherTraceOpts,
+  Md2rStepsOpts,
+  Md2rStepsResult,
+  Md2rTeacherTraceResult,
+  Md2rTraceState,
+  Md2rTraceStateOpts
 } from '@shared/types/mdcode2run'
 import type {
   AuthActionResult,
@@ -309,6 +321,13 @@ declare global {
       }): Promise<Md2rJournalEntry[]>
       dispose(opts: { docPath: string }): Promise<boolean>
       stopJob(opts: { docPath: string; jobId: string }): Promise<boolean>
+      // ── P1 教学接线（双源分离）──
+      setTeacherTrace(opts: Md2rSetTeacherTraceOpts): Promise<Md2rTeacherTraceResult>
+      traceState(opts: Md2rTraceStateOpts): Promise<Md2rTraceState>
+      steps(opts: Md2rStepsOpts): Promise<Md2rStepsResult>
+      guard(opts: Md2rGuardOpts): Promise<Md2rGuardResult>
+      fillTodos(opts: Md2rFillTodosOpts): Promise<Md2rFillResult>
+      labReport(opts: Md2rLabReportOpts): Promise<Md2rLabReport>
       onEvent(listener: (event: Md2rEvent) => void): () => void
     }
     process: ProcessShim
