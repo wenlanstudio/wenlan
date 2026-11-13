@@ -206,6 +206,10 @@
   - 执行面板按**教师录制 trace 的序列**列步骤（可乱序/重复），每步显示该步块与断言
     状态；逐步执行、逐步「提交」→ `t_step_record`；**锁序**：前步无通过记录时下一步
     灰锁（状态由服务端回传）。
+  - **双源分离**（引擎 2026-11-14 第六刀，MR-EXECUTOR §11.4）：教师录制 trace 只作
+    **只读定序序列**（`setTeacherTrace()` 装载，不并入学生本地 journal / sidecar）；
+    `steps[].executed` 与提前做守卫形态②只认学生自己的执行记录（`localRuns()`）。
+    两源混用会让教师每条都 ok 的记录把步骤全点亮、学生提交任何一步都被守卫误拦。
   - **project 档 TODO 块**：占位块带 ▶，点击回填学生工程代码（块实时替换、工程变更
     标 stale）；提交时由回填结果拼出**实验报告 md**（讲义 + 学生代码）一并上送留存。
   - 判分展示沿用「只报事实」：+point / -failsPoint / 豁免 3 次由服务端计算回显。
@@ -253,7 +257,7 @@ sequenceDiagram
         Note over Stu: 面板列步骤 · 前步未通过则下一步灰锁（锁序）
         Stu->>Stu: 块内填写（非 project 档）或 todo 块回填（project 档）
         Stu->>E: 块内 ▶ 执行 · expect= 核对
-        E->>E: journal / trace 记账 · 聚合 RunReport.steps（只报事实）
+        E->>E: 本地 journal 记账 · 教师 trace 只读定序 · 聚合 RunReport.steps（只报事实）
         E-->>Stu: steps：断言 / 执行记录 / 输出摘要
         Stu->>E: 提交第 i 步
         E->>E: 提前做守卫：往后查第 i+1..n 步是否已被做
