@@ -154,8 +154,8 @@
   `editorStore.toc`，切文档即变，点击按 slug 跳标题）；「教学」= 课程工作区树
   （登录态按课程拉取，**与当前打开哪个文件无关**）。三者互不串数据。
 - **两个物理根**：常规文件树（`openFolder` 自选目录）/ 课程工作区
-  （`{projectsRoot}/{course}/`：讲义 md 平铺 + `code/{工程名}/`）。两者在 UI 上是两个
-  tab 两棵树，不是同一棵树里的两个分组。`~/.wenlan/coursework/`（作业考试隐藏副本）
+  （`{projectsRoot}/{course}/`：`doc/` 放讲义 md + 图片，`code/` 本身就是 Maven 工程）。
+  两者在 UI 上是两个 tab 两棵树，不是同一棵树里的两个分组。`~/.wenlan/coursework/`（作业考试隐藏副本）
   **暂不启用**——2026-11-13 裁决见 `course-workspace-design.md` D11：所有发布物一律落
   `projects`，安全靠下发剥离答案与载荷，不靠目录隐藏。
 - **不新增常驻右侧面板、不改壳、不换路由组件、不加第三窗口类型**。
@@ -298,7 +298,8 @@ sequenceDiagram
 ## 6. 数据与缓存
 
 - **隐藏副本暂不启用**（2026-11-13）：发布物一律落 `{projectsRoot}/{course}/`（讲义
-  md 平铺 + `code/{工程名}/`，见 `course-workspace-design.md` D11/D12）。实操型答卷
+  md 在 `doc/` + `code/` 单个 Maven 工程，见 `course-workspace-design.md` D11/D12）。
+  实操型答卷
   要用 IDE 编辑工程，路径藏不住；安全靠下发剥离答案与载荷
   （`variant=assignable`），不靠目录隐藏。`~/.wenlan/coursework/` 保留为将来
   「防篡改副本」场景的储备，启用时再议。
