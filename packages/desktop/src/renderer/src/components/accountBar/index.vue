@@ -39,9 +39,6 @@
           <el-dropdown-item command="teaching-tab">
             {{ t('teaching.tab') }}
           </el-dropdown-item>
-          <el-dropdown-item command="teaching">
-            {{ t('account.openTeaching') }}
-          </el-dropdown-item>
           <el-dropdown-item
             command="logout"
             divided
@@ -85,9 +82,7 @@ const avatarText = computed(() => {
 })
 
 function onCommand(command: string): void {
-  if (command === 'teaching') {
-    void window.auth.openTeaching()
-  } else if (command === 'logout') {
+  if (command === 'logout') {
     void window.auth.logout()
   } else if (command === 'publish') {
     if (auth.isStudent) return

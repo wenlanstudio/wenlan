@@ -25,6 +25,8 @@ export const registerAuthHandlers = (): void => {
 
   ipcMain.handle('auth::list-tenants', () => auth().listTenants())
 
+  // B 方案：不再是常驻 UI 入口，仅命令面板 teaching.openWindow /
+  // 机房快捷启动壳调用。通道保留给启动壳，不要连同 WindowType.TEACHING 删掉。
   ipcMain.handle('auth::open-teaching-window', () => {
     openTeachingWindow()
   })

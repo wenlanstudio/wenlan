@@ -362,6 +362,7 @@ const authAPI = {
   logout: () => invoke('auth::logout'),
   getState: () => invoke('auth::get-state'),
   listTenants: (): Promise<TenantInfo[]> => invoke('auth::list-tenants'),
+  // 机房启动壳专用（命令面板 teaching.openWindow）；日常教学走侧栏教学 tab。
   openTeaching: (): Promise<void> => invoke('auth::open-teaching-window'),
   onStateChanged: (listener: (state: AuthState) => void): (() => void) => {
     const sub = (_e: IpcRendererEvent, state: AuthState): void => listener(state)

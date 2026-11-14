@@ -124,21 +124,26 @@ const authStore = useAuthStore()
 const timer = ref<ReturnType<typeof setTimeout> | null>(null)
 
 /**
- * 教育实例首次登录/启动：文件 tab 默认落在课程工作区（projectsRoot）。
- * activateTab=false 保住「教学」tab 的默认落点；树已有根（上次会话恢复）时
- * 不抢，用户手动切去别的文件夹后也不会被反复拉回。
+ * 课程工作区落根：已登录且「教学」tab 激活时才把文件 tab 落到 projectsRoot。
+ * activateTab=false 保住教学 tab 的落点；树已有根（上次会话恢复）时不抢，
+ * 用户手动切去别的文件夹后也不会被反复拉回。
+ *
+ * B 方案（2026-11-14）之前这里只认 `route.path === '/teaching'`，且登录即
+ * 触发：通用窗里点「教学」tab 不落课程工作区，登录后还会抢本地文件树根
+ * （违背 N1）。现在按「登录 + 教学 tab」触发，与窗口类型/路由彻底解耦。
  */
 const openTeachingWorkspace = async (): Promise<void> => {
-  if (route.path !== '/teaching' || !authStore.state.loggedIn) return
+  if (!authStore.state.loggedIn || layoutStore.sidebarTab !== 'teaching') return
   if (projectStore.projectTree) return
   await window.teachingWorkspace.openProjectsRoot({ activateTab: false })
 }
 
 watch(
-  () => authStore.state.loggedIn,
-  (loggedIn) => {
-    if (loggedIn) void openTeachingWorkspace()
-  }
+  () => [authStore.state.loggedIn, layoutStore.sidebarTab] as const,
+  ([loggedIn, tab]) => {
+    if (loggedIn && tab === 'teaching') void openTeachingWorkspace()
+  },
+  { immediate: true }
 )
 
 // —— 布局高度的唯一真值（issue #2）——
@@ -283,9 +288,10 @@ onMounted(async () => {
   authStore.listen()
   // 教育版实例复用本壳：默认落在「教学」tab。延后一拍设置，避免被 main 侧
   // 稍后送达的 buffered layout 事件覆盖；用户随后手动切 tab 仍会被正常持久化。
-  window.setTimeout(async () => {
+  // 机房启动壳（/teaching）默认落在「教学」tab；落课程工作区由上面的 watch
+  // 接管，不再按路由重复触发。通用窗不抢默认 tab，靠用户自己切。
+  window.setTimeout(() => {
     if (route.path !== '/teaching') return
-    await openTeachingWorkspace()
     if (layoutStore.sidebarTab !== 'teaching') {
       layoutStore.SET_LAYOUT({ sidebarTab: 'teaching', showSideBar: true })
     }

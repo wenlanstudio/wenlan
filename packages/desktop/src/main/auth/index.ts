@@ -367,7 +367,9 @@ export function onAuthStateChange(listener: (state: AuthState) => void): () => v
   return instance ? instance.onStateChange(listener) : () => undefined
 }
 
-// 打开教学客户端窗口的回调由 App 注入（IPC handler 注册早于 App 构造）。
+// 教学启动壳的回调由 App 注入（IPC handler 注册早于 App 构造）。B 方案
+// （2026-11-14）后这是机房/演示用的进阶入口：日常教学只在侧栏「教学」tab，
+// 账号菜单不再开第二个交互面。WindowType.TEACHING 保留，别删。
 let openTeachingWindowHandler: (() => void) | null = null
 
 export function setOpenTeachingWindowHandler(fn: () => void): void {

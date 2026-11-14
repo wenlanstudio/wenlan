@@ -776,6 +776,18 @@ const commands: CommandDescriptor[] = [
       const error = useTeachingStore().openQuizConsole()
       if (error) ElMessage.warning(error)
     }
+  },
+  // B 方案（单交互面）：教学能力日常只在侧栏「教学」tab，账号菜单里的
+  // 「打开教学客户端」已移除。这里保留一条命令面板路径，供机房快捷启动壳
+  // （WindowType.TEACHING）使用——不是常驻 UI，也不构成第二个交互面。
+  {
+    id: 'teaching.openWindow',
+    isVisible: () => useAuthStore().state.loggedIn,
+    execute: async() => {
+      // 菜单按 id 触发时不走命令面板的 isVisible 门控，登录态在这里兜底。
+      if (!useAuthStore().state.loggedIn) return
+      await window.auth.openTeaching()
+    }
   }
 ]
 

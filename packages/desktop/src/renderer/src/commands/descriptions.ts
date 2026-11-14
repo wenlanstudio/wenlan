@@ -244,7 +244,8 @@ const COMMAND_KEY_MAP: Record<string, string> = {
   // ============================================
   'teaching.publish': 'teaching.commandPublish',
   'teaching.classroom': 'teaching.commandClassroom',
-  'teaching.quiz': 'teaching.commandQuiz'
+  'teaching.quiz': 'teaching.commandQuiz',
+  'teaching.openWindow': 'account.openTeaching'
 }
 
 /**

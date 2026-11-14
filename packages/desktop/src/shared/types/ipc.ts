@@ -87,7 +87,7 @@ export interface IpcInvokeChannels {
   'auth::logout': { args: []; ret: void }
   'auth::get-state': { args: []; ret: AuthState }
   'auth::list-tenants': { args: []; ret: TenantInfo[] }
-  // 打开教学客户端窗口（E2 壳）
+  // 打开教学启动壳（E2 壳，B 方案后仅供机房/演示的进阶入口）
   'auth::open-teaching-window': { args: []; ret: void }
   // 课程工作区（E3.0）：位置存 main 偏好，renderer 只拿路径/触发打开。
   'teaching::get-projects-root': { args: []; ret: string }

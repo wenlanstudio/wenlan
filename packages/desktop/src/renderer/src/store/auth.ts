@@ -13,14 +13,17 @@ export const useAuthStore = defineStore('auth', () => {
   const ready = ref(false)
 
   /**
-   * 学生态判据：优先看服务端角色标识；当前学生账号由名单开通、未必配角色，
-   * 因此 `/teaching` 教育版实例（vue-router hash 路由）作为回退判据。
-   * 两者都成立时只影响 UI 裁剪与只读锁，不改登录态与 token。
+   * 学生态判据：只认服务端下发的角色（文枢 `wenshu-student` 标记角色，
+   * 2026-11-14 `d751e33` 起开号即绑定、存量账号已回填）。
+   *
+   * B 方案（单交互面）之前这里还拿 `#/teaching` hash 作回退——名单开通的
+   * 学生账号未必配角色。该回退会让教师打开教学窗时被误判成学生，也把身份
+   * 语义绑死在窗口类型上。角色下发齐备后回退删除：同一个窗里靠 RBAC 裁剪，
+   * 不再按窗口类型猜身份。只影响 UI 裁剪与只读锁，不改登录态与 token。
    */
   const isStudent = computed(() => {
     const roles = state.value.roles ?? []
-    if (roles.some((role) => role.toLowerCase().includes('student'))) return true
-    return window.location.hash.startsWith('#/teaching')
+    return roles.some((role) => role.toLowerCase().includes('student'))
   })
 
   async function init(): Promise<void> {
