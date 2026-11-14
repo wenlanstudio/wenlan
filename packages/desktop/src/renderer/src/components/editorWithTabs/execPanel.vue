@@ -776,11 +776,15 @@ const submitStep = async (key: string): Promise<void> => {
       )
       return
     }
-    const verdict = guard.verdict
-    const msg = await teachingStore.submitLabStep(key, {
-      passed: verdict?.passed ?? false,
-      executed: verdict?.executed ?? false
-    })
+    // project 档 = 整份判分：步级 executed/asserts 不归属（document 不落步），
+    // 通过事实取「最近一次整份运行成功」——没跑过就不准提交（防手填不跑就交）。
+    // 步级断言归因（assertsByStep/围栏）落地后这里换回 guard.verdict 精确判定。
+    const runOk = mrReport.value?.ok === true
+    if (!runOk) {
+      setLabMsg(t('teachingLab.needRun'), true)
+      return
+    }
+    const msg = await teachingStore.submitLabStep(key, { passed: true, executed: true })
     setLabMsg(msg || `${t('teachingLab.submitted')} · ${key}`, !!msg)
     void refreshLabSteps()
   } catch (err) {

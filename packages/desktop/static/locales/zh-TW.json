@@ -1265,6 +1265,7 @@
     "backfillNone": "沒有可回填的佔位塊",
     "writeDenied": "副本寫入被拒（不在登記的課程工作區內）",
     "reportSubmit": "產生並提交實驗報告",
-    "reportDone": "實驗報告已提交"
+    "reportDone": "實驗報告已提交",
+    "needRun": "請先執行整份作業且斷言通過，再提交步驟"
   }
 }

@@ -1265,6 +1265,7 @@
     "backfillNone": "Geen placeholder-blokken om in te vullen",
     "writeDenied": "Schrijven geweigerd (buiten de geregistreerde cursuswerkruimte)",
     "reportSubmit": "Practicumverslag genereren en indienen",
-    "reportDone": "Practicumverslag ingediend"
+    "reportDone": "Practicumverslag ingediend",
+    "needRun": "Voer de hele job uit (asserties slagen) voordat u een stap indient"
   }
 }

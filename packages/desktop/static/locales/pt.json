@@ -1265,6 +1265,7 @@
     "backfillNone": "Não há blocos de marcador para preencher",
     "writeDenied": "Escrita negada (fora do espaço de curso registrado)",
     "reportSubmit": "Gerar e enviar relatório de laboratório",
-    "reportDone": "Relatório de laboratório enviado"
+    "reportDone": "Relatório de laboratório enviado",
+    "needRun": "Execute o trabalho completo (asserções aprovadas) antes de enviar uma etapa"
   }
 }

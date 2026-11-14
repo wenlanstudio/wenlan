@@ -1265,6 +1265,7 @@
     "backfillNone": "Keine Platzhalterblöcke zum Einsetzen",
     "writeDenied": "Schreiben verweigert (außerhalb des registrierten Kursbereichs)",
     "reportSubmit": "Praktikumsbericht erstellen & einreichen",
-    "reportDone": "Praktikumsbericht eingereicht"
+    "reportDone": "Praktikumsbericht eingereicht",
+    "needRun": "Vor dem Abgeben eines Schritts den gesamten Job ausführen (Assertionen bestehen)"
   }
 }

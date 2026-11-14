@@ -4,6 +4,14 @@ import { app, dialog, crashReporter } from 'electron'
 import log from 'electron-log'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 
+// CDP 验收配方：electron-vite 对 electron 参数的透传隔着 `--` 分隔（Chromium 不认
+// 这个形态，调试端口起不来）。dev 验收用 WENLAN_CDP_PORT 注入端口；遮挡豁免全局
+// 开着——被遮挡窗口的 CDP 截图否则是纯白。
+if (process.env.WENLAN_CDP_PORT) {
+  app.commandLine.appendSwitch('remote-debugging-port', process.env.WENLAN_CDP_PORT)
+}
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows')
+
 import cli from './cli'
 import setupExceptionHandler, { initExceptionLogger } from './exceptionHandler'
 import setupEnvironment from './app/env'

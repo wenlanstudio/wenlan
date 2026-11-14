@@ -1265,6 +1265,7 @@
     "backfillNone": "Aucun bloc de placeholder à remplir",
     "writeDenied": "Écriture refusée (hors de l’espace de cours enregistré)",
     "reportSubmit": "Générer et soumettre le compte rendu",
-    "reportDone": "Compte rendu soumis"
+    "reportDone": "Compte rendu soumis",
+    "needRun": "Exécutez le job complet (assertions réussies) avant de soumettre une étape"
   }
 }
