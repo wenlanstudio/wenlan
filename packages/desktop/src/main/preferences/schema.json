@@ -18,7 +18,7 @@
   "openFilesInNewWindow": {
     "description": "General--Open files in a new window.",
     "type": "boolean",
-    "default": false
+    "default": true
   },
   "openFolderInNewWindow": {
     "description": "General--Open folder via menu in a new window.",

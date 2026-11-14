@@ -150,7 +150,9 @@ export const usePreferencesStore = defineStore('preferences', {
     autoSave: true,
     autoSaveDelay: 5000,
     titleBarStyle: 'custom',
-    openFilesInNewWindow: false,
+    // Typora 式一文件一窗口（#30）：单实例锁防多进程，多窗口由本开关承接；
+    // 教学开副本与侧栏文件树点击走 mt::open-file，不读本开关、恒开本窗 tab。
+    openFilesInNewWindow: true,
     openFolderInNewWindow: false,
     zoom: 1.0,
     hideScrollbar: false,
