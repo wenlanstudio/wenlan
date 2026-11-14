@@ -351,8 +351,6 @@ const docPath = computed(() => currentFile.value?.pathname ?? '')
 const blocks = ref<Md2rBlockInfo[]>([])
 /** parse 失败原因（引擎挂了 / IPC 断了都要让人看见，不能静默隐藏面板）。 */
 const parseError = ref('')
-/** 首次解析出可跑块时自动展开一次——否则用户看不到这个功能存在。 */
-let autoOpened = false
 const selectedLine = ref<number | null>(null)
 /** 块行号 → 实时累计的 chunk 文本（上限截尾防内存膨胀）。 */
 const outputs = ref<Record<number, string>>({})
@@ -447,13 +445,6 @@ const refresh = async (): Promise<void> => {
     }
     if (selectedLine.value !== null && !byLine.has(selectedLine.value)) {
       selectedLine.value = runnableBlocks.value[0]?.line ?? null
-    }
-    if (!autoOpened && isCodeRunSurface.value && blocks.value.some((b) => b.runnable)) {
-      autoOpened = true
-      panel.setOpen(true)
-      if (selectedLine.value === null) {
-        selectedLine.value = runnableBlocks.value[0]?.line ?? null
-      }
     }
   } catch (err) {
     console.error('[mdcode2run] parse failed:', err)

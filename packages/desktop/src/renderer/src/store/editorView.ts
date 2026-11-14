@@ -283,8 +283,9 @@ export const useEditorViewStore = defineStore('editorView', () => {
    *  的单叶态有值，故 `activeLeaf === 'flow'` 本身已含 topView === null；
    *  topView 非空即非分屏，码透镜独占无需再查分屏。
    *
-   *  单一来源给 execPanel 的 body 显隐与自动展开共用，避免两处各写一份判据
-   *  后漂移（2026-11-08 起切换器不再有执行窗开关）。 */
+   *  单一来源给 execPanel 的 body 显隐与围栏 ▶ 运行反馈共用，避免两处各写
+   *  一份判据后漂移（2026-11-08 起切换器不再有执行窗开关；2026-11-14 起
+   *  面板默认收起，自动展开已移除，只由 ▶/点块等显式动作打开——#31）。 */
   const isCodeRunSurface = computed<boolean>(
     () =>
       !isWindowFullScreen.value &&
