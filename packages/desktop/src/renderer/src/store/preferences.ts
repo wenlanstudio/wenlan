@@ -155,7 +155,8 @@ export const usePreferencesStore = defineStore('preferences', {
     zoom: 1.0,
     hideScrollbar: false,
     wordWrapInToc: false,
-    fileSortBy: 'created',
+    // 与文件系统默认一致：按名称自然序（文件夹恒在前，treeCtrl 结构保证）。
+    fileSortBy: 'title',
     fileSortOrder: 'asc',
     startUpAction: 'restoreAll',
     restoreLayoutState: true,
