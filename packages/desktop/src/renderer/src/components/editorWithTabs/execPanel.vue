@@ -271,6 +271,22 @@
             >{{
           finalOutputOf(selectedLine)
             }}</pre>
+            <!-- 图形结果内嵌（#22，Jupyter inline 同款）：matplotlib 走 Agg 落
+                 data URL，文本/表格之外原图嵌在输出区；点击弹 mediaViewer 大图
+                 （auto 面，bus 桥到 editor 层）。白底防深色主题吃掉透明图。 -->
+            <div
+              v-if="selectedImages.length"
+              class="output-images"
+            >
+              <img
+                v-for="(src, i) in selectedImages"
+                :key="i"
+                class="output-image"
+                :src="src"
+                alt=""
+                @click="openImagePreview(src)"
+              >
+            </div>
           </div>
           <!-- mr 整份作业的 RunReport 卡：流式日志 + 诊断（学生行号）/ 断言 / 运行观测 / 产物 -->
           <div
@@ -934,6 +950,17 @@ const snippetOf = (b: Md2rBlockInfo): string => {
 
 const resultOf = (line: number): Md2rRunResult | undefined => results.value[line]
 
+/** 选中块的图形结果（matplotlib 图捕获，PNG data URL）——inline 渲染进输出区。 */
+const selectedImages = computed<string[]>(() => {
+  if (selectedLine.value === null) return []
+  return resultOf(selectedLine.value)?.images ?? []
+})
+
+/** 点击内嵌图弹大图（#22 auto 面）：MediaViewer 挂在 editor 层，走 bus。 */
+const openImagePreview = (src: string): void => {
+  bus.emit('exec-image-preview', src)
+}
+
 /** 块徽章：mr 片段显示阶段名（作业管线的消费单位），其余显示语言标签。 */
 const badgeOf = (b: Md2rBlockInfo): string => {
   if (b.stage) return b.stage
@@ -1411,6 +1438,24 @@ onBeforeUnmount(() => {
   white-space: pre-wrap;
   word-break: break-all;
   user-select: text;
+}
+
+/* 图形结果（#22，Jupyter inline 同款）：matplotlib 落 data URL，限宽随面板、
+   白底衬透明/白底图（深色主题不吃图），点击弹 mediaViewer 大图。 */
+.output-images {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px 10px;
+}
+
+.output-image {
+  max-width: 100%;
+  background: #ffffff;
+  border: 1px solid var(--editorColor10, #e0e0e0);
+  border-radius: 4px;
+  cursor: zoom-in;
 }
 
 .toolbar-flex {

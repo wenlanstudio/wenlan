@@ -1375,6 +1375,14 @@ const revealSourceLine = (payload: unknown) => {
   }
 }
 
+/**
+ * 执行面板结果卡图片的「弹大图」（#22 auto 面）：execPanel 在 app.vue 的
+ * main-col 下、摸不到本组件的 MediaViewer 实例，走 bus 让本层开浮层。
+ */
+const handleExecImagePreview = (data: unknown) => {
+  if (typeof data === 'string' && data) mediaViewer.value?.openImage(data)
+}
+
 // —— M0 跳转编辑（视图模型 §6.3）：栏/表双击哪块，跳回文的哪块 ——
 // 同一活引擎实例，块即 muya 自己的块对象；但切回文会解锁、setOptions 的
 // 整树重建让块对象失效——同一 state 重建出的树路径相同，先存 json1 路径，
@@ -2173,6 +2181,7 @@ onMounted(() => {
   bus.on('columns.insert', handleInsertColumns)
   bus.on('scroll-to-header', scrollToHeader)
   bus.on('mdcode2run-reveal-line', revealSourceLine)
+  bus.on('exec-image-preview', handleExecImagePreview)
   bus.on('scroll-to-anchor-element', scrollToAnchorElement)
   bus.on('screenshot-captured', handleScreenShot)
   bus.on('show-command-palette', handleModalOpening)
@@ -2427,6 +2436,7 @@ onBeforeUnmount(() => {
   bus.off('columns.insert', handleInsertColumns)
   bus.off('scroll-to-header', scrollToHeader)
   bus.off('mdcode2run-reveal-line', revealSourceLine)
+  bus.off('exec-image-preview', handleExecImagePreview)
   bus.off('scroll-to-anchor-element', scrollToAnchorElement)
   bus.off('screenshot-captured', handleScreenShot)
   bus.off('show-command-palette', handleModalOpening)
