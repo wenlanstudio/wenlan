@@ -92,16 +92,26 @@ export interface StudentRelease {
   className: string
   courseId: number
   courseName: string
-  /** 1资料查阅 2机房实训 3作业 4测试 5考试 */
+  /** 课程代码（E4 副本落盘目录名：projectsRoot/{courseCode}/doc/，与教师侧 1:1 镜像） */
+  courseCode: string | null
+  /** 词表 v2：1讲义 2实验 3作业 5考试 6实训（4测试废弃并入 5） */
   purpose: number
   publishTime: string
 }
 
-/** 学生版 md 拉取结果（StudentMarkdownRespVO） */
+/** 学生版 md 拉取结果（StudentMarkdownRespVO，含 M3 实验字段） */
 export interface StudentMarkdown {
   releaseId: number
   purpose: number
   /** reading / assignable / original */
   variant: string
   md: string
+  /** M3：提交截止（作业/考试有值；实验/实训 NULL=不限时） */
+  closeAt?: string | null
+  /** M3：步骤锁序快照 JSON 数组字符串（实验类用途下发） */
+  stepOrder?: string | null
+  /** M3：教师录制 trace 侧车原文（实验类用途下发，客户端注入定序用） */
+  trace?: string | null
+  /** M3：派生缓存是否命中（仅派生变体有值） */
+  cached?: boolean | null
 }

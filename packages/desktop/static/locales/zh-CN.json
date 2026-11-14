@@ -1249,5 +1249,22 @@
     "studentQuizRank": "排名",
     "studentQuizVoided": "本题已作废，得分清零",
     "studentQuizClose": "关闭"
+  },
+  "teachingLab": {
+    "copyEmpty": "副本内容为空",
+    "noLab": "当前文档不是已打开的实验副本",
+    "submitRejected": "提交被拒",
+    "passed": "已通过",
+    "rejected": "未通过",
+    "executed": "已执行未提交",
+    "submit": "提交",
+    "submitted": "已提交",
+    "blocked": "提前做守卫拦截",
+    "backfill": "回填全部",
+    "backfillDone": "回填完成，已写回副本",
+    "backfillNone": "没有可回填的占位块",
+    "writeDenied": "副本写入被拒（不在登记的课程工作区内）",
+    "reportSubmit": "生成并提交实验报告",
+    "reportDone": "实验报告已提交"
   }
 }

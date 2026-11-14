@@ -254,6 +254,15 @@ declare global {
     getProjectsRoot(): Promise<string>
     openProjectsRoot(options?: { activateTab?: boolean }): Promise<string>
     chooseProjectsRoot(): Promise<string | null>
+    /** E4 实验副本：落盘（同 releaseId 保留本地回填成果）/ 回填写回（sidecar 校验）。 */
+    labCopyPut(opts: {
+      courseKey: string
+      fileName: string
+      content: string
+      releaseId: number
+      force?: boolean
+    }): Promise<{ docPath: string; kept: boolean }>
+    labDocWrite(opts: { docPath: string; content: string }): Promise<boolean>
   }
 
   interface ProcessShim {

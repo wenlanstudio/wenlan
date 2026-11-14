@@ -1249,5 +1249,22 @@
     "studentQuizRank": "排名",
     "studentQuizVoided": "本題已作廢，得分清零",
     "studentQuizClose": "關閉"
+  },
+  "teachingLab": {
+    "copyEmpty": "副本內容為空",
+    "noLab": "當前文件不是已開啟的實驗副本",
+    "submitRejected": "提交被拒",
+    "passed": "已通過",
+    "rejected": "未通過",
+    "executed": "已執行未提交",
+    "submit": "提交",
+    "submitted": "已提交",
+    "blocked": "提前做守衛攔截",
+    "backfill": "回填全部",
+    "backfillDone": "回填完成，已寫回副本",
+    "backfillNone": "沒有可回填的佔位塊",
+    "writeDenied": "副本寫入被拒（不在登記的課程工作區內）",
+    "reportSubmit": "產生並提交實驗報告",
+    "reportDone": "實驗報告已提交"
   }
 }

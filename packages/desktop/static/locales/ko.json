@@ -1249,5 +1249,22 @@
     "studentQuizRank": "순위",
     "studentQuizVoided": "이 문제는 무효 처리되었습니다 — 점수 초기화",
     "studentQuizClose": "닫기"
+  },
+  "teachingLab": {
+    "copyEmpty": "사본 내용이 비어 있습니다",
+    "noLab": "현재 파일은 열린 실습 사본이 아닙니다",
+    "submitRejected": "제출이 거부되었습니다",
+    "passed": "통과",
+    "rejected": "미통과",
+    "executed": "실행됨, 미제출",
+    "submit": "제출",
+    "submitted": "제출됨",
+    "blocked": "선행 가드에 의해 차단됨",
+    "backfill": "전부 채우기",
+    "backfillDone": "채우기 완료, 사본에 기록됨",
+    "backfillNone": "채울 자리표시 블록이 없습니다",
+    "writeDenied": "사본 쓰기가 거부되었습니다(등록된 과정 작업 공간 외부)",
+    "reportSubmit": "실습 보고서 생성 및 제출",
+    "reportDone": "실습 보고서가 제출되었습니다"
   }
 }

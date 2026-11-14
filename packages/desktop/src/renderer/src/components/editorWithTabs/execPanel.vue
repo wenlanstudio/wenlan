@@ -72,6 +72,62 @@
             </button>
             <span class="job-hint">{{ t('execPanel.jobHint') }}</span>
           </div>
+          <!-- E4 教学模式：本 tab 是已落盘的实验副本 → 锁序步骤卡 + 回填/报告。
+               步骤顺序来自教师录制 trace（发布物下发，main 侧注回）；提交走服务端
+               锁序/计分裁决，引擎只给事实（guardStep 通过判定）。 -->
+          <div
+            v-if="lab"
+            class="lab-bar"
+          >
+            <div class="lab-steps">
+              <div
+                v-for="(s, i) in lab.stepOrder"
+                :key="s.key"
+                class="lab-step"
+                :class="{
+                  passed: teachingStore.labSubmitted[s.key]?.passed,
+                  failed:
+                    teachingStore.labSubmitted[s.key] &&
+                    !teachingStore.labSubmitted[s.key].passed
+                }"
+              >
+                <span class="lab-step-idx">{{ i + 1 }}</span>
+                <span
+                  class="lab-step-name"
+                  :title="s.key"
+                >{{ stepNameOf(s.key) }}</span>
+                <span class="lab-step-point">{{ s.point }}</span>
+                <span class="lab-step-status">{{ stepStatusOf(s.key) }}</span>
+                <button
+                  class="lab-step-submit"
+                  :disabled="labBusy"
+                  @click="submitStep(s.key)"
+                >
+                  {{ t('teachingLab.submit') }}
+                </button>
+              </div>
+            </div>
+            <div class="lab-actions">
+              <button
+                class="lab-btn"
+                :disabled="labBusy"
+                @click="backfillAll"
+              >
+                {{ t('teachingLab.backfill') }}
+              </button>
+              <button
+                class="lab-btn"
+                :disabled="labBusy"
+                @click="submitReport"
+              >
+                {{ t('teachingLab.reportSubmit') }}
+              </button>
+              <span
+                class="lab-msg"
+                :class="{ err: labMsgErr }"
+              >{{ labMsg }}</span>
+            </div>
+          </div>
           <div class="block-list">
             <div
               v-for="b in blocks"
@@ -255,7 +311,14 @@ import bus from '@/bus'
 import { useEditorStore } from '@/store/editor'
 import { useEditorViewStore } from '@/store/editorView'
 import { useExecPanelStore, PANEL_MIN_HEIGHT, PANEL_DEFAULT_HEIGHT } from '@/store/execPanel'
-import type { Md2rBlockInfo, Md2rEvent, Md2rRunReport, Md2rRunResult } from '@shared/types/mdcode2run'
+import { useTeachingStore } from '@/store/teaching'
+import type {
+  Md2rBlockInfo,
+  Md2rEvent,
+  Md2rRunReport,
+  Md2rRunResult,
+  Md2rStepRecord
+} from '@shared/types/mdcode2run'
 import { diagramTypeOfLang } from '@muyajs/core'
 import { codeSlice, findFenceByCode } from '@/util/fenceRun'
 
@@ -605,6 +668,141 @@ const runWholeJob = async (): Promise<void> => {
     }
   } finally {
     mrRunning.value = false
+    // 整份作业跑完：学生的 document 执行记录已落 sidecar → 步骤 executed 状态刷新
+    void refreshLabSteps()
+  }
+}
+
+// —— E4 教学模式（本 tab 是已落盘的实验副本）——
+const teachingStore = useTeachingStore()
+/** 只在「当前打开的文件 = 已落盘实验副本」时激活；stepOrder 为空（讲义/无步骤）不亮。 */
+const lab = computed(() => {
+  const opened = teachingStore.openedLab
+  return opened && opened.docPath === docPath.value && opened.stepOrder.length > 0 ? opened : null
+})
+/** stepsOf 的步骤事实（顺序=教师 trace 序，executed=学生本地记录）。 */
+const labSteps = ref<Md2rStepRecord[]>([])
+const labBusy = ref(false)
+const labMsg = ref('')
+const labMsgErr = ref(false)
+
+const refreshLabSteps = async (): Promise<void> => {
+  if (!lab.value || !docPath.value) {
+    labSteps.value = []
+    return
+  }
+  try {
+    const r = await window.mdcode2run.steps({ docPath: docPath.value, md: props.markdown })
+    labSteps.value = r.steps
+  } catch {
+    labSteps.value = []
+  }
+}
+
+watch(
+  () => [props.markdown, docPath.value, lab.value?.docPath] as const,
+  () => {
+    void refreshLabSteps()
+  },
+  { immediate: true }
+)
+
+const setLabMsg = (msg: string, isErr = false): void => {
+  labMsg.value = msg
+  labMsgErr.value = isErr
+}
+
+const stepNameOf = (key: string): string =>
+  labSteps.value.find((s) => s.stepId === key)?.name || key
+
+/** 状态徽章：服务端受理记录优先（✓/✗），其次本地执行事实（已执行未提交）。 */
+const stepStatusOf = (key: string): string => {
+  const submitted = teachingStore.labSubmitted[key]
+  if (submitted?.passed) return t('teachingLab.passed')
+  if (submitted) return t('teachingLab.rejected')
+  const step = labSteps.value.find((s) => s.stepId === key)
+  return step?.executed ? t('teachingLab.executed') : ''
+}
+
+/** 回填写入文件后重开 tab：磁盘内容变了，内存 tab 必须重载才所见即所得。 */
+const reopenLabDoc = (): void => {
+  const path = docPath.value
+  const current = editorStore.currentFile
+  if (current && current.pathname === path) editorStore.FORCE_CLOSE_TAB(current)
+  window.electron.ipcRenderer.send('mt::open-file', path)
+}
+
+const backfillAll = async (): Promise<void> => {
+  const path = docPath.value
+  if (!lab.value || !path || labBusy.value) return
+  labBusy.value = true
+  setLabMsg('')
+  try {
+    const r = await window.mdcode2run.fillTodos({ docPath: path, md: props.markdown })
+    if (r.problems.length) setLabMsg(r.problems.join('；'), true)
+    if (r.md !== props.markdown) {
+      const written = await window.teachingWorkspace.labDocWrite({ docPath: path, content: r.md })
+      if (written) {
+        reopenLabDoc()
+        setLabMsg(t('teachingLab.backfillDone'))
+      } else {
+        setLabMsg(t('teachingLab.writeDenied'), true)
+      }
+    } else if (!r.problems.length) {
+      setLabMsg(t('teachingLab.backfillNone'))
+    }
+  } catch (err) {
+    setLabMsg(err instanceof Error ? err.message : String(err), true)
+  } finally {
+    labBusy.value = false
+  }
+}
+
+const submitStep = async (key: string): Promise<void> => {
+  const path = docPath.value
+  if (!lab.value || !path || labBusy.value) return
+  labBusy.value = true
+  setLabMsg('')
+  try {
+    const guard = await window.mdcode2run.guard({ docPath: path, md: props.markdown, stepId: key })
+    if (guard.problems.length) {
+      setLabMsg(guard.problems.join('；'), true)
+      return
+    }
+    if (guard.blocked) {
+      setLabMsg(
+        guard.diagnostics.map((d) => d.message).join('；') || t('teachingLab.blocked'),
+        true
+      )
+      return
+    }
+    const verdict = guard.verdict
+    const msg = await teachingStore.submitLabStep(key, {
+      passed: verdict?.passed ?? false,
+      executed: verdict?.executed ?? false
+    })
+    setLabMsg(msg || `${t('teachingLab.submitted')} · ${key}`, !!msg)
+    void refreshLabSteps()
+  } catch (err) {
+    setLabMsg(err instanceof Error ? err.message : String(err), true)
+  } finally {
+    labBusy.value = false
+  }
+}
+
+const submitReport = async (): Promise<void> => {
+  const path = docPath.value
+  if (!lab.value || !path || labBusy.value) return
+  labBusy.value = true
+  setLabMsg('')
+  try {
+    const r = await window.mdcode2run.labReport({ docPath: path, md: props.markdown })
+    const msg = await teachingStore.submitLabReport(r.md)
+    setLabMsg(msg || t('teachingLab.reportDone'), !!msg)
+  } catch (err) {
+    setLabMsg(err instanceof Error ? err.message : String(err), true)
+  } finally {
+    labBusy.value = false
   }
 }
 
@@ -1177,6 +1375,123 @@ onBeforeUnmount(() => {
 }
 
 .output-text.error {
+  color: var(--dangerColor, #eb4d4d);
+}
+
+/* —— E4 教学模式：锁序步骤卡 + 回填/报告（JetBrains 式贴在块清单上方） —— */
+.lab-bar {
+  border-top: 1px solid var(--editorColor10, rgba(128, 128, 128, 0.2));
+  border-bottom: 1px solid var(--editorColor10, rgba(128, 128, 128, 0.2));
+  padding: 4px 8px 6px;
+  background: var(--editorBgColor, transparent);
+}
+
+.lab-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 132px;
+  overflow-y: auto;
+}
+
+.lab-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.lab-step-idx {
+  width: 16px;
+  text-align: center;
+  color: var(--editorColor60);
+  font-family: var(--editorFontMono, monospace);
+}
+
+.lab-step-name {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--editorColor80);
+}
+
+.lab-step-point {
+  color: var(--editorColor60);
+  font-family: var(--editorFontMono, monospace);
+}
+
+.lab-step-status {
+  min-width: 56px;
+  text-align: center;
+  color: var(--editorColor60);
+}
+
+.lab-step.passed .lab-step-status {
+  color: var(--successColor, #27ae60);
+}
+
+.lab-step.failed .lab-step-status {
+  color: var(--dangerColor, #eb4d4d);
+}
+
+.lab-step-submit {
+  border: none;
+  background: transparent;
+  color: var(--editorColor80);
+  cursor: pointer;
+  padding: 0 6px;
+  line-height: 18px;
+  border-radius: 3px;
+}
+
+.lab-step-submit:hover:not(:disabled) {
+  background: var(--editorColor10, rgba(128, 128, 128, 0.15));
+}
+
+.lab-step-submit:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.lab-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.lab-btn {
+  border: 1px solid var(--editorColor30, rgba(128, 128, 128, 0.3));
+  background: transparent;
+  color: var(--editorColor80);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 20px;
+  padding: 0 10px;
+  border-radius: 3px;
+}
+
+.lab-btn:hover:not(:disabled) {
+  background: var(--editorColor10, rgba(128, 128, 128, 0.15));
+}
+
+.lab-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.lab-msg {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  color: var(--editorColor60);
+}
+
+.lab-msg.err {
   color: var(--dangerColor, #eb4d4d);
 }
 </style>

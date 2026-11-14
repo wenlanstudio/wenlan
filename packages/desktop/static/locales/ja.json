@@ -1249,5 +1249,22 @@
     "studentQuizRank": "順位",
     "studentQuizVoided": "この問題は無効になりました（得点クリア）",
     "studentQuizClose": "閉じる"
+  },
+  "teachingLab": {
+    "copyEmpty": "コピーの内容が空です",
+    "noLab": "現在のファイルは開かれた実習コピーではありません",
+    "submitRejected": "提出が拒否されました",
+    "passed": "合格",
+    "rejected": "不合格",
+    "executed": "実行済み・未提出",
+    "submit": "提出",
+    "submitted": "提出済み",
+    "blocked": "先行ガードによりブロック",
+    "backfill": "すべて埋め込む",
+    "backfillDone": "埋め込み完了、コピーに書き戻しました",
+    "backfillNone": "埋め込み可能なプレースホルダーはありません",
+    "writeDenied": "コピーへの書き込みが拒否されました（登録されたコース領域外）",
+    "reportSubmit": "実習レポートを生成して提出",
+    "reportDone": "実習レポートを提出しました"
   }
 }

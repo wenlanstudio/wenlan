@@ -1249,5 +1249,22 @@
     "studentQuizRank": "Sıra",
     "studentQuizVoided": "Bu soru iptal edildi — puanlar sıfırlandı",
     "studentQuizClose": "Kapat"
+  },
+  "teachingLab": {
+    "copyEmpty": "Kopya içeriği boş",
+    "noLab": "Geçerli dosya açık bir laboratuvar kopyası değil",
+    "submitRejected": "Gönderim reddedildi",
+    "passed": "başarılı",
+    "rejected": "başarısız",
+    "executed": "çalıştırıldı, gönderilmedi",
+    "submit": "gönder",
+    "submitted": "gönderildi",
+    "blocked": "Öne koşma koruması tarafından engellendi",
+    "backfill": "Tümünü doldur",
+    "backfillDone": "Dolduruldu ve kopyaya yazıldı",
+    "backfillNone": "Doldurulacak yer tutucu blok yok",
+    "writeDenied": "Kopyaya yazma reddedildi (kayıtlı ders çalışma alanı dışında)",
+    "reportSubmit": "Laboratuvar raporu oluştur ve gönder",
+    "reportDone": "Laboratuvar raporu gönderildi"
   }
 }

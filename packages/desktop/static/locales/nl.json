@@ -1249,5 +1249,22 @@
     "studentQuizRank": "Rang",
     "studentQuizVoided": "Deze vraag is vervallen — scores gewist",
     "studentQuizClose": "Sluiten"
+  },
+  "teachingLab": {
+    "copyEmpty": "Kopie-inhoud is leeg",
+    "noLab": "Het huidige bestand is geen geopende practicumkopie",
+    "submitRejected": "Inzending geweigerd",
+    "passed": "geslaagd",
+    "rejected": "gezakt",
+    "executed": "uitgevoerd, niet ingediend",
+    "submit": "indienen",
+    "submitted": "ingediend",
+    "blocked": "Geblokkeerd door vooruit-wacht",
+    "backfill": "Alles invullen",
+    "backfillDone": "Ingevuld en naar de kopie geschreven",
+    "backfillNone": "Geen placeholder-blokken om in te vullen",
+    "writeDenied": "Schrijven geweigerd (buiten de geregistreerde cursuswerkruimte)",
+    "reportSubmit": "Practicumverslag genereren en indienen",
+    "reportDone": "Practicumverslag ingediend"
   }
 }

@@ -234,10 +234,17 @@
     `RunReport.steps`）；main 注册表按 docPath 持久化教师序列，引擎 60s 宽限回收
     后重建仍原样注回；新增 `set-teacher-trace` / `trace-state` / `steps` /
     `guard` / `fill-todos` / `lab-report` 六个 invoke 通道，preload 桥与类型契约
-    已对齐。**E4 执行面板仍未实现**；文枢 M3 服务端四刀已落地
-    （2026-11-14 `2f33895`..`5530217`，见 `wenshu-server/docs/M3-LAB-SERVER.md §9`：
-    发布链 / 拉副本 / 步骤提交 / 活动面，`t_step_record`、锁序、计分、trace 快照齐备），
-    刀 5 的端到端联调在等客户端 E3/E4。
+    已对齐。**E4 v1 已落地（2026-11-14）**：教学树实验类发布物（purpose≥2）改走
+    `/teaching/lab/copy` → 副本落盘 `{projectsRoot}/{courseCode}/doc/`（main 侧
+    `teaching/labCopy.ts`：sidecar 归属、同 releaseId 重开保留学生回填、回填写入
+    只放行登记过的 doc/ 下 .md）→ 以真实 docPath 开 tab → 教师 trace 注回引擎 →
+    执行面板教学模式（锁序步骤卡 + guardStep 守卫/通过判定 + 回填全部 + 逐步提交
+    - 报告上送）。v1 边界：实训（本地判）全链可用；作业/考试的服务端判证据上送
+      （check-code class= 定位扩展）与 muya 块级锁区、讲义可写+还原留待下一切片。
+      文枢 M3 服务端四刀已落地
+      （2026-11-14 `2f33895`..`5530217`，见 `wenshu-server/docs/M3-LAB-SERVER.md §9`：
+      发布链 / 拉副本 / 步骤提交 / 活动面，`t_step_record`、锁序、计分、trace 快照齐备），
+      刀 5① 伪客户端全链脚本已全绿，真联调（刀 5②）等本 v1 真机验收。
   - **project 档 TODO 块**：占位块带 ▶，点击回填学生工程代码（块实时替换、工程变更
     标 stale）；提交时由回填结果拼出**实验报告 md**（讲义 + 学生代码）一并上送留存。
   - 判分展示沿用「只报事实」：+point / -failsPoint / 豁免 3 次由服务端计算回显。

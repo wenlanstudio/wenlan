@@ -54,6 +54,42 @@ export interface OpenedRelease {
   slotCount: number
 }
 
+/**
+ * E4：已落盘的实验副本（执行面板教学模式的状态源）。
+ *
+ * docPath 是真实文件路径（{projectsRoot}/{courseCode}/doc/{讲义名}.md）——执行
+ * 面板、引擎注册表（trace 注回/sidecar）全靠它锚定。stepOrder 是服务端从教师
+ * trace 推导、发布时冻结的锁序快照。
+ */
+export interface OpenedLabRelease {
+  releaseId: number
+  docPath: string
+  fileName: string
+  courseKey: string
+  variant: string
+  purpose: number
+  stepOrder: Array<{ key: string; point: number }>
+  closeAt: string | null
+  /** true = 命中同 releaseId 旧副本原样保留（学生回填成果没被覆盖）。 */
+  kept: boolean
+}
+
+/** 锁序快照 JSON（stepOrder 字符串）→ 有序步骤清单。 */
+const parseStepOrder = (raw: string | null | undefined): Array<{ key: string; point: number }> => {
+  try {
+    const parsed: unknown = JSON.parse(raw ?? '[]')
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .map((item) => {
+        const o = (item ?? {}) as Record<string, unknown>
+        return { key: asString(o.key), point: asNumber(o.point) }
+      })
+      .filter((s) => s.key)
+  } catch {
+    return []
+  }
+}
+
 /** 课堂跟随与当前发题（M2b ws）。 */
 export interface ClassroomState {
   sessionId: number | null
@@ -302,6 +338,139 @@ export const useTeachingStore = defineStore('teaching', () => {
   const sourceMd = ref('')
   /** 当前学生只读 tab 的 id，重开时只关自己，不误伤用户的其他文档。 */
   const studentTabId = ref<string | null>(null)
+
+  // ==================== E4：实验副本（落盘 + 逐步提交 + 报告） ====================
+
+  /** 当前打开的实验副本（执行面板按 docPath 对号入座）。 */
+  const openedLab = ref<OpenedLabRelease | null>(null)
+  /** 服务端已受理的步骤记录（stepKey → {passed, score}，/lab/my 口径）。 */
+  const labSubmitted = ref<Record<string, { passed: boolean; score: number }>>({})
+
+  /**
+   * 打开实验类发布物（purpose≥2）：拉 /lab/copy → 落盘课程工作区 → 以真实
+   * docPath 打开 tab → 教师录制 trace 注回引擎（面板定序用）。讲义仍走旧链。
+   *
+   * 同 releaseId 重开时 main 侧保留本地文件（kept=true）——学生的 todo 回填
+   * 成果不因重拉被覆盖；换 releaseId（= 教师发了新版本）才整篇重写。
+   */
+  const openLabRelease = async(release: StudentRelease): Promise<string> => {
+    if (release.purpose === 1) return openStudentRelease(release)
+    const res = await window.auth.request<StudentMarkdown>({
+      url: '/teaching/lab/copy',
+      params: { releaseId: release.releaseId }
+    })
+    if (!res.ok) {
+      return res.error ?? `HTTP ${res.status}`
+    }
+    const data = res.data
+    if (!data?.md) {
+      return t('teachingLab.copyEmpty')
+    }
+    const courseKey = (release.courseCode || release.courseName || 'course').trim() || 'course'
+    const fileName = `${(release.materialName || '实验').trim()}.md`
+    let put: { docPath: string; kept: boolean }
+    try {
+      put = await window.teachingWorkspace.labCopyPut({
+        courseKey,
+        fileName,
+        content: data.md,
+        releaseId: release.releaseId
+      })
+    } catch (err) {
+      return err instanceof Error ? err.message : String(err)
+    }
+    // 真实文件 tab（有 docPath）：执行面板、引擎实例、trace 注回全以它为锚。
+    window.electron.ipcRenderer.send('mt::open-file', put.docPath)
+    if (data.trace) {
+      // 双源分离：教师录制序列只进只读定序源，注册表在 60s 宽限重建时原样注回。
+      void window.mdcode2run.setTeacherTrace({ docPath: put.docPath, source: data.trace })
+    }
+    openedLab.value = {
+      releaseId: release.releaseId,
+      docPath: put.docPath,
+      fileName,
+      courseKey,
+      variant: data.variant ?? '',
+      purpose: release.purpose,
+      stepOrder: parseStepOrder(data.stepOrder),
+      closeAt: data.closeAt ?? null,
+      kept: put.kept
+    }
+    labSubmitted.value = {}
+    void refreshLabStatus()
+    return ''
+  }
+
+  /** 服务端已受理的步骤记录（锁序/计分以 t_step_record 为准，这里只读）。 */
+  const refreshLabStatus = async(): Promise<void> => {
+    const lab = openedLab.value
+    if (!lab) return
+    const res = await window.auth.request<{
+      steps: Array<{ stepKey: string; passed: boolean; score: number }>
+    }>({
+      url: '/teaching/lab/my',
+      params: { releaseId: lab.releaseId }
+    })
+    const map: Record<string, { passed: boolean; score: number }> = {}
+    for (const row of res.data?.steps ?? []) {
+      if (row?.stepKey) {
+        map[row.stepKey] = { passed: row.passed === true, score: asNumber(row.score) }
+      }
+    }
+    labSubmitted.value = map
+  }
+
+  /**
+   * 提交一步：passed/traceHit 都来自引擎的通过判定（guardStep 的事实组合），
+   * 锁序与计分由服务端裁决——回执 ok=false 时 message 是人话（跳步/缺证据/过期）。
+   */
+  const submitLabStep = async(
+    stepKey: string,
+    verdict: { passed: boolean; executed: boolean }
+  ): Promise<string> => {
+    const lab = openedLab.value
+    if (!lab) {
+      return t('teachingLab.noLab')
+    }
+    const res = await window.auth.request<{
+      ok: boolean
+      passed?: boolean
+      score?: number
+      message?: string
+    }>({
+      url: '/teaching/lab/step/submit',
+      method: 'POST',
+      data: {
+        releaseId: lab.releaseId,
+        stepKey,
+        passed: verdict.passed,
+        traceHit: verdict.executed
+      }
+    })
+    if (!res.ok) {
+      return res.error ?? `HTTP ${res.status}`
+    }
+    void refreshLabStatus()
+    return res.data?.ok ? '' : (res.data?.message ?? t('teachingLab.submitRejected'))
+  }
+
+  /** 实验报告提交（引擎 labReportOf 拼装的自包含 md；覆盖式，最后一次为准）。 */
+  const submitLabReport = async(reportMd: string): Promise<string> => {
+    const lab = openedLab.value
+    if (!lab) {
+      return t('teachingLab.noLab')
+    }
+    const res = await window.auth.request<unknown>({
+      url: '/teaching/lab/report',
+      method: 'POST',
+      data: { releaseId: lab.releaseId, md: reportMd }
+    })
+    if (!res.ok) {
+      return res.error ?? `HTTP ${res.status}`
+    }
+    return ''
+  }
+
 
   const renderStudentDocument = (): { md: string; slotCount: number } =>
     renderQuizSlots(sourceMd.value, {
@@ -735,6 +904,12 @@ export const useTeachingStore = defineStore('teaching', () => {
     releasesFor,
     metaFor,
     remember,
-    restoreLast
+    restoreLast,
+    openedLab,
+    labSubmitted,
+    openLabRelease,
+    submitLabStep,
+    submitLabReport,
+    refreshLabStatus
   }
 })

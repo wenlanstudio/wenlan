@@ -18,6 +18,7 @@ import { setMatplotlibSource, warmUpPythonDetection } from './ipc/matplotlib'
 import { setGraphvizSource } from './ipc/graphviz'
 import { initAuthManager, getAuthManager } from './auth'
 import { initTeachingProjects } from './teaching/projectsRoot'
+import { initLabCopyHandlers } from './teaching/labCopy'
 
 // Set version strings into global and process.versions
 process.env.MARKTEXT_VERSION = MARKTEXT_VERSION
@@ -139,6 +140,8 @@ setGraphvizSource(() => accessor.preferences.getItem<string>('graphvizDotPath') 
 
 // 课程工作区根目录：安装器交接文件在此采用一次，偏好就绪后才能解析。
 initTeachingProjects(accessor.preferences, appEnvironment.paths.userDataPath)
+// E4：实验副本落盘（{projectsRoot}/{courseCode}/doc/，sidecar 归属 + 回填写回）。
+initLabCopyHandlers()
 
 const appController = new App(accessor, args as unknown as { _: string[] })
 appController.init()

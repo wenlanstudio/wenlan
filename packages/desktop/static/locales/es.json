@@ -1249,5 +1249,22 @@
     "studentQuizRank": "Puesto",
     "studentQuizVoided": "Esta pregunta fue anulada — puntos borrados",
     "studentQuizClose": "Cerrar"
+  },
+  "teachingLab": {
+    "copyEmpty": "El contenido de la copia está vacío",
+    "noLab": "El archivo actual no es una copia de laboratorio abierta",
+    "submitRejected": "Entrega rechazada",
+    "passed": "aprobado",
+    "rejected": "suspendido",
+    "executed": "ejecutado, sin entregar",
+    "submit": "entregar",
+    "submitted": "entregado",
+    "blocked": "Bloqueado por la guarda de anticipación",
+    "backfill": "Rellenar todo",
+    "backfillDone": "Rellenado y escrito en la copia",
+    "backfillNone": "No hay bloques de marcador que rellenar",
+    "writeDenied": "Escritura denegada (fuera del espacio de curso registrado)",
+    "reportSubmit": "Generar y enviar informe de laboratorio",
+    "reportDone": "Informe de laboratorio enviado"
   }
 }

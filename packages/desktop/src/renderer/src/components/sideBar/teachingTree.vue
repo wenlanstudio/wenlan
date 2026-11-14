@@ -255,7 +255,8 @@ const openPublish = (courseId: number, material: SimpleItem): void => {
 }
 
 const openStudent = async (release: StudentRelease): Promise<void> => {
-  error.value = await teachingStore.openStudentRelease(release)
+  // E4：实验类（purpose≥2）走副本落盘 + 教学面板链路（内部为讲义回退旧链）。
+  error.value = await teachingStore.openLabRelease(release)
 }
 
 watch([loggedIn, isStudent], ([value]) => {

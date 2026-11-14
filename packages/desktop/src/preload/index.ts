@@ -406,7 +406,17 @@ const teachingWorkspaceAPI = {
   getProjectsRoot: (): Promise<string> => invoke('teaching::get-projects-root'),
   openProjectsRoot: (options?: { activateTab?: boolean }): Promise<string> =>
     invoke('teaching::open-projects-root', options),
-  chooseProjectsRoot: (): Promise<string | null> => invoke('teaching::choose-projects-root')
+  chooseProjectsRoot: (): Promise<string | null> => invoke('teaching::choose-projects-root'),
+  // E4 实验副本：落盘（同 releaseId 保留本地回填成果）/ 回填写回（sidecar 校验）。
+  labCopyPut: (opts: {
+    courseKey: string
+    fileName: string
+    content: string
+    releaseId: number
+    force?: boolean
+  }): Promise<{ docPath: string; kept: boolean }> => invoke('teaching::lab-copy-put', opts),
+  labDocWrite: (opts: { docPath: string; content: string }): Promise<boolean> =>
+    invoke('teaching::lab-doc-write', opts)
 }
 
 try {

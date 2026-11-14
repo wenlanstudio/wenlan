@@ -1249,5 +1249,22 @@
     "studentQuizRank": "Rank",
     "studentQuizVoided": "This question was voided — scores cleared",
     "studentQuizClose": "Close"
+  },
+  "teachingLab": {
+    "copyEmpty": "Copy content is empty",
+    "noLab": "Current file is not an opened lab copy",
+    "submitRejected": "Submission rejected",
+    "passed": "passed",
+    "rejected": "rejected",
+    "executed": "executed, not submitted",
+    "submit": "submit",
+    "submitted": "submitted",
+    "blocked": "Blocked by ahead-of-step guard",
+    "backfill": "Backfill all",
+    "backfillDone": "Backfilled and written to the copy",
+    "backfillNone": "No placeholder blocks to backfill",
+    "writeDenied": "Copy write denied (outside the registered course workspace)",
+    "reportSubmit": "Generate & submit lab report",
+    "reportDone": "Lab report submitted"
   }
 }

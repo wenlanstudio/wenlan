@@ -1249,5 +1249,22 @@
     "studentQuizRank": "Rang",
     "studentQuizVoided": "Diese Frage wurde annulliert – Punkte gelöscht",
     "studentQuizClose": "Schließen"
+  },
+  "teachingLab": {
+    "copyEmpty": "Kopieinhalt ist leer",
+    "noLab": "Die aktuelle Datei ist keine geöffnete Übungskopie",
+    "submitRejected": "Abgabe abgelehnt",
+    "passed": "bestanden",
+    "rejected": "nicht bestanden",
+    "executed": "ausgeführt, nicht abgegeben",
+    "submit": "abgeben",
+    "submitted": "abgegeben",
+    "blocked": "Durch Vorlauf-Schutz blockiert",
+    "backfill": "Alle einsetzen",
+    "backfillDone": "Eingesetzt und in die Kopie geschrieben",
+    "backfillNone": "Keine Platzhalterblöcke zum Einsetzen",
+    "writeDenied": "Schreiben verweigert (außerhalb des registrierten Kursbereichs)",
+    "reportSubmit": "Praktikumsbericht erstellen & einreichen",
+    "reportDone": "Praktikumsbericht eingereicht"
   }
 }

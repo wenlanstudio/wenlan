@@ -93,6 +93,21 @@ export interface IpcInvokeChannels {
   'teaching::get-projects-root': { args: []; ret: string }
   'teaching::open-projects-root': { args: [options?: { activateTab?: boolean }]; ret: string }
   'teaching::choose-projects-root': { args: []; ret: string | null }
+  // E4 实验副本：落盘/保留判定 + 回填写回（路径 main 侧拼装，渲染端只给清洗前
+  // 的 courseKey/文件名；写入只放行 sidecar 认识的 doc/ 下 .md）。
+  'teaching::lab-copy-put': {
+    args: [
+      opts: {
+        courseKey: string
+        fileName: string
+        content: string
+        releaseId: number
+        force?: boolean
+      }
+    ]
+    ret: { docPath: string; kept: boolean }
+  }
+  'teaching::lab-doc-write': { args: [opts: { docPath: string; content: string }]; ret: boolean }
   // 课堂 ws：连接只存在于 main 进程，renderer 只能拿到脱敏后的事件帧。
   'teaching::ws-join': {
     args: [releaseId: number]

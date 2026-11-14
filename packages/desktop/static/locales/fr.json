@@ -1249,5 +1249,22 @@
     "studentQuizRank": "Rang",
     "studentQuizVoided": "Cette question a été annulée — scores effacés",
     "studentQuizClose": "Fermer"
+  },
+  "teachingLab": {
+    "copyEmpty": "Le contenu de la copie est vide",
+    "noLab": "Le fichier actuel n'est pas une copie de TP ouverte",
+    "submitRejected": "Soumission refusée",
+    "passed": "réussi",
+    "rejected": "échoué",
+    "executed": "exécuté, non soumis",
+    "submit": "soumettre",
+    "submitted": "soumis",
+    "blocked": "Bloqué par la garde d'anticipe",
+    "backfill": "Tout remplir",
+    "backfillDone": "Rempli et écrit dans la copie",
+    "backfillNone": "Aucun bloc de placeholder à remplir",
+    "writeDenied": "Écriture refusée (hors de l’espace de cours enregistré)",
+    "reportSubmit": "Générer et soumettre le compte rendu",
+    "reportDone": "Compte rendu soumis"
   }
 }
