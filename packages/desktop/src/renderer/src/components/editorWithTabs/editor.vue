@@ -2325,14 +2325,24 @@ onMounted(() => {
       }
 
       // Used to fix #628: auto scroll cursor to visible if the cursor is too low.
-      if (container.clientHeight - y < 100) {
+      // `y` is the caret rect in *viewport* coordinates (a raw DOMRect from
+      // muya), while `clientHeight`/`scrollTop` are container-local — compare
+      // in container coordinates, and clamp the target. Otherwise a caret
+      // merged into the trailing break of a document-final code/html block
+      // (deleting the blank line after it, #23 #25 #29) overshoots past max
+      // scrollTop and pins the viewport to the document bottom.
+      const yLocal = y - container.getBoundingClientRect().top
+      const maxScrollTop = container.scrollHeight - container.clientHeight
+      if (container.clientHeight - yLocal < 100) {
         // editableHeight is the lowest cursor position(till to top) that editor allowed.
         const editableHeight = container.clientHeight - 100
-        animatedScrollTo(container, container.scrollTop + (y - editableHeight), 0)
-      } else if (y < 100) {
+        const target = container.scrollTop + (yLocal - editableHeight)
+        animatedScrollTo(container, Math.min(target, maxScrollTop), 0)
+      } else if (yLocal < 100) {
         // Symmetric to #628: scroll up when the cursor rises above the top edge
         // (e.g. Arrow-Up), otherwise the caret leaves the viewport (#3329).
-        animatedScrollTo(container, container.scrollTop + (y - 100), 0)
+        const target = container.scrollTop + (yLocal - 100)
+        animatedScrollTo(container, Math.max(target, 0), 0)
       }
     }
 
