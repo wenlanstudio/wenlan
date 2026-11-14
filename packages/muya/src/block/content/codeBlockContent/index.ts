@@ -279,8 +279,21 @@ class CodeBlockContent extends Content {
     }
 
     override inputHandler(event: Event): void {
-        if (this.isComposed)
+        // Mirror the base inputHandler's undo-boundary handling (#28):
+        // composition and native undo/redo input events must neither record
+        // nor corrupt the boundary state, and every *real* edit has to pass
+        // through markInputBoundary — otherwise a delete inside a code block
+        // coalesces into the previous edit's undo entry whenever it lands
+        // within the 1 s coalescing window.
+        const inputType = 'inputType' in event && typeof event.inputType === 'string'
+            ? event.inputType
+            : '';
+        if (
+            this.isComposed
+            || /historyUndo|historyRedo/.test(inputType)
+        ) {
             return;
+        }
 
         const textContent = this.domNode!.textContent!;
         const { start, end } = this.getCursor()!;
@@ -293,6 +306,10 @@ class CodeBlockContent extends Content {
             false,
             'codeblock.content',
         );
+
+        const inputData = 'data' in event && typeof event.data === 'string' ? event.data : null;
+        this.muya.editor.history.markInputBoundary(inputType, inputData);
+
         this.text = text;
 
         this._updatePreviewIfHave(text);
@@ -557,6 +574,10 @@ class CodeBlockContent extends Content {
             && this.text[start.offset - 1] === '\n'
         ) {
             event.preventDefault();
+            // `preventDefault` suppresses the native input event that would
+            // otherwise reach inputHandler, so the undo boundary has to be
+            // marked here — before the text mutation records its op (#28).
+            this.muya.editor.history.markInputBoundary('deleteContentBackward', null);
             const { text } = this;
             this.text = text.substring(0, start.offset - 1) + text.substring(start.offset);
             this._updatePreviewIfHave(this.text);
@@ -599,6 +620,9 @@ class CodeBlockContent extends Content {
 
                 if (removedLength > 0) {
                     event.preventDefault();
+                    // Same as the `\n` path above: no native input event will
+                    // follow, so mark the undo boundary here (#28).
+                    this.muya.editor.history.markInputBoundary('deleteContentBackward', null);
                     this.text = code;
                     this._updatePreviewIfHave(this.text);
                     return this.setCursor(start.offset - removedLength, end.offset - removedLength, true);
