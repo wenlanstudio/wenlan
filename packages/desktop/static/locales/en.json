@@ -1266,6 +1266,7 @@
     "writeDenied": "Copy write denied (outside the registered course workspace)",
     "reportSubmit": "Generate & submit lab report",
     "reportDone": "Lab report submitted",
-    "needRun": "Run the whole job (asserts pass) before submitting a step"
+    "needRun": "Run the whole job (asserts pass) before submitting a step",
+    "evidenceMissing": "No student code to submit as evidence"
   }
 }

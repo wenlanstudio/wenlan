@@ -1266,6 +1266,7 @@
     "writeDenied": "Schreiben verweigert (außerhalb des registrierten Kursbereichs)",
     "reportSubmit": "Praktikumsbericht erstellen & einreichen",
     "reportDone": "Praktikumsbericht eingereicht",
-    "needRun": "Vor dem Abgeben eines Schritts den gesamten Job ausführen (Assertionen bestehen)"
+    "needRun": "Vor dem Abgeben eines Schritts den gesamten Job ausführen (Assertionen bestehen)",
+    "evidenceMissing": "Kein Studentencode als Nachweis vorhanden"
   }
 }

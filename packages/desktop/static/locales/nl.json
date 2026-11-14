@@ -1266,6 +1266,7 @@
     "writeDenied": "Schrijven geweigerd (buiten de geregistreerde cursuswerkruimte)",
     "reportSubmit": "Practicumverslag genereren en indienen",
     "reportDone": "Practicumverslag ingediend",
-    "needRun": "Voer de hele job uit (asserties slagen) voordat u een stap indient"
+    "needRun": "Voer de hele job uit (asserties slagen) voordat u een stap indient",
+    "evidenceMissing": "Geen studentcode om als bewijs in te dienen"
   }
 }

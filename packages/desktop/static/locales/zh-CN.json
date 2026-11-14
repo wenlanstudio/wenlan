@@ -1266,6 +1266,7 @@
     "writeDenied": "副本写入被拒（不在登记的课程工作区内）",
     "reportSubmit": "生成并提交实验报告",
     "reportDone": "实验报告已提交",
-    "needRun": "请先运行整份作业且断言通过，再提交步骤"
+    "needRun": "请先运行整份作业且断言通过，再提交步骤",
+    "evidenceMissing": "没有可作证据的学生代码"
   }
 }

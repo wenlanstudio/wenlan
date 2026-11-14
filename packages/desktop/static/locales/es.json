@@ -1266,6 +1266,7 @@
     "writeDenied": "Escritura denegada (fuera del espacio de curso registrado)",
     "reportSubmit": "Generar y enviar informe de laboratorio",
     "reportDone": "Informe de laboratorio enviado",
-    "needRun": "Ejecute el trabajo completo (aserciones aprobadas) antes de enviar un paso"
+    "needRun": "Ejecute el trabajo completo (aserciones aprobadas) antes de enviar un paso",
+    "evidenceMissing": "No hay código de estudiante para enviar como evidencia"
   }
 }

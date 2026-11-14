@@ -1266,6 +1266,7 @@
     "writeDenied": "Kopyaya yazma reddedildi (kayıtlı ders çalışma alanı dışında)",
     "reportSubmit": "Laboratuvar raporu oluştur ve gönder",
     "reportDone": "Laboratuvar raporu gönderildi",
-    "needRun": "Bir adım göndermeden önce tüm işi çalıştırın (doğrulamalar geçilmeli)"
+    "needRun": "Bir adım göndermeden önce tüm işi çalıştırın (doğrulamalar geçilmeli)",
+    "evidenceMissing": "Kanıt olarak gönderilecek öğrenci kodu yok"
   }
 }

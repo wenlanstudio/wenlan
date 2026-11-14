@@ -776,15 +776,32 @@ const submitStep = async (key: string): Promise<void> => {
       )
       return
     }
-    // project 档 = 整份判分：步级 executed/asserts 不归属（document 不落步），
-    // 通过事实取「最近一次整份运行成功」——没跑过就不准提交（防手填不跑就交）。
-    // 步级断言归因（assertsByStep/围栏）落地后这里换回 guard.verdict 精确判定。
-    const runOk = mrReport.value?.ok === true
-    if (!runOk) {
+    // 实训/实验（本地判）：project 档步级 executed/asserts 不归属（document 不落
+    // 步），通过事实取「最近一次整份运行成功」——没跑过就不准提交（防手填不跑
+    // 就交）。作业/考试（服务端判）：裁决权在服务端（证据比对），客户端只装配
+    // 证据 = 本步 check-code class= 对应类的回填代码（fences 元数据自 lab/copy，
+    // 无 runOk 硬门槛——守卫与整份编译天然互斥，逐步写类时整份编译必失败）。
+    const isServerJudge = lab.value.purpose === 3 || lab.value.purpose === 5
+    if (!isServerJudge && mrReport.value?.ok !== true) {
       setLabMsg(t('teachingLab.needRun'), true)
       return
     }
-    const msg = await teachingStore.submitLabStep(key, { passed: true, executed: true })
+    let evidence: string | undefined
+    if (isServerJudge) {
+      const fence = (lab.value.fences ?? []).find(
+        (f) => f.stepKey === key && f.verb === 'check-code' && f.class
+      )
+      if (fence?.class) {
+        const r = await window.mdcode2run.fillTodos({ docPath: path, md: props.markdown })
+        const fill = r.fills.find((f) => f.todo?.class === fence.class && f.code)
+        if (!fill?.code) {
+          setLabMsg(t('teachingLab.evidenceMissing') + ` · ${fence.class}`, true)
+          return
+        }
+        evidence = fill.code
+      }
+    }
+    const msg = await teachingStore.submitLabStep(key, { passed: true, executed: true }, evidence)
     setLabMsg(msg || `${t('teachingLab.submitted')} · ${key}`, !!msg)
     void refreshLabSteps()
   } catch (err) {

@@ -69,9 +69,26 @@ export interface OpenedLabRelease {
   variant: string
   purpose: number
   stepOrder: Array<{ key: string; point: number }>
+  /** M4：实验围栏元数据（无判分秘密 body）——服务端判步的证据装配依据。 */
+  fences: Array<{ stepKey: string; verb: string; class?: string }>
   closeAt: string | null
   /** true = 命中同 releaseId 旧副本原样保留（学生回填成果没被覆盖）。 */
   kept: boolean
+}
+
+/** /lab/copy 的 fences[] 投影（仅收 check-code class=——证据装配要用到的字段）。 */
+const parseFences = (raw: unknown): Array<{ stepKey: string; verb: string; class?: string }> => {
+  if (!Array.isArray(raw)) return []
+  const out: Array<{ stepKey: string; verb: string; class?: string }> = []
+  for (const item of raw) {
+    const o = (item ?? {}) as Record<string, unknown>
+    const stepKey = asString(o.stepKey)
+    const verb = asString(o.verb)
+    if (!stepKey || !verb) continue
+    const cls = asString(o.class)
+    out.push({ stepKey, verb, ...(cls ? { class: cls } : {}) })
+  }
+  return out
 }
 
 /** 锁序快照 JSON（stepOrder 字符串）→ 有序步骤清单。 */
@@ -393,6 +410,7 @@ export const useTeachingStore = defineStore('teaching', () => {
       variant: data.variant ?? '',
       purpose: release.purpose,
       stepOrder: parseStepOrder(data.stepOrder),
+      fences: parseFences((data as unknown as { fences?: unknown }).fences),
       closeAt: data.closeAt ?? null,
       kept: put.kept
     }
@@ -426,7 +444,8 @@ export const useTeachingStore = defineStore('teaching', () => {
    */
   const submitLabStep = async(
     stepKey: string,
-    verdict: { passed: boolean; executed: boolean }
+    verdict: { passed: boolean; executed: boolean },
+    evidence?: string
   ): Promise<string> => {
     const lab = openedLab.value
     if (!lab) {
@@ -444,7 +463,8 @@ export const useTeachingStore = defineStore('teaching', () => {
         releaseId: lab.releaseId,
         stepKey,
         passed: verdict.passed,
-        traceHit: verdict.executed
+        traceHit: verdict.executed,
+        ...(evidence ? { evidenceContent: evidence } : {})
       }
     })
     if (!res.ok) {
