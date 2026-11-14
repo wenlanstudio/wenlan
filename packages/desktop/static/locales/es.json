@@ -1248,7 +1248,15 @@
     "studentQuizScore": "Puntos",
     "studentQuizRank": "Puesto",
     "studentQuizVoided": "Esta pregunta fue anulada — puntos borrados",
-    "studentQuizClose": "Cerrar"
+    "studentQuizClose": "Cerrar",
+    "groupLecture": "Apuntes",
+    "groupExperiment": "Prácticas",
+    "groupTraining": "Proyectos formativos",
+    "groupHomework": "Tareas",
+    "groupExam": "Exámenes",
+    "restoreDocMenu": "Restaurar desde el servidor",
+    "commandRestoreDoc": "Restaurar el documento del curso al último contenido publicado (las notas locales se sobrescriben)",
+    "writableCopy": "Copia editable"
   },
   "teachingLab": {
     "copyEmpty": "El contenido de la copia está vacío",

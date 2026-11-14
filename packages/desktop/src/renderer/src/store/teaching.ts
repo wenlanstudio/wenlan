@@ -43,7 +43,10 @@ export interface SavedPublishMeta extends LastPublish {
   releases?: ReleaseRef[]
 }
 
-/** 学生端当前打开的只读讲义（状态栏与教学树共用）。 */
+/**
+ * 学生端当前打开的讲义（E4 起为落盘副本：真实 docPath 可写——学生加笔记批注，
+ * 「还原服务端版本」强制重拉覆盖；状态栏与教学树共用）。
+ */
 export interface OpenedRelease {
   releaseId: number
   materialName: string
@@ -51,7 +54,11 @@ export interface OpenedRelease {
   purpose: number
   versionNo: number
   variant: string
-  slotCount: number
+  docPath: string
+  fileName: string
+  courseKey: string
+  /** true = 命中同 releaseId 旧副本原样保留（学生笔记没被覆盖）。 */
+  kept: boolean
 }
 
 /**
@@ -512,12 +519,17 @@ export const useTeachingStore = defineStore('teaching', () => {
     studentTabId.value = editor.currentFile?.id ?? null
   }
 
-  /** 发题/收卷/进房后重渲染：把对应 slot 换成题目卡或退回占位。 */
+  /**
+   * 发题/收卷/进房后重渲染：把对应 slot 换成题目卡或退回占位。
+   * E4 起讲义是落盘副本（文件模式），文档内容不随课堂事件重渲染——课堂答题
+   * 走答题浮层，这里只对遗留的内存只读流生效（正常路径不会到达）。
+   */
   const refreshStudentDocument = async(): Promise<void> => {
+    if (openedRelease.value?.docPath) return
     if (!openedRelease.value || !sourceMd.value) return
     const view = renderStudentDocument()
     await openReadOnlyTab(view.md, true)
-    openedRelease.value = { ...openedRelease.value, slotCount: view.slotCount }
+    void view.slotCount
   }
 
   const onClassroomMessage = (message: {
@@ -785,8 +797,14 @@ export const useTeachingStore = defineStore('teaching', () => {
     void window.teachingSocket.raceVoid(openId)
   }
 
-  /** 学生端：拉派生 md，渲染占位/题目卡，开成只读文档，然后尝试进课堂。 */
+  /**
+   * 学生端：拉派生 md（讲义=reading，含不可见的 quiz-slot 注释标记），落盘课程
+   * 工作区并以真实 docPath 打开——E4 起讲义是**可写副本**（学生加笔记批注），
+   * 「还原服务端版本」强制重拉覆盖（发布定格：服务端是卷面权威）。课堂答题
+   * 走答题浮层（ws → studentQuiz），文档内容不随课堂事件重渲染。
+   */
   const openStudentRelease = async(release: StudentRelease): Promise<string> => {
+    if (release.purpose !== 1) return openLabRelease(release)
     const res = await window.auth.request<StudentMarkdown>({
       url: '/teaching/student/release/markdown',
       params: { releaseId: release.releaseId }
@@ -794,21 +812,86 @@ export const useTeachingStore = defineStore('teaching', () => {
     if (!res.ok) {
       return res.error ?? `HTTP ${res.status}`
     }
-    sourceMd.value = res.data?.md ?? ''
-    classroom.value.question = null
-    const view = renderStudentDocument()
-    await openReadOnlyTab(view.md, true)
+    const data = res.data
+    if (!data?.md) {
+      return t('teachingLab.copyEmpty')
+    }
+    const courseKey = (release.courseCode || release.courseName || 'course').trim() || 'course'
+    const fileName = `${(release.materialName || '讲义').trim()}.md`
+    let put: { docPath: string; kept: boolean }
+    try {
+      put = await window.teachingWorkspace.labCopyPut({
+        courseKey,
+        fileName,
+        content: data.md,
+        releaseId: release.releaseId
+      })
+    } catch (err) {
+      return err instanceof Error ? err.message : String(err)
+    }
+    window.electron.ipcRenderer.send('mt::open-file', put.docPath)
     openedRelease.value = {
       releaseId: release.releaseId,
       materialName: release.materialName,
       courseName: release.courseName,
       purpose: release.purpose,
       versionNo: release.versionNo,
-      variant: res.data?.variant ?? 'reading',
-      slotCount: view.slotCount
+      variant: data.variant ?? 'reading',
+      docPath: put.docPath,
+      fileName,
+      courseKey,
+      kept: put.kept
     }
     void joinClassroom(release.releaseId)
     return ''
+  }
+
+  /**
+   * 「还原服务端版本」（教学菜单 / 命令面板）：当前打开的课程文档（实验副本或
+   * 讲义笔记）强制重拉覆盖——发布定格下服务端是卷面权威，本地只是作答面。
+   */
+  const restoreCurrentDoc = async(): Promise<string> => {
+    const reopen = (docPath: string): void => {
+      const editor = useEditorStore()
+      const current = editor.currentFile
+      if (current && current.pathname === docPath) editor.FORCE_CLOSE_TAB(current)
+      window.electron.ipcRenderer.send('mt::open-file', docPath)
+    }
+    const lab = openedLab.value
+    if (lab) {
+      const res = await window.auth.request<StudentMarkdown>({
+        url: '/teaching/lab/copy',
+        params: { releaseId: lab.releaseId }
+      })
+      if (!res.ok) return res.error ?? `HTTP ${res.status}`
+      const put = await window.teachingWorkspace.labCopyPut({
+        courseKey: lab.courseKey,
+        fileName: lab.fileName,
+        content: res.data?.md ?? '',
+        releaseId: lab.releaseId,
+        force: true
+      })
+      reopen(put.docPath)
+      return ''
+    }
+    const rel = openedRelease.value
+    if (rel?.docPath) {
+      const res = await window.auth.request<StudentMarkdown>({
+        url: '/teaching/student/release/markdown',
+        params: { releaseId: rel.releaseId }
+      })
+      if (!res.ok) return res.error ?? `HTTP ${res.status}`
+      const put = await window.teachingWorkspace.labCopyPut({
+        courseKey: rel.courseKey,
+        fileName: rel.fileName,
+        content: res.data?.md ?? '',
+        releaseId: rel.releaseId,
+        force: true
+      })
+      reopen(put.docPath)
+      return ''
+    }
+    return t('teachingLab.noLab')
   }
 
   // ==================== 学生作答（E5 步 4） ====================
@@ -927,6 +1010,7 @@ export const useTeachingStore = defineStore('teaching', () => {
     restoreLast,
     openedLab,
     labSubmitted,
+    restoreCurrentDoc,
     openLabRelease,
     submitLabStep,
     submitLabReport,

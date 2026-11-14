@@ -1248,7 +1248,15 @@
     "studentQuizScore": "Puan",
     "studentQuizRank": "Sıra",
     "studentQuizVoided": "Bu soru iptal edildi — puanlar sıfırlandı",
-    "studentQuizClose": "Kapat"
+    "studentQuizClose": "Kapat",
+    "groupLecture": "Ders notları",
+    "groupExperiment": "Laboratuvar",
+    "groupTraining": "Uygulama projeleri",
+    "groupHomework": "Ödevler",
+    "groupExam": "Sınavlar",
+    "restoreDocMenu": "Sunucudan geri yükle",
+    "commandRestoreDoc": "Geçerli ders belgesini sunucudaki son yayımlanan içeriğe geri yükle (yerel notlar üzerine yazılır)",
+    "writableCopy": "Yazılabilir kopya"
   },
   "teachingLab": {
     "copyEmpty": "Kopya içeriği boş",

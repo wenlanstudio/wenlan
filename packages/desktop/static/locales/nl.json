@@ -1248,7 +1248,15 @@
     "studentQuizScore": "Score",
     "studentQuizRank": "Rang",
     "studentQuizVoided": "Deze vraag is vervallen — scores gewist",
-    "studentQuizClose": "Sluiten"
+    "studentQuizClose": "Sluiten",
+    "groupLecture": "Colleges",
+    "groupExperiment": "Practica",
+    "groupTraining": "Trainingsprojecten",
+    "groupHomework": "Huiswerk",
+    "groupExam": "Tentamens",
+    "restoreDocMenu": "Herstel vanaf server",
+    "commandRestoreDoc": "Het huidige cursusdocument herstellen naar de laatst gepubliceerde inhoud (lokale notities worden overschreven)",
+    "writableCopy": "Beschrijfbare kopie"
   },
   "teachingLab": {
     "copyEmpty": "Kopie-inhoud is leeg",

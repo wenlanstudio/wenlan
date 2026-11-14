@@ -1248,7 +1248,15 @@
     "studentQuizScore": "得分",
     "studentQuizRank": "排名",
     "studentQuizVoided": "本題已作廢，得分清零",
-    "studentQuizClose": "關閉"
+    "studentQuizClose": "關閉",
+    "groupLecture": "講義",
+    "groupExperiment": "實驗",
+    "groupTraining": "實訓",
+    "groupHomework": "作業",
+    "groupExam": "考試",
+    "restoreDocMenu": "還原伺服器版本",
+    "commandRestoreDoc": "把目前課程文件還原為伺服器最新發布內容（本地筆記與回填會被覆蓋）",
+    "writableCopy": "可寫副本"
   },
   "teachingLab": {
     "copyEmpty": "副本內容為空",

@@ -1248,7 +1248,15 @@
     "studentQuizScore": "Score",
     "studentQuizRank": "Rank",
     "studentQuizVoided": "This question was voided — scores cleared",
-    "studentQuizClose": "Close"
+    "studentQuizClose": "Close",
+    "groupLecture": "Lectures",
+    "groupExperiment": "Lab experiments",
+    "groupTraining": "Training projects",
+    "groupHomework": "Homework",
+    "groupExam": "Exams",
+    "restoreDocMenu": "Restore from server",
+    "commandRestoreDoc": "Restore the current course document to the latest published content",
+    "writableCopy": "Writable copy"
   },
   "teachingLab": {
     "copyEmpty": "Copy content is empty",

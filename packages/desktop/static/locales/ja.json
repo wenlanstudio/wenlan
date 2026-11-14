@@ -1248,7 +1248,15 @@
     "studentQuizScore": "得点",
     "studentQuizRank": "順位",
     "studentQuizVoided": "この問題は無効になりました（得点クリア）",
-    "studentQuizClose": "閉じる"
+    "studentQuizClose": "閉じる",
+    "groupLecture": "講義",
+    "groupExperiment": "実験",
+    "groupTraining": "実習",
+    "groupHomework": "課題",
+    "groupExam": "試験",
+    "restoreDocMenu": "サーバー版に復元",
+    "commandRestoreDoc": "現在の講義資料をサーバーの最新公開内容に復元します（ローカルのメモは上書き）",
+    "writableCopy": "書き込み可能なコピー"
   },
   "teachingLab": {
     "copyEmpty": "コピーの内容が空です",

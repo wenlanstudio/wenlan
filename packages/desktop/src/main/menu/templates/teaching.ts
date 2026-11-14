@@ -44,6 +44,15 @@ export default function(): MenuItemConstructorOptions {
           win?.webContents.send('mt::execute-command-by-id', 'teaching.quiz')
         }
       },
+      {
+        // E4：把当前打开的课程文档（实验副本 / 讲义笔记）还原为服务端最新发布
+        // 内容——本地是作答面，服务端是卷面权威，还原 = 强制重拉覆盖。
+        label: t('teaching.restoreDocMenu'),
+        click(_menuItem, browserWindow) {
+          const win = browserWindow as BrowserWindow | undefined
+          win?.webContents.send('mt::execute-command-by-id', 'teaching.restoreDoc')
+        }
+      },
       { type: 'separator' },
       {
         // 文件 tab 默认落在课程工作区；用户切去别的文件夹后可从这里切回。

@@ -44,44 +44,34 @@
           <span class="course-name">{{ group.name }}</span>
         </div>
         <div v-if="expanded[group.courseId]">
-          <div class="group-row">
-            {{ t('teaching.readingGroup') }}
-          </div>
-          <div
-            v-if="group.reading.length === 0"
-            class="group-row loading"
+          <template
+            v-for="pg in PURPOSE_GROUPS"
+            :key="pg.purpose"
           >
-            {{ t('teaching.emptyMaterial') }}
-          </div>
-          <div
-            v-for="release in group.reading"
-            :key="release.releaseId"
-            class="material-row"
-            :class="{ active: openedRelease?.releaseId === release.releaseId }"
-            :title="release.materialName"
-            @click="openStudent(release)"
-          >
-            {{ release.materialName }}
-          </div>
-          <div class="group-row">
-            {{ t('teaching.assignGroup') }}
-          </div>
-          <div
-            v-if="group.assignable.length === 0"
-            class="group-row loading"
-          >
-            {{ t('teaching.emptyMaterial') }}
-          </div>
-          <div
-            v-for="release in group.assignable"
-            :key="release.releaseId"
-            class="material-row"
-            :class="{ active: openedRelease?.releaseId === release.releaseId }"
-            :title="release.materialName"
-            @click="openStudent(release)"
-          >
-            {{ release.materialName }}
-          </div>
+            <div class="group-row">
+              {{ t(pg.label) }}
+            </div>
+            <div
+              v-if="itemsOf(group, pg.purpose).length === 0"
+              class="group-row loading"
+            >
+              {{ t('teaching.emptyMaterial') }}
+            </div>
+            <div
+              v-for="release in itemsOf(group, pg.purpose)"
+              :key="release.releaseId"
+              class="material-row"
+              :class="{
+                active:
+                  openedRelease?.releaseId === release.releaseId ||
+                  openedLab?.releaseId === release.releaseId
+              }"
+              :title="release.materialName"
+              @click="openStudent(release)"
+            >
+              {{ release.materialName }}
+            </div>
+          </template>
         </div>
       </div>
     </template>
@@ -167,14 +157,26 @@ interface SimpleItem {
 interface StudentGroup {
   courseId: number
   name: string
-  reading: StudentRelease[]
-  assignable: StudentRelease[]
+  /** 词表 v2 用途桶：1 讲义 / 2 实验 / 6 实训 / 3 作业 / 5 考试（D13）。 */
+  byPurpose: Record<number, StudentRelease[]>
 }
+
+/** 五组固定顺序 = 词表序（D13：讲义/实验/实训/作业/考试，目录与菜单同构 D14）。 */
+const PURPOSE_GROUPS: Array<{ purpose: number; label: string }> = [
+  { purpose: 1, label: 'teaching.groupLecture' },
+  { purpose: 2, label: 'teaching.groupExperiment' },
+  { purpose: 6, label: 'teaching.groupTraining' },
+  { purpose: 3, label: 'teaching.groupHomework' },
+  { purpose: 5, label: 'teaching.groupExam' }
+]
+
+const itemsOf = (group: StudentGroup, purpose: number): StudentRelease[] =>
+  group.byPurpose[purpose] ?? []
 
 const auth = useAuthStore()
 const teachingStore = useTeachingStore()
 const { state, isStudent } = storeToRefs(auth)
-const { openedRelease } = storeToRefs(teachingStore)
+const { openedRelease, openedLab } = storeToRefs(teachingStore)
 const loggedIn = computed(() => state.value.loggedIn)
 
 const courses = ref<SimpleItem[]>([])
@@ -192,13 +194,13 @@ const studentGroups = computed<StudentGroup[]>(() => {
       group = {
         courseId: release.courseId,
         name: release.courseName,
-        reading: [],
-        assignable: []
+        byPurpose: {}
       }
       groups.set(release.courseId, group)
     }
-    if (release.purpose === 1) group.reading.push(release)
-    else group.assignable.push(release)
+    const bucket = group.byPurpose[release.purpose] ?? []
+    bucket.push(release)
+    group.byPurpose[release.purpose] = bucket
   }
   return [...groups.values()]
 })

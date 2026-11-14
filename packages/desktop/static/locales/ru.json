@@ -1248,7 +1248,15 @@
     "studentQuizScore": "Баллы",
     "studentQuizRank": "Место",
     "studentQuizVoided": "Вопрос отменён — баллы обнулены",
-    "studentQuizClose": "Закрыть"
+    "studentQuizClose": "Закрыть",
+    "groupLecture": "Лекции",
+    "groupExperiment": "Лабораторные",
+    "groupTraining": "Практикумы",
+    "groupHomework": "Домашние задания",
+    "groupExam": "Экзамены",
+    "restoreDocMenu": "Восстановить с сервера",
+    "commandRestoreDoc": "Восстановить текущий документ курса по последней опубликованной версии (локальные заметки будут перезаписаны)",
+    "writableCopy": "Редактируемая копия"
   },
   "teachingLab": {
     "copyEmpty": "Содержимое копии пусто",

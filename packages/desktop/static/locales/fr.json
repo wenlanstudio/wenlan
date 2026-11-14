@@ -1248,7 +1248,15 @@
     "studentQuizScore": "Score",
     "studentQuizRank": "Rang",
     "studentQuizVoided": "Cette question a été annulée — scores effacés",
-    "studentQuizClose": "Fermer"
+    "studentQuizClose": "Fermer",
+    "groupLecture": "Cours",
+    "groupExperiment": "TP",
+    "groupTraining": "Projets pratiques",
+    "groupHomework": "Devoirs",
+    "groupExam": "Examens",
+    "restoreDocMenu": "Restaurer depuis le serveur",
+    "commandRestoreDoc": "Restaurer le document de cours selon la dernière publication (les notes locales sont écrasées)",
+    "writableCopy": "Copie modifiable"
   },
   "teachingLab": {
     "copyEmpty": "Le contenu de la copie est vide",

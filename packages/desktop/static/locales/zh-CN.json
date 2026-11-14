@@ -1248,7 +1248,15 @@
     "studentQuizScore": "得分",
     "studentQuizRank": "排名",
     "studentQuizVoided": "本题已作废，得分清零",
-    "studentQuizClose": "关闭"
+    "studentQuizClose": "关闭",
+    "groupLecture": "讲义",
+    "groupExperiment": "实验",
+    "groupTraining": "实训",
+    "groupHomework": "作业",
+    "groupExam": "考试",
+    "restoreDocMenu": "还原服务端版本",
+    "commandRestoreDoc": "把当前课程文档还原为服务端最新发布内容（本地笔记与回填会被覆盖）",
+    "writableCopy": "可写副本"
   },
   "teachingLab": {
     "copyEmpty": "副本内容为空",

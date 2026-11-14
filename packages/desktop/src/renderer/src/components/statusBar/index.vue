@@ -67,16 +67,17 @@
         </el-dropdown-menu>
       </template>
     </el-dropdown>
-    <!-- 学生端：只读投影的来源与课堂跟随状态。不提供发布动作；课堂进行中时可点
-         进入放映跟随（「映」叶全屏，Esc 退回），不在课堂里则只是一条静态指示。 -->
+    <!-- 学生端：课程文档副本（E4 起可写）的来源与课堂跟随状态。不提供发布动作；
+         课堂进行中时可点进入放映跟随（「映」叶全屏，Esc 退回），不在课堂里则只是
+         一条静态指示。 -->
     <button
       v-else-if="isStudent && openedRelease && authState.loggedIn && !isWindowFullScreen && !presentExclusive"
       class="status-teaching readonly"
       :class="{ followable: classroom.connected }"
-      :title="classroom.error || (openedRelease.slotCount ? `${t('teaching.quizSlotWaiting')} · ${openedRelease.slotCount}` : t('teaching.readOnlyProjection'))"
+      :title="classroom.error || t('teaching.writableCopy')"
       @click="followClassroom"
     >
-      {{ openedRelease.materialName }} · {{ t('teaching.readOnlyProjection') }} · {{ t('teaching.synced') }}
+      {{ openedRelease.materialName }} · {{ t('teaching.writableCopy') }} · {{ t('teaching.synced') }}
       <template v-if="classroom.connected">
         · {{ t('teaching.classroomFollowing') }} · {{ t('teaching.classroomPage', { page: classroom.page ?? 1 }) }}
       </template>

@@ -788,6 +788,17 @@ const commands: CommandDescriptor[] = [
       if (!useAuthStore().state.loggedIn) return
       await window.auth.openTeaching()
     }
+  },
+  // E4：把当前打开的课程文档（实验副本 / 讲义笔记）还原为服务端最新发布内容。
+  // 本地是作答面（回填/笔记），服务端是卷面权威——发布定格，还原 = 强制重拉覆盖。
+  {
+    id: 'teaching.restoreDoc',
+    isVisible: () => useAuthStore().state.loggedIn,
+    execute: async() => {
+      if (!useAuthStore().state.loggedIn) return
+      const error = await useTeachingStore().restoreCurrentDoc()
+      if (error) ElMessage.warning(error)
+    }
   }
 ]
 
