@@ -3,7 +3,8 @@ import { PATH_SEPARATOR } from '../config'
 
 // Helper module (NOT a Pinia store): file-tree mutation helpers.
 
-const naturalCompare = (a: string, b: string): number =>
+/** 名称自然序比较器（数字按数值比，大小写不敏感）——文件树与教学树共用。 */
+export const naturalCompare = (a: string, b: string): number =>
   a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
 
 interface TreeFolder {

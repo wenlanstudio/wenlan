@@ -148,6 +148,7 @@ import type { StudentRelease } from '@shared/types/auth'
 import { t } from '@/i18n'
 import { useAuthStore } from '@/store/auth'
 import { useTeachingStore } from '@/store/teaching'
+import { naturalCompare } from '@/store/treeCtrl'
 
 interface SimpleItem {
   id: number
@@ -202,7 +203,14 @@ const studentGroups = computed<StudentGroup[]>(() => {
     bucket.push(release)
     group.byPurpose[release.purpose] = bucket
   }
-  return [...groups.values()]
+  // 展示序 = 名称自然序（与文件树 #27 同口径）：服务端返回序不承担展示职责。
+  const out = [...groups.values()]
+  for (const group of out) {
+    for (const bucket of Object.values(group.byPurpose)) {
+      bucket.sort((a, b) => naturalCompare(a.materialName, b.materialName))
+    }
+  }
+  return out.sort((a, b) => naturalCompare(a.name, b.name))
 })
 
 const loadTeacher = async (): Promise<void> => {
@@ -210,7 +218,8 @@ const loadTeacher = async (): Promise<void> => {
     url: '/teaching/course/simple-list'
   })
   if (!res.ok) throw new Error(res.error ?? `HTTP ${res.status}`)
-  courses.value = res.data ?? []
+  // 展示序 = 名称自然序（与文件树 #27 同口径）。
+  courses.value = [...(res.data ?? [])].sort((a, b) => naturalCompare(a.name, b.name))
 }
 
 const loadStudent = async (): Promise<void> => {
@@ -241,7 +250,9 @@ const toggleCourse = async (courseId: number): Promise<void> => {
     url: '/teaching/material/simple-list',
     params: { courseId }
   })
-  materials[courseId] = res.ok ? res.data ?? [] : []
+    materials[courseId] = res.ok
+      ? [...(res.data ?? [])].sort((a, b) => naturalCompare(a.name, b.name))
+      : []
 }
 
 const toggleGroup = (courseId: number): void => {
