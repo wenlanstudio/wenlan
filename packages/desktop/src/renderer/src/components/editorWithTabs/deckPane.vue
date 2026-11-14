@@ -61,6 +61,34 @@
     >
       {{ missingWarn }}
     </div>
+    <!-- ADR-24 封面叠码：课表自动开房命中时，第 1 页叠二维码供大屏学生扫。 -->
+    <div
+      v-if="coverQr"
+      class="deck-qr"
+    >
+      <img
+        class="deck-qr-img"
+        :src="coverQr.dataUrl"
+        alt="学生扫码加入课堂"
+      >
+      <div class="deck-qr-meta">
+        <div class="deck-qr-course">
+          {{ coverQr.courseName }}
+        </div>
+        <div class="deck-qr-class">
+          {{ classroom.className }}<template v-if="coverQr.location">
+            · {{ coverQr.location }}
+          </template>
+        </div>
+      </div>
+      <button
+        class="deck-qr-hide"
+        title="隐藏二维码（重开课自动恢复）"
+        @click="qrHidden = true"
+      >
+        ×
+      </button>
+    </div>
     <div class="deck-bar">
       <span class="page-indicator">
         {{ indicator }}
@@ -121,6 +149,7 @@
  * 大位图导出经服务 /x 旁路落盘（不过 postMessage/IPC——数百 MB 会挂死 Electron）。
  */
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import QRCode from 'qrcode'
 import { storeToRefs } from 'pinia'
 import { diagramTypeOfLang } from '@muyajs/core'
 import type { Md2rEvent } from '@shared/types/mdcode2run'
@@ -155,6 +184,34 @@ const editorStore = useEditorStore()
 const editorViewStore = useEditorViewStore()
 const preferencesStore = usePreferencesStore()
 const teachingStore = useTeachingStore()
+
+// ── ADR-24 封面叠码：课表命中自动开房后，第 1 页叠学生入会二维码 ──
+const qrHidden = ref(false)
+const qrDataUrl = ref('')
+const room = computed(() => teachingStore.classroom)
+const coverQr = computed(() => {
+  const auto = room.value.auto
+  if (!auto?.joinUrl || qrHidden.value || index.value !== 1) return null
+  return { dataUrl: qrDataUrl.value, courseName: auto.courseName, location: auto.location }
+})
+watch(
+  () => classroom.value.auto?.joinUrl,
+  (url) => {
+    if (!url) {
+      qrDataUrl.value = ''
+      return
+    }
+    void QRCode.toDataURL(url, { width: 256, margin: 1 })
+      .then((dataUrl) => {
+        // 只在 URL 没变时回填，避免竞态把旧码写进新会话
+        if (room.value.auto?.joinUrl === url) qrDataUrl.value = dataUrl
+      })
+      .catch(() => {
+        qrDataUrl.value = ''
+      })
+  },
+  { immediate: true }
+)
 const { plantumlServer } = storeToRefs(preferencesStore)
 const { isSplit, presentExclusive, presentImmersive } = storeToRefs(editorViewStore)
 const { classroom } = storeToRefs(teachingStore)
@@ -690,6 +747,8 @@ onMounted(() => {
   offExecEvent = window.mdcode2run.onEvent(handleExecEvent)
   if (listensWindowKeys) window.addEventListener('keydown', onKeydown)
   void startServer()
+  // 课表命中自动开房（ADR-24）：幂等静默——未登录/未命中不打扰普通放映
+  void teachingStore.autoStart()
 })
 
 onBeforeUnmount(() => {
@@ -705,6 +764,48 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.deck-qr {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+.deck-qr-img {
+  width: 112px;
+  height: 112px;
+  display: block;
+}
+.deck-qr-meta {
+  max-width: 168px;
+  color: #1a1a1a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.deck-qr-course {
+  font-weight: 600;
+}
+.deck-qr-class {
+  opacity: 0.75;
+}
+.deck-qr-hide {
+  align-self: flex-start;
+  border: 0;
+  background: transparent;
+  color: #1a1a1a;
+  font-size: 14px;
+  cursor: pointer;
+  opacity: 0.55;
+}
+.deck-qr-hide:hover {
+  opacity: 1;
+}
 .deck-pane {
   position: relative;
   height: 100%;

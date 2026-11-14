@@ -4,6 +4,30 @@
       {{ isStudent ? t('teaching.myCourses') : t('teaching.workspace') }}
     </div>
 
+    <!-- ADR-24 此刻有课：课表自动开房命中态（含下课）/ multi·no_release 降级提示。 -->
+    <div
+      v-if="loggedIn && liveCard"
+      class="live-card"
+    >
+      <div class="live-card-head">
+        <span class="live-dot" />
+        <span class="live-title">{{ liveCard.title }}</span>
+      </div>
+      <div class="live-card-body">
+        {{ liveCard.courseName }}<template v-if="liveCard.className">
+          · {{ liveCard.className }}
+        </template><template v-if="liveCard.location">
+          · {{ liveCard.location }}
+        </template>
+      </div>
+      <button
+        v-if="liveCard.live"
+        class="live-card-end"
+        @click="endLive"
+      >
+        下课
+      </button>
+    </div>
     <div
       v-if="!loggedIn"
       class="teaching-tree-hint"
@@ -177,8 +201,29 @@ const itemsOf = (group: StudentGroup, purpose: number): StudentRelease[] =>
 const auth = useAuthStore()
 const teachingStore = useTeachingStore()
 const { state, isStudent } = storeToRefs(auth)
-const { openedRelease, openedLab } = storeToRefs(teachingStore)
+const { openedRelease, openedLab, classroom } = storeToRefs(teachingStore)
 const loggedIn = computed(() => state.value.loggedIn)
+
+/** ADR-24 此刻有课：hit 态（含下课）或 multi/no_release 降级提示。 */
+const liveCard = computed(() => {
+  const room = classroom.value
+  if (room.sessionId != null && room.role === 'host' && room.auto) {
+    return {
+      live: true,
+      title: t('teaching.liveNow'),
+      courseName: room.auto.courseName,
+      className: room.className,
+      location: room.auto.location
+    }
+  }
+  if (room.autoNotice) {
+    return { live: false, title: t('teaching.liveNotice'), courseName: room.autoNotice, className: '', location: '' }
+  }
+  return null
+})
+const endLive = (): void => {
+  void teachingStore.endClassroom()
+}
 
 const courses = ref<SimpleItem[]>([])
 const materials = reactive<Record<number, SimpleItem[] | undefined>>({})
@@ -358,5 +403,59 @@ onMounted(() => {
   background: #faeeda;
   color: #854f0b;
   border-radius: 4px;
+}
+
+/* ADR-24 此刻有课卡 */
+.live-card {
+  margin: 4px 8px 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--wenlan-border, #d4d4d4);
+  border-radius: 8px;
+  background: var(--wenlan-live-bg, #f0faf4);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.live-card-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2e9e5b;
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.live-title {
+  font-weight: 600;
+}
+.live-card-body {
+  opacity: 0.8;
+  word-break: break-all;
+}
+.live-card-end {
+  margin-top: 6px;
+  padding: 2px 10px;
+  border: 1px solid #d0442f;
+  border-radius: 6px;
+  background: transparent;
+  color: #d0442f;
+  font-size: 12px;
+  cursor: pointer;
+}
+.live-card-end:hover {
+  background: #d0442f;
+  color: #fff;
 }
 </style>

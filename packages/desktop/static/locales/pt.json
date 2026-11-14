@@ -1259,7 +1259,9 @@
     "groupExam": "Provas",
     "restoreDocMenu": "Restaurar do servidor",
     "commandRestoreDoc": "Restaurar o documento do curso para o último conteúdo publicado (notas locais são sobrescritas)",
-    "writableCopy": "Cópia editável"
+    "writableCopy": "Cópia editável",
+    "liveNow": "Em aula agora",
+    "liveNotice": "Aviso de horário"
   },
   "teachingLab": {
     "copyEmpty": "O conteúdo da cópia está vazio",

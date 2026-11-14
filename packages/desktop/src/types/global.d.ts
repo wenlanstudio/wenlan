@@ -234,9 +234,38 @@ declare global {
     sessionId: number | null
   }
 
+  interface TeachingAutoHit {
+    sessionId: number
+    classId: number
+    className: string
+    courseId: number
+    courseName: string
+    releaseId: number
+    entryToken: string
+    joinUrl: string | null
+    location?: string
+  }
+
+  interface TeachingAutoNotice {
+    status: 'multi' | 'no_release'
+    message: string
+    classId?: number
+    className?: string
+  }
+
+  interface TeachingAutoResult {
+    ok: boolean
+    hit: boolean
+    sessionId?: number
+    auto?: TeachingAutoHit
+    notice?: TeachingAutoNotice
+    error?: string
+  }
+
   interface TeachingSocketAPI {
     join(releaseId: number): Promise<{ ok: boolean; sessionId?: number; error?: string }>
     host(releaseId: number): Promise<{ ok: boolean; sessionId?: number; error?: string }>
+    autoHost(): Promise<TeachingAutoResult>
     page(page: number): Promise<void>
     follow(locked: boolean): Promise<void>
     end(sessionId: number | null): Promise<void>

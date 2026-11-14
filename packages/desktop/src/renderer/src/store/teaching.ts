@@ -130,6 +130,10 @@ export interface ClassroomState {
   releaseId: number | null
   /** 教师端正在上课的班名，给状态栏与菜单文案用。 */
   className: string
+  /** ADR-24 课表自动开房信息（hit 态）：封面叠码与首页卡的数据源；手动开房为 null。 */
+  auto: { courseName: string; location: string; joinUrl: string } | null
+  /** 课表业务提示（multi / no_release 的 message）：教学首页卡降级展示，未命中为空。 */
+  autoNotice: string
 }
 
 const META_PREFIX = 'wenlan.teaching.publish.'
@@ -256,7 +260,9 @@ const emptyClassroom = (): ClassroomState => ({
   role: null,
   online: 0,
   releaseId: null,
-  className: ''
+  className: '',
+  auto: null,
+  autoNotice: ''
 })
 
 const emptyRace = (): RaceState => ({
@@ -723,6 +729,39 @@ export const useTeachingStore = defineStore('teaching', () => {
     reportedPage = 0
   }
 
+  /**
+   * 课表命中自动开房（ADR-24 / M2c）：示视图打开时调一次，幂等静默。
+   *
+   * 服务端判定的权威形态四态——none（静默如常放映）/ hit（已自动进房，
+   * 填 classroom.auto 供封面叠码与首页卡）/ multi·no_release（降级提示，
+   * message 放 classroom.autoNotice 给教学首页卡）。已在课中不重复调。
+   */
+  const autoStart = async(): Promise<void> => {
+    if (classroom.value.sessionId != null) return
+    const res = await window.teachingSocket.autoHost()
+    if (!res.ok || !res.hit || !res.auto) {
+      if (res.notice) {
+        classroom.value.autoNotice = res.notice.message
+        if (res.notice.className) classroom.value.className = res.notice.className
+      }
+      return
+    }
+    classroom.value = {
+      ...emptyClassroom(),
+      sessionId: res.sessionId ?? null,
+      role: 'host',
+      page: 1,
+      releaseId: res.auto.releaseId,
+      className: res.auto.className,
+      auto: {
+        courseName: res.auto.courseName,
+        location: res.auto.location ?? '',
+        joinUrl: res.auto.joinUrl ?? ''
+      }
+    }
+    reportedPage = 0
+  }
+
   /** 教师端上报页码（只在 host 角色下有效，重复页号不外发）。 */
   const reportPage = (page: number): void => {
     if (classroom.value.role !== 'host') return
@@ -996,6 +1035,7 @@ export const useTeachingStore = defineStore('teaching', () => {
     leaveClassroom,
     startClassroom,
     endClassroom,
+    autoStart,
     reportPage,
     setFollowLocked,
     openQuizConsole,

@@ -378,6 +378,7 @@ type WsStatus = { connected: boolean; sessionId: number | null }
 const teachingSocketAPI = {
   join: (releaseId: number) => invoke('teaching::ws-join', releaseId),
   host: (releaseId: number) => invoke('teaching::ws-host', releaseId),
+  autoHost: (): Promise<TeachingAutoResult> => invoke('teaching::ws-auto'),
   page: (page: number): Promise<void> => invoke('teaching::ws-page', page),
   follow: (locked: boolean): Promise<void> => invoke('teaching::ws-follow', locked),
   end: (sessionId: number | null): Promise<void> => invoke('teaching::ws-end', sessionId),

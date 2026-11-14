@@ -1259,7 +1259,9 @@
     "groupExam": "試験",
     "restoreDocMenu": "サーバー版に復元",
     "commandRestoreDoc": "現在の講義資料をサーバーの最新公開内容に復元します（ローカルのメモは上書き）",
-    "writableCopy": "書き込み可能なコピー"
+    "writableCopy": "書き込み可能なコピー",
+    "liveNow": "授業中",
+    "liveNotice": "時間割のお知らせ"
   },
   "teachingLab": {
     "copyEmpty": "コピーの内容が空です",

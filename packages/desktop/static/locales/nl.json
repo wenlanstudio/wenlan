@@ -1259,7 +1259,9 @@
     "groupExam": "Tentamens",
     "restoreDocMenu": "Herstel vanaf server",
     "commandRestoreDoc": "Het huidige cursusdocument herstellen naar de laatst gepubliceerde inhoud (lokale notities worden overschreven)",
-    "writableCopy": "Beschrijfbare kopie"
+    "writableCopy": "Beschrijfbare kopie",
+    "liveNow": "Nu in les",
+    "liveNotice": "Roostermelding"
   },
   "teachingLab": {
     "copyEmpty": "Kopie-inhoud is leeg",

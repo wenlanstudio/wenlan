@@ -15,6 +15,8 @@ export const registerTeachingSocketHandlers = (): void => {
   ipcMain.handle('teaching::ws-host', (_event, releaseId: number) =>
     teachingSocket.host(releaseId)
   )
+  // 课表命中自动开房（ADR-24 / M2c）：零参数，判定权威在服务端
+  ipcMain.handle('teaching::ws-auto', () => teachingSocket.autoHost())
   ipcMain.handle('teaching::ws-page', (_event, page: number) => {
     teachingSocket.sendPage(page)
   })

@@ -1259,7 +1259,9 @@
     "groupExam": "Exams",
     "restoreDocMenu": "Restore from server",
     "commandRestoreDoc": "Restore the current course document to the latest published content",
-    "writableCopy": "Writable copy"
+    "writableCopy": "Writable copy",
+    "liveNow": "In class now",
+    "liveNotice": "Schedule notice"
   },
   "teachingLab": {
     "copyEmpty": "Copy content is empty",

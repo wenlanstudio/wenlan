@@ -118,6 +118,11 @@ export interface IpcInvokeChannels {
     args: [releaseId: number]
     ret: { ok: boolean; sessionId?: number; error?: string }
   }
+  // 课表命中自动开房（ADR-24 / M2c）：零参数幂等，判定权威在服务端。
+  'teaching::ws-auto': {
+    args: []
+    ret: TeachingAutoResult
+  }
   // 教师翻页 / 跟随锁：sessionId 由 main 记住，renderer 不传（防越权指定房间）。
   'teaching::ws-page': { args: [page: number]; ret: void }
   'teaching::ws-follow': { args: [locked: boolean]; ret: void }

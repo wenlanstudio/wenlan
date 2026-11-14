@@ -1259,7 +1259,9 @@
     "groupExam": "시험",
     "restoreDocMenu": "서버 버전으로 복원",
     "commandRestoreDoc": "현재 강의 문서를 서버의 최신 게시 내용으로 복원합니다(로컬 메모 덮어쓰기)",
-    "writableCopy": "쓰기 가능한 사본"
+    "writableCopy": "쓰기 가능한 사본",
+    "liveNow": "수업 중",
+    "liveNotice": "시간표 알림"
   },
   "teachingLab": {
     "copyEmpty": "사본 내용이 비어 있습니다",

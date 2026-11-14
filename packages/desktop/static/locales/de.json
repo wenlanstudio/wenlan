@@ -1259,7 +1259,9 @@
     "groupExam": "Klausuren",
     "restoreDocMenu": "Auf Serverstand zurücksetzen",
     "commandRestoreDoc": "Das aktuelle Kursdokument auf den zuletzt veröffentlichten Stand zurücksetzen (lokale Notizen werden überschrieben)",
-    "writableCopy": "Beschreibbare Kopie"
+    "writableCopy": "Beschreibbare Kopie",
+    "liveNow": "Jetzt Unterricht",
+    "liveNotice": "Hinweis Stundenplan"
   },
   "teachingLab": {
     "copyEmpty": "Kopieinhalt ist leer",

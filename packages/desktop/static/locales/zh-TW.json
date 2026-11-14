@@ -1259,7 +1259,9 @@
     "groupExam": "考試",
     "restoreDocMenu": "還原伺服器版本",
     "commandRestoreDoc": "把目前課程文件還原為伺服器最新發布內容（本地筆記與回填會被覆蓋）",
-    "writableCopy": "可寫副本"
+    "writableCopy": "可寫副本",
+    "liveNow": "此刻有課",
+    "liveNotice": "課表提示"
   },
   "teachingLab": {
     "copyEmpty": "副本內容為空",

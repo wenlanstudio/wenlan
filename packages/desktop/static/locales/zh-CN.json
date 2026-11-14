@@ -1259,7 +1259,9 @@
     "groupExam": "考试",
     "restoreDocMenu": "还原服务端版本",
     "commandRestoreDoc": "把当前课程文档还原为服务端最新发布内容（本地笔记与回填会被覆盖）",
-    "writableCopy": "可写副本"
+    "writableCopy": "可写副本",
+    "liveNow": "此刻有课",
+    "liveNotice": "课表提示"
   },
   "teachingLab": {
     "copyEmpty": "副本内容为空",

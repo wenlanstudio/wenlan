@@ -20,6 +20,37 @@ interface ClassroomSession {
   followLocked: boolean
 }
 
+/** `/class-session/auto` 命中态的会话信息（其余字段仅 hit 时有值，ADR-24） */
+interface ClassroomAutoHit {
+  status: 'hit'
+  sessionId: number
+  classId: number
+  className: string
+  courseId: number
+  courseName: string
+  releaseId: number
+  entryToken: string
+  joinUrl: string | null
+}
+
+/** `/class-session/auto` 的非命中态：multi / no_release（message 带班名） */
+interface ClassroomAutoNotice {
+  status: 'none' | 'multi' | 'no_release'
+  message: string
+  classId?: number
+  className?: string
+}
+
+/** autoHost 的 renderer 返回：hit=已自动开房进房；notice=课表业务提示（降级首页选择/提示） */
+export interface TeachingAutoResult {
+  ok: boolean
+  hit: boolean
+  sessionId?: number
+  auto?: ClassroomAutoHit
+  notice?: ClassroomAutoNotice
+  error?: string
+}
+
 interface WsMessage {
   type: string
   content: Record<string, unknown>
@@ -152,6 +183,44 @@ class TeachingSocket {
     if (!Number.isInteger(openId) || openId <= 0) return
     if (!Number.isInteger(choice) || choice < 0 || choice > 5) return
     this.send('teaching.race.answer', { openId, choice })
+  }
+
+  /**
+   * 教师：课表命中自动开房（ADR-24 / M2c）。零参数幂等——判定权威在服务端，
+   * 时刻服务端取；未登录/网络失败一律静默（普通放映绝不被打扰）。
+   *
+   * - hit：服务端复用该班 active 会话或以最新有效发布物新建，这里直接 attach 进房；
+   * - none：课表未命中，静默；
+   * - multi / no_release：课表业务提示，交给教学首页卡降级（选班/提示发布）。
+   */
+  async autoHost(): Promise<TeachingAutoResult> {
+    if (typeof WebSocket === 'undefined') {
+      return { ok: false, hit: false, error: '当前运行环境不支持 WebSocket' }
+    }
+    const auth = getAuthManager()
+    await auth.init()
+    const res = await auth.request<ClassroomAutoHit | ClassroomAutoNotice | null>({
+      url: '/teaching/class-session/auto',
+      method: 'POST'
+    })
+    // 真 error（未登录 / 网络 / 服务端异常）：静默，不带文案
+    if (!res.ok) {
+      return { ok: true, hit: false }
+    }
+    const data = res.data
+    if (!data || data.status === 'none') {
+      return { ok: true, hit: false }
+    }
+    const notice = data as ClassroomAutoNotice
+    if (notice.status === 'multi' || notice.status === 'no_release') {
+      return { ok: true, hit: false, notice }
+    }
+    const hit = data as ClassroomAutoHit
+    const attached = this.attach(auth, hit.sessionId)
+    if (!attached.ok) {
+      return { ok: false, hit: false, error: attached.error }
+    }
+    return { ok: true, hit: true, sessionId: hit.sessionId, auto: hit }
   }
 
   /** 关闭会话并退房（不退出登录、不影响其他窗口）。 */

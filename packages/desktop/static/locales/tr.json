@@ -1259,7 +1259,9 @@
     "groupExam": "Sınavlar",
     "restoreDocMenu": "Sunucudan geri yükle",
     "commandRestoreDoc": "Geçerli ders belgesini sunucudaki son yayımlanan içeriğe geri yükle (yerel notlar üzerine yazılır)",
-    "writableCopy": "Yazılabilir kopya"
+    "writableCopy": "Yazılabilir kopya",
+    "liveNow": "Ders devam ediyor",
+    "liveNotice": "Program bildirimi"
   },
   "teachingLab": {
     "copyEmpty": "Kopya içeriği boş",
