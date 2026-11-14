@@ -87,6 +87,8 @@
     ".md2s-exec-status.md2s-exec-fail { color: #f48771; }",
     ".md2s-exec-close { cursor: pointer; color: #bbb; padding: 0 4px; }",
     ".md2s-exec-close:hover { color: #fff; }",
+    "/* 焦点遍历的可见性：翻页笔走到的头钮要有圈，不然投影上看不出焦点在哪。 */",
+    ".md2s-exec-head [tabindex='-1']:focus { outline: 1px solid #7ab3d9; outline-offset: 2px; }",
     ".md2s-exec-splitbtn { cursor: pointer; color: #bbb; padding: 0 6px; font-size: 1.1em; }",
     ".md2s-exec-splitbtn:hover { color: #fff; }",
     ".md2s-exec-splitbtn.md2s-exec-on { color: #ff9d2e; }",
@@ -276,16 +278,69 @@
     } catch (e) { /* 老环境无 CustomEvent */ }
   };
 
-  /** 浮层打开时按键归浮层：capture 先于 player 的 keyTarget / Esc 转发。 */
+  /** 浮层的模态键盘——翻页笔控制与 kit/lightbox.js 对齐（2026-11-14）：
+   *  开着时拦下导航键（页码冻结，关闭即回原页原步）；PgDn/↓/Tab=头部按钮焦点
+   *  遍历（到边界停住），PgUp/↑ 反向；确定键（Enter/空格，很多翻页笔发空格）=
+   *  按下聚焦的按钮；焦点不在按钮上时：确认态=确认运行、已完成=收起、
+   *  **运行中=空操作**——确定键不该误杀正在跑的作业（想停就翻页键走到「终止」
+   *  再确定，那是明确意图）。挂 window capture 抢在播放器 keyTarget 之前，
+   *  与 lightbox 同层；两者靠 md2s-overlay-dismiss 互斥，不会同时开着。
+   *  Ctrl 组合键（复制输出）不在拦截之列，照常放行——lightbox 没有可复制物，
+   *  全拦无妨；这里的 body 是运行结果，得能 Ctrl+C。 */
+  var SWALLOW_KEYS = { Home: 1, End: 1, ArrowLeft: 1, ArrowRight: 1, Backspace: 1 };
+
+  /** 头部可聚焦钮（DOM 序 = [终止] ◐ ⇆ ✕ 收起）。tabindex=-1 不进原生 Tab 序，
+   *  焦点全由本层的翻页键遍历与完成态聚焦掌握。 */
+  var focusablesOf = function () {
+    if (!overlay || !overlay.el) return [];
+    var head = overlay.el.querySelector(".md2s-exec-head");
+    return head ? Array.prototype.slice.call(head.querySelectorAll("[tabindex='-1']")) : [];
+  };
+
+  /** 完成态把焦点交给 ✕ 收起：结果一出来按确定就收（lightbox「默认落在 ✕」同款）。 */
+  var focusCloseBtn = function () {
+    var list = focusablesOf();
+    if (list.length) list[list.length - 1].focus();
+  };
+
+  /** 翻页键移动焦点：到边界停住（lightbox 同款）。焦点在浮层外时 PgDn 进第一个、PgUp 进最后一个。 */
+  var moveFocus = function (dir) {
+    var list = focusablesOf();
+    if (!list.length) return;
+    var i = list.indexOf(document.activeElement);
+    if (i < 0) i = dir > 0 ? -1 : list.length;
+    list[Math.min(list.length - 1, Math.max(0, i + dir))].focus();
+  };
+
   var onKey = function (ev) {
-    if (ev.key !== "Enter" && ev.key !== "Escape") return;
-    ev.preventDefault();
-    ev.stopPropagation();
-    if (ev.key === "Enter" && overlay && overlay.confirmMode && overlay.confirmRun) {
-      overlay.confirmRun();
-      return;
+    if (!overlay) return;
+    switch (ev.key) {
+      case "Escape":
+        closeOverlay();
+        break;
+      case "PageDown": case "ArrowDown": case "Tab":
+        moveFocus(ev.shiftKey ? -1 : 1);
+        break;
+      case "PageUp": case "ArrowUp":
+        moveFocus(-1);
+        break;
+      case "Enter": case " ": {
+        if (overlay.confirmMode && overlay.confirmRun) {
+          overlay.confirmRun();
+          break;
+        }
+        var list = focusablesOf();
+        var i = list.indexOf(document.activeElement);
+        if (i >= 0) list[i].click();
+        else if (overlay.done) closeOverlay();
+        break;
+      }
+      default:
+        if (!SWALLOW_KEYS[ev.key]) return;  // 无导航含义的键放行
+        break;
     }
-    closeOverlay();
+    if (ev.cancelable) ev.preventDefault();
+    ev.stopPropagation();
   };
 
   var createOverlay = function (title, lang) {
@@ -297,9 +352,9 @@
       '  <span class="md2s-exec-title"></span>',
       '  <span class="md2s-exec-session"></span>',
       '  <span class="md2s-exec-status md2s-exec-busy">准备中…</span>',
-      '  <span class="md2s-exec-alphabtn" title="切换背景透明度">◐</span>',
-      '  <span class="md2s-exec-splitbtn" title="切换 居中浮层 / 左右分栏">⇆</span>',
-      '  <span class="md2s-exec-close" title="关闭（Enter / Esc）">✕ 收起</span>',
+      '  <span class="md2s-exec-alphabtn" tabindex="-1" title="切换背景透明度">◐</span>',
+      '  <span class="md2s-exec-splitbtn" tabindex="-1" title="切换 居中浮层 / 左右分栏">⇆</span>',
+      '  <span class="md2s-exec-close" tabindex="-1" title="关闭（Esc；确定键按下聚焦钮）">✕ 收起</span>',
       '</div>',
       '<div class="md2s-exec-body"></div>'
     ].join("");
@@ -371,22 +426,26 @@
       splitMode = !splitMode;
       applyLayout();
     });
-    document.addEventListener("keydown", onKey, true);
+    window.addEventListener("keydown", onKey, true);
     askOthersToDismiss();
 
     return {
+      el: el,
       body: body,
       statusEl: statusEl,
       sessionEl: sessionEl,
       confirmMode: false,
       confirmRun: null,
+      /** 终态标记：结果/错误/作业完结后为 true——确定键的兜底语义（收起）只在
+       *  终态生效，运行中空操作防误杀。 */
+      done: false,
       setStatus: function (text, cls) {
         statusEl.className = "md2s-exec-status " + (cls || "");
         statusEl.textContent = text;
       },
       applyLayout: applyLayout,
       destroy: function () {
-        document.removeEventListener("keydown", onKey, true);
+        window.removeEventListener("keydown", onKey, true);
         restoreSec();
         el.remove();
       }
@@ -408,7 +467,12 @@
     }
     activeRun = null;
     o.destroy();
-    try { window.focus(); } catch (e) { /* jsdom */ }
+    // 焦点还给播放器容器（lightbox onClose → rootOf().focus() 同款）：翻页笔的
+    // 下一次确定键回到播放器手里，不会误触页面上别的可激活元素。
+    try {
+      var deckEl = document.getElementById("deck");
+      (deckEl || document.body).focus();
+    } catch (e) { /* jsdom */ }
   };
 
   var ensureStream = function () {
@@ -437,6 +501,7 @@
     box.appendChild(hint);
     box.appendChild(btn);
     o.body.appendChild(box);
+    try { btn.focus(); } catch (e) { /* jsdom */ }  // 确定键直落在「允许并运行」上
     o.confirmMode = true;
     o.confirmRun = function () {
       if (!o.confirmMode) return;
@@ -579,6 +644,8 @@
         overlay.body.appendChild(err);
       }
       r.jobDone = true;
+      o.done = true;
+      focusCloseBtn();  // 作业完结：确定键即可收起
       overlay.applyLayout();
     }
     // done：结算统一交给 md2s:exec-result（避免与 result 抢状态）
@@ -599,6 +666,7 @@
       }, 500);
       var stop = document.createElement("span");
       stop.className = "md2s-exec-stop";
+      stop.tabIndex = -1;  // 进头部焦点遍历：翻页笔可走到「终止」再确定
       stop.textContent = "终止";
       stop.title = "终止作业进程（Windows 上按进程树终止）";
       stop.addEventListener("click", function () {
@@ -611,11 +679,17 @@
       return;
     }
     var secs = ((Date.now() - r.started) / 1000).toFixed(1);
+    o.done = true;  // 同步执行的终态：确定键兜底=收起
     if (!result.ok) {
       o.setStatus("失败", "md2s-exec-fail");
     } else {
       o.setStatus((KIND_LABEL[result.kind] || result.kind) + " · " + secs + "s", "md2s-exec-ok");
-      if (result.stdout) {
+      if (result.kind === "table") {
+        /* 表格已表达全部行列：原始 TSV 流（含 beeline 横幅）收掉——
+           同一份数据显示两遍是噪声，不是「日志」。text/none 维持原文展示。 */
+        if (r.streamEl) { r.streamEl.remove(); r.streamEl = null; }
+        r.streamBuf = "";
+      } else if (result.stdout) {
         var s = ensureStream();
         if (s && !s.textContent.trim()) {
           r.streamBuf = result.stdout;
@@ -624,17 +698,20 @@
       }
     }
     renderResult(result);
+    focusCloseBtn();  // 结果一出来焦点落 ✕：确定键即可收起
     o.applyLayout();
   };
 
   var handleError = function (reqId, message) {
     var r = activeRun;
     if (!r || r.reqId !== reqId || !overlay) return;
+    overlay.done = true;
     overlay.setStatus("失败", "md2s-exec-fail");
     var err = document.createElement("pre");
     err.className = "md2s-exec-error";
     err.textContent = String(message || "执行失败");
     overlay.body.appendChild(err);
+    focusCloseBtn();
     overlay.applyLayout();
   };
 

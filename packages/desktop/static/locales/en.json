@@ -1110,7 +1110,10 @@
     "reportExit": "exit",
     "reportCounters": "counters",
     "reportOutput": "output",
-    "reportWorkdir": "workdir"
+    "reportWorkdir": "workdir",
+    "viewTable": "Table",
+    "viewRaw": "Raw",
+    "rowCap": "{total} rows total (showing first {shown})"
   },
   "account": {
     "account": "Account",

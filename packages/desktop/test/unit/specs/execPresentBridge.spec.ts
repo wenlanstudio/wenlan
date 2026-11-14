@@ -8,11 +8,12 @@ import { describe, expect, it } from 'vitest'
  * 「示」视图放映执行桥（resources-src/md2slides/exec-present.js）的行为护栏。
  *
  * 这份脚本是部署进 deck 页面的独立浏览器脚本（不是 TS 模块），所以用 jsdom
- * eval 它、拿 MessageEvent 模拟宿主消息。重点钉死三件容易回归的事：
+ * eval 它、拿 MessageEvent 模拟宿主消息。重点钉死四件容易回归的事：
  *   ① 分页续片的 data-src-start 落在块体内，必须用区间包含匹配，且 ▶ 回传
  *      的是整块开栏行（与引擎事件 event.line 同口径），不是切片行；
  *   ② 首次运行要先确认，未保存文档根本不注入 ▶；
- *   ③ 结果浮层的输入隔离 / 导出前收起，别惊动播放器与 PPTX 出片。
+ *   ③ 结果浮层的输入隔离 / 导出前收起，别惊动播放器与 PPTX 出片；
+ *   ④ kind=table 收掉原始 TSV 流——同一份数据别显示两遍（表格 + 弱化尾注）。
  */
 const requireFromHere = createRequire(import.meta.url)
 // jsdom 没有随包的 @types，只用得到下面这几个成员，就地声明最小形状。
@@ -39,7 +40,7 @@ const SRC = readFileSync(
 )
 
 const HTML = `<!doctype html><html><head></head><body>
-<div id="deck"><section class="md2s-current">
+<div id="deck" tabindex="-1"><section class="md2s-current">
 <pre data-src-start="3" data-src-end="7"><code class="language-python">print("hi")</code></pre>
 <pre data-src-start="5" data-src-end="7"><code class="language-python">continued</code></pre>
 <pre data-src-start="10" data-src-end="13"><code class="language-bash">echo ok</code></pre>
@@ -131,6 +132,37 @@ describe('exec-present bridge', () => {
     expect(overlay?.querySelector('.md2s-exec-status')?.textContent).toContain('输出')
   })
 
+  it('kind=table 收掉原始 TSV 流——表格一份 + 弱化尾注，不双显', () => {
+    const t = boot(true)
+    t.send(CAP)
+    t.click(t.w.document.querySelector('.md2s-exec-run'))
+    const req = t.sent.find(m => m.type === 'md2s:exec')
+    t.send({
+      type: 'md2s:exec-state',
+      reqId: req?.reqId,
+      event: { type: 'chunk', stream: 'stdout', text: 'tab_name\nmedia_index\n' }
+    })
+    expect(
+      t.w.document.querySelector('.md2s-exec-body')?.querySelector('pre')?.textContent
+    ).toContain('media_index') // 流式期间原始输出可见
+    t.send({
+      type: 'md2s:exec-result',
+      reqId: req?.reqId,
+      result: {
+        ok: true, kind: 'table',
+        rows: { columns: ['tab_name'], cells: [['media_index']] },
+        stdout: 'tab_name\nmedia_index\n', text: '1 row selected (0.5s)', images: []
+      }
+    })
+    const body = t.w.document.querySelector('.md2s-exec-body')
+    expect(body?.querySelectorAll('table')).toHaveLength(1)
+    expect(body?.querySelectorAll('pre')).toHaveLength(1) // 只剩尾注，原始 TSV 已收
+    expect(body?.querySelector('pre')?.textContent).toContain('1 row selected')
+    expect(
+      t.w.document.querySelector('.md2s-exec-status')?.textContent
+    ).toContain('表格')
+  })
+
   it('导出前收起结果面板并通知宿主取消', () => {
     const t = boot(true)
     t.send(CAP)
@@ -167,9 +199,87 @@ describe('exec-present bridge', () => {
     const ev = new t.w.KeyboardEvent('keydown', {
       key: 'Escape', bubbles: true, cancelable: true
     })
-    t.w.document.dispatchEvent(ev)
+    t.w.dispatchEvent(ev)
     expect(t.w.document.querySelector('.md2s-exec-overlay')).toBeNull()
     expect(ev.defaultPrevented).toBe(true)
+    // 焦点还给播放器容器：翻页笔的下一发确定键回播放器手里，不误触页内 ▶
+    expect(t.w.document.activeElement?.id).toBe('deck')
+  })
+
+  it('翻页键=头钮焦点遍历不翻页，确定键=按下聚焦钮（lightbox 同款契约）', () => {
+    const t = boot(true)
+    t.send(CAP)
+    t.click(t.w.document.querySelector('.md2s-exec-run'))
+    const key = (k: string): KeyboardEvent =>
+      new t.w.KeyboardEvent('keydown', { key: k, cancelable: true })
+    // 焦点在浮层外：PgDn 进第一个头钮（◐），到边界停住
+    t.w.dispatchEvent(key('PageDown'))
+    expect(t.w.document.activeElement?.classList.contains('md2s-exec-alphabtn')).toBe(true)
+    t.w.dispatchEvent(key('PageUp'))
+    expect(t.w.document.activeElement?.classList.contains('md2s-exec-alphabtn')).toBe(true)
+    // 走到 ✕ 收起（最后一个），确定键按下它 = 关闭
+    t.w.dispatchEvent(key('PageDown'))
+    t.w.dispatchEvent(key('PageDown'))
+    expect(t.w.document.activeElement?.classList.contains('md2s-exec-close')).toBe(true)
+    const enter = key('Enter')
+    t.w.dispatchEvent(enter)
+    expect(t.w.document.querySelector('.md2s-exec-overlay')).toBeNull()
+    expect(enter.defaultPrevented).toBe(true)
+    expect(t.w.document.activeElement?.id).toBe('deck')
+  })
+
+  it('运行中确定键不关面板（防误杀作业），完成即聚焦 ✕、Enter 收起', () => {
+    const t = boot(true)
+    t.send(CAP)
+    t.click(t.w.document.querySelector('.md2s-exec-run'))
+    const req = t.sent.find(m => m.type === 'md2s:exec')
+    t.send({
+      type: 'md2s:exec-state',
+      reqId: req?.reqId,
+      event: { type: 'started' }
+    })
+    t.w.dispatchEvent(new t.w.KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))
+    expect(t.w.document.querySelector('.md2s-exec-overlay')).not.toBeNull()
+    t.send({
+      type: 'md2s:exec-result',
+      reqId: req?.reqId,
+      result: { ok: true, kind: 'text', stdout: 'done', text: '', images: [], rows: null }
+    })
+    expect(t.w.document.activeElement?.classList.contains('md2s-exec-close')).toBe(true)
+    t.w.dispatchEvent(new t.w.KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))
+    expect(t.w.document.querySelector('.md2s-exec-overlay')).toBeNull()
+  })
+
+  it('确认态按确定键 = 允许并运行（翻页笔可全程键盘走完）', () => {
+    const t = boot(false)
+    t.send(CAP)
+    t.click(t.w.document.querySelector('.md2s-exec-run'))
+    expect(t.sent.filter(m => m.type === 'md2s:exec')).toHaveLength(0)
+    t.w.dispatchEvent(new t.w.KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))
+    expect(t.sent.filter(m => m.type === 'md2s:exec')).toHaveLength(1)
+  })
+
+  it('作业运行中翻页键可走到「终止」并确定', () => {
+    const t = boot(true)
+    t.send(CAP)
+    t.click(t.w.document.querySelector('.md2s-exec-run'))
+    const req = t.sent.find(m => m.type === 'md2s:exec')
+    t.send({
+      type: 'md2s:exec-result',
+      reqId: req?.reqId,
+      result: {
+        ok: true, kind: 'job', job: { id: 'j1' },
+        text: 'running', stdout: '', images: [], rows: null
+      }
+    })
+    const key = (k: string): KeyboardEvent =>
+      new t.w.KeyboardEvent('keydown', { key: k, cancelable: true })
+    // 头钮 DOM 序 = [终止] ◐ ⇆ ✕；运行中默认不聚焦任何头钮（确定键空操作防误杀），
+    // 从浮层外 PgDn 进第一个 = 「终止」
+    t.w.dispatchEvent(key('PageDown'))
+    expect(t.w.document.activeElement?.classList.contains('md2s-exec-stop')).toBe(true)
+    t.w.dispatchEvent(key('Enter'))
+    expect(t.sent.some(m => m.type === 'md2s:exec-stop')).toBe(true)
   })
 
   it('结果浮层默认居中覆盖且半透明，不再把代码顶走', () => {

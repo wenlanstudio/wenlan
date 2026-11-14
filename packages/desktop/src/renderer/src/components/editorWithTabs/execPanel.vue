@@ -186,6 +186,28 @@
               <span class="output-label">
                 {{ t('execPanel.output') }} · {{ langOf(selectedLine) }} L{{ selectedLine + 1 }}
               </span>
+              <span class="toolbar-flex" />
+              <!-- query 原型带结构化行列（rows）时输出区给 表格/原文 双态，默认表格；
+                   纯文本块不出开关，走原文分支。 -->
+              <span
+                v-if="selectedRows"
+                class="view-toggle"
+              >
+                <button
+                  class="view-btn"
+                  :class="{ on: outputView === 'table' }"
+                  @click="outputView = 'table'"
+                >
+                  {{ t('execPanel.viewTable') }}
+                </button>
+                <button
+                  class="view-btn"
+                  :class="{ on: outputView === 'raw' }"
+                  @click="outputView = 'raw'"
+                >
+                  {{ t('execPanel.viewRaw') }}
+                </button>
+              </span>
               <button
                 v-if="isRunning(selectedLine)"
                 class="stop-btn"
@@ -194,7 +216,56 @@
                 {{ t('execPanel.stop') }}
               </button>
             </div>
+            <div
+              v-if="showTable"
+              class="output-table-wrap"
+            >
+              <table class="output-table">
+                <thead>
+                  <tr>
+                    <th
+                      v-for="c in selectedRows!.columns"
+                      :key="c"
+                    >
+                      {{ c }}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="(row, i) in shownRows"
+                    :key="i"
+                  >
+                    <td
+                      v-for="(cell, j) in row"
+                      :key="j"
+                      :class="{ null: cell == null || cell === 'NULL' }"
+                    >
+                      {{ cell == null ? 'NULL' : cell }}
+                    </td>
+                  </tr>
+                </tbody>
+                <tfoot v-if="selectedRows!.cells.length > TABLE_MAX_ROWS">
+                  <tr>
+                    <td :colspan="selectedRows!.columns.length">
+                      {{
+                        t('execPanel.rowCap', {
+                          total: selectedRows!.cells.length,
+                          shown: TABLE_MAX_ROWS
+                        })
+                      }}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+              <!-- 尾注（如 beeline 的 N rows selected / 第二结果集）：弱化展示，不混进表格 -->
+              <pre
+                v-if="tableNote"
+                class="output-table-note"
+              >{{ tableNote }}</pre>
+            </div>
             <pre
+              v-else
               class="output-text"
               :class="{ error: resultOf(selectedLine)?.ok === false }"
             >{{
@@ -916,10 +987,51 @@ const finalOutputOf = (line: number): string => {
   return result.stdout || result.text || t('execPanel.empty')
 }
 
+// —— query 原型的表格视图（rows 契约：{columns, cells}；类型层只标 unknown）——
+/** 表格单次渲染上限：超出走 tfoot 汇总行（放映浮层 20 行同思路，编辑区放宽些）。 */
+const TABLE_MAX_ROWS = 100
+
+interface QueryRows {
+  columns: string[]
+  cells: string[][]
+}
+
+/** 块行号 → 结构化行列；仅 ok 且 rows 形状成立时返回（text/none/失败均 null）。 */
+const rowsOf = (line: number): QueryRows | null => {
+  const r = results.value[line]
+  if (!r || !r.ok) return null
+  const rows = r.rows as unknown
+  if (
+    !rows ||
+    typeof rows !== 'object' ||
+    !Array.isArray((rows as QueryRows).columns) ||
+    !(rows as QueryRows).columns.length
+  ) {
+    return null
+  }
+  return rows as QueryRows
+}
+
+/** 输出区视图偏好：query 块默认表格；纯文本块表格分支不生效，自动落回原文。 */
+const outputView = ref<'table' | 'raw'>('table')
+const selectedRows = computed<QueryRows | null>(() =>
+  selectedLine.value === null ? null : rowsOf(selectedLine.value)
+)
+const showTable = computed(() => outputView.value === 'table' && !!selectedRows.value)
+const shownRows = computed(() => selectedRows.value?.cells.slice(0, TABLE_MAX_ROWS) ?? [])
+/** 表格态下的弱化尾注（beeline 的 N rows selected / 第二结果集等 stdout 剩余）。 */
+const tableNote = computed<string>(() => {
+  if (!selectedRows.value || selectedLine.value === null) return ''
+  return (results.value[selectedLine.value]?.text ?? '').trim()
+})
+
 onMounted(() => {
   offEvent = window.mdcode2run.onEvent(handleEvent)
   bus.on('mdcode2run-run-fence', handleFenceRunRequest)
   bus.on('mdcode2run-select-fence', handleFenceSelectRequest)
+  // 挂载即对账：存量高度可能来自更大的窗口/屏幕（上次会话存的值），首帧把它
+  // 收回上限内——不然面板底会压到状态栏上。等一拍再量，让 flex 先算完。
+  void nextTick(() => requestAnimationFrame(reclampHeight))
   void refresh()
 })
 
@@ -1002,10 +1114,26 @@ const toggleMaximize = (): void => {
   panel.setHeight(max, true)
 }
 
-// 窗口变矮：把高度收回上限内（不然编辑区被挤没），顺带丢掉失效的还原值
-const onWindowResize = (): void => {
+// 存量高度对账：只在面板 DOM 真实存在时量。关闭态 .exec-panel 根本不渲染
+// （panelEl 为 null），maxHeight() 只能兜底返回下限——照算会把用户存的高度
+// 清成下限，所以关闭态不动，等下次展开（open watch）再对账。
+const reclampHeight = (): void => {
+  if (!panelEl.value) return
   if (panel.height > maxHeight()) panel.setHeight(maxHeight(), true)
 }
+
+// 窗口变矮：把高度收回上限内（不然编辑区被挤没），顺带丢掉失效的还原值
+const onWindowResize = (): void => {
+  reclampHeight()
+}
+
+// 关闭态不量高度；展开后布局稳定了补一次对账（窗口在面板关着时缩过水）。
+watch(
+  () => panel.open,
+  (open) => {
+    if (open) void nextTick(() => requestAnimationFrame(reclampHeight))
+  }
+)
 
 window.addEventListener('resize', onWindowResize)
 
@@ -1039,6 +1167,8 @@ onBeforeUnmount(() => {
   font-size: 12px;
   color: var(--editorColor);
   user-select: none;
+  /* 注意：这里不能 overflow:hidden——resizer 热区上半截刻意伸进编辑区（top:-3px），
+     剪了就没法从编辑区侧拖动。硬剪裁放 .panel-body（两栏内容全在它里面）。 */
 }
 
 .panel-close {
@@ -1100,6 +1230,10 @@ onBeforeUnmount(() => {
 .panel-body {
   display: flex;
   min-height: 0;
+  /* 硬剪裁：面板内容任何情况下都画不出面板盒——压不到状态栏上（2026-11-14
+     输出越界事故）。盒子尺寸本身由高度对账保证（挂载/展开/resize 三处钳制）；
+     resizer 与关闭钮是本层兄弟节点，不受剪裁影响。 */
+  overflow: hidden;
 }
 
 /* 两栏：左 = 块表（mr 文档多一条作业入口条），右 = 输出 / RunReport 卡 */
@@ -1237,6 +1371,10 @@ onBeforeUnmount(() => {
 .output-area {
   flex: 1;
   min-width: 0;
+  /* 自 containment：表格 / 原文都只能在输出区内部滚，绘制逃不出这层
+     （flex 链上 column 项的 min-height:auto 会被大表格顶破，必须显式归零）。 */
+  min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -1256,7 +1394,6 @@ onBeforeUnmount(() => {
 }
 
 .stop-btn {
-  margin-left: auto;
   padding: 1px 8px;
   border: 1px solid var(--editorColor20);
   border-radius: 3px;
@@ -1274,6 +1411,88 @@ onBeforeUnmount(() => {
   white-space: pre-wrap;
   word-break: break-all;
   user-select: text;
+}
+
+.toolbar-flex {
+  flex: 1 1 0;
+}
+
+/* 表格/原文 双态开关（query 原型带 rows 时出现）：分段钮样式，主题色勾选态。 */
+.view-toggle {
+  display: flex;
+}
+
+.view-btn {
+  padding: 1px 10px;
+  border: 1px solid var(--editorColor20);
+  background: transparent;
+  color: var(--editorColor50);
+  cursor: pointer;
+}
+
+.view-btn:first-child {
+  border-radius: 3px 0 0 3px;
+}
+
+.view-btn:last-child {
+  border-radius: 0 3px 3px 0;
+  margin-left: -1px;
+}
+
+.view-btn.on {
+  position: relative;
+  z-index: 1;
+  color: var(--themeColor);
+  border-color: var(--themeColor);
+}
+
+.output-table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 6px 10px;
+  user-select: text;
+}
+
+.output-table {
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.output-table th,
+.output-table td {
+  border: 1px solid var(--editorColor20);
+  padding: 2px 10px;
+  text-align: left;
+  vertical-align: top;
+  white-space: pre-wrap;
+}
+
+.output-table th {
+  background: var(--editorColor10);
+  color: var(--editorColor);
+}
+
+.output-table td {
+  color: var(--editorColor80);
+}
+
+.output-table td.null {
+  color: var(--editorColor30);
+  font-style: italic;
+}
+
+.output-table tfoot td {
+  color: var(--editorColor50);
+  font-style: italic;
+}
+
+/* 表格态的弱化尾注（N rows selected / 第二结果集）：与表格同卷滚动。 */
+.output-table-note {
+  margin: 6px 0 0;
+  color: var(--editorColor40);
+  font-size: 12px;
+  white-space: pre-wrap;
 }
 
 /* ── mr 体裁：文档级整份作业入口 + RunReport 卡（docs/MR-EXECUTOR.md）── */

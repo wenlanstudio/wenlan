@@ -1110,7 +1110,10 @@
     "reportExit": "退出码",
     "reportCounters": "计数器",
     "reportOutput": "产物",
-    "reportWorkdir": "工作目录"
+    "reportWorkdir": "工作目录",
+    "viewTable": "表格",
+    "viewRaw": "原文",
+    "rowCap": "共 {total} 行（已显示前 {shown}）"
   },
   "account": {
     "account": "账户",
