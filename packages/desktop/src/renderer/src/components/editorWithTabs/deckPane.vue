@@ -298,6 +298,29 @@ type ExecReq = { reqId: string; docPath: string; line: number; jobId?: string }
 let execReq: ExecReq | null = null
 let offExecEvent: (() => void) | null = null
 
+/**
+ * 围栏体正文键（▶ 连接用）：与引擎 parseFences 的体提取同构——开启行缩进在体内
+ * 剥离、闭合/未闭合的体区间不同（闭合 end 指向闭合围栏下一行，未闭合 end = 总行
+ * 数且体含末行）。角色/体裁等语义一律以引擎 parse 为准，这里只产 join 键：
+ * deck 页面的 pre 正文是 md2slides 逐字渲染的围栏体，与原始 md 的这一段全等
+ * （分页续片是它的整行子串）。
+ */
+const fenceBodyOf = (mdLines: string[], line: number, end: number): string => {
+  const open = /^(\s{0,3})(`{3,}|~{3,})/.exec(mdLines[line] ?? '')
+  if (!open) return ''
+  const fence = open[2]
+  const closeRe = new RegExp(`^\\s{0,3}${fence[0]}{${fence.length},}[ \\t]*$`)
+  const closed = end - 1 > line && closeRe.test(mdLines[end - 1] ?? '')
+  const last = closed ? end - 1 : end
+  const indent = open[1]
+  const body: string[] = []
+  for (let i = line + 1; i < last; i++) {
+    const l = mdLines[i] ?? ''
+    body.push(indent && l.startsWith(indent) ? l.slice(indent.length) : l)
+  }
+  return body.join('\n')
+}
+
 /** 每次 deck 就绪（含 300ms 防抖重建）重新下发：重建会换掉整份 DOM，▶ 要重挂。 */
 const sendExecCapability = async (): Promise<void> => {
   if (props.leaf !== 'present') return
@@ -328,6 +351,11 @@ const sendExecCapability = async (): Promise<void> => {
       }
       return key
     }
+    // blocks 行号是原始 md 的 0 基行号；deck 页面 pre 上的 data-src-start 却是
+    // md2slides compose 后文本的行号（front-matter 被剥掉提前、分号段展开推后），
+    // 两套坐标系有 front-matter 就对不上（#18：▶ 挂隔壁围栏、引擎跑错块）。
+    // 所以块里带上围栏体正文 code，页面侧改按内容连接，行号只作兜底与消歧。
+    const mdLines = props.markdown.split(/\r?\n/)
     const blocks = runnable.map(b => {
       const first = firstByChapter.get(chapterLineOf(b.line))
       return {
@@ -336,7 +364,8 @@ const sendExecCapability = async (): Promise<void> => {
         runnable: b.runnable,
         lang: b.lang,
         job: b.job,
-        replayable: first !== undefined && b.line > first
+        replayable: first !== undefined && b.line > first,
+        code: fenceBodyOf(mdLines, b.line, b.end)
       }
     })
     postToDeck({ type: 'md2s:exec-capability', docPath, enabled: true, blocks })

@@ -12,14 +12,19 @@
  *   Vue 宿主 deckPane.vue：唯一拿得到 docPath 的一层，转 window.mdcode2run IPC。
  *   main 进程：registry 单例引擎 + 子进程（已有，本次零改动）。
  *
- * 行号口径（关键）：deck 的 <pre data-src-start="N"> 中 N 是围栏开栏行 **1 基**；
- * 分页切片后的续片被改成「原 start + 切走行数 + 1」，仍落在原块体内。引擎
- * locate({line}) 是 **0 基** 区间 f.line <= line < f.end。故装饰时用
- * `line = N - 1` 做 **区间包含** 匹配（不能精确等于，续片会漏 ▶），点击时把
- * 匹配到的块开栏行 b.line 发回宿主——与引擎事件的 event.line 同口径。
+ * 行号与连接口径（关键，#18）：deck 的 <pre data-src-start="N"> 中 N 是围栏开栏
+ * 行 **1 基**——但那是 md2slides **compose 后文本**上的行号：front-matter 被
+ * bodyOf 剥掉（整体提前 F 行）、正文里的「A；B；C。」被 splitSemicolons 展开成
+ * 列表（推后 K 行）；而宿主 capability 的 blocks 行号是 **原始 md** 的 0 基行号。
+ * 两套坐标系一有 front-matter/分号段就对不上——旧行号包含匹配会把 ▶ 挂到隔壁
+ * 围栏上，引擎跑错块（hive 报错只是症状）。所以 pre→块 的连接改按 **内容**：
+ * blocks 带围栏体正文 code（宿主 deckPane 从原始 md 切出，与引擎执行体同构），
+ * ① 整块 pre 正文与 code 全等；② 分页续片（正文 = code 的整行子串）取行号距离
+ * 最近者消歧；③ 宿主没带 code / 内容对不上时退回旧行号区间包含兜底。匹配到的
+ * 块开栏行 b.line 发回宿主——与引擎 locate({line}) 的 **0 基** 区间同口径。
  *
  * 契约：
- *   宿主→页  md2s:exec-capability { docPath, enabled, blocks:[{line,end,runnable,lang,job,replayable}] }
+ *   宿主→页  md2s:exec-capability { docPath, enabled, blocks:[{line,end,runnable,lang,job,replayable,code}] }
  *   页→宿主  md2s:exec { reqId, docPath, line, replay }
  *   宿主→页  md2s:exec-state { reqId, event } / md2s:exec-result { reqId, result }
  *            / md2s:exec-error { reqId, error }
@@ -166,6 +171,48 @@
 
   // ── 装饰 ────────────────────────────────────────────────────────────────
 
+  /* pre → 块 的连接（内容优先，行号兜底）。理由见文件头「行号与连接口径」。 */
+  var normCode = function (s) {
+    return String(s == null ? "" : s).replace(/\r\n/g, "\n").replace(/\s+$/, "");
+  };
+  /* 整行子串：命中处左边界是串首或 \n、右边界是串尾或 \n——续片是围栏体的
+     连续整行切片（md2slides overflow.js 逐行搬 textContent），松 indexOf 会把
+     行中片段也算进去。 */
+  var containsLineSlice = function (body, slice) {
+    var i = body.indexOf(slice);
+    while (i >= 0) {
+      var before = i === 0 ? "\n" : body.charAt(i - 1);
+      var after = i + slice.length >= body.length ? "\n" : body.charAt(i + slice.length);
+      if (before === "\n" && after === "\n") return true;
+      i = body.indexOf(slice, i + 1);
+    }
+    return false;
+  };
+  var matchBlock = function (blocks, content, srcLine) {
+    var c = normCode(content);
+    if (!c) return null;
+    var i, b, bc, d, best = null, bestDist = Infinity;
+    for (i = 0; i < blocks.length; i++) {
+      b = blocks[i];
+      if (b.code != null && normCode(b.code) === c) return b;
+    }
+    for (i = 0; i < blocks.length; i++) {
+      b = blocks[i];
+      if (b.code == null) continue;
+      bc = normCode(b.code);
+      if (bc && bc !== c && containsLineSlice(bc, c)) {
+        d = Math.abs(srcLine - b.line);
+        if (d < bestDist) { best = b; bestDist = d; }
+      }
+    }
+    if (best) return best;
+    for (i = 0; i < blocks.length; i++) {
+      b = blocks[i];
+      if (srcLine >= b.line && srcLine < b.end) return b;
+    }
+    return null;
+  };
+
   var makeBtn = function (extraClass, text, title, onClick) {
     var el = document.createElement("div");
     el.className = "md2s-exec-run" + (extraClass ? " " + extraClass : "");
@@ -195,12 +242,10 @@
       if (!pre || pre.querySelector(".md2s-exec-run")) return;
       var n = Number(pre.getAttribute("data-src-start"));
       if (!isFinite(n) || n <= 0) return;
-      var line = n - 1; // 1 基 → 0 基
-      // 区间包含：分页续片的 start 落在块体内，精确等于会漏掉它们。
-      var b = null;
-      for (var i = 0; i < blocks.length; i++) {
-        if (line >= blocks[i].line && line < blocks[i].end) { b = blocks[i]; break; }
-      }
+      // composed 口径的 0 基行号：只作消歧提示与兜底（见 matchBlock）。
+      var line = n - 1;
+      // 内容优先连接：续片是整行子串，整块是全等（#18 坐标系错位修复）。
+      var b = matchBlock(blocks, code.textContent, line);
       if (!b) return;
       try {
         if (window.getComputedStyle(pre).position === "static") pre.style.position = "relative";
