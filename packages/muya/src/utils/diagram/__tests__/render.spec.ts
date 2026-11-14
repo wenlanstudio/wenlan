@@ -1,12 +1,18 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { finalizeRenderedDiagram, renderDiagram, withMermaidInit } from '../render';
+import { clearDiagramMarkupCache } from '../renderCache';
 
 // The WASM compiler is the fallback engine: stub it so the exe-first and
-// fallback paths can be asserted without instantiating WebAssembly.
+// fallback paths can be asserted without instantiating WebAssembly. The call
+// counter pins the markup cache: an engine rebuild re-renders every block, and
+// a repeated render of identical source must be served from the cache, not
+// from a second compiler run.
+const vizCalls = vi.hoisted(() => ({ count: 0 }));
 vi.mock('@viz-js/viz', () => ({
     instance: async () => ({
         renderSVGElement: (code: string) => {
+            vizCalls.count += 1;
             const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
             svg.setAttribute('data-code', code);
             return svg;
@@ -277,6 +283,62 @@ describe('renderDiagram — Graphviz exe first, WASM as backup', () => {
 
         expect(target.querySelector('svg')).not.toBeNull();
         expect(target.querySelector('svg')!.getAttribute('data-graphviz-engine')).toBeNull();
+    });
+});
+
+describe('renderDiagram — markup cache (view-switch re-renders hit cache)', () => {
+    const wasmOptions = (target: HTMLElement, code = 'digraph G { A -> B }') => ({
+        type: 'graphviz',
+        code,
+        target,
+        vegaTheme: '',
+        mermaidTheme: 'default',
+        plantumlServer: '',
+        sequenceTheme: 'simple',
+        drawioServer: '',
+    });
+
+    beforeEach(() => {
+        clearDiagramMarkupCache();
+        vizCalls.count = 0;
+    });
+
+    it('replays a cached WASM drawing instead of re-running the compiler', async () => {
+        const first = makeTarget();
+        await renderDiagram(wasmOptions(first) as never);
+        expect(vizCalls.count).toBe(1);
+
+        // Simulated engine rebuild: a fresh target with the same source.
+        const second = makeTarget();
+        await renderDiagram(wasmOptions(second) as never);
+
+        expect(vizCalls.count).toBe(1);
+        const svg = second.querySelector('svg');
+        expect(svg).not.toBeNull();
+        expect(svg!.getAttribute('data-code')).toBe('digraph G { A -> B }');
+    });
+
+    it('re-renders when the source differs', async () => {
+        await renderDiagram(wasmOptions(makeTarget()) as never);
+        await renderDiagram(wasmOptions(makeTarget(), 'digraph H { B -> C }') as never);
+
+        expect(vizCalls.count).toBe(2);
+    });
+
+    it('treats the wasm-fallback marker as part of the key', async () => {
+        // No-host render (plain 'wasm' key)...
+        await renderDiagram(wasmOptions(makeTarget()) as never);
+        // ...then the same code where the host dot renderer failed ('wasm-fallback' key).
+        const fallbackTarget = makeTarget();
+        await renderDiagram({
+            ...wasmOptions(fallbackTarget),
+            renderExternalDiagram: async () => {
+                throw new Error('no dot');
+            },
+        } as never);
+
+        expect(vizCalls.count).toBe(2);
+        expect(fallbackTarget.querySelector('svg')!.getAttribute('data-graphviz-engine')).toBe('wasm-fallback');
     });
 });
 

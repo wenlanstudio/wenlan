@@ -3,6 +3,11 @@ import type { TExternalDiagramRenderer } from '../../types';
 import { applyBlockStyle, parseDiagramBlock, parseJsonBlock, pixelSize } from './blockSource';
 import { loadDrawioDiagram, renderDrawio } from './drawio';
 import loadRenderer from './index';
+import {
+    getCachedDiagramMarkup,
+    diagramMarkupKey,
+    putCachedDiagramMarkup,
+} from './renderCache';
 
 // Mermaid's own `run()` derives the id it stamps on the rendered `<svg>` from
 // `Date.now()`, and its renderers then resolve that id with a document-wide
@@ -322,7 +327,16 @@ export async function renderDiagram({
         diagram.insertImgElement(target);
     }
     else if (type === 'vega-lite') {
+        // Same cache rationale as mermaid (svg renderer, tooltip/actions off —
+        // replayed markup is inert). The theme is part of the key.
+        const cacheKey = diagramMarkupKey([type, vegaTheme, code]);
+        const cached = getCachedDiagramMarkup(cacheKey);
+        if (cached !== null) {
+            target.innerHTML = cached;
+            return;
+        }
         await render(target, JSON.parse(code), options);
+        putCachedDiagramMarkup(cacheKey, target.innerHTML);
     }
     else if (type === 'flowchart' || type === 'sequence') {
         const diagram = render.parse(code);
@@ -330,6 +344,18 @@ export async function renderDiagram({
         diagram.drawSVG(target, options);
     }
     else if (type === 'mermaid') {
+        // Cache by (theme, code): engine rebuilds recreate every block and each
+        // fresh DiagramPreview re-renders, so view flips re-ran parse+render
+        // for every mermaid block on the page. On a hit the rendered svg is
+        // replayed as markup; `bindFunctions` from the original render is not
+        // re-bound (interactive elements in cached diagrams stay inert, which
+        // static lecture diagrams don't miss).
+        const cacheKey = diagramMarkupKey([type, mermaidTheme, code]);
+        const cached = getCachedDiagramMarkup(cacheKey);
+        if (cached !== null) {
+            target.innerHTML = cached;
+            return;
+        }
         render.initialize({
             startOnLoad: false,
             securityLevel: 'strict',
@@ -343,8 +369,24 @@ export async function renderDiagram({
         );
         target.innerHTML = svg;
         bindFunctions?.(target);
+        putCachedDiagramMarkup(cacheKey, svg);
     }
     else if (type === 'graphviz') {
+        // Same cache rationale as mermaid; the fallback notice flag is part of
+        // the key so an exe→wasm machine change re-renders rather than
+        // replaying a drawing stamped with the wrong engine marker.
+        const cacheKey = diagramMarkupKey([type, graphvizFallback ? 'wasm-fallback' : 'wasm', code]);
+        const cached = getCachedDiagramMarkup(cacheKey);
+        if (cached !== null) {
+            const tpl = document.createElement('template');
+            tpl.innerHTML = cached;
+            const svg = tpl.content.firstElementChild;
+            if (svg) {
+                target.innerHTML = '';
+                target.appendChild(svg);
+                return;
+            }
+        }
         // The module exports `instance()`, which resolves to a compiler bound
         // to its WASM module; repeated calls reuse the same instance.
         const { instance } = render;
@@ -359,16 +401,26 @@ export async function renderDiagram({
             svg.insertBefore(title, svg.firstChild);
         }
         target.appendChild(svg);
+        putCachedDiagramMarkup(cacheKey, svg.outerHTML);
     }
     else if (type === 'wavedrom') {
         const { options, value } = parseJsonBlock(code);
         applyBlockStyle(target, options);
+        // Cache the ONML markup (block styling above stays outside the cache).
+        const cacheKey = diagramMarkupKey([type, code]);
+        const cached = getCachedDiagramMarkup(cacheKey);
+        if (cached !== null) {
+            target.innerHTML = cached;
+            return;
+        }
         target.innerHTML = '';
         // `renderAny` returns the drawing as ONML; stringify paints it into
         // the block. `renderWaveForm` would go through a document-wide id
         // lookup, which two diagrams on one page would race.
         const onml = render.renderAny(0, value, render.waveSkin);
-        target.innerHTML = render.onml.stringify(onml);
+        const markup = render.onml.stringify(onml);
+        target.innerHTML = markup;
+        putCachedDiagramMarkup(cacheKey, markup);
     }
     else if (type === 'echarts') {
         renderECharts(render, target, code, mermaidTheme === 'dark', !!vector);
