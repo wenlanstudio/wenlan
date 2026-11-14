@@ -4,11 +4,13 @@
     @mouseenter="handleBarEnter"
     @mouseleave="handleBarLeave"
   >
-    <!-- Hibernate state: only the burger stays in the title bar. Hovering the
-         bar — no click needed — reveals the flat entries beside it, the way the
-         JetBrains new UI does it. Clicking the burger toggles the side bar
-         (same entry as the View menu). Pressing Alt alone reveals + opens the
-         first menu (#8, Word convention: Alt lands on 「文件」). -->
+    <!-- Hibernate state: the burger plus the (invisible) entries strip stay in
+         the title bar, and the WHOLE strip is the hover hotspot — entering any
+         part of it reveals the flat entries in place, no need to aim at the
+         30px burger. Leaving the strip hides them again. Clicking the burger
+         toggles the side bar (same entry as the View menu). Pressing Alt alone
+         reveals + opens the first menu (#8, Word convention: Alt lands on
+         「文件」). -->
     <div
       class="menu-bar-burger"
       :class="{ 'is-open': openIndex !== -1 }"
@@ -40,29 +42,27 @@
         </g>
       </svg>
     </div>
-    <Transition name="menu-bar-fade">
+    <div
+      class="menu-bar-roots"
+      :class="{ 'is-expanded': expanded }"
+    >
       <div
-        v-show="expanded"
-        class="menu-bar-roots"
+        v-for="(menu, index) of menus"
+        :key="menu.id || index"
+        class="menu-bar-root title-no-drag"
+        :class="{ 'is-open': openIndex === index }"
+        @click.stop="toggle(index)"
+        @mouseenter="handleEnter(index)"
       >
-        <div
-          v-for="(menu, index) of menus"
-          :key="menu.id || index"
-          class="menu-bar-root title-no-drag"
-          :class="{ 'is-open': openIndex === index }"
-          @click.stop="toggle(index)"
-          @mouseenter="handleEnter(index)"
-        >
-          {{ menu.label }}
-          <menu-dropdown
-            v-if="openIndex === index"
-            class="menu-bar-panel"
-            :items="menu.submenu"
-            @execute="run"
-          />
-        </div>
+        {{ menu.label }}
+        <menu-dropdown
+          v-if="openIndex === index"
+          class="menu-bar-panel"
+          :items="menu.submenu"
+          @execute="run"
+        />
       </div>
-    </Transition>
+    </div>
   </div>
 </template>
 
@@ -240,6 +240,18 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   height: 100%;
+  /* 隐藏时仍占位（visibility 而非 display:none）：整条「汉堡 + 条目」条带都是
+     悬停热区，不必精准瞄中 30px 的「文」按钮；条目原地显隐，展开无布局跳动。 */
+  visibility: hidden;
+  opacity: 0;
+  transition:
+    opacity 0.15s ease-in-out,
+    visibility 0.15s ease-in-out;
+}
+
+.menu-bar-roots.is-expanded {
+  visibility: visible;
+  opacity: 1;
 }
 
 .menu-bar-root {
@@ -265,15 +277,5 @@ onBeforeUnmount(() => {
   top: 100%;
   left: 0;
   z-index: 100;
-}
-
-.menu-bar-fade-enter-active,
-.menu-bar-fade-leave-active {
-  transition: opacity 0.15s ease-in-out;
-}
-
-.menu-bar-fade-enter-from,
-.menu-bar-fade-leave-to {
-  opacity: 0;
 }
 </style>
