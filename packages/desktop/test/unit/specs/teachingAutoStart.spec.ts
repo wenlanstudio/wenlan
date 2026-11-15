@@ -37,15 +37,33 @@ const hitPayload = (sessionId = 68) => ({
     releaseId: 39,
     entryToken: 'tok',
     joinUrl: 'http://host/admin-api/teaching/reading/h5?entryToken=tok',
-    location: '计算机实验室3'
+    location: '计算机实验室3',
+    scheduled: true,
+    roomReopened: false
   }
 })
 
 const autoHostMock = vi.fn()
 
+// autoStart 的教师身份门控（2026-11-15）会调 useAuthStore().init()，
+// 而 init() 走 window.auth.getState()；jsdom 里不给这个夹具，原有用例全会
+// 以 "Cannot read properties of undefined (reading 'getState')" 挂掉。
+const teacherAuthState = {
+  loggedIn: true,
+  tenantId: 1,
+  user: { id: 1, username: 'teacher', nickname: '教师' },
+  roles: ['teacher']
+}
+let authState: Record<string, unknown> = teacherAuthState
+
 beforeEach(() => {
+  authState = { ...teacherAuthState }
   setActivePinia(createPinia())
   vi.clearAllMocks()
+  ;(window as unknown as Record<string, unknown>).auth = {
+    getState: vi.fn(() => Promise.resolve(authState)),
+    onStateChanged: vi.fn().mockReturnValue(() => undefined)
+  }
   ;(window as unknown as Record<string, unknown>).teachingSocket = {
     autoHost: autoHostMock,
     host: vi.fn().mockResolvedValue({ ok: false, error: 'unused' }),
@@ -121,5 +139,19 @@ describe('teaching store · autoStart 课表自动开房（ADR-24）', () => {
     expect(store.classroom.sessionId).toBeNull()
     expect(store.classroom.auto).toBeNull()
     expect(store.classroom.autoNotice).toBe('')
+  })
+
+  it('门控：未登录 / 学生一律零 autoHost 请求（不惊动教学链路）', async() => {
+    autoHostMock.mockResolvedValue(hitPayload())
+
+    authState = { loggedIn: false, tenantId: null, user: null, roles: [] }
+    setActivePinia(createPinia())
+    await useTeachingStore().autoStart()
+    expect(autoHostMock).not.toHaveBeenCalled()
+
+    authState = { loggedIn: true, tenantId: 1, user: null, roles: ['wenshu-student'] }
+    setActivePinia(createPinia())
+    await useTeachingStore().autoStart()
+    expect(autoHostMock).not.toHaveBeenCalled()
   })
 })
