@@ -18,6 +18,8 @@ interface ClassroomSession {
   id: number
   currentPage: number
   followLocked: boolean
+  /** 2026-11-15 门户裁决：服务端权威拼装的学生门户入口（叠码数据源） */
+  joinUrl?: string | null
 }
 
 /** `/class-session/auto` 命中态的会话信息（其余字段仅 hit 时有值，ADR-24） */
@@ -99,7 +101,12 @@ class TeachingSocket {
    * 教师误点两次不该在 t_class_session 里堆出两条并行会话；没有才 create。
    * 两个接口都要 `teaching:session:manage`，权限不足时把服务端原话带回去。
    */
-  async host(releaseId: number): Promise<{ ok: boolean; sessionId?: number; error?: string }> {
+  async host(releaseId: number): Promise<{
+    ok: boolean
+    sessionId?: number
+    joinUrl?: string | null
+    error?: string
+  }> {
     this.leave()
     if (typeof WebSocket === 'undefined') {
       return { ok: false, error: '当前运行环境不支持 WebSocket' }
@@ -114,6 +121,8 @@ class TeachingSocket {
       return { ok: false, error: existing.error ?? `HTTP ${existing.status}` }
     }
     let sessionId = existing.data?.id ?? null
+    // 2026-11-15 门户裁决：get 响应带服务端权威拼装的门户入口 URL（叠码数据源）
+    let joinUrl = existing.data?.joinUrl ?? null
     if (sessionId == null) {
       const created = await auth.request<number>({
         url: '/teaching/class-session/create',
@@ -124,11 +133,21 @@ class TeachingSocket {
         return { ok: false, error: created.error ?? `HTTP ${created.status}` }
       }
       sessionId = created.data ?? null
+      if (sessionId != null) {
+        // create 只回数字 id，补一次 get 拿 joinUrl（服务端权威拼装，客户端不自行拼）
+        const fetched = await auth.request<ClassroomSession | null>({
+          url: '/teaching/class-session/get',
+          params: { releaseId }
+        })
+        joinUrl = fetched.data?.joinUrl ?? null
+      }
     }
     if (sessionId == null) {
       return { ok: false, error: '创建课堂会话失败' }
     }
-    return this.attach(auth, sessionId)
+    const attached = this.attach(auth, sessionId)
+    if (!attached.ok) return attached
+    return { ok: true, sessionId, joinUrl }
   }
 
   /** 教师：上报当前页（服务端校验 host，失败会回 teaching.error）。 */
@@ -148,11 +167,18 @@ class TeachingSocket {
    * 教师：拉本会话可发题目（`teaching.race.questions`）。
    *
    * 结果是异步回帧 `teaching.race.question-list`，main 侧不缓存不转发队列——
-   * renderer 自己监听该帧并按 `openId` 对齐当前轮，这里只负责驱动。
+   * renderer 自己监听该帧并按 `openId` 对齐当前轮。返回值只报「上行是否发出」：
+   * 未进房 / 连接未就绪时明确失败，不再静默吞掉让 renderer 把超时伪装成空列表。
    */
-  sendRaceQuestions(): void {
-    if (this.sessionId == null) return
+  sendRaceQuestions(): { ok: boolean; error?: string } {
+    if (this.sessionId == null) {
+      return { ok: false, error: '尚未进入课堂会话' }
+    }
+    if (this.socket?.readyState !== WebSocket.OPEN) {
+      return { ok: false, error: '课堂连接未就绪' }
+    }
     this.send('teaching.race.questions', {})
+    return { ok: true }
   }
 
   /** 教师：发题（服务端校验 host、一题一轮，重复发会被 RACE_ALREADY_OPEN 挡回）。 */

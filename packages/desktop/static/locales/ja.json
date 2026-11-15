@@ -1261,7 +1261,12 @@
     "commandRestoreDoc": "現在の講義資料をサーバーの最新公開内容に復元します（ローカルのメモは上書き）",
     "writableCopy": "書き込み可能なコピー",
     "liveNow": "授業中",
-    "liveNotice": "時間割のお知らせ"
+    "liveNotice": "時間割のお知らせ",
+    "quizLoadFailed": "問題リストの取得に失敗しました",
+    "quizLoadTimeout": "問題リストの取得がタイムアウトしました。接続を確認してください",
+    "quizRetry": "再試行",
+    "quizOnPage": "このページ",
+    "quizMismatch": "現在の教室に紐づく公開物と表示中の講義が一致していません。問題を出す前に確認してください"
   },
   "teachingLab": {
     "copyEmpty": "コピーの内容が空です",

@@ -155,3 +155,130 @@ describe('teaching store · autoStart 课表自动开房（ADR-24）', () => {
     expect(autoHostMock).not.toHaveBeenCalled()
   })
 })
+
+/**
+ * 缺口 A（2026-11-15 发题对齐裁决）：当前文档的发布物优先——放映哪份讲义
+ * 就开哪份发布物的房。优先级：课表命中班 ∈ 文档发布物 → 换开该发布物；
+ * multi 且文档收敛 → 免降级；auto 未命中而文档有发布物 → 兜底开房。
+ * releasesFor 读 localStorage（发布时 remember 写入），测试里直接种数据。
+ */
+const DOC_PATH = '/course/第6章 坐标轴的定制.md'
+const seedDocReleases = (
+  releases: Array<{ releaseId: number; classId: number; className: string }>
+): void => {
+  localStorage.setItem(
+    'wenlan.teaching.publish.' + DOC_PATH,
+    JSON.stringify({ contentHash: 'h', versionId: 1, versionNo: 1, releases })
+  )
+}
+
+describe('teaching store · autoStart 文档对齐（缺口 A）', () => {
+  it('课表命中班 ∈ 文档发布物且 releaseId 不同 → 换开文档对应发布物（带门户 joinUrl）', async() => {
+    seedDocReleases([{ releaseId: 100, classId: 65, className: '2024级大数据1班' }])
+    autoHostMock.mockResolvedValue(hitPayload(68)) // 课表命中 releaseId=39
+    const hostMock = vi.fn().mockResolvedValue({
+      ok: true,
+      sessionId: 101,
+      joinUrl: 'http://host/admin-api/teaching/portal/h5'
+    })
+    ;(window as unknown as Record<string, unknown>).teachingSocket = {
+      autoHost: autoHostMock,
+      host: hostMock,
+      end: vi.fn().mockResolvedValue(undefined),
+      onMessage: vi.fn().mockReturnValue(() => undefined),
+      onStatus: vi.fn().mockReturnValue(() => undefined)
+    }
+    const store = useTeachingStore()
+    await store.autoStart(DOC_PATH)
+    expect(hostMock).toHaveBeenCalledWith(100)
+    expect(store.classroom.releaseId).toBe(100)
+    expect(store.classroom.sessionId).toBe(101)
+    expect(store.classroom.auto?.joinUrl).toContain('/teaching/portal/h5')
+    // 课表的展示信息（课程名/教室）跟着换房保留
+    expect(store.classroom.auto?.courseName).toBe('数据仓库工程实践')
+  })
+
+  it('课表命中的发布物就是文档的发布物 → 不换房，host 不被调', async() => {
+    seedDocReleases([{ releaseId: 39, classId: 65, className: '2024级大数据1班' }])
+    autoHostMock.mockResolvedValue(hitPayload(68))
+    const hostMock = vi.fn()
+    ;(window as unknown as Record<string, unknown>).teachingSocket = {
+      autoHost: autoHostMock,
+      host: hostMock,
+      end: vi.fn().mockResolvedValue(undefined),
+      onMessage: vi.fn().mockReturnValue(() => undefined),
+      onStatus: vi.fn().mockReturnValue(() => undefined)
+    }
+    const store = useTeachingStore()
+    await store.autoStart(DOC_PATH)
+    expect(hostMock).not.toHaveBeenCalled()
+    expect(store.classroom.releaseId).toBe(39)
+    expect(store.classroom.sessionId).toBe(68)
+  })
+
+  it('multi 且文档只发给其中一个命中班 → 用文档收敛选班，免降级', async() => {
+    seedDocReleases([{ releaseId: 100, classId: 64, className: '2024级软件工程班' }])
+    autoHostMock.mockResolvedValue({
+      ok: true,
+      hit: false,
+      notice: {
+        status: 'multi' as const,
+        message: '同一时段多个班在课表命中：2024级软件工程班、2024级大数据1班',
+        classId: 64,
+        className: '2024级软件工程班'
+      }
+    })
+    const hostMock = vi.fn().mockResolvedValue({ ok: true, sessionId: 102, joinUrl: null })
+    ;(window as unknown as Record<string, unknown>).teachingSocket = {
+      autoHost: autoHostMock,
+      host: hostMock,
+      end: vi.fn().mockResolvedValue(undefined),
+      onMessage: vi.fn().mockReturnValue(() => undefined),
+      onStatus: vi.fn().mockReturnValue(() => undefined)
+    }
+    const store = useTeachingStore()
+    await store.autoStart(DOC_PATH)
+    expect(hostMock).toHaveBeenCalledWith(100)
+    expect(store.classroom.releaseId).toBe(100)
+    expect(store.classroom.className).toBe('2024级软件工程班')
+  })
+
+  it('auto 未命中（none）而文档有发布物 → 兜底按文档开房', async() => {
+    seedDocReleases([{ releaseId: 100, classId: 65, className: '2024级大数据1班' }])
+    autoHostMock.mockResolvedValue({ ok: true, hit: false })
+    const hostMock = vi.fn().mockResolvedValue({
+      ok: true,
+      sessionId: 103,
+      joinUrl: 'http://host/admin-api/teaching/portal/h5'
+    })
+    ;(window as unknown as Record<string, unknown>).teachingSocket = {
+      autoHost: autoHostMock,
+      host: hostMock,
+      end: vi.fn().mockResolvedValue(undefined),
+      onMessage: vi.fn().mockReturnValue(() => undefined),
+      onStatus: vi.fn().mockReturnValue(() => undefined)
+    }
+    const store = useTeachingStore()
+    await store.autoStart(DOC_PATH)
+    expect(hostMock).toHaveBeenCalledWith(100)
+    expect(store.classroom.sessionId).toBe(103)
+    expect(store.classroom.auto?.joinUrl).toContain('/teaching/portal/h5')
+  })
+
+  it('无 pathname（旧调用方）保持旧行为：auto 未命中即静默', async() => {
+    seedDocReleases([{ releaseId: 100, classId: 65, className: '2024级大数据1班' }])
+    autoHostMock.mockResolvedValue({ ok: true, hit: false })
+    const hostMock = vi.fn()
+    ;(window as unknown as Record<string, unknown>).teachingSocket = {
+      autoHost: autoHostMock,
+      host: hostMock,
+      end: vi.fn().mockResolvedValue(undefined),
+      onMessage: vi.fn().mockReturnValue(() => undefined),
+      onStatus: vi.fn().mockReturnValue(() => undefined)
+    }
+    const store = useTeachingStore()
+    await store.autoStart()
+    expect(hostMock).not.toHaveBeenCalled()
+    expect(store.classroom.sessionId).toBeNull()
+  })
+})

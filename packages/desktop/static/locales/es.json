@@ -1261,7 +1261,12 @@
     "commandRestoreDoc": "Restaurar el documento del curso al último contenido publicado (las notas locales se sobrescriben)",
     "writableCopy": "Copia editable",
     "liveNow": "En clase ahora",
-    "liveNotice": "Aviso de horario"
+    "liveNotice": "Aviso de horario",
+    "quizLoadFailed": "No se pudo cargar la lista de preguntas",
+    "quizLoadTimeout": "Tiempo agotado al cargar la lista de preguntas, compruebe la conexión",
+    "quizRetry": "Reintentar",
+    "quizOnPage": "Esta página",
+    "quizMismatch": "El aula está vinculada a una publicación distinta del documento presentado; compruebe antes de abrir una pregunta"
   },
   "teachingLab": {
     "copyEmpty": "El contenido de la copia está vacío",

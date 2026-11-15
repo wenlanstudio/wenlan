@@ -1261,7 +1261,12 @@
     "commandRestoreDoc": "Het huidige cursusdocument herstellen naar de laatst gepubliceerde inhoud (lokale notities worden overschreven)",
     "writableCopy": "Beschrijfbare kopie",
     "liveNow": "Nu in les",
-    "liveNotice": "Roostermelding"
+    "liveNotice": "Roostermelding",
+    "quizLoadFailed": "Vragenlijst laden mislukt",
+    "quizLoadTimeout": "Time-out bij het laden van de vragenlijst, controleer de verbinding",
+    "quizRetry": "Opnieuw proberen",
+    "quizOnPage": "Deze pagina",
+    "quizMismatch": "De les is gekoppeld aan een andere publicatie dan het getoonde document — controleer voordat u een vraag opent"
   },
   "teachingLab": {
     "copyEmpty": "Kopie-inhoud is leeg",

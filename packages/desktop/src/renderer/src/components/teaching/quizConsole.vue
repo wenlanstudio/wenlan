@@ -101,6 +101,13 @@
 
       <!-- 题目列表 -->
       <div class="quiz-body">
+        <!-- 缺口 A（2026-11-15）：房间绑定的发布物与正在放映的讲义不一致时提示，防发错讲义的题 -->
+        <div
+          v-if="roomMismatch"
+          class="quiz-mismatch"
+        >
+          {{ t('teaching.quizMismatch') }}
+        </div>
         <div
           v-if="race.loading"
           class="quiz-empty"
@@ -108,7 +115,7 @@
           {{ t('teaching.quizLoading') }}
         </div>
         <div
-          v-else-if="!race.questions.length"
+          v-else-if="!race.questions.length && !race.error"
           class="quiz-empty"
         >
           {{ t('teaching.quizEmpty') }}
@@ -116,17 +123,34 @@
             {{ t('teaching.quizEmptyHint') }}
           </div>
         </div>
+        <div
+          v-else-if="!race.questions.length"
+          class="quiz-empty"
+        >
+          {{ race.error }}
+          <el-button
+            size="small"
+            class="quiz-retry"
+            @click="teachingStore.loadRaceQuestions()"
+          >
+            {{ t('teaching.quizRetry') }}
+          </el-button>
+        </div>
         <ul
           v-else
           class="quiz-list"
         >
           <li
-            v-for="question in race.questions"
+            v-for="question in orderedQuestions"
             :key="question.id"
             class="quiz-item"
             :class="{ current: question.id === race.questionId }"
           >
             <span class="quiz-key">{{ question.questionKey || `#${question.id}` }}</span>
+            <span
+              v-if="question.onPage"
+              class="quiz-page-badge"
+            >{{ t('teaching.quizOnPage') }}</span>
             <span class="quiz-stem">{{ question.stem }}</span>
             <span class="quiz-point">{{ t('teaching.quizPoint', { point: question.point }) }}</span>
             <el-button
@@ -179,15 +203,30 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { t } from '@/i18n'
+import { useEditorStore } from '@/store/editor'
 import { useTeachingStore, type RaceQuestion } from '@/store/teaching'
+import { orderRaceQuestions } from '@/util/quizConsoleOrder'
 
 const teachingStore = useTeachingStore()
+const editor = useEditorStore()
 // 必须走 storeToRefs：直接从 store 上解构 state 会丢掉响应性，倒计时与按钮状态都不刷新。
 const { race, classroom } = storeToRefs(teachingStore)
 const limitSec = ref(30)
 
 const running = computed(() => race.value.openId != null)
 const reveal = computed(() => race.value.reveal)
+// 缺口 B：放映当前页的题置顶（onPage 徽章），其余保持服务端顺序
+const orderedQuestions = computed(() =>
+  orderRaceQuestions(race.value.questions as RaceQuestion[], race.value.pageQuizKeys)
+)
+// 缺口 A：房间绑定的发布物不在「当前放映文档的发布物集合」里 → 提示防发错
+// （当前文档没发布过则不打扰——空集合意味着无对齐基线，本来就可能开别的讲义）
+const roomMismatch = computed(() => {
+  if (classroom.value.releaseId == null) return false
+  const local = teachingStore.releasesFor(editor.currentFile?.pathname ?? '')
+  if (!local.length) return false
+  return !local.some((r) => r.releaseId === classroom.value.releaseId)
+})
 
 const letter = (index: number): string => String.fromCharCode(65 + index)
 
@@ -485,5 +524,31 @@ const onOpen = (question: RaceQuestion): void => {
   color: #a32d2d;
   font-size: 12px;
   word-break: break-all;
+}
+
+/* 缺口 B：本页题徽章（放映当前页的题置顶后一眼可辨） */
+.quiz-page-badge {
+  flex: none;
+  font-size: 10px;
+  line-height: 1;
+  color: #2b6cb0;
+  background: #e8f0fa;
+  border-radius: 3px;
+  padding: 3px 5px;
+}
+
+.quiz-retry {
+  margin-left: 8px;
+}
+
+/* 缺口 A：房间/文档不一致提示条 */
+.quiz-mismatch {
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #8a5a00;
+  background: #fdf3e0;
+  border: 1px solid #f0d9a8;
+  border-radius: 6px;
 }
 </style>

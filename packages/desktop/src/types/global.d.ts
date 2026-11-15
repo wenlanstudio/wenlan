@@ -268,13 +268,18 @@ declare global {
 
   interface TeachingSocketAPI {
     join(releaseId: number): Promise<{ ok: boolean; sessionId?: number; error?: string }>
-    host(releaseId: number): Promise<{ ok: boolean; sessionId?: number; error?: string }>
+    host(releaseId: number): Promise<{
+      ok: boolean
+      sessionId?: number
+      joinUrl?: string | null
+      error?: string
+    }>
     autoHost(): Promise<TeachingAutoResult>
     page(page: number): Promise<void>
     follow(locked: boolean): Promise<void>
     end(sessionId: number | null): Promise<void>
     leave(): Promise<void>
-    raceQuestions(): Promise<void>
+    raceQuestions(): Promise<{ ok: boolean; error?: string }>
     raceOpen(questionId: number, limitSec: number): Promise<void>
     raceClose(openId: number): Promise<void>
     raceVoid(openId: number): Promise<void>

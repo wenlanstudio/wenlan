@@ -186,6 +186,8 @@ export interface RaceState {
   online: number
   reveal: RaceReveal | null
   error: string
+  /** 缺口 B（2026-11-15）：放映当前页的 quiz 标记 id（===服务端 questionKey），本页题置顶用 */
+  pageQuizKeys: string[]
 }
 
 /**
@@ -277,7 +279,8 @@ const emptyRace = (): RaceState => ({
   answered: 0,
   online: 0,
   reveal: null,
-  error: ''
+  error: '',
+  pageQuizKeys: []
 })
 
 const emptyStudentQuiz = (): StudentQuizState => ({
@@ -716,7 +719,12 @@ export const useTeachingStore = defineStore('teaching', () => {
       role: 'host',
       page: 1,
       releaseId: ref.releaseId,
-      className: ref.className
+      className: ref.className,
+      // 2026-11-15 门户裁决：手动/文档对齐开房也带服务端权威拼装的门户入口，
+      // 封面叠码不再只属于 auto 开房一条路
+      auto: res.joinUrl
+        ? { courseName: '', location: '', joinUrl: res.joinUrl, scheduled: true }
+        : null
     }
     reportedPage = 0
     return ''
@@ -740,7 +748,7 @@ export const useTeachingStore = defineStore('teaching', () => {
    * 提示先发布）。message 放 classroom.autoNotice，教学首页卡与映视图封面都会提示，
    * **放映照常**。已在课中不重复调；未登录 / 学生 / 普通用户根本不进本方法。
    */
-  const autoStart = async(): Promise<void> => {
+  const autoStart = async(pathname?: string): Promise<void> => {
     if (classroom.value.sessionId != null) return
     // 门控（2026-11-15）：只有已登录的教师才检测发布物 / 自动开房。
     // 普通用户（含未登录）与登录的学生一律零请求——不登录也能一文多览。
@@ -748,29 +756,69 @@ export const useTeachingStore = defineStore('teaching', () => {
     if (!auth.ready) await auth.init()
     if (!auth.state.loggedIn || auth.isStudent) return
     try {
+      // 缺口 A（2026-11-15 发题对齐裁决）：当前文档的发布物优先——放映哪份讲义
+      // 就开哪份发布物的房，发题列表才与放映内容同源；课表只做「选哪个班」的辅助。
+      const localReleases = pathname ? releasesFor(pathname) : []
       const res = await window.teachingSocket.autoHost()
-      if (!res.ok || !res.hit || !res.auto) {
-        if (res.notice) {
-          classroom.value.autoNotice = res.notice.message
-          if (res.notice.className) classroom.value.className = res.notice.className
+      if (res.ok && res.hit && res.auto) {
+        // 课表命中，且命中的班也在当前文档的发布物里 → 换开该文档对应发布物
+        const matched = localReleases.find((r) => r.classId === res.auto!.classId)
+        if (matched && matched.releaseId !== res.auto.releaseId) {
+          const switched = await window.teachingSocket.host(matched.releaseId)
+          if (switched.ok && switched.sessionId != null) {
+            classroom.value = {
+              ...emptyClassroom(),
+              sessionId: switched.sessionId,
+              role: 'host',
+              page: 1,
+              releaseId: matched.releaseId,
+              className: matched.className || res.auto.className,
+              auto: {
+                courseName: res.auto.courseName,
+                location: res.auto.location ?? '',
+                joinUrl: switched.joinUrl ?? res.auto.joinUrl ?? '',
+                scheduled: res.auto.scheduled !== false
+              }
+            }
+            reportedPage = 0
+            return
+          }
         }
+        classroom.value = {
+          ...emptyClassroom(),
+          sessionId: res.sessionId ?? null,
+          role: 'host',
+          page: 1,
+          releaseId: res.auto.releaseId,
+          className: res.auto.className,
+          auto: {
+            courseName: res.auto.courseName,
+            location: res.auto.location ?? '',
+            joinUrl: res.auto.joinUrl ?? '',
+            scheduled: res.auto.scheduled !== false
+          }
+        }
+        reportedPage = 0
         return
       }
-      classroom.value = {
-        ...emptyClassroom(),
-        sessionId: res.sessionId ?? null,
-        role: 'host',
-        page: 1,
-        releaseId: res.auto.releaseId,
-        className: res.auto.className,
-        auto: {
-          courseName: res.auto.courseName,
-          location: res.auto.location ?? '',
-          joinUrl: res.auto.joinUrl ?? '',
-          scheduled: res.auto.scheduled !== false
-        }
+      // 多班命中：当前文档恰好只发给其中一个命中班 → 用文档收敛选班，免降级弹提示
+      if (
+        res.ok &&
+        !res.hit &&
+        res.notice?.status === 'multi' &&
+        res.notice.classId != null
+      ) {
+        const matched = localReleases.find((r) => r.classId === res.notice!.classId)
+        if (matched && (await startClassroom(matched)) === '') return
       }
-      reportedPage = 0
+      // auto 未命中（没排课 / 无发布物 / 静默失败）：当前文档有发布物就照常开房
+      if (classroom.value.sessionId == null && localReleases.length > 0) {
+        if ((await startClassroom(localReleases[0])) === '') return
+      }
+      if (res.notice) {
+        classroom.value.autoNotice = res.notice.message
+        if (res.notice.className) classroom.value.className = res.notice.className
+      }
     } catch {
       // 未登录 / 网络 / 服务端异常一律静默：放映绝不被教学检测打扰
     }
@@ -796,14 +844,39 @@ export const useTeachingStore = defineStore('teaching', () => {
 
   // ==================== 竞答控制台（host） ====================
 
-  /** 拉本讲义可发题目（异步回帧 `teaching.race.question-list`）。 */
+  /**
+   * 拉本讲义可发题目（异步回帧 `teaching.race.question-list`）。
+   *
+   * 2026-11-15 诚实化：上行失败（未进房/连接未就绪，main 返回明确错误）与回帧
+   * 丢失（超时仍 loading）都亮失败态——只有真回帧且列表为空才显示「没有可发的题」。
+   */
   const loadRaceQuestions = (): void => {
     race.value.loading = true
-    void window.teachingSocket.raceQuestions()
-    // 回帧可能因为 ws 正在重连而丢掉，别让「加载中」永远转下去
+    race.value.error = ''
+    window.teachingSocket
+      .raceQuestions()
+      .then((res) => {
+        if (!res.ok) {
+          race.value.loading = false
+          race.value.error = res.error || t('teaching.quizLoadFailed')
+        }
+      })
+      .catch(() => {
+        race.value.loading = false
+        race.value.error = t('teaching.quizLoadFailed')
+      })
+    // 回帧可能因为 ws 正在重连而丢掉：超时不再伪装成空列表，亮失败态给重试
     setTimeout(() => {
-      if (race.value.loading) race.value.loading = false
+      if (race.value.loading) {
+        race.value.loading = false
+        race.value.error = t('teaching.quizLoadTimeout')
+      }
     }, 4000)
+  }
+
+  /** 缺口 B：deckPane 在 md2s:change 时上报当前页 quiz 标记 id，发题面板据此把本页题置顶。 */
+  const setPageQuizKeys = (keys: string[]): void => {
+    race.value.pageQuizKeys = Array.isArray(keys) ? keys.filter((k) => typeof k === 'string') : []
   }
 
   /** 打开控制台：只对 host 有意义，未开课时返回一句提示给调用方。 */
@@ -1055,6 +1128,7 @@ export const useTeachingStore = defineStore('teaching', () => {
     openQuizConsole,
     closeQuizConsole,
     loadRaceQuestions,
+    setPageQuizKeys,
     openRaceQuestion,
     closeRaceRound,
     voidRaceRound,

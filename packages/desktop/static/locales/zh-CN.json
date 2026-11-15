@@ -1261,7 +1261,12 @@
     "commandRestoreDoc": "把当前课程文档还原为服务端最新发布内容（本地笔记与回填会被覆盖）",
     "writableCopy": "可写副本",
     "liveNow": "此刻有课",
-    "liveNotice": "课表提示"
+    "liveNotice": "课表提示",
+    "quizLoadFailed": "拉取题目失败",
+    "quizLoadTimeout": "拉取题目超时，请检查课堂连接",
+    "quizRetry": "重试",
+    "quizOnPage": "本页",
+    "quizMismatch": "当前课堂绑定的发布物与正在放映的讲义不一致，发题前请确认"
   },
   "teachingLab": {
     "copyEmpty": "副本内容为空",

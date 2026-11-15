@@ -1261,7 +1261,12 @@
     "commandRestoreDoc": "Das aktuelle Kursdokument auf den zuletzt veröffentlichten Stand zurücksetzen (lokale Notizen werden überschrieben)",
     "writableCopy": "Beschreibbare Kopie",
     "liveNow": "Jetzt Unterricht",
-    "liveNotice": "Hinweis Stundenplan"
+    "liveNotice": "Hinweis Stundenplan",
+    "quizLoadFailed": "Frageliste konnte nicht geladen werden",
+    "quizLoadTimeout": "Zeitüberschreitung beim Laden der Frageliste, Verbindung prüfen",
+    "quizRetry": "Erneut versuchen",
+    "quizOnPage": "Diese Seite",
+    "quizMismatch": "Der Unterraum ist an eine andere Veröffentlichung gebunden als das dargestellte Dokument — vor dem Öffnen einer Frage prüfen"
   },
   "teachingLab": {
     "copyEmpty": "Kopieinhalt ist leer",

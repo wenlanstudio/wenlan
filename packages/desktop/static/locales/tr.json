@@ -1261,7 +1261,12 @@
     "commandRestoreDoc": "Geçerli ders belgesini sunucudaki son yayımlanan içeriğe geri yükle (yerel notlar üzerine yazılır)",
     "writableCopy": "Yazılabilir kopya",
     "liveNow": "Ders devam ediyor",
-    "liveNotice": "Program bildirimi"
+    "liveNotice": "Program bildirimi",
+    "quizLoadFailed": "Soru listesi yüklenemedi",
+    "quizLoadTimeout": "Soru listesi yüklenirken zaman aşımı, bağlantıyı kontrol edin",
+    "quizRetry": "Tekrar dene",
+    "quizOnPage": "Bu sayfa",
+    "quizMismatch": "Sınıf, sunulan belgeden farklı bir yayına bağlı — soru açmadan önce kontrol edin"
   },
   "teachingLab": {
     "copyEmpty": "Kopya içeriği boş",

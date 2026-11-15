@@ -28,10 +28,9 @@ export const registerTeachingSocketHandlers = (): void => {
   )
   ipcMain.handle('teaching::ws-leave', () => teachingSocket.leave())
 
-  // 竞答（M2b 发题/收卷/作废）：全部是 fire-and-forget 上行，结果靠广播回来
-  ipcMain.handle('teaching::ws-race-questions', () => {
-    teachingSocket.sendRaceQuestions()
-  })
+  // 竞答（M2b 发题/收卷/作废）：fire-and-forget 上行，结果靠广播回来；
+  // 唯 questions 例外——返回上行是否发出（2026-11-15 诚实化：失败不再伪装空列表）
+  ipcMain.handle('teaching::ws-race-questions', () => teachingSocket.sendRaceQuestions())
   ipcMain.handle(
     'teaching::ws-race-open',
     (_event, questionId: number, limitSec: number) => {

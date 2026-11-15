@@ -1261,7 +1261,12 @@
     "commandRestoreDoc": "Restore the current course document to the latest published content",
     "writableCopy": "Writable copy",
     "liveNow": "In class now",
-    "liveNotice": "Schedule notice"
+    "liveNotice": "Schedule notice",
+    "quizLoadFailed": "Couldn't load the question list",
+    "quizLoadTimeout": "Loading the question list timed out, check the classroom connection",
+    "quizRetry": "Retry",
+    "quizOnPage": "This page",
+    "quizMismatch": "The classroom is bound to a different release than the document being presented — double-check before opening a question"
   },
   "teachingLab": {
     "copyEmpty": "Copy content is empty",

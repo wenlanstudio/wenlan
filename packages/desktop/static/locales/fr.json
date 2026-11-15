@@ -1261,7 +1261,12 @@
     "commandRestoreDoc": "Restaurer le document de cours selon la dernière publication (les notes locales sont écrasées)",
     "writableCopy": "Copie modifiable",
     "liveNow": "Cours en cours",
-    "liveNotice": "Avis d’emploi du temps"
+    "liveNotice": "Avis d’emploi du temps",
+    "quizLoadFailed": "Échec du chargement des questions",
+    "quizLoadTimeout": "Délai dépassé lors du chargement des questions, vérifiez la connexion",
+    "quizRetry": "Réessayer",
+    "quizOnPage": "Cette page",
+    "quizMismatch": "Le cours est lié à une publication différente du document présenté — vérifiez avant d'ouvrir une question"
   },
   "teachingLab": {
     "copyEmpty": "Le contenu de la copie est vide",

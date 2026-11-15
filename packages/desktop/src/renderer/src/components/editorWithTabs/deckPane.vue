@@ -67,12 +67,23 @@
       class="deck-qr"
     >
       <img
+        v-if="coverQr.dataUrl"
         class="deck-qr-img"
         :src="coverQr.dataUrl"
         alt="学生扫码加入课堂"
       >
+      <div
+        v-else
+        class="deck-qr-fallback"
+        :title="coverQr.joinUrl"
+      >
+        {{ coverQr.error || '二维码生成中…' }}
+      </div>
       <div class="deck-qr-meta">
-        <div class="deck-qr-course">
+        <div
+          v-if="coverQr.courseName"
+          class="deck-qr-course"
+        >
           {{ coverQr.courseName }}
           <span
             v-if="!coverQr.scheduled"
@@ -211,12 +222,18 @@ const teachingStore = useTeachingStore()
 // ── ADR-24 封面叠码：课表命中自动开房后，第 1 页叠学生入会二维码 ──
 const qrHidden = ref(false)
 const qrDataUrl = ref('')
+const qrError = ref('')
+// room 在此处声明，watch 的源必须用它——不能用下面 storeToRefs 解构出来的
+// classroom：那个 const 在本段之后才初始化，getter 会在 immediate 首跑时撞 TDZ，
+// 生产构建里 Vue 只 console.error 不抛，结果浮层照常渲染但 watcher 永久失效、码恒空。
 const room = computed(() => teachingStore.classroom)
 const coverQr = computed(() => {
   const auto = room.value.auto
   if (!auto?.joinUrl || qrHidden.value || index.value !== 1) return null
   return {
     dataUrl: qrDataUrl.value,
+    joinUrl: auto.joinUrl,
+    error: qrError.value,
     courseName: auto.courseName,
     location: auto.location,
     scheduled: auto.scheduled
@@ -229,20 +246,45 @@ const roomNotice = computed(() => {
   return room.value.autoNotice || ''
 })
 
+/**
+ * 二维码 data URL：canvas 路径优先，失败回退纯字符串 SVG（不依赖 canvas / GPU）。
+ * 两条都失败时抛出带原始原因的错误，由调用方显示出来，绝不再静默留白。
+ */
+const buildQrDataUrl = async(url: string): Promise<string> => {
+  try {
+    return await QRCode.toDataURL(url, { width: 256, margin: 1 })
+  } catch (pngErr) {
+    try {
+      const svg = await QRCode.toString(url, { type: 'svg', width: 256, margin: 1 })
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+    } catch (svgErr) {
+      throw new Error(`canvas: ${String(pngErr)} / svg: ${String(svgErr)}`, { cause: svgErr })
+    }
+  }
+}
+
 watch(
-  () => classroom.value.auto?.joinUrl,
+  () => room.value.auto?.joinUrl,
   (url) => {
+    qrError.value = ''
     if (!url) {
       qrDataUrl.value = ''
       return
     }
-    void QRCode.toDataURL(url, { width: 256, margin: 1 })
+    // 换会话/重开课时自动恢复被 × 隐藏的码（与隐藏按钮的提示一致）
+    qrHidden.value = false
+    void buildQrDataUrl(url)
       .then((dataUrl) => {
         // 只在 URL 没变时回填，避免竞态把旧码写进新会话
-        if (room.value.auto?.joinUrl === url) qrDataUrl.value = dataUrl
+        if (room.value.auto?.joinUrl === url) {
+          qrDataUrl.value = dataUrl
+          qrError.value = ''
+        }
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error('[deckPane] 二维码生成失败:', err)
         qrDataUrl.value = ''
+        qrError.value = '二维码生成失败（详见控制台）'
       })
   },
   { immediate: true }
@@ -608,6 +650,15 @@ const onMessage = (ev: MessageEvent): void => {
     case 'md2s:change': {
       index.value = Number(data.index) || index.value
       total.value = Number(data.total) || total.value
+      // 缺口 B（2026-11-15）：deck 侧随 change 带来本页 quiz 标记 id，
+      // 发题面板据此把本页题置顶。载荷缺字段（旧 deck 资源）时清空即可。
+      teachingStore.setPageQuizKeys(
+        Array.isArray((data as { quizKeys?: unknown }).quizKeys)
+          ? ((data as { quizKeys: unknown[] }).quizKeys.filter(
+              (k): k is string => typeof k === 'string'
+            ) as string[])
+          : []
+      )
       // 教师端上课：翻到哪页就把哪页报给服务端（内部按页号去重，只在 host 角色下发）。
       // 必须在回弹判定之前——老师翻页是「源」，回弹只对学生成立。
       teachingStore.reportPage(index.value)
@@ -782,8 +833,9 @@ onMounted(() => {
   offExecEvent = window.mdcode2run.onEvent(handleExecEvent)
   if (listensWindowKeys) window.addEventListener('keydown', onKeydown)
   void startServer()
-  // 课表命中自动开房（ADR-24）：幂等静默——未登录/未命中不打扰普通放映
-  void teachingStore.autoStart()
+  // 课表命中自动开房（ADR-24）+ 文档对齐（2026-11-15 缺口 A）：幂等静默——
+  // 未登录/未命中不打扰普通放映；当前文档有发布物时优先开该文档的房
+  void teachingStore.autoStart(pathname.value)
 })
 
 onBeforeUnmount(() => {
@@ -816,6 +868,24 @@ onBeforeUnmount(() => {
   width: 112px;
   height: 112px;
   display: block;
+}
+/* 无图时给明确状态，别让 <img src=""> 只显示 alt 文本冒充「图层已出」 */
+.deck-qr-fallback {
+  flex: none;
+  width: 112px;
+  height: 112px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 6px;
+  background: #f2f3f5;
+  color: #666;
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+  word-break: break-all;
 }
 .deck-qr-meta {
   max-width: 168px;
