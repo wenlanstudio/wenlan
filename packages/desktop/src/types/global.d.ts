@@ -244,10 +244,14 @@ declare global {
     entryToken: string
     joinUrl: string | null
     location?: string
+    /** false = 课表未排课的临时课，照常开房，仅展示口径不同 */
+    scheduled: boolean
+    /** true = 房间从休眠态重启，复用同一 sessionId */
+    roomReopened: boolean
   }
 
   interface TeachingAutoNotice {
-    status: 'multi' | 'no_release'
+    status: 'none' | 'multi' | 'no_release'
     message: string
     classId?: number
     className?: string

@@ -74,6 +74,10 @@
       <div class="deck-qr-meta">
         <div class="deck-qr-course">
           {{ coverQr.courseName }}
+          <span
+            v-if="!coverQr.scheduled"
+            style="margin-left: 6px; font-size: 11px; color: #f0a020"
+          >临时课</span>
         </div>
         <div class="deck-qr-class">
           {{ classroom.className }}<template v-if="coverQr.location">
@@ -85,6 +89,25 @@
         class="deck-qr-hide"
         title="隐藏二维码（重开课自动恢复）"
         @click="qrHidden = true"
+      >
+        ×
+      </button>
+    </div>
+    <!-- 教师已登录但无发布物（或多班命中）：第 1 页轻量提示，放映照常 -->
+    <div
+      v-if="roomNotice"
+      class="deck-room-notice"
+    >
+      <div class="deck-room-notice-text">
+        {{ roomNotice }}
+      </div>
+      <div class="deck-room-notice-sub">
+        放映不受影响，可继续使用一文多览
+      </div>
+      <button
+        class="deck-room-notice-close"
+        title="关闭提示"
+        @click="roomNoticeDismissed = true"
       >
         ×
       </button>
@@ -192,8 +215,20 @@ const room = computed(() => teachingStore.classroom)
 const coverQr = computed(() => {
   const auto = room.value.auto
   if (!auto?.joinUrl || qrHidden.value || index.value !== 1) return null
-  return { dataUrl: qrDataUrl.value, courseName: auto.courseName, location: auto.location }
+  return {
+    dataUrl: qrDataUrl.value,
+    courseName: auto.courseName,
+    location: auto.location,
+    scheduled: auto.scheduled
+  }
 })
+// 无发布物 / 多班命中的提示：只在封面页、无二维码时显示，可关闭，不阻断放映
+const roomNoticeDismissed = ref(false)
+const roomNotice = computed(() => {
+  if (roomNoticeDismissed.value || index.value !== 1 || coverQr.value) return ''
+  return room.value.autoNotice || ''
+})
+
 watch(
   () => classroom.value.auto?.joinUrl,
   (url) => {
@@ -804,6 +839,42 @@ onBeforeUnmount(() => {
   opacity: 0.55;
 }
 .deck-qr-hide:hover {
+  opacity: 1;
+}
+/* 教师无发布物提示（封面右上角，与二维码互斥；轻量、可关、不拦截放映交互） */
+.deck-room-notice {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  z-index: 30;
+  max-width: 300px;
+  padding: 10px 30px 10px 12px;
+  border-radius: 10px;
+  background: rgba(180, 83, 9, 0.9);
+  color: #ffedd5;
+  font-size: 12px;
+  line-height: 1.6;
+  user-select: none;
+}
+.deck-room-notice-text {
+  font-weight: 600;
+}
+.deck-room-notice-sub {
+  opacity: 0.85;
+  font-size: 11px;
+}
+.deck-room-notice-close {
+  position: absolute;
+  right: 8px;
+  top: 6px;
+  border: 0;
+  background: transparent;
+  color: #ffedd5;
+  font-size: 14px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.deck-room-notice-close:hover {
   opacity: 1;
 }
 .deck-pane {

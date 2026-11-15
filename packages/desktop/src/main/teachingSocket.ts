@@ -31,6 +31,10 @@ interface ClassroomAutoHit {
   releaseId: number
   entryToken: string
   joinUrl: string | null
+  /** false = 课表未排课的临时课，照常开房，仅展示口径不同 */
+  scheduled: boolean
+  /** true = 房间从休眠态重启，复用同一 sessionId */
+  roomReopened: boolean
 }
 
 /** `/class-session/auto` 的非命中态：multi / no_release（message 带班名） */
@@ -189,38 +193,44 @@ class TeachingSocket {
    * 教师：课表命中自动开房（ADR-24 / M2c）。零参数幂等——判定权威在服务端，
    * 时刻服务端取；未登录/网络失败一律静默（普通放映绝不被打扰）。
    *
-   * - hit：服务端复用该班 active 会话或以最新有效发布物新建，这里直接 attach 进房；
-   * - none：课表未命中，静默；
-   * - multi / no_release：课表业务提示，交给教学首页卡降级（选班/提示发布）。
+   * - hit：服务端按发布物确保常驻房间（复用/休眠重启/新建），这里直接 attach 进房；
+   *   课表未排课也照样 hit（scheduled=false），课表只提供展示信息；
+   * - none：无任教课程或教学班，静默；
+   * - multi / no_release：多班命中降级选班 / 尚无发布物提示先发布讲义。
    */
   async autoHost(): Promise<TeachingAutoResult> {
     if (typeof WebSocket === 'undefined') {
       return { ok: false, hit: false, error: '当前运行环境不支持 WebSocket' }
     }
-    const auth = getAuthManager()
-    await auth.init()
-    const res = await auth.request<ClassroomAutoHit | ClassroomAutoNotice | null>({
-      url: '/teaching/class-session/auto',
-      method: 'POST'
-    })
-    // 真 error（未登录 / 网络 / 服务端异常）：静默，不带文案
-    if (!res.ok) {
+    try {
+      const auth = getAuthManager()
+      await auth.init()
+      const res = await auth.request<ClassroomAutoHit | ClassroomAutoNotice | null>({
+        url: '/teaching/class-session/auto',
+        method: 'POST'
+      })
+      // 真 error（未登录 / 网络 / 服务端异常）：静默，不带文案
+      if (!res.ok) {
+        return { ok: true, hit: false }
+      }
+      const data = res.data
+      if (!data || data.status === 'none') {
+        return { ok: true, hit: false }
+      }
+      const notice = data as ClassroomAutoNotice
+      if (notice.status === 'multi' || notice.status === 'no_release') {
+        return { ok: true, hit: false, notice }
+      }
+      const hit = data as ClassroomAutoHit
+      const attached = this.attach(auth, hit.sessionId)
+      if (!attached.ok) {
+        return { ok: false, hit: false, error: attached.error }
+      }
+      return { ok: true, hit: true, sessionId: hit.sessionId, auto: hit }
+    } catch {
+      // 登录态初始化 / 请求 / ws 连接任一异常都静默，放映不受影响
       return { ok: true, hit: false }
     }
-    const data = res.data
-    if (!data || data.status === 'none') {
-      return { ok: true, hit: false }
-    }
-    const notice = data as ClassroomAutoNotice
-    if (notice.status === 'multi' || notice.status === 'no_release') {
-      return { ok: true, hit: false, notice }
-    }
-    const hit = data as ClassroomAutoHit
-    const attached = this.attach(auth, hit.sessionId)
-    if (!attached.ok) {
-      return { ok: false, hit: false, error: attached.error }
-    }
-    return { ok: true, hit: true, sessionId: hit.sessionId, auto: hit }
   }
 
   /** 关闭会话并退房（不退出登录、不影响其他窗口）。 */

@@ -4,6 +4,7 @@ import type { StudentMarkdown, StudentRelease } from '@shared/types/auth'
 import { t } from '@/i18n'
 import { renderQuizSlots, type ActiveQuiz } from '@/util/quizSlot'
 import { useEditorStore } from './editor'
+import { useAuthStore } from './auth'
 import bus from '../bus'
 
 /**
@@ -131,7 +132,7 @@ export interface ClassroomState {
   /** 教师端正在上课的班名，给状态栏与菜单文案用。 */
   className: string
   /** ADR-24 课表自动开房信息（hit 态）：封面叠码与首页卡的数据源；手动开房为 null。 */
-  auto: { courseName: string; location: string; joinUrl: string } | null
+  auto: { courseName: string; location: string; joinUrl: string; scheduled: boolean } | null
   /** 课表业务提示（multi / no_release 的 message）：教学首页卡降级展示，未命中为空。 */
   autoNotice: string
 }
@@ -730,36 +731,49 @@ export const useTeachingStore = defineStore('teaching', () => {
   }
 
   /**
-   * 课表命中自动开房（ADR-24 / M2c）：示视图打开时调一次，幂等静默。
+   * 打开映视图自动确保房间（2026-11-15 裁决）：课表不再是准入门槛，
+   * 没排课也照常开房；课表只贡献展示信息（scheduled / 班级 / 教室）。
+   * 房间按发布物常驻，手动结束后下次复用同一 sessionId。
    *
-   * 服务端判定的权威形态四态——none（静默如常放映）/ hit（已自动进房，
-   * 填 classroom.auto 供封面叠码与首页卡）/ multi·no_release（降级提示，
-   * message 放 classroom.autoNotice 给教学首页卡）。已在课中不重复调。
+   * 四态——none（无任教课程/班，静默）/ hit（已进房，填 classroom.auto
+   * 供封面叠码与首页卡）/ multi（多班命中，降级选班）/ no_release（尚未发布讲义，
+   * 提示先发布）。message 放 classroom.autoNotice，教学首页卡与映视图封面都会提示，
+   * **放映照常**。已在课中不重复调；未登录 / 学生 / 普通用户根本不进本方法。
    */
   const autoStart = async(): Promise<void> => {
     if (classroom.value.sessionId != null) return
-    const res = await window.teachingSocket.autoHost()
-    if (!res.ok || !res.hit || !res.auto) {
-      if (res.notice) {
-        classroom.value.autoNotice = res.notice.message
-        if (res.notice.className) classroom.value.className = res.notice.className
+    // 门控（2026-11-15）：只有已登录的教师才检测发布物 / 自动开房。
+    // 普通用户（含未登录）与登录的学生一律零请求——不登录也能一文多览。
+    const auth = useAuthStore()
+    if (!auth.ready) await auth.init()
+    if (!auth.state.loggedIn || auth.isStudent) return
+    try {
+      const res = await window.teachingSocket.autoHost()
+      if (!res.ok || !res.hit || !res.auto) {
+        if (res.notice) {
+          classroom.value.autoNotice = res.notice.message
+          if (res.notice.className) classroom.value.className = res.notice.className
+        }
+        return
       }
-      return
-    }
-    classroom.value = {
-      ...emptyClassroom(),
-      sessionId: res.sessionId ?? null,
-      role: 'host',
-      page: 1,
-      releaseId: res.auto.releaseId,
-      className: res.auto.className,
-      auto: {
-        courseName: res.auto.courseName,
-        location: res.auto.location ?? '',
-        joinUrl: res.auto.joinUrl ?? ''
+      classroom.value = {
+        ...emptyClassroom(),
+        sessionId: res.sessionId ?? null,
+        role: 'host',
+        page: 1,
+        releaseId: res.auto.releaseId,
+        className: res.auto.className,
+        auto: {
+          courseName: res.auto.courseName,
+          location: res.auto.location ?? '',
+          joinUrl: res.auto.joinUrl ?? '',
+          scheduled: res.auto.scheduled !== false
+        }
       }
+      reportedPage = 0
+    } catch {
+      // 未登录 / 网络 / 服务端异常一律静默：放映绝不被教学检测打扰
     }
-    reportedPage = 0
   }
 
   /** 教师端上报页码（只在 host 角色下有效，重复页号不外发）。 */
