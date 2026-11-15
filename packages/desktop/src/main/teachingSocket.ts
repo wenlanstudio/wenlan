@@ -113,38 +113,27 @@ class TeachingSocket {
     }
     const auth = getAuthManager()
     await auth.init()
-    const existing = await auth.request<ClassroomSession | null>({
-      url: '/teaching/class-session/get',
-      params: { releaseId }
+    // 2026-11-16 重复会话修复：改走 ensure（常驻幂等，休眠行复用同一房间号）。
+    // 原「get 活跃 → create」三段式在房间休眠后必然直插新行（get 只查活跃，
+    // 查不到休眠行）——测试中同一发布物被开出 5 个并行会话即此因。
+    const ensured = await auth.request<number>({
+      url: '/teaching/class-session/ensure',
+      method: 'POST',
+      data: { releaseId }
     })
-    if (!existing.ok) {
-      return { ok: false, error: existing.error ?? `HTTP ${existing.status}` }
+    if (!ensured.ok) {
+      return { ok: false, error: ensured.error ?? `HTTP ${ensured.status}` }
     }
-    let sessionId = existing.data?.id ?? null
-    // 2026-11-15 门户裁决：get 响应带服务端权威拼装的门户入口 URL（叠码数据源）
-    let joinUrl = existing.data?.joinUrl ?? null
-    if (sessionId == null) {
-      const created = await auth.request<number>({
-        url: '/teaching/class-session/create',
-        method: 'POST',
-        data: { releaseId }
-      })
-      if (!created.ok) {
-        return { ok: false, error: created.error ?? `HTTP ${created.status}` }
-      }
-      sessionId = created.data ?? null
-      if (sessionId != null) {
-        // create 只回数字 id，补一次 get 拿 joinUrl（服务端权威拼装，客户端不自行拼）
-        const fetched = await auth.request<ClassroomSession | null>({
-          url: '/teaching/class-session/get',
-          params: { releaseId }
-        })
-        joinUrl = fetched.data?.joinUrl ?? null
-      }
-    }
+    const sessionId = ensured.data ?? null
     if (sessionId == null) {
       return { ok: false, error: '创建课堂会话失败' }
     }
+    // ensure 只回数字 id，补一次 get 拿 joinUrl（服务端权威拼装，客户端不自行拼）
+    const fetched = await auth.request<ClassroomSession | null>({
+      url: '/teaching/class-session/get',
+      params: { releaseId }
+    })
+    const joinUrl = fetched.data?.joinUrl ?? null
     const attached = this.attach(auth, sessionId)
     if (!attached.ok) return attached
     return { ok: true, sessionId, joinUrl }
