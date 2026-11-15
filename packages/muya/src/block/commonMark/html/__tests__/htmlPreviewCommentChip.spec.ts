@@ -3,12 +3,18 @@
 import type Parent from '../../../base/parent';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Muya } from '../../../../muya';
+import { isPlainCommentHtml } from '../index';
 
-// Issue #15, first bug: an html block whose source the preview sanitizer
-// erases completely (`<!-- test -->`, unknown tags, unclosed comments) used to
-// render an empty zero-height preview — invisible, unclickable, unreachable
-// by the caret. The block now shows its raw source as a chip, and clicking it
-// opens the source editor like any preview content.
+// Issue #15 originally patched the symptom: a comment-only html block has no
+// rendered form, so its preview was a zero-height hole. The patch painted the
+// raw source as a chip inside that preview — which kept the preview/source
+// two-state model and its `mu-active` layout jump (the caret entered a 0×0
+// absolutely positioned container and selection-change scroll-follow jumped).
+//
+// The structural fix: such a block IS its source. `HTMLBlock.create()` builds
+// only the editable code leaf, inline and permanently visible. No preview, no
+// chip, no activation, no container. Only sanitizer-erased NON-comment html
+// still falls back to the chip.
 
 const bootedHosts: HTMLElement[] = [];
 
@@ -45,16 +51,64 @@ function clickOn(el: Element): MouseEvent {
     return event;
 }
 
-describe('htmlPreview — sanitizer-erased source renders as a visible chip (#15)', () => {
-    it('shows `<!-- test -->` as a chip holding the raw comment', () => {
-        const muya = boot('<!-- test -->\n');
-        const chip = chipOf(muya);
-
-        expect(chip).not.toBeNull();
-        expect(chip!.textContent).toBe('<!-- test -->');
+describe('isPlainCommentHtml — rendering strategy comes from the source, not the DOM', () => {
+    it('recognises quiz comments and ordinary comments', () => {
+        expect(isPlainCommentHtml('<!--quiz {"answer":"B","limit":30}-->')).toBe(true);
+        expect(isPlainCommentHtml('<!-- test -->\n')).toBe(true);
+        expect(isPlainCommentHtml('<!-- a -->\n<!-- b -->')).toBe(true);
     });
 
-    it('shows an unknown self-closing tag as a chip too', () => {
+    it('keeps functional markers on the badge/preview path', () => {
+        expect(isPlainCommentHtml('<!-- begin 50:50 -->')).toBe(false);
+        expect(isPlainCommentHtml('<!-- split -->')).toBe(false);
+        expect(isPlainCommentHtml('<!-- pagebreak -->')).toBe(false);
+    });
+
+    it('does not claim html with real content', () => {
+        expect(isPlainCommentHtml('<div><!-- c --></div>')).toBe(false);
+        expect(isPlainCommentHtml('<p>x</p>')).toBe(false);
+        expect(isPlainCommentHtml('<!-- c --><p>x</p>')).toBe(false);
+    });
+});
+
+describe('htmlBlock — a comment-only block has one inline editable source', () => {
+    it('renders `<!-- test -->` without a preview, a chip or an activation state', () => {
+        const muya = boot('<!-- test -->\n');
+        const figure = figureOf(muya);
+
+        expect(figure.classList.contains('mu-html-plain')).toBe(true);
+        expect(muya.domNode.querySelector('.mu-html-preview')).toBeNull();
+        expect(figure.querySelector('.mu-html-container')).not.toBeNull();
+        // The visible source is exactly the comment — no Prism token span
+        // duplicating it, no chip, no preview island.
+        expect(figure.querySelector('.mu-html-container')!.textContent).toBe('<!-- test -->');
+        expect(figure.querySelector('.token')).toBeNull();
+        expect(figure.classList.contains('mu-active')).toBe(false);
+    });
+
+    it('keeps the html-block state and the markdown byte-for-byte', () => {
+        const muya = boot('<!--quiz {"answer":"B","limit":30}-->\n');
+        const state = muya.getState() as Array<{ name: string; text: string }>;
+
+        expect(state.length).toBe(1);
+        expect(state[0].name).toBe('html-block');
+        expect(state[0].text).toBe('<!--quiz {"answer":"B","limit":30}-->');
+        expect(muya.getMarkdown()).toContain('<!--quiz {"answer":"B","limit":30}-->');
+    });
+
+    it('accepts the caret directly — no click-to-activate source editor', () => {
+        const muya = boot('<!-- test -->\n');
+        const firstBlock = muya.editor.scrollPage!.firstChild as unknown as Parent;
+        const content = firstBlock.firstContentInDescendant()!;
+
+        content.setCursor(content.text.length, content.text.length, true);
+
+        expect(content.text).toBe('<!-- test -->');
+        expect(content.getCursor()).not.toBeNull();
+        expect(figureOf(muya).querySelector('.mu-html-preview')).toBeNull();
+    });
+
+    it('still shows an unknown self-closing tag as a chip', () => {
         const muya = boot('<abc src=""/>\n');
         const chip = chipOf(muya);
 
@@ -70,6 +124,12 @@ describe('htmlPreview — sanitizer-erased source renders as a visible chip (#15
         expect(beginPreview.querySelector('.mu-mdcols-marker')).not.toBeNull();
     });
 
+    it('keeps the pagebreak badge for paper pagination', () => {
+        const muya = boot('<!-- pagebreak -->\n');
+
+        expect(previewOf(muya).querySelector('.mu-mdcols-pagebreak')).not.toBeNull();
+    });
+
     it('keeps rendering real content through the sanitizer', () => {
         const muya = boot('<p>hello</p>\n');
 
@@ -77,15 +137,15 @@ describe('htmlPreview — sanitizer-erased source renders as a visible chip (#15
         expect(previewOf(muya).textContent).toContain('hello');
     });
 
-    it('clicking the chip opens the source editor', () => {
-        const muya = boot('<!-- test -->\n');
+    it('clicking a chip still opens the source editor for non-comment html', () => {
+        const muya = boot('<abc src=""/>\n');
 
         clickOn(chipOf(muya)!);
 
         expect(figureOf(muya).classList.contains('mu-active')).toBe(true);
         const firstBlock = muya.editor.scrollPage!.firstChild as unknown as Parent;
         const content = firstBlock.firstContentInDescendant()!;
-        expect(content.text).toBe('<!-- test -->');
+        expect(content.text).toBe('<abc src=""/>');
         expect(content.getCursor()).not.toBeNull();
     });
 });

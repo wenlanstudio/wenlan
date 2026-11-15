@@ -77,7 +77,11 @@ class HTMLPreview extends Parent {
             // 预览 DOM 与源码文本之间没有位置映射，做不到点哪落哪；统一落在
             // 源码末尾，整个 <details>…</details> 都在这个可编辑块里。
             content.setCursor(content.text.length, content.text.length, true);
-            content.domNode?.focus();
+            // `focus()` scrolls the focused element into view by default. The
+            // caret has just been placed by setCursor(), so let the editor's
+            // own selection-change scroll-follow own the viewport instead of
+            // letting the browser jump first.
+            content.domNode?.focus({ preventScroll: true });
         }
         return true;
     }
@@ -168,12 +172,13 @@ class HTMLPreview extends Parent {
                 return;
             }
 
-            // The sanitizer erases whole classes of source outright (comments,
-            // unknown/foreign tags, unclosed comments) — a block holding only
-            // those would render as a zero-height hole: invisible, unclickable,
+            // The sanitizer erases whole classes of source outright (unknown /
+            // foreign tags, unclosed comments) — a block holding only those
+            // would render as a zero-height hole: invisible, unclickable,
             // unreachable by the caret (#15). Show the raw source as a chip
             // instead; clicking lands in the source editor like any preview
-            // content.
+            // content. Comment-only blocks never reach this class:
+            // HTMLBlock.create() gives them a single inline source leaf.
             if (!htmlContent.trim() && html.trim()) {
                 const chip = document.createElement('span');
                 chip.className = 'mu-html-comment';

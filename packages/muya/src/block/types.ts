@@ -3,8 +3,10 @@ import type { Muya } from '../muya';
 // Block constructor signature stored in `ScrollPage.registeredBlocks` and
 // returned from `ScrollPage.loadBlock`. The registry holds heterogeneous
 // block kinds; each concrete subclass ships its own `static create(muya,
-// state)` where `state` narrows to the corresponding I…State interface.
-// `create` returns `any` so the registry-driven dispatcher chain
+// state, ...options)` where `state` narrows to the corresponding I…State
+// interface and optional trailing arguments carry per-block render options
+// (e.g. `plainText` for a comment-only html block). `create` returns `any`
+// so the registry-driven dispatcher chain
 // (`loadBlock(...).create(muya, state).firstContentInDescendant()…`)
 // stays usable across both Parent and Content shapes without forcing
 // every call site to cast. Both `any` slots below are sanctioned escape
@@ -14,7 +16,7 @@ import type { Muya } from '../muya';
 export interface IConstructor<T> {
     blockName: string;
     // eslint-disable-next-line ts/no-explicit-any
-    create: (muya: Muya, state: any) => any;
+    create: (muya: Muya, state: any, ...options: any[]) => any;
     new (...args: never[]): T;
 }
 

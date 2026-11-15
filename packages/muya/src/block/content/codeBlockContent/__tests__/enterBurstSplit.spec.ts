@@ -358,3 +358,67 @@ describe('codeBlockContent — triple Enter does NOT fire outside the gesture', 
         expect(stateOf(muya).length).toBe(before);
     });
 });
+
+// A diagram/math block shares this very Content leaf with code-block, but its
+// intermediate container is `diagram-container` / `math-container`. Deciding
+// splittability from the container NAME used to exclude them all; the decision
+// now comes from the outer state, which serializes to a paired fence.
+describe('codeBlockContent — triple Enter splits any fence-serialized block', () => {
+    it('splits a matplotlib diagram into two diagrams that keep the fence type', async () => {
+        const muya = bootMuya('```matplotlib\nx = [1, 2]\n```\n');
+        const content = codeContent(muya);
+        muya.editor.activeContentBlock = content;
+        content.setCursor(content.text.length, content.text.length, true);
+
+        enter(content);
+        enter(content);
+        enter(content);
+        await flush();
+
+        const state = stateOf(muya);
+        expect(state.length).toBe(2);
+        expect(state[0].name).toBe('diagram');
+        expect(state[1].name).toBe('diagram');
+        expect(state[0].text).toBe('x = [1, 2]');
+        expect(state[1].text).toBe('');
+        expect(state[0].meta?.type).toBe('matplotlib');
+        expect(state[1].meta?.type).toBe('matplotlib');
+    });
+
+    it('splits in the middle of a diagram and keeps both halves as diagrams', async () => {
+        const muya = bootMuya('```mermaid\ngraph TD\nA --> B\n```\n');
+        const content = codeContent(muya);
+        muya.editor.activeContentBlock = content;
+        content.setCursor('graph TD'.length, 'graph TD'.length, true);
+
+        enter(content);
+        enter(content);
+        enter(content);
+        await flush();
+
+        const state = stateOf(muya);
+        expect(state.length).toBe(2);
+        expect(state.map(s => s.name)).toEqual(['diagram', 'diagram']);
+        expect(state[0].text).toBe('graph TD');
+        expect(state[1].text).toBe('A --> B');
+    });
+
+    it('splits a math block into two math blocks', async () => {
+        const muya = bootMuya('$$\nx^2\n$$\n\nbody\n');
+        const content = codeContent(muya);
+        muya.editor.activeContentBlock = content;
+        content.setCursor(content.text.length, content.text.length, true);
+
+        enter(content);
+        enter(content);
+        enter(content);
+        await flush();
+
+        const state = stateOf(muya);
+        expect(state.length).toBe(3);
+        expect(state[0].name).toBe('math-block');
+        expect(state[1].name).toBe('math-block');
+        expect(state[0].text).toBe('x^2');
+        expect(state[1].text).toBe('');
+    });
+});

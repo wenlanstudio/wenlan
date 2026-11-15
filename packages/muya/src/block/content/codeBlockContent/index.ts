@@ -9,7 +9,8 @@ import type {
 import type Code from '../../commonMark/codeBlock/code';
 import type HTMLPreview from '../../commonMark/html/htmlPreview';
 import { CLASS_NAMES, HTML_TAGS, VOID_HTML_TAGS } from '../../../config';
-import { adjustOffset, escapeHTML, firstGraphemeLength, firstWordOfInfo, lastGraphemeLength, lineBounds } from '../../../utils';
+import { isSplittableFence } from '../../../state/types';
+import { adjustOffset, deepClone, escapeHTML, firstGraphemeLength, firstWordOfInfo, lastGraphemeLength, lineBounds } from '../../../utils';
 import { computeLineCount, repositionLineNumberSpans, syncLineNumbersSpans } from '../../../utils/codeBlockLineNumbers';
 import { getHighlightHtml, MARKER_HASH } from '../../../utils/highlightHTML';
 import prism, { loadedLanguages, transformAliasToOrigin, walkTokens } from '../../../utils/prism/index';
@@ -123,12 +124,16 @@ function hasStateMeta(
 
 class CodeBlockContent extends Content {
     private _initialLang: string;
+    // A comment-only html block is inline text, not source code. Set at
+    // construction so the create-pass update() can see it (the leaf is not
+    // attached to its parent yet at that point).
+    private readonly _plainText: boolean;
     public override parent: Code | null = null;
 
     static override blockName = 'codeblock.content';
 
-    static create(muya: Muya, state: CodeContentState) {
-        const content = new CodeBlockContent(muya, state);
+    static create(muya: Muya, state: CodeContentState, plainText = false) {
+        const content = new CodeBlockContent(muya, state, plainText);
 
         return content;
     }
@@ -166,8 +171,9 @@ class CodeBlockContent extends Content {
 
     private _enterBurst: IEnterBurst | null = null;
 
-    constructor(muya: Muya, state: CodeContentState) {
+    constructor(muya: Muya, state: CodeContentState, plainText = false) {
         super(muya, state.text);
+        this._plainText = plainText;
         this._lastPreviewText = state.text;
         if (hasStateMeta(state))
             this._initialLang = state.meta.lang;
@@ -223,8 +229,13 @@ class CodeBlockContent extends Content {
             ? `<span class="${CLASS_NAMES.MU_TRAILING_BREAK}"><br></span>`
             : '';
 
+        // A comment-only html block is plain inline text, not source code.
+        // Running Prism's keep-markup highlighter over an HTML comment
+        // duplicates the comment text inside its own token span, so such a
+        // block keeps the escaped source as-is instead.
         if (
-            fullLengthLang
+            !this._plainText
+            && fullLengthLang
             && /\S/.test(code)
             && loadedLanguages.has(fullLengthLang)
         ) {
@@ -354,7 +365,7 @@ class CodeBlockContent extends Content {
             && now - burst.lastAt <= ENTER_BURST_WINDOW_MS
             && burst.expectedOffset === start.offset
             && start.offset === end.offset
-            && this._isFencedCodeBlock();
+            && this._isSplittableFence();
 
         // Split BEFORE inserting the third newline. Everything the first two
         // Enters inserted (newlines plus auto-indent whitespace) sits in
@@ -405,18 +416,20 @@ class CodeBlockContent extends Content {
 
     /**
      * This Content class is shared by code-block, diagram, frontmatter, html
-     * and math containers. Only a fenced code block may be split: two adjacent
-     * INDENTED blocks cannot be expressed in markdown and would merge back
-     * into one on save.
+     * and math containers, but the answer to "may this block be split?" belongs
+     * to the OUTER block's state, not to the intermediate container's
+     * `blockName`. A diagram's container is `diagram-container`, yet it
+     * serializes to a ```matplotlib fence exactly like a code block does —
+     * testing the container name silently excluded every diagram/math block
+     * from the gesture.
      */
-    private _isFencedCodeBlock() {
-        const container = this._codeContainer;
-        if (container?.blockName !== 'code-block')
+    private _isSplittableFence() {
+        if (!this._codeContainer)
             return false;
 
-        const { meta } = container.getState() as ICodeBlockState;
+        const outer = this.outContainer;
 
-        return meta?.type !== 'indented';
+        return !!outer && isSplittableFence(outer.getState());
     }
 
     /**
@@ -439,8 +452,12 @@ class CodeBlockContent extends Content {
      * wanted "one blank line in a new block" case, with meta inherited.
      */
     private _splitCodeBlock(originOffset: number, splitOffset: number) {
-        const container = this._codeContainer;
-        if (!container?.parent)
+        // `outContainer` is the TOP-LEVEL block (CodeBlock / DiagramBlock /
+        // MathBlock). `_codeContainer` is only the intermediate `pre` wrapper
+        // and, for diagrams, its `getState()` deliberately returns `{}` —
+        // splitting through it loses the fence language and the rendered image.
+        const outer = this.outContainer;
+        if (!outer?.parent)
             return;
 
         const { text } = this;
@@ -456,16 +473,22 @@ class CodeBlockContent extends Content {
             afterStart++;
         const before = text.substring(0, beforeEnd);
         const after = text.substring(afterStart);
-        // getState() already copies meta, so the new block keeps lang /
-        // fenceChar / fenceLength without the language-input setter emitting
-        // an extra json1 op.
-        const state = container.getState() as ICodeBlockState;
+        // Clone the OUTER state verbatim (deepClone: DiagramBlock.getState()
+        // hands back its live `meta`, which two blocks must not share). The
+        // new block is created from `state.name`, so a diagram splits into two
+        // diagrams with the same fence language/type instead of degrading into
+        // a plain code-block. `deepClone` also avoids the language-input
+        // setter emitting an extra json1 op.
+        const state = deepClone(outer.getState()) as CodeContentState;
+        if (!isSplittableFence(state))
+            return;
+
         state.text = after;
 
-        const newBlock = ScrollPage.loadBlock('code-block').create(this.muya, state);
+        const newBlock = ScrollPage.loadBlock(state.name).create(this.muya, state);
         this.text = before;
         this.update();
-        container.parent.insertAfter(newBlock, container);
+        outer.parent.insertAfter(newBlock, outer);
         newBlock.lastContentInDescendant()?.setCursor(0, 0, true);
     }
 

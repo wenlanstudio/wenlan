@@ -307,6 +307,25 @@ export function isAnyListState(s: TState): s is IOrderListState | IBulletListSta
     return s.name === 'order-list' || s.name === 'bullet-list' || s.name === 'task-list';
 }
 
+/**
+ * Can this state be expressed as TWO ADJACENT fenced blocks of the same kind?
+ *
+ * This is a property of the state — of how it serializes — not of the DOM
+ * container that happens to host its editor. `code-block`, `diagram`,
+ * `math-block`, `html-block` and `frontmatter` all share one `CodeBlockContent`
+ * leaf, but only the first three serialize to paired fences (```lang / $$):
+ * splitting them produces two distinguishable blocks in the markdown source.
+ * Indented code has no fence (two adjacent indented blocks merge back into
+ * one on save), and a document has exactly one frontmatter. HTML blocks are
+ * delimited by blank lines, not fences, so the gesture does not apply either.
+ */
+export function isSplittableFence(state: TState): boolean {
+    if (state.name === 'code-block')
+        return state.meta.type !== 'indented';
+
+    return state.name === 'diagram' || state.name === 'math-block';
+}
+
 export interface ITurnoverOptions {
     headingStyle: 'atx' | 'setext'; // setext or atx
     hr: '---';

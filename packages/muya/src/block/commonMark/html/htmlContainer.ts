@@ -9,10 +9,10 @@ const debug = logger('htmlContainer:');
 class HTMLContainer extends Parent {
     static override blockName = 'html-container';
 
-    static create(muya: Muya, state: IHtmlBlockState) {
+    static create(muya: Muya, state: IHtmlBlockState, plainText = false) {
         const htmlContainer = new HTMLContainer(muya);
 
-        const code = ScrollPage.loadBlock('code').create(muya, state);
+        const code = ScrollPage.loadBlock('code').create(muya, state, plainText);
 
         htmlContainer.append(code);
 

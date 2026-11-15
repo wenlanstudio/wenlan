@@ -60,7 +60,15 @@ class MathPreview extends Parent {
         event.preventDefault();
         event.stopPropagation();
 
-        const cursorBlock = this.parent!.firstContentInDescendant();
+        if (this.parent == null)
+            return;
+
+        // Expand the source before placing the caret (same contract as
+        // diagramPreview / HTMLPreview). The source is a normal in-flow node
+        // whose height is collapsed while the block is inactive.
+        this.parent.active = true;
+
+        const cursorBlock = this.parent.firstContentInDescendant();
         cursorBlock?.setCursor(0, 0);
     }
 

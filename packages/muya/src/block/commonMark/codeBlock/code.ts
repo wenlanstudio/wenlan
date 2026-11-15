@@ -69,13 +69,16 @@ class Code extends Parent {
     // Cached reference to the gutter wrapper so CodeBlockContent.update() does
     // not pay a querySelector on every keystroke.
     public lineNumbersWrapper: HTMLElement | null = null;
-
     static override blockName = 'code';
 
-    static create(muya: Muya, state: CodeContentState) {
+    static create(muya: Muya, state: CodeContentState, plainText = false) {
         const code = new Code(muya, state.name === 'code-block');
 
-        code.append(ScrollPage.loadBlock('codeblock.content').create(muya, state));
+        // The rendering strategy belongs to the CONTENT leaf, not to this
+        // wrapper: update() also runs during the create pass, before append()
+        // has attached the leaf to the tree. Passing it down at construction
+        // is the only way it is visible on that first render.
+        code.append(ScrollPage.loadBlock('codeblock.content').create(muya, state, plainText));
 
         return code;
     }

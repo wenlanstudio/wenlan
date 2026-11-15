@@ -794,48 +794,73 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
     text-align: right;
 }
 
-/* html block and math block, diagram block */
+/* Preview and source are BOTH permanent children of the figure and BOTH stay
+   in the document flow. `mu-active` only expands the source's height — it
+   never changes position, width, display or stacking context.
+
+   The old model hid the source as an absolutely positioned 0×0 node and then
+   turned it into a relative 100%×auto node on focus. That changed the layout
+   under a live caret: the caret's rect came from the collapsed node, so
+   selection-change scroll-follow used a stale y and yanked the viewport away.
+   It also left a zero-size caret reachable by keyboard. Collapsing only the
+   height keeps the node (and its selection) in the real flow at all times.
+
+   `order` puts the source ABOVE the preview even though the preview is
+   appended first — Parent.appendAttachment() runs before Parent.append(). */
+figure.mu-html-block,
+figure.mu-math-block,
+figure.mu-diagram-block {
+    display: flex;
+    flex-direction: column;
+}
+
 figure.mu-html-block > .mu-html-container,
 figure.mu-math-block > .mu-math-container,
 figure.mu-diagram-block > .mu-diagram-container {
-    position: absolute;
-    z-index: -1;
+    order: 1;
 
-    width: 0;
-    height: 0;
-    margin-top: 0;
-    margin-bottom: 0;
-    overflow: visible;
-
-    opacity: 0;
-}
-
-figure.mu-active.mu-html-block .mu-html-container,
-figure.mu-disable-html-render.mu-html-block .mu-html-container,
-figure.mu-active.mu-math-block .mu-math-container,
-figure.mu-active.mu-diagram-block .mu-diagram-container {
-    position: relative;
-    z-index: 1;
-
-    display: block;
     box-sizing: border-box;
     width: 100%;
-    height: auto;
+    height: 0;
+    min-height: 0;
+    margin-top: 0;
+    margin-bottom: 0;
 
-    opacity: 1;
-}
-
-figure:not(.mu-active, .mu-disable-html-render).mu-html-block .mu-html-container,
-figure:not(.mu-active).mu-math-block .mu-math-container,
-figure:not(.mu-active).mu-diagram-block .mu-diagram-container {
+    /* The shared code-container rule gives these a 1em padding and a 1px
+       border. With `height: 0` + border-box those still take ~31px of real
+       space, so an inactive preview would sit below an invisible empty band.
+       Zero them here and restore them in the active rule below. */
+    padding: 0;
     overflow: hidden;
+
+    border: 0;
+
+    opacity: 0;
+
+    pointer-events: none;
 }
 
 figure.mu-html-block .mu-html-preview,
 figure.mu-math-block .mu-math-preview,
 figure.mu-diagram-block .mu-diagram-preview {
     display: block;
+    order: 2;
+
     width: 100%;
+}
+
+figure.mu-active.mu-html-block .mu-html-container,
+figure.mu-disable-html-render.mu-html-block .mu-html-container,
+figure.mu-active.mu-math-block .mu-math-container,
+figure.mu-active.mu-diagram-block .mu-diagram-container {
+    height: auto;
+    padding: 1em;
+    overflow: visible;
+
+    border: 1px solid var(--editor-color-10);
+    opacity: 1;
+
+    pointer-events: auto;
 }
 
 figure.mu-math-block .mu-math-preview .katex-display {
@@ -900,9 +925,45 @@ figure.mu-html-block .mu-html-preview > pre {
     border-radius: 0.3em;
 }
 
-figure.mu-html-block.mu-active .mu-html-preview,
+/* `disableHtml` is a preference, not an edit state: with rendering off there
+   is nothing to preview, so only the source is shown. An ACTIVE (editing)
+   HTML block keeps its preview inline, exactly like math/diagram — one
+   strategy for all three families instead of three different ones. */
 figure.mu-html-block.mu-disable-html-render .mu-html-preview {
     display: none;
+}
+
+/* An HTML block whose source is nothing but comments has no rendered form.
+   `HTMLBlock.create()` builds only the editable source leaf for it (no
+   preview), so there is no second state to switch to: keep that leaf inline
+   and permanently visible, with no figure chrome and no hover background. */
+figure.mu-html-block.mu-html-plain {
+    display: block;
+    margin: 0;
+
+    background: transparent;
+}
+
+/* Re-assert the expanded state for the plain block. The generic rules above
+   collapse the source while inactive; a comment-only block has no preview to
+   show instead, so collapsing it would leave an empty hole. */
+figure.mu-html-block.mu-html-plain > .mu-html-container,
+figure.mu-html-block.mu-html-plain.mu-active > .mu-html-container {
+    box-sizing: border-box;
+    width: 100%;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+
+    opacity: 1;
+
+    pointer-events: auto;
 }
 
 /* math block and diagram */
@@ -911,7 +972,7 @@ figure.mu-diagram-block {
     position: relative;
 }
 
-figure.mu-html-block:not(.mu-active, .mu-disable-html-render):hover,
+figure.mu-html-block:not(.mu-active, .mu-disable-html-render, .mu-html-plain):hover,
 figure.mu-math-block:not(.mu-active):hover {
     background: var(--editor-color-04);
 }
@@ -968,22 +1029,14 @@ figure.mu-diagram-block .mu-diagram-preview svg.sequence path[fill='#fff'] {
     fill: var(--editor-bg-color);
 }
 
+/* While editing, the rendered image/formula sits INLINE below the source and
+   occupies its own space. It must never become an absolutely positioned
+   popover: a floating card is drawn over the following paragraph and hides it.
+   The non-active rules above already keep the preview in the flow — this is
+   only the extra breathing room between source and preview. */
 figure.mu-active.mu-math-block > div.mu-math-preview,
 figure.mu-active.mu-diagram-block > div.mu-diagram-preview {
-    position: absolute;
-    top: calc(100% + 20px);
-    left: 50%;
-    z-index: 10000;
-
-    box-sizing: border-box;
-    width: 100%;
-    padding: 0.5rem;
-
-    background: var(--float-bg-color);
-    border: 1px solid var(--float-border-color);
-    border-radius: 4px;
-    box-shadow: 0 2px 12px 0 rgb(0 0 0 / 10%);
-    transform: translateX(-50%);
+    margin-top: 0.5em;
 }
 
 figure.mu-math-block span.mu-codeblock-content:first-of-type:empty::after {

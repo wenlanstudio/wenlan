@@ -3,8 +3,8 @@ import type { IDiagramState, TDiagramType, TState } from '../../../state/types';
 import { fromEvent } from 'rxjs';
 import { CLASS_NAMES, PREVIEW_DOMPURIFY_CONFIG } from '../../../config';
 import { sanitize } from '../../../utils';
-import { hasTextSelectionIn } from '../../../utils/dom';
 import { finalizeRenderedDiagram, renderDiagram } from '../../../utils/diagram/render';
+import { hasTextSelectionIn } from '../../../utils/dom';
 import logger from '../../../utils/logger';
 import Parent from '../../base/parent';
 
@@ -64,6 +64,12 @@ class DiagramPreview extends Parent {
 
         if (this.parent == null)
             return;
+
+        // The source container stays collapsed until the block is active. Set
+        // the state explicitly here rather than waiting for the focus/blur
+        // rAF: setCursor() needs the expanded, in-flow node to place a real
+        // caret whose rect is on the block, not on a zero-height one.
+        this.parent.active = true;
 
         const cursorBlock = this.parent.firstContentInDescendant();
         cursorBlock?.setCursor(0, 0);
