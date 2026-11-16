@@ -136,14 +136,30 @@ describe('teaching store · 拉题诚实化', () => {
     expect(store.classroom.question?.questionKey).toBe('q1')
     expect(store.classroom.question?.options).toHaveLength(4)
     expect(store.race.openId).toBe(170)
-    // 浮层开关：host 可开可关；学生身份开不了（wsListening 模块级守卫下必须同 store 测门控）
-    store.openRaceOverlay()
-    expect(store.race.overlayVisible).toBe(true)
-    store.closeRaceOverlay()
-    expect(store.race.overlayVisible).toBe(false)
-    store.classroom.role = 'student'
-    store.openRaceOverlay()
-    expect(store.race.overlayVisible).toBe(false)
+  })
+
+  it('揭晓帧 → host 保留题快照（放映浮层左栏高亮用）；学生端维持退占位', () => {
+    const store = useTeachingStore()
+    resetRaceState(store)
     store.classroom.role = 'host'
+    feedFrame('teaching.race.opened', {
+      openId: 171,
+      questionId: 248,
+      questionKey: 'q1',
+      stem: '题干',
+      options: ['A 项', 'B 项', 'C 项', 'D 项'],
+      limitSec: 30
+    })
+    feedFrame('teaching.race.revealed', {
+      openId: 171,
+      questionKey: 'q1',
+      answer: 'C',
+      distribution: [1, 0, 0, 0]
+    })
+    expect(store.race.reveal?.answer).toBe('C')
+    expect(store.classroom.question?.options).toHaveLength(4) // host 保留：浮层左栏高亮用
+    store.classroom.role = 'student'
+    feedFrame('teaching.race.revealed', { openId: 172, questionKey: 'q2', answer: 'A', distribution: [0, 0, 0, 0] })
+    expect(store.classroom.question).toBeNull() // 学生端退占位语义不变
   })
 })

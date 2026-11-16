@@ -188,8 +188,6 @@ export interface RaceState {
   error: string
   /** 缺口 B（2026-11-15）：放映当前页的 quiz 标记 id（===服务端 questionKey），本页题置顶用 */
   pageQuizKeys: string[]
-  /** 放映发题浮层（2026-11-16）：两栏「左题右实况」，deckPane 工具条发题时打开 */
-  overlayVisible: boolean
 }
 
 /**
@@ -282,8 +280,7 @@ const emptyRace = (): RaceState => ({
   online: 0,
   reveal: null,
   error: '',
-  pageQuizKeys: [],
-  overlayVisible: false
+  pageQuizKeys: []
 })
 
 const emptyStudentQuiz = (): StudentQuizState => ({
@@ -900,16 +897,6 @@ export const useTeachingStore = defineStore('teaching', () => {
     race.value.visible = false
   }
 
-  /** 放映发题浮层（2026-11-16）：两栏「左题右实况」，只在 host 的放映叶打开。 */
-  const openRaceOverlay = (): void => {
-    if (classroom.value.role !== 'host') return
-    race.value.overlayVisible = true
-  }
-
-  const closeRaceOverlay = (): void => {
-    race.value.overlayVisible = false
-  }
-
   /**
    * 发题。服务端一题一轮，进行中再发会被 `RACE_ALREADY_OPEN` 挡回，
    * 所以这里先在本地挡一次，避免把错误刷到界面上。
@@ -1158,8 +1145,6 @@ export const useTeachingStore = defineStore('teaching', () => {
     setFollowLocked,
     openQuizConsole,
     closeQuizConsole,
-    openRaceOverlay,
-    closeRaceOverlay,
     loadRaceQuestions,
     setPageQuizKeys,
     openRaceQuestion,

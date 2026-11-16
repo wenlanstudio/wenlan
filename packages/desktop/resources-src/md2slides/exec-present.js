@@ -765,6 +765,347 @@
     followTo(follow.page);
   };
 
+
+  // ══ 课堂发题（2026-11-16）：页面注入模式 ═══════════════════════════════
+  // 「发题」按钮与两栏浮层（左题右实况）都在 deck 页面内——跟幻灯片融为一体，
+  // 独占态自然可见；宿主（deckPane）只当数据桥：quiz-open 请求发题、quiz-state
+  // 推实况/揭晓投影。模态锁页与执行浮层同一纪律：浮层开着导航键全拦（题目
+  // 做完才往下讲），Esc 关浮层恢复翻页。选项是本班显示序（opened 广播投影），
+  // 与学生看到的一致；页面侧不含答案字段（揭晓的 answer 由宿主投影下发）。
+
+  var QUIZ_CSS_ID = "md2s-quiz-css";
+  var quizEnabled = false;
+  var quizOverlay = null;   // { el, questionKey }
+  var quizState = null;     // 宿主投影（md2s:quiz-state）
+  var quizTick = null;
+
+  var QUIZ_CSS = [
+    ".md2s-quiz-launch { display: inline-block; margin-top: 10px; padding: 6px 16px;",
+    "  cursor: pointer; font-size: 0.95em; color: #fff; background: #2b8a3e;",
+    "  border: 1px solid #237a36; border-radius: 6px; }",
+    ".md2s-quiz-launch:hover { background: #237a36; }",
+    ".md2s-quiz-launch:disabled { opacity: 0.55; cursor: default; }",
+    ".md2s-quiz-ov { position: fixed; inset: 0; z-index: 120000;",
+    "  background: rgba(15, 25, 40, 0.55); display: flex;",
+    "  align-items: center; justify-content: center; }",
+    ".md2s-quiz-card { width: min(900px, 88vw); max-height: 80vh; display: flex;",
+    "  background: #fff; border-radius: 14px; overflow: hidden;",
+    "  box-shadow: 0 12px 48px rgba(15, 25, 40, 0.35); }",
+    ".md2s-quiz-l { flex: 1.2; padding: 22px 24px; border-right: 1px solid #e3e8ee;",
+    "  overflow: auto; color: #22303f; }",
+    ".md2s-quiz-r { flex: 1; padding: 22px 24px; display: flex; flex-direction: column;",
+    "  justify-content: center; gap: 14px; background: #f7f9fb; color: #33414f; }",
+    ".md2s-quiz-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }",
+    ".md2s-quiz-key { font-size: 12px; color: #2b6cb0; background: #e8f0fa;",
+    "  border-radius: 4px; padding: 2px 8px; }",
+    ".md2s-quiz-limit { font-size: 12px; color: #8a5a00; background: #fdf3e0;",
+    "  border-radius: 4px; padding: 2px 8px; }",
+    ".md2s-quiz-stem { font-size: 16px; line-height: 1.7; margin-bottom: 14px; }",
+    ".md2s-quiz-opt { display: flex; gap: 8px; padding: 9px 12px; margin-bottom: 8px;",
+    "  border: 1px solid #e3e8ee; border-radius: 8px; font-size: 14px; line-height: 1.5; }",
+    ".md2s-quiz-opt b { color: #5b6b7c; }",
+    ".md2s-quiz-opt.md2s-quiz-correct { border-color: #2b8a3e; background: #e9f7ec; }",
+    ".md2s-quiz-opt.md2s-quiz-correct b { color: #2b8a3e; }",
+    ".md2s-quiz-answer { margin-top: 12px; font-size: 14px; color: #2b8a3e; }",
+    ".md2s-quiz-clock { font-size: 44px; font-weight: 700; color: #1f3a5f;",
+    "  text-align: center; font-variant-numeric: tabular-nums; }",
+    ".md2s-quiz-clock.done { font-size: 26px; color: #2b8a3e; }",
+    ".md2s-quiz-prog { height: 8px; background: #e3e8ee; border-radius: 4px; overflow: hidden; }",
+    ".md2s-quiz-prog i { display: block; height: 100%; background: #2b6cb0; }",
+    ".md2s-quiz-stat { font-size: 14px; color: #5b6b7c; text-align: center; }",
+    ".md2s-quiz-stat b { color: #1f3a5f; font-size: 16px; }",
+    ".md2s-quiz-hint { font-size: 12px; color: #8a97a5; text-align: center; }",
+    ".md2s-quiz-dist { display: flex; flex-direction: column; gap: 6px; }",
+    ".md2s-quiz-drow { display: flex; align-items: center; gap: 8px; }",
+    ".md2s-quiz-drow .dletter { width: 18px; font-size: 13px; color: #5b6b7c; text-align: center; }",
+    ".md2s-quiz-drow.md2s-quiz-correct .dletter { color: #2b8a3e; font-weight: 700; }",
+    ".md2s-quiz-drow .dbar { flex: 1; height: 14px; background: #e9edf2; border-radius: 4px; overflow: hidden; }",
+    ".md2s-quiz-drow .dbar i { display: block; height: 100%; background: #7c93ad; }",
+    ".md2s-quiz-drow.md2s-quiz-correct .dbar i { background: #2b8a3e; }",
+    ".md2s-quiz-drow .dcount { width: 24px; font-size: 13px; color: #33414f; text-align: right; }",
+    ".md2s-quiz-close { position: absolute; top: 14px; right: 18px; border: 0;",
+    "  border-radius: 50%; width: 32px; height: 32px; font-size: 18px;",
+    "  background: rgba(255, 255, 255, 0.85); color: #33414f; cursor: pointer; }"
+  ];
+  var quizCssInjected = false;
+  var injectQuizCss = function () {
+    if (quizCssInjected) return;
+    var style = document.createElement("style");
+    style.id = QUIZ_CSS_ID;
+    style.textContent = QUIZ_CSS.join("\n");
+    document.head.appendChild(style);
+    quizCssInjected = true;
+  };
+
+  var letterOf = function (i) { return String.fromCharCode(65 + i); };
+
+  /* 讲义 DOM 里的题目是公开信息（题干/选项就在幻灯片上），页面侧自己读——
+     参考 kit/quiz/panel.js 的 readQuizzes。这样点发题浮层左侧立刻有题目，
+     不必空等宿主回填 quiz-state（宿主一卡就永远停在"等待发题…"）。
+     答案不在这里读：揭晓的正确答案只认宿主投影，页面侧不能提前泄题。 */
+  var quizTextOf = function (el) {
+    if (!el) return "";
+    if (!el.querySelector || !el.querySelector(".katex")) return (el.textContent || "").trim();
+    // KaTeX 一份公式渲染出三份内容（MathML + katex-html + annotation），
+    // 直接 textContent 会把公式重复三遍；换回 $tex$ 才是作者写的原文。
+    var clone = el.cloneNode(true);
+    var nodes = clone.querySelectorAll(".katex");
+    for (var i = 0; i < nodes.length; i++) {
+      var ann = nodes[i].querySelector("annotation");
+      var tex = ann ? (ann.textContent || "") : "";
+      nodes[i].replaceWith(clone.ownerDocument.createTextNode(tex ? "$" + tex + "$" : ""));
+    }
+    return (clone.textContent || "").trim();
+  };
+  var readQuizFromDom = function (questionKey) {
+    if (!questionKey) return null;
+    var escKey = String(questionKey).replace(/["\\]/g, "\\$&");
+    var stemEl = document.querySelector('[data-md2s-quiz="' + escKey + '"]');
+    if (!stemEl) return null;
+    var optionsEl = document.querySelector('[data-md2s-quiz-options="' + escKey + '"]');
+    var options = [];
+    if (optionsEl) {
+      Array.prototype.forEach.call(optionsEl.children, function (li) {
+        if (li.tagName !== "LI") return;
+        var t = quizTextOf(li);
+        if (t) options.push(t);
+      });
+    }
+    var limitSec = 30;
+    try {
+      var meta = JSON.parse(stemEl.getAttribute("data-md2s-quiz-meta") || "{}");
+      if (Number(meta.limit) > 0) limitSec = Number(meta.limit);
+    } catch (e) { /* 题面 meta 坏了就用默认限时，不让浮层开不出来 */ }
+    return {
+      questionKey: questionKey,
+      stem: quizTextOf(stemEl),
+      options: options,
+      limitSec: limitSec
+    };
+  };
+
+  /* 题干旁注入「发题」按钮（幂等）；quiz-capability 关闭时整体移除。 */
+  var decorateQuizButtons = function () {
+    var stems = document.querySelectorAll("[data-md2s-quiz]");
+    Array.prototype.forEach.call(stems, function (stemEl) {
+      var key = stemEl.getAttribute("data-md2s-quiz");
+      if (!key) return;
+      var next = stemEl.nextElementSibling;
+      if (next && next.classList && next.classList.contains("md2s-quiz-launch")) return; // 已注入
+      var btn = document.createElement("button");
+      btn.className = "md2s-quiz-launch";
+      btn.setAttribute("data-quiz-key", key);
+      btn.textContent = "发题";
+      btn.addEventListener("click", function () { requestQuizOpen(key); });
+      stemEl.insertAdjacentElement("afterend", btn);
+    });
+  };
+  var removeQuizButtons = function () {
+    Array.prototype.forEach.call(document.querySelectorAll(".md2s-quiz-launch"), function (b) { b.remove(); });
+  };
+  var updateQuizButtons = function () {
+    var running = quizState && quizState.phase === "running";
+    Array.prototype.forEach.call(document.querySelectorAll(".md2s-quiz-launch"), function (b) {
+      b.disabled = !!running;
+      b.textContent = running ? "答题中…" : "发题";
+    });
+  };
+
+  var requestQuizOpen = function (questionKey) {
+    // 揭晓后重按同题按钮 = 重看结果浮层（不重复发题），沿用现有揭晓态
+    if (quizState && quizState.phase === "revealed" && quizState.questionKey === questionKey) {
+      openQuizOverlay(questionKey);
+      return;
+    }
+    // 参考 kit/quiz/panel.js：题目是讲义 DOM 里的公开信息，页面侧直接读来渲染浮层左侧。
+    // 绝不把 quizState 清空成 null —— 那是"等待发题…"卡死的根因：宿主 quiz-state
+    // 一来晚/一来空，浮层就永远没题目。宿主数据到达后只覆盖实况与本班显示序选项。
+    var local = readQuizFromDom(questionKey) || { questionKey: questionKey };
+    quizState = Object.assign({ phase: "idle" }, local);
+    openQuizOverlay(questionKey);
+    post({ type: "md2s:quiz-open", questionKey: questionKey });
+  };
+
+  /* 两栏浮层：左题右实况。phase/数据由 md2s:quiz-state 投影驱动，页面纯展示。 */
+  var openQuizOverlay = function (questionKey) {
+    injectQuizCss();
+    if (quizOverlay) closeQuizOverlay();
+    quizState = quizState || { phase: "idle", questionKey: questionKey };
+    quizState.questionKey = questionKey;
+    var el = document.createElement("div");
+    el.className = "md2s-quiz-ov";
+    el.innerHTML =
+      '<div class="md2s-quiz-card">' +
+      '  <div class="md2s-quiz-l">' +
+      '    <div class="md2s-quiz-head"><span class="md2s-quiz-key"></span>' +
+      '      <span class="md2s-quiz-limit" style="display:none"></span></div>' +
+      '    <div class="md2s-quiz-stem">正在发题…</div>' +
+      '    <div class="md2s-quiz-opts"></div>' +
+      '    <div class="md2s-quiz-answer" style="display:none"></div>' +
+      "  </div>" +
+      '  <div class="md2s-quiz-r">' +
+      '    <div class="md2s-quiz-clock" style="display:none"></div>' +
+      '    <div class="md2s-quiz-prog" style="display:none"><i></i></div>' +
+      '    <div class="md2s-quiz-stat" style="display:none"></div>' +
+      '    <div class="md2s-quiz-dist" style="display:none"></div>' +
+      '    <div class="md2s-quiz-hint">Esc 关闭浮层 · 浮层开着不翻页</div>' +
+      "  </div>" +
+      "</div>" +
+      '<button class="md2s-quiz-close" title="关闭浮层（Esc）——放映继续">×</button>';
+    document.body.appendChild(el);
+    quizOverlay = { el: el, questionKey: questionKey };
+    el.querySelector(".md2s-quiz-close").addEventListener("click", function () { closeQuizOverlay(); });
+    el.addEventListener("click", function (ev) { if (ev.target === el) closeQuizOverlay(); });
+    renderQuizOverlay();
+    document.addEventListener("keydown", onQuizKey, true);
+  };
+  var closeQuizOverlay = function () {
+    if (!quizOverlay) return;
+    quizOverlay.el.remove();
+    quizOverlay = null;
+    if (quizTick) { clearInterval(quizTick); quizTick = null; }
+    document.removeEventListener("keydown", onQuizKey, true);
+    post({ type: "md2s:quiz-close", questionKey: quizState ? quizState.questionKey : null });
+  };
+
+  /* 模态锁页：浮层开着，翻页笔/导航键一律吞掉——题目做完才往下讲。 */
+  var QUIZ_SWALLOW = {
+    PageUp: 1, PageDown: 1, ArrowLeft: 1, ArrowRight: 1, ArrowUp: 1, ArrowDown: 1,
+    Home: 1, End: 1, " ": 1, Spacebar: 1, Enter: 1
+  };
+  var onQuizKey = function (ev) {
+    if (!quizOverlay) return;
+    if (ev.key === "Escape") { closeQuizOverlay(); }
+    else if (!QUIZ_SWALLOW[ev.key]) return;
+    if (ev.cancelable) ev.preventDefault();
+    ev.stopPropagation();
+  };
+
+  var renderQuizOverlay = function () {
+    if (!quizOverlay || !quizState) return;
+    var st = quizState;
+    var root = quizOverlay.el;
+    var qkey = root.querySelector(".md2s-quiz-key");
+    var limit = root.querySelector(".md2s-quiz-limit");
+    var stem = root.querySelector(".md2s-quiz-stem");
+    var opts = root.querySelector(".md2s-quiz-opts");
+    var answer = root.querySelector(".md2s-quiz-answer");
+    var clock = root.querySelector(".md2s-quiz-clock");
+    var prog = root.querySelector(".md2s-quiz-prog");
+    var stat = root.querySelector(".md2s-quiz-stat");
+    var dist = root.querySelector(".md2s-quiz-dist");
+    qkey.textContent = st.questionKey || "—";
+    if (st.phase === "error") {
+      stem.textContent = st.message || "发题失败";
+      opts.innerHTML = "";
+      answer.style.display = "none";
+      clock.style.display = "none";
+      prog.style.display = "none";
+      stat.style.display = "none";
+      dist.style.display = "none";
+      return;
+    }
+    stem.textContent = st.stem || "等待发题…";
+    limit.style.display = st.phase === "running" ? "" : "none";
+    limit.textContent = "限时 " + (st.limitSec || 30) + "s";
+    // 选项（本班显示序，与学生看到的一致）；揭晓后正确项标绿
+    opts.innerHTML = "";
+    (st.options || []).forEach(function (opt, i) {
+      var li = document.createElement("div");
+      li.className = "md2s-quiz-opt" +
+        (st.reveal && st.reveal.answer === letterOf(i) ? " md2s-quiz-correct" : "");
+      var b = document.createElement("b");
+      b.textContent = letterOf(i) + ".";
+      var span = document.createElement("span");
+      span.textContent = opt;
+      li.appendChild(b);
+      li.appendChild(span);
+      opts.appendChild(li);
+    });
+    if (st.reveal) {
+      answer.style.display = "";
+      answer.innerHTML = "正确答案 <b>" + String(st.reveal.answer || "—") + "</b>";
+    } else {
+      answer.style.display = "none";
+    }
+    if (st.phase === "running") {
+      clock.style.display = "";
+      clock.className = "md2s-quiz-clock";
+      clock.textContent = (st.remainingSec || 0) + "s";
+      prog.style.display = "";
+      var ratio = st.limitSec ? Math.max(0, Math.min(100, ((st.remainingSec || 0) / st.limitSec) * 100)) : 0;
+      prog.querySelector("i").style.width = ratio.toFixed(1) + "%";
+      stat.style.display = "";
+      stat.innerHTML = "在线 <b>" + (st.online || 0) + "</b> · 已答 <b>" + (st.answered || 0) + "</b>";
+      dist.style.display = "none";
+      if (!quizTick) {
+        quizTick = setInterval(function () {
+          if (quizState && quizState.phase === "running" && quizState.remainingSec > 0) {
+            quizState.remainingSec -= 1;
+            if (quizOverlay) {
+              var clk = quizOverlay.el.querySelector(".md2s-quiz-clock");
+              if (clk) clk.textContent = quizState.remainingSec + "s";
+            }
+          }
+        }, 1000);
+      }
+    } else if (st.phase === "revealed") {
+      clock.style.display = "";
+      clock.className = "md2s-quiz-clock done";
+      clock.textContent = "已揭晓";
+      prog.style.display = "none";
+      var dist0 = (st.reveal && st.reveal.distribution) || [];
+      var total = dist0.reduce(function (a, b) { return a + b; }, 0);
+      var ai = st.reveal && st.reveal.answer ? st.reveal.answer.charCodeAt(0) - 65 : -1;
+      var correct = ai >= 0 ? (dist0[ai] || 0) : 0;
+      stat.style.display = "";
+      stat.innerHTML = "正确率 <b>" + (total ? Math.round((correct / total) * 100) : 0) + "%</b>" +
+        (st.reveal && st.reveal.fastest && st.reveal.fastest.durationMs
+          ? " · 最快 " + (st.reveal.fastest.studentNo || "—") + "（" + (st.reveal.fastest.durationMs / 1000).toFixed(1) + "s）"
+          : "");
+      dist.style.display = "";
+      dist.innerHTML = "";
+      dist0.forEach(function (count, i) {
+        var row = document.createElement("div");
+        row.className = "md2s-quiz-drow" + (st.reveal.answer === letterOf(i) ? " md2s-quiz-correct" : "");
+        var l = document.createElement("span"); l.className = "dletter"; l.textContent = letterOf(i);
+        var bar = document.createElement("span"); bar.className = "dbar";
+        var fill = document.createElement("i");
+        var max = Math.max.apply(null, [1].concat(dist0));
+        fill.style.width = Math.round(((count || 0) / max) * 100) + "%";
+        bar.appendChild(fill);
+        var c = document.createElement("span"); c.className = "dcount"; c.textContent = String(count || 0);
+        row.appendChild(l); row.appendChild(bar); row.appendChild(c);
+        dist.appendChild(row);
+      });
+    } else {
+      clock.style.display = "none";
+      prog.style.display = "none";
+      stat.style.display = "";
+      stat.innerHTML = st.phase === "idle"
+        ? "正在发题 · 等待同学作答…"
+        : "等待实况…";
+      dist.style.display = "none";
+    }
+    updateQuizButtons();
+  };
+
+  var handleQuizState = function (d) {
+    // 宿主只负责实况 + 本班显示序选项。它若没读到题（题列表未加载 / sessionId 被清），
+    // stem/options 会是空——这时保留本地 DOM 读来的题目，别把浮层左侧打回"等待发题…"。
+    var prev = quizState || {};
+    var merged = Object.assign({}, prev, d || {});
+    if (!merged.stem && prev.stem) merged.stem = prev.stem;
+    if ((!merged.options || !merged.options.length) && prev.options && prev.options.length) {
+      merged.options = prev.options;
+    }
+    if (d && d.questionKey == null && prev.questionKey) merged.questionKey = prev.questionKey;
+    quizState = merged;
+    if (quizOverlay) renderQuizOverlay();
+    updateQuizButtons();
+  };
+
+
   // ── 消息入口 ────────────────────────────────────────────────────────────
 
   window.addEventListener("message", function (ev) {
@@ -772,6 +1113,16 @@
     var d = ev.data;
     if (!d || typeof d !== "object") return;
     switch (d.type) {
+      case "md2s:quiz-capability":
+        quizEnabled = d.enabled === true;
+        if (quizEnabled) decorateQuizButtons(); else removeQuizButtons();
+        break;
+      case "md2s:quiz-state":
+        handleQuizState(d);
+        break;
+      case "md2s:quiz-close":
+        // 页面浮层已自行关闭（协议对称通知），无动作
+        break;
       case "md2s:exec-capability":
         // 重建（改字 / 换主题）会换掉整份 DOM 与 section 引用：丢掉旧浮层再装饰。
         closeOverlay();

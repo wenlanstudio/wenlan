@@ -123,133 +123,11 @@
         ×
       </button>
     </div>
-    <!-- 放映发题浮层（2026-11-16）：左题右实况，两栏；键控对齐 exec 浮层（Esc 关、翻页笔空操作） -->
-    <div
-      v-if="teachingStore.race.overlayVisible"
-      class="race-overlay"
-      @click.self="teachingStore.closeRaceOverlay()"
-    >
-      <div class="race-card">
-        <div class="race-left">
-          <div class="race-q-head">
-            <span class="race-q-key">{{ classroom.question?.questionKey || '—' }}</span>
-            <span
-              v-if="raceRunning"
-              class="race-q-point"
-            >限时 {{ teachingStore.race.limitSec }}s</span>
-          </div>
-          <div class="race-q-stem">
-            {{ classroom.question?.stem || '等待发题…' }}
-          </div>
-          <ol
-            v-if="classroom.question?.options?.length"
-            class="race-q-options"
-          >
-            <li
-              v-for="(opt, i) in classroom.question.options"
-              :key="i"
-              :class="{ correct: !!teachingStore.race.reveal && teachingStore.race.reveal.answer === letterOf(i) }"
-            >
-              <b>{{ letterOf(i) }}.</b>
-              <span>{{ opt }}</span>
-            </li>
-          </ol>
-          <div
-            v-if="teachingStore.race.reveal"
-            class="race-answer-line"
-          >
-            正确答案 <b>{{ teachingStore.race.reveal.answer }}</b>
-          </div>
-        </div>
-        <div class="race-right">
-          <template v-if="raceRunning">
-            <div class="race-clock">
-              {{ remainingLabel }}
-            </div>
-            <div class="race-progress">
-              <i :style="{ width: progressWidth }" />
-            </div>
-            <div class="race-stat">
-              在线 <b>{{ teachingStore.race.online }}</b> · 已答 <b>{{ teachingStore.race.answered }}</b>
-            </div>
-            <div class="race-hint">
-              到点自动收卷 · Esc 关闭浮层 · 翻页笔已屏蔽
-            </div>
-          </template>
-          <template v-else-if="teachingStore.race.reveal">
-            <div class="race-clock done">
-              已揭晓
-            </div>
-            <div class="race-stat">
-              正确率 <b>{{ revealCorrectRate }}%</b>
-              <span
-                v-if="teachingStore.race.reveal.fastest && teachingStore.race.reveal.fastest.durationMs"
-              >· 最快 {{ teachingStore.race.reveal.fastest.studentNo }}（{{ revealFastestSec }}s）</span>
-            </div>
-            <div class="race-dist">
-              <div
-                v-for="(count, i) in teachingStore.race.reveal.distribution"
-                :key="i"
-                class="race-dist-row"
-                :class="{ correct: teachingStore.race.reveal && teachingStore.race.reveal.answer === letterOf(i) }"
-              >
-                <span class="race-dist-letter">{{ letterOf(i) }}</span>
-                <span class="race-dist-bar">
-                  <i :style="{ width: distWidth(i) }" />
-                </span>
-                <span class="race-dist-count">{{ count }}</span>
-              </div>
-            </div>
-            <div class="race-hint">
-              Esc 关闭浮层，放映继续
-            </div>
-          </template>
-          <template v-else>
-            <div class="race-hint">
-              正在等待作答…
-            </div>
-          </template>
-        </div>
-      </div>
-      <button
-        class="race-close"
-        title="关闭浮层（Esc）——放映继续"
-        @click="teachingStore.closeRaceOverlay()"
-      >
-        ×
-      </button>
-    </div>
-
     <div class="deck-bar">
       <span class="page-indicator">
         {{ indicator }}
       </span>
       <template v-if="leaf === 'present'">
-        <!-- 放映发题（2026-11-16）：本页有题时工具条直发，发后两栏浮层看实况 -->
-        <button
-          v-if="quizBarState === 'running'"
-          class="bar-button quiz-live"
-          title="答题进行中——查看实况浮层（Esc 关闭）"
-          @click="teachingStore.openRaceOverlay()"
-        >
-          答题中 · 已答 {{ teachingStore.race.answered }}
-        </button>
-        <button
-          v-else-if="quizBarState === 'revealed'"
-          class="bar-button quiz-live"
-          title="查看本页题揭晓结果（Esc 关闭浮层）"
-          @click="teachingStore.openRaceOverlay()"
-        >
-          结果
-        </button>
-        <button
-          v-else-if="quizBarState === 'ready'"
-          class="bar-button quiz-armed"
-          :title="`发本页题（${pageQuizStem}）——学生限时作答，到点自动收卷`"
-          @click="sendPageQuiz"
-        >
-          发题 · 本页 {{ teachingStore.race.pageQuizKeys.length }} 题
-        </button>
         <button
           v-if="canToggleExclusive && !isExclusive"
           class="bar-button"
@@ -349,98 +227,6 @@ const qrError = ref('')
 // classroom：那个 const 在本段之后才初始化，getter 会在 immediate 首跑时撞 TDZ，
 // 生产构建里 Vue 只 console.error 不抛，结果浮层照常渲染但 watcher 永久失效、码恒空。
 const room = computed(() => teachingStore.classroom)
-
-// —— 放映发题（2026-11-16）：工具条三态按钮 + 两栏实况浮层 ——
-// 数据全部来自 teaching store（opened 广播的 classroom.question 为本班显示序选项，
-// 与学生看到的一致）；倒计时本地推算（openedAt + limitSec），不解析服务端无时区串。
-const letterOf = (i: number): string => String.fromCharCode(65 + i)
-
-const raceRunning = computed(() => teachingStore.race.openId != null)
-
-const quizBarState = computed<'idle' | 'ready' | 'running' | 'revealed'>(() => {
-  if (teachingStore.race.openId != null) return 'running'
-  if (teachingStore.race.reveal) return 'revealed'
-  if (
-    teachingStore.race.pageQuizKeys.length > 0 &&
-    teachingStore.race.questions.length > 0 &&
-    teachingStore.classroom.role === 'host'
-  ) {
-    return 'ready'
-  }
-  return 'idle'
-})
-
-const pageQuizStem = computed(() => {
-  const key = teachingStore.race.pageQuizKeys[0]
-  const q = teachingStore.race.questions.find(item => item.questionKey === key)
-  return (q?.stem || '').slice(0, 24)
-})
-
-const sendPageQuiz = async (): Promise<void> => {
-  const key = teachingStore.race.pageQuizKeys[0]
-  const q = teachingStore.race.questions.find(item => item.questionKey === key)
-  if (!q || teachingStore.classroom.role !== 'host') return
-  // 本地拦截（已有轮次/非 host）与上行失败都会返回错误文案——失败不开浮层
-  const err = await teachingStore.openRaceQuestion(q)
-  if (!err) teachingStore.openRaceOverlay()
-}
-
-// 倒计时：1s tick，仅浮层可见或有进行中轮次时跑
-const now = ref(Date.now())
-let quizTickTimer: ReturnType<typeof setInterval> | null = null
-const ensureQuizTick = (): void => {
-  if (quizTickTimer) return
-  quizTickTimer = setInterval(() => {
-    now.value = Date.now()
-    if (!raceRunning.value && !teachingStore.race.overlayVisible) stopQuizTick()
-  }, 1000)
-}
-const stopQuizTick = (): void => {
-  if (quizTickTimer) {
-    clearInterval(quizTickTimer)
-    quizTickTimer = null
-  }
-}
-watch(
-  () => [raceRunning.value, teachingStore.race.overlayVisible] as const,
-  ([running, visible]) => {
-    if (running || visible) ensureQuizTick()
-  },
-  { immediate: true }
-)
-onBeforeUnmount(stopQuizTick)
-
-const remainingMs = computed(() => {
-  const { openedAt, limitSec } = teachingStore.race
-  if (!openedAt || !limitSec) return 0
-  return Math.max(0, openedAt + limitSec * 1000 - now.value)
-})
-const remainingLabel = computed(() => `${Math.ceil(remainingMs.value / 1000)}s`)
-const progressWidth = computed(() => {
-  const total = teachingStore.race.limitSec * 1000
-  if (!total) return '0%'
-  return `${Math.max(0, Math.min(100, (remainingMs.value / total) * 100)).toFixed(1)}%`
-})
-
-const revealCorrectRate = computed(() => {
-  const reveal = teachingStore.race.reveal
-  if (!reveal) return 0
-  const total = reveal.distribution.reduce((sum, n) => sum + n, 0)
-  if (!total) return 0
-  const correctIndex = reveal.answer ? reveal.answer.charCodeAt(0) - 65 : -1
-  const correct = correctIndex >= 0 ? reveal.distribution[correctIndex] || 0 : 0
-  return Math.round((correct / total) * 100)
-})
-const revealFastestSec = computed(() => {
-  const ms = teachingStore.race.reveal?.fastest?.durationMs
-  return ms ? (ms / 1000).toFixed(1) : '0'
-})
-const distWidth = (i: number): string => {
-  const reveal = teachingStore.race.reveal
-  if (!reveal) return '0%'
-  const max = Math.max(1, ...reveal.distribution)
-  return `${Math.round(((reveal.distribution[i] || 0) / max) * 100)}%`
-}
 
 const coverQr = computed(() => {
   const auto = room.value.auto
@@ -579,6 +365,65 @@ const isHtml = computed(() => isHtmlSlidePath(pathname.value))
 const postToDeck = (msg: Record<string, unknown>): void => {
   deckFrame.value?.contentWindow?.postMessage(msg, origin.value ?? '*')
 }
+
+// —— 放映发题·页面注入模式（2026-11-16）：按钮/浮层都在 deck 页面内（exec-present），
+// 宿主只当数据桥：capability（教师进房开页面按钮）与 quiz-state（实况/揭晓投影）两条推送。
+// 实况数据全部来自 teaching store（opened 广播的 classroom.question 为本班显示序选项，
+// 与学生看到的一致）；倒计时由页面本地递减，宿主只在状态变化时推。
+// 注意：本段必须位于 postToDeck 定义之后（此前版本插在前面撞 TDZ，deckPane 挂载即炸）。
+const quizCapability = computed(() =>
+  teachingStore.classroom.role === 'host' && teachingStore.classroom.sessionId != null
+)
+const pushQuizCapability = (): void => {
+  postToDeck({ type: 'md2s:quiz-capability', enabled: quizCapability.value })
+}
+const pushQuizState = (): void => {
+  const q = teachingStore.classroom.question
+  const race = teachingStore.race
+  const phase = race.error ? 'error' : race.reveal ? 'revealed' : race.openId != null ? 'running' : 'idle'
+  const remainingMs =
+    race.openId != null && race.openedAt && race.limitSec
+      ? Math.max(0, race.openedAt + race.limitSec * 1000 - Date.now())
+      : 0
+  postToDeck({
+    type: 'md2s:quiz-state',
+    phase,
+    questionKey: q?.questionKey ?? null,
+    stem: q?.stem ?? null,
+    options: q?.options ?? null,
+    limitSec: race.limitSec,
+    remainingSec: Math.ceil(remainingMs / 1000),
+    answered: race.answered,
+    online: race.online,
+    reveal: race.reveal
+      ? { answer: race.reveal.answer, distribution: race.reveal.distribution, fastest: race.reveal.fastest ?? null }
+      : null,
+    error: race.error || null
+  })
+}
+watch(quizCapability, (enabled) => {
+  pushQuizCapability()
+  if (enabled) {
+    // 预拉本发布物题列表：页面「发题」按钮可能先于任何面板点击出现
+    teachingStore.loadRaceQuestions()
+  } else {
+    // 退房/下课：撤页面按钮并收浮层态
+    pushQuizState()
+  }
+})
+watch(
+  () => [
+    teachingStore.race.openId,
+    teachingStore.race.answered,
+    teachingStore.race.online,
+    teachingStore.race.reveal,
+    teachingStore.race.error,
+    teachingStore.classroom.question
+  ],
+  () => {
+    if (quizCapability.value) pushQuizState()
+  }
+)
 
 const sendBuild = (preservePage = false): void => {
   // 每次重建先清旧提示：警告是「这次构建」的结论，修好（补图/改主题名）后
@@ -859,6 +704,14 @@ const onMessage = (ev: MessageEvent): void => {
       // DOM 已分页、player 已就绪：此刻装饰 ▶ 才能进 refreshSteps 的步进表。
       // 第三方 HTML 放映稿无文览源码，没有可跑代码块，跳过 ▶ 下发。
       if (!isHtml.value) void sendExecCapability()
+      // 发题按钮能力必须在此补推：watch(quizCapability) 非 immediate，若 ready 前
+      // capability 已 true（挂载时登录态已恢复 / autoStart 已自动开房），watch 不会
+      // 二次触发，而重建后的 exec-present 是全新实例（内存 quizEnabled 复位 false）
+      // → 永远收不到推送 → 放映页一个发题按钮都不出现。与执行能力同在 ready 下发。
+      pushQuizCapability()
+      // 同一 watch 非 immediate 也漏了题列表预拉：按钮出来了但 race.questions 空，
+      // 点下去报「题目不在本发布物的题列表」。capability 已 true 时在此补一次（幂等）。
+      if (quizCapability.value) teachingStore.loadRaceQuestions()
       // 跟随必须在 ready 之后发：重建/首帧之前 player 还不存在，消息会被丢弃。
       sendFollow()
       break
@@ -908,11 +761,6 @@ const onMessage = (ev: MessageEvent): void => {
         : []
       break
     }
-    case 'md2s:esc':
-      // 发题浮层打开时 Esc 只关浮层（deck 聚焦时页面侧把 Esc 转发到这里）
-      if (teachingStore.race.overlayVisible) teachingStore.closeRaceOverlay()
-      else exit()
-      break
     case 'md2s:rpc':
       void onRpc(data as unknown as { id: number; diagramType: string; source: string })
       break
@@ -929,20 +777,29 @@ const onMessage = (ev: MessageEvent): void => {
       exportWaiter?.(data)
       exportWaiter = null
       break
+    case 'md2s:quiz-open': {
+      // 页面内「发题」按钮：宿主执行发题，成功/失败都回推 quiz-state
+      const key = String((data as { questionKey?: unknown }).questionKey ?? '')
+      const q = teachingStore.race.questions.find(item => item.questionKey === key)
+      if (!q) {
+        teachingStore.race.error = `题目 ${key} 不在本发布物的题列表`
+        pushQuizState()
+        break
+      }
+      void teachingStore.openRaceQuestion(q).then(() => pushQuizState())
+      break
+    }
+    case 'md2s:quiz-close':
+      // 页面浮层 Esc 自行关闭的对称通知，宿主无动作（实况推送继续，供重开取数）
+      break
+    case 'md2s:esc':
+      exit()
+      break
     default:
       break
   }
 }
-
 const onKeydown = (ev: KeyboardEvent): void => {
-  // 发题浮层打开期间（2026-11-16，键控对齐 exec 浮层配方）：Esc 只关浮层；
-  // 翻页笔的 PageUp/PageDown/空格/Enter 一律空操作——防误翻页、防误关放映。
-  if (teachingStore.race.overlayVisible) {
-    ev.preventDefault()
-    ev.stopPropagation()
-    if (ev.key === 'Escape') teachingStore.closeRaceOverlay()
-    return
-  }
   // 焦点在 deck 里时 Esc 由页面侧转发（md2s:esc）；这里接焦点在外（刚进视图）的情况。
   if (ev.key === 'Escape') exit()
 }
@@ -1391,187 +1248,4 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
-/* —— 放映发题浮层（2026-11-16）：遮罩 + 两栏卡片，配色随 deck-qr 家族 —— */
-.race-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 30;
-  background: rgba(15, 25, 40, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.race-card {
-  width: min(880px, 86%);
-  max-height: 78%;
-  display: flex;
-  gap: 0;
-  background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 12px 48px rgba(15, 25, 40, 0.35);
-  overflow: hidden;
-}
-.race-left {
-  flex: 1.2;
-  padding: 22px 24px;
-  border-right: 1px solid #e3e8ee;
-  overflow: auto;
-}
-.race-q-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.race-q-key {
-  font-size: 12px;
-  color: #2b6cb0;
-  background: #e8f0fa;
-  border-radius: 4px;
-  padding: 2px 8px;
-}
-.race-q-point {
-  font-size: 12px;
-  color: #8a5a00;
-  background: #fdf3e0;
-  border-radius: 4px;
-  padding: 2px 8px;
-}
-.race-q-stem {
-  font-size: 16px;
-  line-height: 1.7;
-  color: #22303f;
-  margin-bottom: 14px;
-}
-.race-q-options {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.race-q-options li {
-  display: flex;
-  gap: 8px;
-  padding: 9px 12px;
-  border: 1px solid #e3e8ee;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #33414f;
-  line-height: 1.5;
-}
-.race-q-options li b {
-  color: #5b6b7c;
-}
-.race-q-options li.correct {
-  border-color: #2b8a3e;
-  background: #e9f7ec;
-}
-.race-q-options li.correct b {
-  color: #2b8a3e;
-}
-.race-answer-line {
-  margin-top: 14px;
-  font-size: 14px;
-  color: #2b8a3e;
-}
-.race-right {
-  flex: 1;
-  padding: 22px 24px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 14px;
-  background: #f7f9fb;
-}
-.race-clock {
-  font-size: 44px;
-  font-weight: 700;
-  color: #1f3a5f;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-.race-clock.done {
-  font-size: 26px;
-  color: #2b8a3e;
-}
-.race-progress {
-  height: 8px;
-  background: #e3e8ee;
-  border-radius: 4px;
-  overflow: hidden;
-}
-.race-progress i {
-  display: block;
-  height: 100%;
-  background: #2b6cb0;
-  transition: width 1s linear;
-}
-.race-stat {
-  font-size: 14px;
-  color: #5b6b7c;
-  text-align: center;
-}
-.race-stat b {
-  color: #1f3a5f;
-  font-size: 16px;
-}
-.race-hint {
-  font-size: 12px;
-  color: #8a97a5;
-  text-align: center;
-}
-.race-dist {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.race-dist-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.race-dist-letter {
-  width: 18px;
-  font-size: 13px;
-  color: #5b6b7c;
-  text-align: center;
-}
-.race-dist-row.correct .race-dist-letter {
-  color: #2b8a3e;
-  font-weight: 700;
-}
-.race-dist-bar {
-  flex: 1;
-  height: 14px;
-  background: #e9edf2;
-  border-radius: 4px;
-  overflow: hidden;
-}
-.race-dist-bar i {
-  display: block;
-  height: 100%;
-  background: #7c93ad;
-}
-.race-dist-row.correct .race-dist-bar i {
-  background: #2b8a3e;
-}
-.race-dist-count {
-  width: 24px;
-  font-size: 13px;
-  color: #33414f;
-  text-align: right;
-}
-.race-close {
-  position: absolute;
-  top: 14px;
-  right: 18px;
-  border: 0;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  font-size: 18px;
-  background: rgba(255, 255, 255, 0.85);
-  color: #33414f;
-  cursor: pointer;
-}
 </style>
