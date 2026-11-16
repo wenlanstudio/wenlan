@@ -280,7 +280,7 @@ declare global {
     end(sessionId: number | null): Promise<void>
     leave(): Promise<void>
     raceQuestions(): Promise<{ ok: boolean; error?: string }>
-    raceOpen(questionId: number, limitSec: number): Promise<void>
+    raceOpen(questionId: number, limitSec: number): Promise<{ ok: boolean; error?: string }>
     raceClose(openId: number): Promise<void>
     raceVoid(openId: number): Promise<void>
     raceAnswer(openId: number, choice: number): Promise<void>

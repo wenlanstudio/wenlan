@@ -385,7 +385,7 @@ const teachingSocketAPI = {
   leave: (): Promise<void> => invoke('teaching::ws-leave'),
   raceQuestions: (): Promise<{ ok: boolean; error?: string }> =>
     invoke('teaching::ws-race-questions'),
-  raceOpen: (questionId: number, limitSec: number): Promise<void> =>
+  raceOpen: (questionId: number, limitSec: number): Promise<{ ok: boolean; error?: string }> =>
     invoke('teaching::ws-race-open', questionId, limitSec),
   raceClose: (openId: number): Promise<void> => invoke('teaching::ws-race-close', openId),
   raceVoid: (openId: number): Promise<void> => invoke('teaching::ws-race-void', openId),

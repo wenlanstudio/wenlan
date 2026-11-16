@@ -291,8 +291,8 @@ const onVisibleChange = (visible: boolean): void => {
   if (!visible) teachingStore.closeQuizConsole()
 }
 
-const onOpen = (question: RaceQuestion): void => {
-  const error = teachingStore.openRaceQuestion(question, limitSec.value)
+const onOpen = async (question: RaceQuestion): Promise<void> => {
+  const error = await teachingStore.openRaceQuestion(question, limitSec.value)
   if (error) race.value.error = error
 }
 </script>

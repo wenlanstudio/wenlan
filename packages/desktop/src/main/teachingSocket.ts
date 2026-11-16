@@ -171,13 +171,19 @@ class TeachingSocket {
   }
 
   /** 教师：发题（服务端校验 host、一题一轮，重复发会被 RACE_ALREADY_OPEN 挡回）。 */
-  sendRaceOpen(questionId: number, limitSec: number): void {
-    if (this.sessionId == null) return
+  sendRaceOpen(questionId: number, limitSec: number): { ok: boolean; error?: string } {
+    if (this.sessionId == null) {
+      return { ok: false, error: '尚未进入课堂会话' }
+    }
+    if (this.socket?.readyState !== WebSocket.OPEN) {
+      return { ok: false, error: '课堂连接未就绪' }
+    }
     this.send('teaching.race.open', {
       sessionId: this.sessionId,
       questionId,
       limitSec: Math.floor(limitSec)
     })
+    return { ok: true }
   }
 
   /** 教师：收卷揭晓（到点服务端也会自动收，这里只是提前收）。 */

@@ -131,7 +131,7 @@ export interface IpcInvokeChannels {
   // 竞答（发题/收卷/作废）：上行为 fire-and-forget，结果一律由 `teaching::ws-message` 广播回来。
   // questions 例外——ret 报上行是否发出（2026-11-15 诚实化：失败不再伪装成空列表）
   'teaching::ws-race-questions': { args: []; ret: { ok: boolean; error?: string } }
-  'teaching::ws-race-open': { args: [questionId: number, limitSec: number]; ret: void }
+  'teaching::ws-race-open': { args: [questionId: number, limitSec: number]; ret: { ok: boolean; error?: string } }
   'teaching::ws-race-close': { args: [openId: number]; ret: void }
   'teaching::ws-race-void': { args: [openId: number]; ret: void }
   // 学生作答：choice 为本班显示序下标；accepted 回执与 revealed 广播另走事件通道。

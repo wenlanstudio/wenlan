@@ -119,4 +119,31 @@ describe('teaching store · 拉题诚实化', () => {
     expect(store.race.questions.map((q) => q.questionKey)).toEqual(['q1'])
     expect(store.race.pageQuizKeys).toEqual(['q3'])
   })
+
+  it('opened 帧 → host 侧存题快照（stem/options 显示序）；浮层开关仅 host 可开、Esc 可关', () => {
+    const store = useTeachingStore()
+    resetRaceState(store)
+    // 教师进房（role=host）
+    feedFrame('teaching.session.joined', { role: 'host', page: 1 })
+    feedFrame('teaching.race.opened', {
+      openId: 170,
+      questionId: 248,
+      questionKey: 'q1',
+      stem: 'pyplot 的 axes() 函数…',
+      options: ['(left, bottom, width, height)', '(x, y, z, w)', 'C 选项', 'D 选项'],
+      limitSec: 30
+    })
+    expect(store.classroom.question?.questionKey).toBe('q1')
+    expect(store.classroom.question?.options).toHaveLength(4)
+    expect(store.race.openId).toBe(170)
+    // 浮层开关：host 可开可关；学生身份开不了（wsListening 模块级守卫下必须同 store 测门控）
+    store.openRaceOverlay()
+    expect(store.race.overlayVisible).toBe(true)
+    store.closeRaceOverlay()
+    expect(store.race.overlayVisible).toBe(false)
+    store.classroom.role = 'student'
+    store.openRaceOverlay()
+    expect(store.race.overlayVisible).toBe(false)
+    store.classroom.role = 'host'
+  })
 })

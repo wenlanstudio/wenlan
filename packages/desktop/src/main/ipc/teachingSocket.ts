@@ -33,9 +33,8 @@ export const registerTeachingSocketHandlers = (): void => {
   ipcMain.handle('teaching::ws-race-questions', () => teachingSocket.sendRaceQuestions())
   ipcMain.handle(
     'teaching::ws-race-open',
-    (_event, questionId: number, limitSec: number) => {
+    (_event, questionId: number, limitSec: number) =>
       teachingSocket.sendRaceOpen(questionId, limitSec)
-    }
   )
   ipcMain.handle('teaching::ws-race-close', (_event, openId: number) => {
     teachingSocket.sendRaceClose(openId)

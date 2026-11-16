@@ -188,6 +188,8 @@ export interface RaceState {
   error: string
   /** 缺口 B（2026-11-15）：放映当前页的 quiz 标记 id（===服务端 questionKey），本页题置顶用 */
   pageQuizKeys: string[]
+  /** 放映发题浮层（2026-11-16）：两栏「左题右实况」，deckPane 工具条发题时打开 */
+  overlayVisible: boolean
 }
 
 /**
@@ -280,7 +282,8 @@ const emptyRace = (): RaceState => ({
   online: 0,
   reveal: null,
   error: '',
-  pageQuizKeys: []
+  pageQuizKeys: [],
+  overlayVisible: false
 })
 
 const emptyStudentQuiz = (): StudentQuizState => ({
@@ -624,7 +627,11 @@ export const useTeachingStore = defineStore('teaching', () => {
         race.value.reveal = parseReveal(content)
         race.value.openId = null
         race.value.questionId = null
-        classroom.value.question = null
+        // 放映发题浮层（2026-11-16）：host 揭晓后仍要左栏题目+正确项高亮，题快照保留；
+        // 学生端维持原语义（题位退回占位）
+        if (classroom.value.role !== 'host') {
+          classroom.value.question = null
+        }
         if (classroom.value.role === 'student') {
           // 保留 submitted：揭晓面板要用「我选了什么」对照正确答案。
           studentQuiz.value.voided = false
@@ -893,11 +900,21 @@ export const useTeachingStore = defineStore('teaching', () => {
     race.value.visible = false
   }
 
+  /** 放映发题浮层（2026-11-16）：两栏「左题右实况」，只在 host 的放映叶打开。 */
+  const openRaceOverlay = (): void => {
+    if (classroom.value.role !== 'host') return
+    race.value.overlayVisible = true
+  }
+
+  const closeRaceOverlay = (): void => {
+    race.value.overlayVisible = false
+  }
+
   /**
    * 发题。服务端一题一轮，进行中再发会被 `RACE_ALREADY_OPEN` 挡回，
    * 所以这里先在本地挡一次，避免把错误刷到界面上。
    */
-  const openRaceQuestion = (question: RaceQuestion, limitSec?: number): string => {
+  const openRaceQuestion = async(question: RaceQuestion, limitSec?: number): Promise<string> => {
     if (classroom.value.role !== 'host') return t('teaching.quizNeedClassroom')
     if (race.value.openId != null) return t('teaching.quizRoundRunning')
     const limit = Math.min(300, Math.max(5, Math.floor(limitSec ?? race.value.limitSec)))
@@ -905,8 +922,22 @@ export const useTeachingStore = defineStore('teaching', () => {
     race.value.error = ''
     race.value.reveal = null
     race.value.questionId = question.id
-    void window.teachingSocket.raceOpen(question.id, limit)
-    return ''
+    // 2026-11-16 诚实化：上行失败（未进房/连接未就绪）显式报错，不再静默吞掉
+    return window.teachingSocket
+      .raceOpen(question.id, limit)
+      .then((res) => {
+        if (!res.ok) {
+          race.value.questionId = null
+          race.value.error = res.error || t('teaching.quizLoadFailed')
+          return race.value.error
+        }
+        return ''
+      })
+      .catch(() => {
+        race.value.questionId = null
+        race.value.error = t('teaching.quizLoadFailed')
+        return race.value.error
+      })
   }
 
   /** 收卷揭晓（到点服务端也会自动收，这里只是提前收）。 */
@@ -1127,6 +1158,8 @@ export const useTeachingStore = defineStore('teaching', () => {
     setFollowLocked,
     openQuizConsole,
     closeQuizConsole,
+    openRaceOverlay,
+    closeRaceOverlay,
     loadRaceQuestions,
     setPageQuizKeys,
     openRaceQuestion,
