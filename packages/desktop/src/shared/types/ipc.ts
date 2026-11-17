@@ -158,7 +158,7 @@ export interface IpcInvokeChannels {
   // 跑一块（或章重放）：结果契约返回；stdout/stderr 实时流走
   // mt::mdcode2run::event 推送（invoke 返回值没法流式）。
   'mt::mdcode2run::run': {
-    args: [opts: { docPath: string; md: string; line: number; replay?: boolean; timeout?: number; src?: 'run' | 'replay' | 'trace' | 'present' }]
+    args: [opts: { docPath: string; md: string; line: number; lineOffset?: number; replay?: boolean; timeout?: number; src?: 'run' | 'replay' | 'trace' | 'present' }]
     ret: Md2rRunResult
   }
   // ⟳ 销毁第 line 行所在块的章会话（下次运行重建）。

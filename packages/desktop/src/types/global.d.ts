@@ -355,6 +355,8 @@ declare global {
         docPath: string
         md: string
         line: number
+        /** 逐行执行（放映态会话族）：块内 0 基行号；不传则整块执行。 */
+        lineOffset?: number
         replay?: boolean
         timeout?: number
         src?: 'run' | 'replay' | 'trace' | 'present'

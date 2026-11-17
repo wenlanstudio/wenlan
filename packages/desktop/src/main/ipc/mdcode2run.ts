@@ -96,6 +96,7 @@ const runHandler = async(
     docPath: string
     md: string
     line: number
+    lineOffset?: number
     replay?: boolean
     timeout?: number
     src?: 'run' | 'replay' | 'trace' | 'present'
@@ -120,10 +121,13 @@ const runHandler = async(
       error: `第 ${opts.line + 1} 行（0 基 ${opts.line}）附近没有可执行的代码块（语言不支持或角色不可跑）`
     }
   }
+  // 逐行执行（2026-11-17 拍板）：lineOffset 是块内 0 基行号——放映态老师逐行讲解时
+  // 按 Enter 只执行该行（会话族逐行追加、共享变量）；不传则整块执行。
   const raw = await entry.engine.run(ctx, {
     replay: !!opts.replay,
     timeout: opts.timeout,
-    src: opts.src
+    src: opts.src,
+    line: opts.lineOffset
   })
   return attachJob(entry, raw)
 }

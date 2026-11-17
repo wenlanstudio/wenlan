@@ -206,6 +206,23 @@ const isHtmlSlidePath = (pathname: string): boolean => {
   return ext === 'html' || ext === 'htm'
 }
 
+/**
+ * front-matter 标量读取（与 md2slides core/parse/frontMatter.js 的 deckMeta 同口径，
+ * 只认文档最顶上的 --- 块）。这里只需 stepLines 一个布尔键，不值得拖 md2slides 进来。
+ */
+const frontScalarOf = (md: string, key: string): string | null => {
+  const m = /^[ \t]*---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*\r?\n?/.exec(md ?? '')
+  if (!m) return null
+  const hit = new RegExp(`^\\s*${key}\\s*:\\s*(.+?)\\s*$`, 'm').exec(m[1])
+  return hit ? hit[1] : null
+}
+
+/** 代码块行粒度遍历（front-matter stepLines: true，缺省 false）。 */
+const stepLines = computed(() => {
+  const raw = frontScalarOf(props.markdown, 'stepLines')
+  return raw != null && raw.toLowerCase() === 'true'
+})
+
 const props = defineProps<{
   /** 映支的叶：present 放映 / slide 页览。 */
   leaf: 'present' | 'slide'
@@ -460,6 +477,8 @@ const sendBuild = (preservePage = false): void => {
       : { md: props.markdown }),
     runOpts: {
       view: props.leaf === 'slide' ? 'list' : 'present',
+      // 代码块行粒度遍历（front-matter stepLines: true）：页面侧 player 逐行拆步。
+      stepLines: stepLines.value,
       ...(startIndex !== undefined ? { startIndex } : {})
     }
   })
@@ -554,6 +573,7 @@ const sendExecCapability = async (): Promise<void> => {
         end: b.end,
         runnable: b.runnable,
         lang: b.lang,
+        family: b.family,
         job: b.job,
         code: fenceBodyOf(mdLines, b.line, b.end)
       }
@@ -569,9 +589,11 @@ const sendExecCapability = async (): Promise<void> => {
 const onExecRequest = async (data: {
   reqId: string
   line: number
+  lineOffset?: number
 }): Promise<void> => {
   const reqId = String(data.reqId ?? '')
   const line = Number(data.line)
+  const lineOffset = data.lineOffset == null ? undefined : Number(data.lineOffset)
   const docPath = pathname.value
   if (!reqId || !Number.isFinite(line) || !docPath) {
     postToDeck({ type: 'md2s:exec-error', reqId, error: '文档未保存或运行请求不合法' })
@@ -586,10 +608,12 @@ const onExecRequest = async (data: {
   try {
     // 放映态（老师讲台）：真执行、共享会话状态，但不落执行记录（src="present" 不记账）。
     // 学生评判链读的是文视图 ▶ 的记录，放映不该污染它。
+    // lineOffset（块内 0 基行号）非空 = 逐行执行（会话族），否则整块执行。
     const result = await window.mdcode2run.run({
       docPath,
       md: props.markdown,
       line,
+      ...(lineOffset !== undefined ? { lineOffset } : {}),
       src: 'present',
       timeout: EXEC_TIMEOUT_MS
     })
@@ -766,7 +790,7 @@ const onMessage = (ev: MessageEvent): void => {
       void onRpc(data as unknown as { id: number; diagramType: string; source: string })
       break
     case 'md2s:exec':
-      void onExecRequest(data as unknown as { reqId: string; line: number })
+      void onExecRequest(data as unknown as { reqId: string; line: number; lineOffset?: number })
       break
     case 'md2s:exec-stop':
       onExecStop(data as unknown as { jobId: string })

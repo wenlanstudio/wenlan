@@ -60,6 +60,8 @@ declare module 'mdcode2run' {
     replay?: boolean
     timeout?: number
     src?: 'run' | 'replay' | 'trace' | 'present'
+    /** 逐行执行（放映态会话族）：块内 0 基行号，只执行该行（共享变量）；不传则整块。 */
+    line?: number
   }
 
   /** runDocument 的引擎侧选项（lib/mr runDoc 的透传；docDir 缺省引擎的 documentDir）。 */

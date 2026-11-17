@@ -225,6 +225,45 @@
     return el;
   };
 
+  /* ── 逐行运行（2026-11-17 拍板）────────────────────────────────────────
+   * 代码块行粒度遍历（front-matter stepLines: true）时，会话族（java/python 有
+   * 常驻 REPL、逐行追加共享变量）的行挂 data-md2s-run-line：翻页笔走到该行、
+   * 按 Enter，player 的 activate() 命中行并派发 click，这里接手 → 只执行该行。
+   * 一次性族（bash/shell/mysql/hive）只逐行遍历、不逐行运行——行照常挂
+   * run-line 但委托判定非 lineable 就忽略（翻页笔点它不运行，保留整块 ▶）。
+   * 用独立属性 run-line 而非 activatable：行是内容，得进 IR/PPTX，activatable
+   * 会被导出的 skipSelector 误删。
+   */
+  var LINEABLE_FAMILIES = { java: 1, python: 1 };
+
+  /** 行（.code-line）→ 它所在的 pre + 行号（0 基） + 匹配到的 capability 块。 */
+  var resolveRunLine = function (lineEl) {
+    var pre = lineEl.closest ? lineEl.closest("pre") : null;
+    if (!pre) return null;
+    var code = pre.querySelector("code");
+    if (!code) return null;
+    var lineEls = code.querySelectorAll(".code-line");
+    var idx = Array.prototype.indexOf.call(lineEls, lineEl);
+    if (idx < 0) return null;
+    var srcLine = Number(pre.getAttribute("data-src-start"));
+    if (!isFinite(srcLine) || srcLine <= 0) srcLine = 1;
+    var block = matchBlock(capability.blocks, code.textContent, srcLine - 1);
+    if (!block) return null;
+    return { block: block, lineOffset: idx };
+  };
+
+  var onRunLineClick = function (ev) {
+    var lineEl = ev.target && ev.target.closest ? ev.target.closest("[data-md2s-run-line]") : null;
+    if (!lineEl || !capability.enabled) return;
+    var hit = resolveRunLine(lineEl);
+    if (!hit) return;
+    // 只有会话族（有常驻 REPL、共享变量）才逐行运行；一次性族点行不运行。
+    if (!LINEABLE_FAMILIES[hit.block.family]) return;
+    ev.stopPropagation();
+    startRun(hit.block.line, hit.block.lang, hit.lineOffset);
+  };
+  document.addEventListener("click", onRunLineClick, true);
+
   var decorate = function (cap) {
     capability = {
       docPath: String(cap.docPath || ""),
@@ -513,16 +552,19 @@
     if (!r || r.reqId !== reqId || r.startedExec) return;
     r.startedExec = true;
     if (overlay) { overlay.confirmMode = false; overlay.confirmRun = null; }
-    post({ type: "md2s:exec", reqId: reqId, docPath: r.docPath, line: r.line });
+    var msg = { type: "md2s:exec", reqId: reqId, docPath: r.docPath, line: r.line };
+    if (r.lineOffset != null) msg.lineOffset = r.lineOffset;
+    post(msg);
   };
 
-  var startRun = function (line, lang) {
+  var startRun = function (line, lang, lineOffset) {
     closeOverlay();
-    var o = createOverlay("▶ 运行", lang);
+    var o = createOverlay(lineOffset == null ? "▶ 运行" : "▶ 逐行运行", lang);
     overlay = o;
     var reqId = "e" + (++reqSeq);
     activeRun = {
-      reqId: reqId, line: line, docPath: capability.docPath,
+      reqId: reqId, line: line, lineOffset: lineOffset == null ? undefined : lineOffset,
+      docPath: capability.docPath,
       started: Date.now(), startedExec: false, jobId: null, jobDone: false,
       timer: null, streamEl: null, streamBuf: "", streamChars: 0
     };
