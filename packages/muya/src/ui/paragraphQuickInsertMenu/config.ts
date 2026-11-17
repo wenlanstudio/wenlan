@@ -132,6 +132,21 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
         ],
     },
     {
+        // `/quiz` 快速插入（#36）：课堂竞答题骨架，产 ```quiz 题面围栏——
+        // ADR-26 定围栏为默认形态（边界确定、源码可见）。answer=? 是刻意占位：
+        // 认不出的答案在发布校验会拦（宁拒不猜），不会带着错答案静默发布；
+        // id 省略走内容寻址（md2slides scan），插入两道也不撞号。
+        name: 'teaching',
+        children: [
+            {
+                title: 'Quiz',
+                subTitle: '```quiz answer=?',
+                label: 'quiz',
+                icon: codeIcon,
+            },
+        ],
+    },
+    {
         name: 'headings',
         children: [
             {

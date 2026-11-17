@@ -86,6 +86,7 @@ describe('paragraphQuickInsertMenu search() — zh-CN localized matching', () =>
         expect(sectionNames).toEqual([
             'basic blocks',
             'column markers',
+            'teaching',
             'headings',
             'advanced blocks',
             'list blocks',
@@ -134,6 +135,19 @@ describe('paragraphQuickInsertMenu search() — zh-CN localized matching', () =>
         expect(matched[0].i18nTitle).toBe('代码块');
         // fuse.js attaches a score to every match.
         expect(typeof matched[0].score).toBe('number');
+    });
+
+    it('typing /quiz surfaces the teaching section with the quiz entry (#36)', () => {
+        const { menu } = bootMenu();
+
+        menu._search('quiz');
+
+        // 'quiz' 也可能模糊命中别的条目（fuse 允许错配），但 'Quiz' 精确标题
+        // 得分最低、所在 section 必须排第一。
+        expect(menu.renderData[0].name).toBe('teaching');
+        const best = menu.renderData[0].children[0];
+        expect(best.label).toBe('quiz');
+        expect(best.score!).toBeLessThan(0.001);
     });
 
     it('an exact localized title match scores ~0 and surfaces as the section', () => {

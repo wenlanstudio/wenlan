@@ -22,6 +22,7 @@ interface IFakeBlock {
     parent?: { insertAfter: ReturnType<typeof vi.fn> };
     replaceWith: ReturnType<typeof vi.fn>;
     firstContentInDescendant?: () => { text: string; setCursor: ReturnType<typeof vi.fn> };
+    lastContentInDescendant?: () => { text: string; setCursor: ReturnType<typeof vi.fn> };
 }
 
 // Regression for marktext 8891287b "fix paragraph turn into list bug (#1025)".
@@ -87,6 +88,11 @@ function makeFakeBlock(state: IFakeBlockState): IFakeBlock {
         replaceWith: vi.fn(),
         firstContentInDescendant: () => ({
             text: '',
+            setCursor: vi.fn(),
+        }),
+        // quiz 骨架的光标落在代码体（lastContent），其余标签只用 firstContent。
+        lastContentInDescendant: () => ({
+            text: '（在这里输入题干）',
             setCursor: vi.fn(),
         }),
     };
@@ -570,6 +576,30 @@ describe('replaceBlockByLabel — column marker slash commands (#17)', () => {
 
             const html = captured.find(c => c.label === 'html-block')!;
             expect(html.state.text).toBe('<div>\n\n</div>');
+        }
+        finally {
+            restore();
+        }
+    });
+
+    it('/quiz (#36): builds the quiz fence skeleton as a code-block with info `quiz answer=?`', () => {
+        const { captured, restore } = setupCreateSpy();
+        try {
+            replaceBlockByLabel({
+                block: makeFakeOriginBlock(),
+                muya: makeFakeMuya(),
+                label: 'quiz',
+            });
+
+            const quiz = captured.find(c => c.label === 'code-block')!;
+            expect(quiz).toBeTruthy();
+            expect(quiz.state.name).toBe('code-block');
+            // meta.lang 保存整条 info string 原文并原样序列化——```quiz answer=? 得以往返
+            expect(quiz.state.meta!.lang).toBe('quiz answer=?');
+            expect(quiz.state.meta!.type).toBe('fenced');
+            expect(quiz.state.text).toContain('（在这里输入题干）');
+            expect(quiz.state.text).toContain('- A. ');
+            expect(quiz.state.text).toContain('- D. ');
         }
         finally {
             restore();

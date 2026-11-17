@@ -199,6 +199,30 @@ const COLUMN_MARKER_TEXT: Record<'column-begin' | 'column-split' | 'column-end',
     'column-end': '<!-- end -->',
 };
 
+// `/quiz` 快速插入（#36）：```quiz 题面围栏骨架。info 串的 `answer=?` 刻意是
+// 认不出的占位——发布校验会拦（宁拒不猜），不会带着错答案静默发布；id 省略
+// 走 md2slides scan 的内容寻址，同一文档连插两道也不撞号。骨架题干占位句
+// 插入后处于选中态，键入即替换。
+const QUIZ_SKELETON_INFO = 'quiz answer=?';
+const QUIZ_SKELETON_STEM = '（在这里输入题干）';
+const QUIZ_SKELETON_BODY = [
+    QUIZ_SKELETON_STEM,
+    '',
+    '- A. 选项一',
+    '- B. 选项二',
+    '- C. 选项三',
+    '- D. 选项四',
+].join('\n');
+
+function buildQuizFenceBlock(muya: Muya) {
+    const quizState = deepClone(emptyStates['code-block']);
+    // meta.lang 保存整条 info string 原文且序列化原样回吐，```quiz answer=? 得以往返；
+    // 高亮只认首词，quiz 不是已知语言 → 普通无高亮代码块（编辑态对教学围栏 neutral）。
+    quizState.meta.lang = QUIZ_SKELETON_INFO;
+    quizState.text = QUIZ_SKELETON_BODY;
+    return ScrollPage.loadBlock('code-block').create(muya, quizState);
+}
+
 export function buildReplacementBlock(label: string, muya: Muya, text: string) {
     if (!canInsertLabel(label, muya))
         return null;
@@ -219,6 +243,9 @@ export function buildReplacementBlock(label: string, muya: Muya, text: string) {
             // block with the marker text instead of the default empty
             // `<div>\n\n</div>` scaffold.
             return buildLeafBlock('html-block', muya, COLUMN_MARKER_TEXT[label]);
+        case 'quiz':
+            // `/quiz`（#36）：课堂竞答题面围栏骨架（ADR-26 默认形态）。
+            return buildQuizFenceBlock(muya);
         case 'paragraph':
             // fall through
         case 'thematic-break':
@@ -314,9 +341,18 @@ function finishInsertedBlock(newBlock: Parent, muya: Muya, label: string) {
     placeCaretInNewBlock(newBlock, label);
 }
 
-// Move the caret into a freshly-built block: between <div>\n\n</div> for an
+// Move the caret into a freshly-built block: for a quiz skeleton select the
+// stem placeholder line (type to replace it), between <div>\n\n</div> for an
 // html-block, otherwise to the end of its text.
 function placeCaretInNewBlock(newBlock: Parent, label: string) {
+    // quiz 骨架的第一内容块是语言输入行（lang=quiz answer=?），要落的是代码体：
+    // 选中题干占位句，键入即替换。
+    if (label === 'quiz') {
+        const codeContent = newBlock.lastContentInDescendant();
+        codeContent?.setCursor(0, QUIZ_SKELETON_STEM.length, true);
+        return;
+    }
+
     const cursorBlock = newBlock.firstContentInDescendant();
     if (!cursorBlock)
         return;
