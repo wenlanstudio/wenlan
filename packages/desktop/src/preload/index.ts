@@ -20,6 +20,7 @@ import type {
   SaveDialogRequest
 } from '@shared/types/ipc'
 import type {
+  Md2rEngineConfig,
   Md2rEvent,
   Md2rFillTodosOpts,
   Md2rGuardOpts,
@@ -352,6 +353,10 @@ const mdcode2runAPI = {
   guard: (opts: Md2rGuardOpts) => invoke('mt::mdcode2run::guard', opts),
   fillTodos: (opts: Md2rFillTodosOpts) => invoke('mt::mdcode2run::fill-todos', opts),
   labReport: (opts: Md2rLabReportOpts) => invoke('mt::mdcode2run::lab-report', opts),
+  // ── 引擎层配置（设置面板读写 ~/.wenlan/mdcode2run.json）──
+  getEngineConfig: () => invoke('mt::mdcode2run::get-engine-config'),
+  setEngineConfig: (patch: Md2rEngineConfig) =>
+    invoke('mt::mdcode2run::set-engine-config', patch),
   onEvent: (listener: (event: Md2rEvent) => void): (() => void) =>
     ipcWrapper.on('mt::mdcode2run::event', (_event, payload) => listener(payload))
 }

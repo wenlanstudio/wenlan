@@ -379,7 +379,8 @@
         "searcher": "搜索器",
         "watcher": "监听器",
         "spelling": "拼写",
-        "custom css": "自定义 CSS"
+        "custom css": "自定义 CSS",
+        "codeexec": "代码执行"
       },
       "items": {
         "autoSave": "自动保存正在编辑的内容",
@@ -462,7 +463,8 @@
       "theme": "主题",
       "image": "图片",
       "keybindings": "快捷键",
-      "account": "账户"
+      "account": "账户",
+      "codeExec": "代码执行"
     },
     "general": {
       "title": "通用",
@@ -1286,5 +1288,38 @@
     "reportDone": "实验报告已提交",
     "needRun": "请先运行整份作业且断言通过，再提交步骤",
     "evidenceMissing": "没有可作证据的学生代码"
+  },
+  "codeExec": {
+    "title": "代码执行",
+    "notes": "运行讲义代码块的机器环境。优先级低于文档 front-matter 的 code-exec 段（文档值覆盖这里）。保存到 ~/.wenlan/mdcode2run.json，对新打开的文档生效。",
+    "save": "保存",
+    "saveOk": "已保存",
+    "saveFailed": "保存失败",
+    "loadFailed": "读取配置失败",
+    "configPath": "配置文件",
+    "language": {
+      "title": "语言运行时",
+      "javaHome": "JAVA_HOME",
+      "javaHomeNotes": "JDK 根目录或 bin 目录（JDK 11+）。留空回落到系统 JAVA_HOME。",
+      "javaHomePlaceholder": "例：D:/Program Files/Java/jdk-17.0.20.1",
+      "classPath": "CLASS_PATH",
+      "classPathNotes": "可选；留空则从 HADOOP_HOME 派生（8 个客户端 jar 目录）。分号分隔或 dir/*。",
+      "classPathPlaceholder": "留空则从 HADOOP_HOME 派生",
+      "pythonPath": "PYTHON_PATH",
+      "pythonPathNotes": "Python 解释器路径。",
+      "pythonPathPlaceholder": "留空自动探测"
+    },
+    "mr": {
+      "title": "MapReduce 执行器",
+      "notes": "本地作业提交（mr-job 文档）。留空回落到环境变量。",
+      "jdkHome": "JDK 目录",
+      "jdkHomePlaceholder": "例：D:/Program Files/Java/jdk-17.0.20.1",
+      "hadoopHome": "Hadoop 目录",
+      "hadoopHomeNotes": "完整发行版，含 share/hadoop 与 bin/winutils.exe。",
+      "hadoopHomePlaceholder": "例：D:/bigdata/hadoop/hadoop-3.1.3",
+      "winutilsHome": "Winutils 目录",
+      "winutilsHomeNotes": "可选；单基线 3.1.3 下默认同 Hadoop 目录。",
+      "winutilsHomePlaceholder": "通常与 Hadoop 目录相同"
+    }
   }
 }

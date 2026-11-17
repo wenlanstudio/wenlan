@@ -379,7 +379,8 @@
         "searcher": "Arayıcı",
         "watcher": "İzleyici",
         "spelling": "Yazım",
-        "custom css": "Özel CSS"
+        "custom css": "Özel CSS",
+        "codeexec": "Kod Yürütme"
       },
       "items": {
         "autoSave": "Düzenlenen içeriği otomatik olarak kaydet",
@@ -462,7 +463,8 @@
       "theme": "Tema",
       "image": "Görsel",
       "keybindings": "Kısayol Tuşları",
-      "account": "Hesap"
+      "account": "Hesap",
+      "codeExec": "Kod Yürütme"
     },
     "general": {
       "title": "Genel",
@@ -1286,5 +1288,38 @@
     "reportDone": "Laboratuvar raporu gönderildi",
     "needRun": "Bir adım göndermeden önce tüm işi çalıştırın (doğrulamalar geçilmeli)",
     "evidenceMissing": "Kanıt olarak gönderilecek öğrenci kodu yok"
+  },
+  "codeExec": {
+    "title": "Kod Yürütme",
+    "notes": "Kod bloklarını yürütmek için makine ortamı. front-matter code-exec'ten daha düşük öncelik.",
+    "save": "Kaydet",
+    "saveOk": "Kaydedildi",
+    "saveFailed": "Kaydetme başarısız",
+    "loadFailed": "Yapılandırma yüklenemedi",
+    "configPath": "Yapılandırma dosyası",
+    "language": {
+      "title": "Dil çalışma zamanları",
+      "javaHome": "JAVA_HOME",
+      "javaHomeNotes": "JDK kök veya bin dizini (JDK 11+). Boş = sistem JAVA_HOME.",
+      "javaHomePlaceholder": "örn. D:/Program Files/Java/jdk-17.0.20.1",
+      "classPath": "CLASS_PATH",
+      "classPathNotes": "İsteğe bağlı; boş = HADOOP_HOME'dan türetilir.",
+      "classPathPlaceholder": "HADOOP_HOME'dan türetmek için boş bırakın",
+      "pythonPath": "PYTHON_PATH",
+      "pythonPathNotes": "Python yorumlayıcı yolu.",
+      "pythonPathPlaceholder": "boşsa otomatik algılanır"
+    },
+    "mr": {
+      "title": "MapReduce yürütücüsü",
+      "notes": "Yerel iş gönderimi (mr-job). Boş = ortam değişkenleri.",
+      "jdkHome": "JDK dizini",
+      "jdkHomePlaceholder": "örn. D:/Program Files/Java/jdk-17.0.20.1",
+      "hadoopHome": "Hadoop dizini",
+      "hadoopHomeNotes": "share/hadoop ve bin/winutils.exe içeren tam dağıtım.",
+      "hadoopHomePlaceholder": "örn. D:/bigdata/hadoop/hadoop-3.1.3",
+      "winutilsHome": "Winutils dizini",
+      "winutilsHomeNotes": "İsteğe bağlı; varsayılan Hadoop ile aynı.",
+      "winutilsHomePlaceholder": "genellikle Hadoop ile aynı"
+    }
   }
 }

@@ -379,7 +379,8 @@
         "searcher": "Pesquisador",
         "watcher": "Observador",
         "spelling": "Ortografia",
-        "custom css": "CSS personalizado"
+        "custom css": "CSS personalizado",
+        "codeexec": "Execução de código"
       },
       "items": {
         "autoSave": "Salvar automaticamente o conteúdo sendo editado",
@@ -462,7 +463,8 @@
       "theme": "Tema",
       "image": "Imagem",
       "keybindings": "Atalhos de Teclado",
-      "account": "Conta"
+      "account": "Conta",
+      "codeExec": "Execução de código"
     },
     "general": {
       "title": "Geral",
@@ -1286,5 +1288,38 @@
     "reportDone": "Relatório de laboratório enviado",
     "needRun": "Execute o trabalho completo (asserções aprovadas) antes de enviar uma etapa",
     "evidenceMissing": "Sem código de estudante para enviar como evidência"
+  },
+  "codeExec": {
+    "title": "Execução de código",
+    "notes": "Ambiente específico da máquina para executar blocos de código. Prioridade inferior a front-matter code-exec.",
+    "save": "Salvar",
+    "saveOk": "Salvo",
+    "saveFailed": "Falha ao salvar",
+    "loadFailed": "Falha ao carregar a configuração",
+    "configPath": "Arquivo de configuração",
+    "language": {
+      "title": "Runtimes de linguagem",
+      "javaHome": "JAVA_HOME",
+      "javaHomeNotes": "Diretório raiz ou bin do JDK (JDK 11+). Vazio = JAVA_HOME do sistema.",
+      "javaHomePlaceholder": "ex. D:/Program Files/Java/jdk-17.0.20.1",
+      "classPath": "CLASS_PATH",
+      "classPathNotes": "Opcional; vazio = derivado de HADOOP_HOME.",
+      "classPathPlaceholder": "vazio para derivar de HADOOP_HOME",
+      "pythonPath": "PYTHON_PATH",
+      "pythonPathNotes": "Caminho do interpretador Python.",
+      "pythonPathPlaceholder": "detecção automática se vazio"
+    },
+    "mr": {
+      "title": "Executor MapReduce",
+      "notes": "Envio de job local (mr-job). Vazio = variáveis de ambiente.",
+      "jdkHome": "Diretório JDK",
+      "jdkHomePlaceholder": "ex. D:/Program Files/Java/jdk-17.0.20.1",
+      "hadoopHome": "Diretório Hadoop",
+      "hadoopHomeNotes": "Distribuição completa com share/hadoop e bin/winutils.exe.",
+      "hadoopHomePlaceholder": "ex. D:/bigdata/hadoop/hadoop-3.1.3",
+      "winutilsHome": "Diretório Winutils",
+      "winutilsHomeNotes": "Opcional; igual a Hadoop por padrão.",
+      "winutilsHomePlaceholder": "normalmente igual a Hadoop"
+    }
   }
 }

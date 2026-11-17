@@ -16,9 +16,11 @@ import type {
 import type { MenuTemplate, MenuPopupPosition, MenuStructureItem } from '@shared/types/menu'
 import type { SerializedStat } from '@shared/types/files'
 import type {
+  Md2rEngineConfig,
   Md2rEvent,
   Md2rFillResult,
   Md2rFillTodosOpts,
+  Md2rGetEngineConfigResult,
   Md2rGuardOpts,
   Md2rGuardResult,
   Md2rJournalEntry,
@@ -27,6 +29,7 @@ import type {
   Md2rParseResult,
   Md2rRunReport,
   Md2rRunResult,
+  Md2rSetEngineConfigResult,
   Md2rSetTeacherTraceOpts,
   Md2rStepsOpts,
   Md2rStepsResult,
@@ -376,6 +379,9 @@ declare global {
       guard(opts: Md2rGuardOpts): Promise<Md2rGuardResult>
       fillTodos(opts: Md2rFillTodosOpts): Promise<Md2rFillResult>
       labReport(opts: Md2rLabReportOpts): Promise<Md2rLabReport>
+      // ── 引擎层配置（设置面板读写 ~/.wenlan/mdcode2run.json）──
+      getEngineConfig(): Promise<Md2rGetEngineConfigResult>
+      setEngineConfig(patch: Md2rEngineConfig): Promise<Md2rSetEngineConfigResult>
       onEvent(listener: (event: Md2rEvent) => void): () => void
     }
     process: ProcessShim

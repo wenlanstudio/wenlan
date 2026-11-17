@@ -35,9 +35,11 @@ import type { BufferedState as BufferedStateType } from './bufferedState'
 import type { MenuTemplate, MenuPopupPosition, MenuStructureItem } from './menu'
 import type { PandocCommandInfo } from './pandoc'
 import type {
+  Md2rEngineConfig,
   Md2rEvent,
   Md2rFillResult,
   Md2rFillTodosOpts,
+  Md2rGetEngineConfigResult,
   Md2rGuardOpts,
   Md2rGuardResult,
   Md2rJournalEntry,
@@ -47,6 +49,7 @@ import type {
   Md2rRunDocumentOpts,
   Md2rRunReport,
   Md2rRunResult,
+  Md2rSetEngineConfigResult,
   Md2rSetTeacherTraceOpts,
   Md2rStepsOpts,
   Md2rStepsResult,
@@ -213,6 +216,17 @@ export interface IpcInvokeChannels {
   'mt::mdcode2run::lab-report': {
     args: [opts: Md2rLabReportOpts]
     ret: Md2rLabReport
+  }
+  // ── 引擎层配置（~/.wenlan/mdcode2run.json）：设置面板读写，秘密与机器参数 ──
+  // 读：合并自动探测打底 + 文件覆盖，另带落盘原文供面板编辑。
+  'mt::mdcode2run::get-engine-config': {
+    args: []
+    ret: Md2rGetEngineConfigResult
+  }
+  // 写：merge 到现有文件（不整文件覆盖，避免抹掉面板不认识的外族键）。
+  'mt::mdcode2run::set-engine-config': {
+    args: [patch: Md2rEngineConfig]
+    ret: Md2rSetEngineConfigResult
   }
   // M2 一键导出的出片半边（取数在 renderer 经 deck 页面完成）。大位图走服务旁路
   // 落盘（/x），IPC 只传目录路径——数百 MB 过 invoke 会把进程挂死（真机教训）。

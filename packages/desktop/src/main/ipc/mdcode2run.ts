@@ -21,9 +21,11 @@ import { app, ipcMain, webContents, type IpcMainInvokeEvent } from 'electron'
 
 import type {
   Md2rChapterInfo,
+  Md2rEngineConfig,
   Md2rEvent,
   Md2rFillResult,
   Md2rFillTodosOpts,
+  Md2rGetEngineConfigResult,
   Md2rGuardOpts,
   Md2rGuardResult,
   Md2rJournalEntry,
@@ -34,6 +36,7 @@ import type {
   Md2rRunDocumentOpts,
   Md2rRunReport,
   Md2rRunResult,
+  Md2rSetEngineConfigResult,
   Md2rSetTeacherTraceOpts,
   Md2rStepSourceOverride,
   Md2rStepsOpts,
@@ -47,7 +50,11 @@ import {
   attachJob,
   disposeAllEngines,
   disposeEngine,
+  engineConfigPath,
+  loadEngineProfile,
   loadMrProfile,
+  resolveEngineConfig,
+  saveEngineProfile,
   setEventSink,
   setTeacherTrace as applyTeacherTrace,
   stopJob,
@@ -295,6 +302,36 @@ const labReportHandler = (e: IpcMainInvokeEvent, opts: Md2rLabReportOpts): Md2rL
   return entry.engine.labReportOf(md, fileOptsOf(opts))
 }
 
+// ── 引擎层配置（~/.wenlan/mdcode2run.json）：设置面板读写 ──────────────────
+
+/** 读：合并探测打底 + 文件覆盖（config），另带落盘原文（saved）供面板编辑。 */
+const getEngineConfigHandler = (_e: IpcMainInvokeEvent): Md2rGetEngineConfigResult => ({
+  path: engineConfigPath(),
+  config: resolveEngineConfig(),
+  saved: loadEngineProfile()
+})
+
+/**
+ * 写：merge 到现有文件。只收 family → 对象 的形状，标量/数组键忽略。
+ * 保存成功后，已建的引擎实例仍持旧配置（createEngine 时固化了 config）——
+ * 面板保存后提示「重启或重开文档生效」，不做热更新（引擎会话/JVM 长驻，热更风险大）。
+ */
+const setEngineConfigHandler = (
+  _e: IpcMainInvokeEvent,
+  patch: Md2rEngineConfig
+): Md2rSetEngineConfigResult => {
+  if (!patch || typeof patch !== 'object' || Array.isArray(patch)) {
+    throw new Error('Invalid mdcode2run set-engine-config request')
+  }
+  const clean: Md2rEngineConfig = {}
+  for (const [family, value] of Object.entries(patch)) {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      clean[family] = value as Record<string, unknown>
+    }
+  }
+  return saveEngineProfile(clean)
+}
+
 export const registerMdcode2runHandlers = (): void => {
   // 引擎事件 → 定向推给 watcher（fromId 可能为 null：销毁竞态，跳过即静默丢帧）
   setEventSink((event: Md2rEvent, watcherIds: number[]): void => {
@@ -319,6 +356,8 @@ export const registerMdcode2runHandlers = (): void => {
   ipcMain.handle('mt::mdcode2run::guard', guardHandler)
   ipcMain.handle('mt::mdcode2run::fill-todos', fillTodosHandler)
   ipcMain.handle('mt::mdcode2run::lab-report', labReportHandler)
+  ipcMain.handle('mt::mdcode2run::get-engine-config', getEngineConfigHandler)
+  ipcMain.handle('mt::mdcode2run::set-engine-config', setEngineConfigHandler)
 
   // watcher 离场：webContents 销毁（关窗/reload）→ 从所有引擎摘掉该 watcher。
   app.on('web-contents-created', (_event, contents) => {

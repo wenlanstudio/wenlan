@@ -379,7 +379,8 @@
         "searcher": "Поиск",
         "watcher": "Наблюдение",
         "spelling": "Орфография",
-        "custom css": "Пользовательский CSS"
+        "custom css": "Пользовательский CSS",
+        "codeexec": "Выполнение кода"
       },
       "items": {
         "autoSave": "Автоматически сохранять редактируемое содержимое",
@@ -462,7 +463,8 @@
       "theme": "Тема",
       "image": "Изображения",
       "keybindings": "Горячие клавиши",
-      "account": "Учётная запись"
+      "account": "Учётная запись",
+      "codeExec": "Выполнение кода"
     },
     "general": {
       "title": "Общие",
@@ -1286,5 +1288,38 @@
     "reportDone": "Отчёт по лабораторной отправлен",
     "needRun": "Перед отправкой шага выполните задание целиком (проверки пройдены)",
     "evidenceMissing": "Нет кода студента для отправки в качестве доказательства"
+  },
+  "codeExec": {
+    "title": "Выполнение кода",
+    "notes": "Машинное окружение для выполнения блоков кода. Приоритет ниже front-matter code-exec.",
+    "save": "Сохранить",
+    "saveOk": "Сохранено",
+    "saveFailed": "Ошибка сохранения",
+    "loadFailed": "Не удалось загрузить конфигурацию",
+    "configPath": "Файл конфигурации",
+    "language": {
+      "title": "Рантаймы языков",
+      "javaHome": "JAVA_HOME",
+      "javaHomeNotes": "Корневой или bin-каталог JDK (JDK 11+). Пусто = системный JAVA_HOME.",
+      "javaHomePlaceholder": "напр. D:/Program Files/Java/jdk-17.0.20.1",
+      "classPath": "CLASS_PATH",
+      "classPathNotes": "Необязательно; пусто = из HADOOP_HOME.",
+      "classPathPlaceholder": "пусто для вывода из HADOOP_HOME",
+      "pythonPath": "PYTHON_PATH",
+      "pythonPathNotes": "Путь к интерпретатору Python.",
+      "pythonPathPlaceholder": "автоопределение, если пусто"
+    },
+    "mr": {
+      "title": "Исполнитель MapReduce",
+      "notes": "Локальная отправка задач (mr-job). Пусто = переменные окружения.",
+      "jdkHome": "Каталог JDK",
+      "jdkHomePlaceholder": "напр. D:/Program Files/Java/jdk-17.0.20.1",
+      "hadoopHome": "Каталог Hadoop",
+      "hadoopHomeNotes": "Полная сборка с share/hadoop и bin/winutils.exe.",
+      "hadoopHomePlaceholder": "напр. D:/bigdata/hadoop/hadoop-3.1.3",
+      "winutilsHome": "Каталог Winutils",
+      "winutilsHomeNotes": "Необязательно; как Hadoop по умолчанию.",
+      "winutilsHomePlaceholder": "обычно совпадает с Hadoop"
+    }
   }
 }

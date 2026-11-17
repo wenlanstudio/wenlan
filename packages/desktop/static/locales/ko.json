@@ -379,7 +379,8 @@
         "searcher": "검색기",
         "watcher": "감시자",
         "spelling": "맞춤법",
-        "custom css": "사용자 정의 CSS"
+        "custom css": "사용자 정의 CSS",
+        "codeexec": "코드 실행"
       },
       "items": {
         "autoSave": "편집 중인 내용을 자동으로 저장",
@@ -462,7 +463,8 @@
       "theme": "테마",
       "image": "이미지",
       "keybindings": "키 바인딩",
-      "account": "계정"
+      "account": "계정",
+      "codeExec": "코드 실행"
     },
     "general": {
       "title": "일반",
@@ -1286,5 +1288,38 @@
     "reportDone": "실습 보고서가 제출되었습니다",
     "needRun": "단계를 제출하기 전에 전체 작업을 실행하세요(어설션 통과)",
     "evidenceMissing": "증거로 제출할 학생 코드가 없습니다"
+  },
+  "codeExec": {
+    "title": "코드 실행",
+    "notes": "강의 코드 블록을 실행하는 머신 환경. front-matter code-exec보다 우선순위가 낮다. ~/.wenlan/mdcode2run.json에 저장.",
+    "save": "저장",
+    "saveOk": "저장됨",
+    "saveFailed": "저장 실패",
+    "loadFailed": "설정 로드 실패",
+    "configPath": "설정 파일",
+    "language": {
+      "title": "언어 런타임",
+      "javaHome": "JAVA_HOME",
+      "javaHomeNotes": "JDK 루트 또는 bin 디렉터리(JDK 11+). 비우면 시스템 JAVA_HOME으로 폴백.",
+      "javaHomePlaceholder": "예: D:/Program Files/Java/jdk-17.0.20.1",
+      "classPath": "CLASS_PATH",
+      "classPathNotes": "선택. 비우면 HADOOP_HOME에서 파생.",
+      "classPathPlaceholder": "비우면 HADOOP_HOME에서 파생",
+      "pythonPath": "PYTHON_PATH",
+      "pythonPathNotes": "Python 인터프리터 경로.",
+      "pythonPathPlaceholder": "비우면 자동 감지"
+    },
+    "mr": {
+      "title": "MapReduce 실행기",
+      "notes": "로컬 잡 제출(mr-job). 비우면 환경 변수로 폴백.",
+      "jdkHome": "JDK 디렉터리",
+      "jdkHomePlaceholder": "예: D:/Program Files/Java/jdk-17.0.20.1",
+      "hadoopHome": "Hadoop 디렉터리",
+      "hadoopHomeNotes": "share/hadoop과 bin/winutils.exe를 포함한 전체 배포판.",
+      "hadoopHomePlaceholder": "예: D:/bigdata/hadoop/hadoop-3.1.3",
+      "winutilsHome": "Winutils 디렉터리",
+      "winutilsHomeNotes": "선택. 단일 기준 3.1.3에서 Hadoop 디렉터리와 동일.",
+      "winutilsHomePlaceholder": "보통 Hadoop 디렉터리와 동일"
+    }
   }
 }

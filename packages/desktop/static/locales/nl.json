@@ -379,7 +379,8 @@
         "searcher": "Zoeker",
         "watcher": "Watcher",
         "spelling": "Spelling",
-        "custom css": "Aangepaste CSS"
+        "custom css": "Aangepaste CSS",
+        "codeexec": "Code-uitvoering"
       },
       "items": {
         "autoSave": "Automatisch de bewerkte inhoud opslaan",
@@ -462,7 +463,8 @@
       "theme": "Thema",
       "image": "Afbeelding",
       "keybindings": "Sneltoetsen",
-      "account": "Account"
+      "account": "Account",
+      "codeExec": "Code-uitvoering"
     },
     "general": {
       "title": "Algemeen",
@@ -1286,5 +1288,38 @@
     "reportDone": "Practicumverslag ingediend",
     "needRun": "Voer de hele job uit (asserties slagen) voordat u een stap indient",
     "evidenceMissing": "Geen studentcode om als bewijs in te dienen"
+  },
+  "codeExec": {
+    "title": "Code-uitvoering",
+    "notes": "Machine-specifieke omgeving voor het uitvoeren van codeblokken. Lagere prioriteit dan front-matter code-exec.",
+    "save": "Opslaan",
+    "saveOk": "Opgeslagen",
+    "saveFailed": "Opslaan mislukt",
+    "loadFailed": "Configuratie laden mislukt",
+    "configPath": "Configuratiebestand",
+    "language": {
+      "title": "Taalruntimes",
+      "javaHome": "JAVA_HOME",
+      "javaHomeNotes": "JDK-hoofd- of bin-map (JDK 11+). Leeg = systeem JAVA_HOME.",
+      "javaHomePlaceholder": "bv. D:/Program Files/Java/jdk-17.0.20.1",
+      "classPath": "CLASS_PATH",
+      "classPathNotes": "Optioneel; leeg = afgeleid van HADOOP_HOME.",
+      "classPathPlaceholder": "leeg laten om van HADOOP_HOME af te leiden",
+      "pythonPath": "PYTHON_PATH",
+      "pythonPathNotes": "Pad naar de Python-interpreter.",
+      "pythonPathPlaceholder": "automatische detectie indien leeg"
+    },
+    "mr": {
+      "title": "MapReduce-uitvoerder",
+      "notes": "Lokale jobindiening (mr-job). Leeg = omgevingsvariabelen.",
+      "jdkHome": "JDK-map",
+      "jdkHomePlaceholder": "bv. D:/Program Files/Java/jdk-17.0.20.1",
+      "hadoopHome": "Hadoop-map",
+      "hadoopHomeNotes": "Volledige distributie met share/hadoop en bin/winutils.exe.",
+      "hadoopHomePlaceholder": "bv. D:/bigdata/hadoop/hadoop-3.1.3",
+      "winutilsHome": "Winutils-map",
+      "winutilsHomeNotes": "Optioneel; standaard gelijk aan Hadoop-map.",
+      "winutilsHomePlaceholder": "meestal gelijk aan Hadoop-map"
+    }
   }
 }

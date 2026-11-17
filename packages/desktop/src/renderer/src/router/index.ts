@@ -12,6 +12,7 @@ import Theme from '@/prefComponents/theme/index.vue'
 import Image from '@/prefComponents/image/index.vue'
 import Keybindings from '@/prefComponents/keybindings/index.vue'
 import Account from '@/prefComponents/account/index.vue'
+import CodeExec from '@/prefComponents/codeexec/index.vue'
 
 const parseSettingsPage = (type: string | null | undefined): string => {
   let pageUrl = '/preference'
@@ -84,6 +85,11 @@ const routes = (type: string | null | undefined): RouteRecordRaw[] => [
         path: 'account',
         component: Account,
         name: 'account'
+      },
+      {
+        path: 'codeexec',
+        component: CodeExec,
+        name: 'codeexec'
       }
     ]
   }

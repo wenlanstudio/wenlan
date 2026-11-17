@@ -373,3 +373,30 @@ export interface Md2rLabReportOpts {
   previous?: Md2rTodoFill[]
   projectFiles?: Md2rProjectFile[]
 }
+
+// =================================================================
+// 引擎层配置（~/.wenlan/mdcode2run.json）：秘密与机器相关参数只放这层，
+// 讲义 front-matter 无权指定。设置面板「代码执行环境」读写此 JSON。
+// =================================================================
+
+/** 引擎层配置的一族（语言族或 mr 执行器的三路径）。键自由，值标量。 */
+export type Md2rEngineFamilyConfig = Record<string, unknown>
+
+/** 引擎层配置全文：family → { KEY: value }。`secrets` 给 preset ${NAME} 取真值。 */
+export type Md2rEngineConfig = Record<string, Md2rEngineFamilyConfig>
+
+/** 读当前引擎配置（含自动探测打底，如 Python 解释器路径）。 */
+export interface Md2rGetEngineConfigResult {
+  /** 配置文件的绝对路径（面板展示用，只读）。 */
+  path: string
+  /** 合并后的引擎配置（探测 + 文件覆盖）。 */
+  config: Md2rEngineConfig
+  /** 配置文件里原始落盘内容（面板编辑的起点，不含探测结果）。 */
+  saved: Md2rEngineConfig
+}
+
+/** 写回引擎配置。merge 到现有文件，不整文件覆盖。 */
+export interface Md2rSetEngineConfigResult {
+  ok: boolean
+  error?: string
+}

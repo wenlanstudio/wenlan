@@ -6,7 +6,8 @@ import {
   Picture as ImageIcon,
   Reading as SpellIcon,
   Operation as KeyBindingIcon,
-  User as AccountIcon
+  User as AccountIcon,
+  Cpu as CodeExecIcon
 } from '@element-plus/icons-vue'
 
 import preferences from '../../../../main/preferences/schema.json'
@@ -114,6 +115,12 @@ export const getCategory = (): PrefCategory[] => [
     label: 'account',
     icon: AccountIcon,
     path: '/preference/account'
+  },
+  {
+    name: t('preferences.categories.codeExec'),
+    label: 'codeExec',
+    icon: CodeExecIcon,
+    path: '/preference/codeexec'
   }
 ]
 

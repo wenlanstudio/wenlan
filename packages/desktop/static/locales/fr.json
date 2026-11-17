@@ -379,7 +379,8 @@
         "searcher": "Recherche",
         "watcher": "Surveillant",
         "spelling": "Orthographe",
-        "custom css": "CSS personnalisé"
+        "custom css": "CSS personnalisé",
+        "codeexec": "Exécution de code"
       },
       "items": {
         "autoSave": "Sauvegarder automatiquement le contenu en cours d'édition",
@@ -462,7 +463,8 @@
       "theme": "Thème",
       "image": "Image",
       "keybindings": "Raccourcis clavier",
-      "account": "Compte"
+      "account": "Compte",
+      "codeExec": "Exécution de code"
     },
     "general": {
       "title": "Général",
@@ -1286,5 +1288,38 @@
     "reportDone": "Compte rendu soumis",
     "needRun": "Exécutez le job complet (assertions réussies) avant de soumettre une étape",
     "evidenceMissing": "Aucun code d'étudiant à soumettre comme preuve"
+  },
+  "codeExec": {
+    "title": "Exécution de code",
+    "notes": "Environnement machine pour exécuter les blocs de code. Priorité inférieure à front-matter code-exec.",
+    "save": "Enregistrer",
+    "saveOk": "Enregistré",
+    "saveFailed": "Échec de l'enregistrement",
+    "loadFailed": "Impossible de charger la configuration",
+    "configPath": "Fichier de configuration",
+    "language": {
+      "title": "Runtimes de langage",
+      "javaHome": "JAVA_HOME",
+      "javaHomeNotes": "Répertoire racine ou bin du JDK (JDK 11+). Vide = JAVA_HOME système.",
+      "javaHomePlaceholder": "ex. D:/Program Files/Java/jdk-17.0.20.1",
+      "classPath": "CLASS_PATH",
+      "classPathNotes": "Facultatif; vide = dérivé de HADOOP_HOME.",
+      "classPathPlaceholder": "vide pour dériver de HADOOP_HOME",
+      "pythonPath": "PYTHON_PATH",
+      "pythonPathNotes": "Chemin de l'interpréteur Python.",
+      "pythonPathPlaceholder": "détection auto si vide"
+    },
+    "mr": {
+      "title": "Exécuteur MapReduce",
+      "notes": "Soumission de job local (mr-job). Vide = variables d'environnement.",
+      "jdkHome": "Répertoire JDK",
+      "jdkHomePlaceholder": "ex. D:/Program Files/Java/jdk-17.0.20.1",
+      "hadoopHome": "Répertoire Hadoop",
+      "hadoopHomeNotes": "Distribution complète avec share/hadoop et bin/winutils.exe.",
+      "hadoopHomePlaceholder": "ex. D:/bigdata/hadoop/hadoop-3.1.3",
+      "winutilsHome": "Répertoire Winutils",
+      "winutilsHomeNotes": "Facultatif; identique à Hadoop par défaut.",
+      "winutilsHomePlaceholder": "généralement identique à Hadoop"
+    }
   }
 }

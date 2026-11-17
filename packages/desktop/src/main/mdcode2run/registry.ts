@@ -132,6 +132,36 @@ export const loadEngineProfile = (): Record<string, Record<string, unknown>> => 
   }
 }
 
+/**
+ * 写回引擎层配置（配置面板保存）。只 merge 语言族对象，不整文件覆盖——避免把
+ * 用户手工加进去、面板不认识的外族键抹掉。写前确保 `.wenlan` 目录存在，原子写
+ * （先写临时文件再 rename，Windows 上 rename 覆盖已有文件会失败，先删再 rename）。
+ * 密码这类秘密参数本阶段仍走明文 JSON（M5 后续接 keytar 再加密落盘）。
+ * @returns {ok:boolean, error?:string} 失败不抛，让面板拿到可读原因。
+ */
+export const saveEngineProfile = (
+  patch: Record<string, Record<string, unknown>>
+): { ok: boolean; error?: string } => {
+  const file = engineConfigPath()
+  try {
+    const merged: Record<string, unknown> = { ...loadEngineProfile() }
+    for (const [family, value] of Object.entries(patch)) {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) continue
+      merged[family] = { ...(merged[family] as Record<string, unknown> | undefined), ...value }
+    }
+    fs.mkdirSync(path.dirname(file), { recursive: true })
+    const tmp = `${file}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(merged, null, 2), 'utf8')
+    if (fs.existsSync(file)) fs.rmSync(file)
+    fs.renameSync(tmp, file)
+    return { ok: true }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.warn(`[mdcode2run] 配置写回失败：${file}`, error)
+    return { ok: false, error: message }
+  }
+}
+
 /** 自动探测打底，文件配置覆盖同族同键（文件只给部分参数时不丢探测结果）。 */
 export const resolveEngineConfig = (): Record<string, Record<string, unknown>> => {
   const python = detectPython()
