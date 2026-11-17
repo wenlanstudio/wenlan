@@ -369,10 +369,12 @@ const postToDeck = (msg: Record<string, unknown>): void => {
 // —— 放映发题·页面注入模式（2026-11-16）：按钮/浮层都在 deck 页面内（exec-present），
 // 宿主只当数据桥：capability（教师进房开页面按钮）与 quiz-state（实况/揭晓投影）两条推送。
 // 实况数据全部来自 teaching store（opened 广播的 classroom.question 为本班显示序选项，
-// 与学生看到的一致）；倒计时由页面本地递减，宿主只在状态变化时推。
+// 与学生看到的一致）；倒计时以服务端 closeAt 为准，页面只递减展示，宿主状态帧一到即覆盖。
 // 注意：本段必须位于 postToDeck 定义之后（此前版本插在前面撞 TDZ，deckPane 挂载即炸）。
 const quizCapability = computed(() =>
-  teachingStore.classroom.role === 'host' && teachingStore.classroom.sessionId != null
+  teachingStore.classroom.role === 'host' &&
+  teachingStore.classroom.sessionId != null &&
+  teachingStore.classroom.connected
 )
 const pushQuizCapability = (): void => {
   postToDeck({ type: 'md2s:quiz-capability', enabled: quizCapability.value })
@@ -381,10 +383,11 @@ const pushQuizState = (): void => {
   const q = teachingStore.classroom.question
   const race = teachingStore.race
   const phase = race.error ? 'error' : race.reveal ? 'revealed' : race.openId != null ? 'running' : 'idle'
-  const remainingMs =
-    race.openId != null && race.openedAt && race.limitSec
-      ? Math.max(0, race.openedAt + race.limitSec * 1000 - Date.now())
-      : 0
+  // closeAt 是服务端权威；旧帧没有 closeAt 时才退回本地 openedAt 推算。
+  const countdownBase = race.closeAt || (race.openedAt && race.limitSec ? race.openedAt + race.limitSec * 1000 : 0)
+  const remainingMs = race.openId != null && countdownBase
+    ? Math.max(0, countdownBase - Date.now())
+    : 0
   postToDeck({
     type: 'md2s:quiz-state',
     phase,
@@ -394,9 +397,16 @@ const pushQuizState = (): void => {
     limitSec: race.limitSec,
     remainingSec: Math.ceil(remainingMs / 1000),
     answered: race.answered,
-    online: race.online,
+    // 在线人数在 joined 广播里也可能只更新 classroom（尚未发题时 race.online 还是 0）。
+    // 取 race 优先、classroom 兜底，浮层一打开就能看到真实在线数。
+    online: race.online || teachingStore.classroom.online || 0,
     reveal: race.reveal
-      ? { answer: race.reveal.answer, distribution: race.reveal.distribution, fastest: race.reveal.fastest ?? null }
+      ? {
+          answer: race.reveal.answer,
+          distribution: race.reveal.distribution,
+          fastest: race.reveal.fastest ?? null,
+          leaderboard: race.reveal.leaderboard
+        }
       : null,
     error: race.error || null
   })
@@ -414,11 +424,15 @@ watch(quizCapability, (enabled) => {
 watch(
   () => [
     teachingStore.race.openId,
+    teachingStore.race.openedAt,
+    teachingStore.race.closeAt,
+    teachingStore.race.limitSec,
     teachingStore.race.answered,
     teachingStore.race.online,
     teachingStore.race.reveal,
     teachingStore.race.error,
-    teachingStore.classroom.question
+    teachingStore.classroom.question,
+    teachingStore.classroom.online
   ],
   () => {
     if (quizCapability.value) pushQuizState()
@@ -529,36 +543,18 @@ const sendExecCapability = async (): Promise<void> => {
     const runnable = parsed.blocks.filter(
       b => b.runnable && diagramTypeOfLang(b.lang) === null
     )
-    const runnableSet = new Set(runnable.map(b => b.line))
-    // ⏩ 重放以 h1 章为边界：只有章内已有前置可跑块时才有意义。
-    const chapters = [...parsed.chapters].sort((a, b) => a.line - b.line)
-    const firstByChapter = new Map<number, number>()
-    for (const ch of chapters) {
-      const first = ch.fenceLines.find(l => runnableSet.has(l))
-      if (first !== undefined) firstByChapter.set(ch.line, first)
-    }
-    const chapterLineOf = (line: number): number => {
-      let key = -1
-      for (const ch of chapters) {
-        if (ch.line > line) break
-        key = ch.line
-      }
-      return key
-    }
     // blocks 行号是原始 md 的 0 基行号；deck 页面 pre 上的 data-src-start 却是
     // md2slides compose 后文本的行号（front-matter 被剥掉提前、分号段展开推后），
     // 两套坐标系有 front-matter 就对不上（#18：▶ 挂隔壁围栏、引擎跑错块）。
     // 所以块里带上围栏体正文 code，页面侧改按内容连接，行号只作兜底与消歧。
     const mdLines = props.markdown.split(/\r?\n/)
     const blocks = runnable.map(b => {
-      const first = firstByChapter.get(chapterLineOf(b.line))
       return {
         line: b.line,
         end: b.end,
         runnable: b.runnable,
         lang: b.lang,
         job: b.job,
-        replayable: first !== undefined && b.line > first,
         code: fenceBodyOf(mdLines, b.line, b.end)
       }
     })
@@ -573,7 +569,6 @@ const sendExecCapability = async (): Promise<void> => {
 const onExecRequest = async (data: {
   reqId: string
   line: number
-  replay?: boolean
 }): Promise<void> => {
   const reqId = String(data.reqId ?? '')
   const line = Number(data.line)
@@ -589,11 +584,13 @@ const onExecRequest = async (data: {
   const req: ExecReq = { reqId, docPath, line }
   execReq = req
   try {
+    // 放映态（老师讲台）：真执行、共享会话状态，但不落执行记录（src="present" 不记账）。
+    // 学生评判链读的是文视图 ▶ 的记录，放映不该污染它。
     const result = await window.mdcode2run.run({
       docPath,
       md: props.markdown,
       line,
-      replay: !!data.replay,
+      src: 'present',
       timeout: EXEC_TIMEOUT_MS
     })
     if (execReq !== req) return // 面板已关 / 文档已换：结果作废
@@ -711,7 +708,11 @@ const onMessage = (ev: MessageEvent): void => {
       pushQuizCapability()
       // 同一 watch 非 immediate 也漏了题列表预拉：按钮出来了但 race.questions 空，
       // 点下去报「题目不在本发布物的题列表」。capability 已 true 时在此补一次（幂等）。
-      if (quizCapability.value) teachingStore.loadRaceQuestions()
+      if (quizCapability.value) {
+        teachingStore.loadRaceQuestions()
+        // 断线重进/恢复已发题房间：页面重建后内存态是空的，补一次实况快照。
+        pushQuizState()
+      }
       // 跟随必须在 ready 之后发：重建/首帧之前 player 还不存在，消息会被丢弃。
       sendFollow()
       break
@@ -765,7 +766,7 @@ const onMessage = (ev: MessageEvent): void => {
       void onRpc(data as unknown as { id: number; diagramType: string; source: string })
       break
     case 'md2s:exec':
-      void onExecRequest(data as unknown as { reqId: string; line: number; replay?: boolean })
+      void onExecRequest(data as unknown as { reqId: string; line: number })
       break
     case 'md2s:exec-stop':
       onExecStop(data as unknown as { jobId: string })
@@ -792,6 +793,20 @@ const onMessage = (ev: MessageEvent): void => {
     case 'md2s:quiz-close':
       // 页面浮层 Esc 自行关闭的对称通知，宿主无动作（实况推送继续，供重开取数）
       break
+    case 'md2s:quiz-action': {
+      // 统一浮层的教师操作：文览与文枢走同一套 teaching.race.*，不再各判一次。
+      const action = String((data as { action?: unknown }).action ?? '')
+      if (action === 'close') {
+        teachingStore.closeRaceRound()
+      } else if (action === 'void') {
+        teachingStore.voidRaceRound()
+      } else if (action === 'reopen') {
+        const key = String((data as { questionKey?: unknown }).questionKey ?? '')
+        const q = teachingStore.race.questions.find(item => item.questionKey === key)
+        if (q) void teachingStore.openRaceQuestion(q).then(() => pushQuizState())
+      }
+      break
+    }
     case 'md2s:esc':
       exit()
       break

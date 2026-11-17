@@ -91,6 +91,7 @@ const runHandler = async(
     line: number
     replay?: boolean
     timeout?: number
+    src?: 'run' | 'replay' | 'trace' | 'present'
   }
 ): Promise<Md2rRunResult> => {
   if (
@@ -114,7 +115,8 @@ const runHandler = async(
   }
   const raw = await entry.engine.run(ctx, {
     replay: !!opts.replay,
-    timeout: opts.timeout
+    timeout: opts.timeout,
+    src: opts.src
   })
   return attachJob(entry, raw)
 }

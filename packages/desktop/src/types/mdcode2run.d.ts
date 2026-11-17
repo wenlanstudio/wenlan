@@ -59,7 +59,7 @@ declare module 'mdcode2run' {
     onChunk?: (info: { stream: string; text: string }) => void
     replay?: boolean
     timeout?: number
-    src?: 'run' | 'replay' | 'trace'
+    src?: 'run' | 'replay' | 'trace' | 'present'
   }
 
   /** runDocument 的引擎侧选项（lib/mr runDoc 的透传；docDir 缺省引擎的 documentDir）。 */

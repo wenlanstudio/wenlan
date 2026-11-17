@@ -354,6 +354,7 @@ declare global {
         line: number
         replay?: boolean
         timeout?: number
+        src?: 'run' | 'replay' | 'trace' | 'present'
       }): Promise<Md2rRunResult>
       runDocument(opts: {
         docPath: string

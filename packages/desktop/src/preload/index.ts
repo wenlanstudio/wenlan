@@ -329,6 +329,7 @@ const mdcode2runAPI = {
     line: number
     replay?: boolean
     timeout?: number
+    src?: 'run' | 'replay' | 'trace' | 'present'
   }) => invoke('mt::mdcode2run::run', opts),
   runDocument: (opts: {
     docPath: string
