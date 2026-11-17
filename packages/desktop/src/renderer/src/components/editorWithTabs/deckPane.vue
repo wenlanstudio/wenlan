@@ -798,6 +798,18 @@ const onMessage = (ev: MessageEvent): void => {
     case 'md2s:exec-cancel':
       if (execReq && execReq.reqId === String(data.reqId)) execReq = null
       break
+    case 'md2s:link-open': {
+      // 链接浮层「↗ 浏览器打开」：iframe 内嵌不了大站时的兜底。只放行 http(s)，
+      // 拦掉 javascript:/file: 等——链接文本来自讲义，不能让它借 shell 执行任意东西。
+      const raw = String((data as { url?: unknown }).url ?? '').trim()
+      try {
+        const u = new URL(raw)
+        if (u.protocol === 'https:' || u.protocol === 'http:') {
+          void window.electron.shell.openExternal(u.href)
+        }
+      } catch { /* 非法 URL 忽略 */ }
+      break
+    }
     case 'md2s:export-result':
       exportWaiter?.(data)
       exportWaiter = null

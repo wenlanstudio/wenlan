@@ -3,7 +3,7 @@ import fsPromises from 'fs/promises'
 import { exec } from 'child_process'
 import dayjs from 'dayjs'
 import log from 'electron-log'
-import { app, BrowserWindow, clipboard, dialog, nativeTheme, ipcMain } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, nativeTheme, ipcMain, session } from 'electron'
 import type { BrowserWindowConstructorOptions } from 'electron'
 import { isChildOfDirectory } from 'common/filesystem/paths'
 import type { IUserPreferences } from '@shared/types/preferences'
@@ -141,6 +141,12 @@ class App {
         this.ready()
       }
     })
+
+    // 放映态链接浮层用 iframe 内嵌网页（课堂里常见 http://node0:8088 这类本地
+    // 服务页）。这类服务几乎都回 X-Frame-Options: SAMEORIGIN，Chromium 据此拒绝
+    // 跨源 iframe 渲染 → 浮层白屏。只对子框架（iframe）文档响应剥掉 XFO 与 CSP
+    // frame-ancestors；顶层文档与其它资源一律不动。
+    app.whenReady().then(() => this._relaxFramingForEmbeddedPages())
 
     // Prevent to load webview and opening links or new windows via HTML/JS.
     app.on('web-contents-created', (_event, contents) => {
@@ -441,6 +447,47 @@ class App {
   }
 
   // --- private --------------------------------
+
+  /**
+   * 放映态「链接浮层」用 iframe 内嵌任意网页（kit/linkbox.js）。目标站点普遍回
+   * `X-Frame-Options: SAMEORIGIN` 或 CSP `frame-ancestors`，Chromium 据此拒绝跨源
+   * iframe 渲染 → 白屏。这里在响应头到达渲染器前剥掉这两种「禁止被嵌」指令。
+   *
+   * 收敛范围（避免放宽全局安全）：
+   *  - 只处理 `subFrame` 文档导航；顶层文档、脚本、图片等一律透传不动。
+   *  - 只删 XFO 头与 CSP 中的 `frame-ancestors` 指令，CSP 其余指令原样保留。
+   *  - 这是本地桌面应用的内嵌预览，不涉及浏览器里那种「任意第三方站点嵌套本站」的
+   *    点击劫持面——应用本身没有可被这样嵌套的会话态页面。
+   */
+  private _relaxFramingForEmbeddedPages(): void {
+    const webRequest = session.defaultSession?.webRequest
+    if (!webRequest) return
+    webRequest.onHeadersReceived((details, callback) => {
+      if (details.resourceType !== 'subFrame' || !details.responseHeaders) {
+        callback({ responseHeaders: details.responseHeaders })
+        return
+      }
+      const headers: Record<string, string[]> = {}
+      for (const [name, value] of Object.entries(details.responseHeaders)) {
+        const lower = name.toLowerCase()
+        if (lower === 'x-frame-options') continue
+        if (lower === 'content-security-policy' || lower === 'content-security-policy-report-only') {
+          const kept: string[] = []
+          for (const line of value) {
+            const directives = line
+              .split(';')
+              .map((part: string) => part.trim())
+              .filter((part: string) => part && !/^frame-ancestors\b/i.test(part))
+            if (directives.length) kept.push(directives.join('; '))
+          }
+          if (kept.length) headers[name] = kept
+          continue
+        }
+        headers[name] = value
+      }
+      callback({ responseHeaders: headers })
+    })
+  }
 
   /**
    * Creates a new editor window.
