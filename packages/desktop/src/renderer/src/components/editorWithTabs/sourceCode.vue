@@ -50,7 +50,8 @@ const {
   texMathDollars,
   texMathGfm,
   texMathSingleBackslash,
-  texMathDoubleBackslash
+  texMathDoubleBackslash,
+  zoom
 } = storeToRefs(preferencesStore)
 const { currentFile: currentTab } = storeToRefs(editorStore)
 
@@ -70,6 +71,18 @@ watch(
 
 watch(sourceCodeLineNumbers, (value) => {
   editor.value?.setOption('lineNumbers', value)
+})
+
+// 缩放改的是字号（见样式区注释）：CSS 变量即时生效，但 CodeMirror 的
+// 行高与视口测量缓存不会跟着重算，必须等字号真实重排后 refresh 重测，
+// 否则缩放后点击命中与光标又会错位。双 rAF = 等 Vue 的 :style 更新
+// 落到 DOM 并完成一次布局。
+watch(zoom, () => {
+  const cm = editor.value
+  if (!cm) return
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => cm.refresh())
+  })
 })
 
 // A fresh instance reads these at mount; the watch is for a preference changed
@@ -569,10 +582,15 @@ onBeforeUnmount(() => {
 }
 .source-code .CodeMirror {
   height: auto;
-  margin: 50px auto;
+  margin: calc(50px * var(--editor-zoom, 1)) auto;
   max-width: var(--editorAreaWidth);
   background: transparent;
-  zoom: var(--editor-zoom, 1);
+  /* 缩放走字号而非 CSS zoom：CodeMirror 的点击命中、光标/选区层
+     （absolute 定位）与文字层（文档流）共用一套布局像素坐标，容器上套
+     CSS zoom 后三层换算错位——zoom≠1 时光标画的位置与实际编辑位置差
+     十几行且越往下偏得越多，选择与编辑全乱。字号缩放下行高/行号随 em
+     走，CodeMirror 自测自量全程自洽（77566316 引入，用户 140% 实报）。 */
+  font-size: calc(1rem * var(--editor-zoom, 1));
 }
 .source-code .CodeMirror-gutters {
   border-right: none;
