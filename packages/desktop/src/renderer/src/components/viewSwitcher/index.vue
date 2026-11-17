@@ -11,8 +11,8 @@
       <input
         v-model.number="sliderValue"
         type="range"
-        min="400"
-        max="1200"
+        :min="minWidth"
+        :max="maxWidth"
         step="10"
         class="width-slider"
         @change="handleSliderChange"
@@ -74,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useEditorViewStore, TOP_VIEWS, visibleLeafList, type Leaf } from '@/store/editorView'
 import { usePreferencesStore } from '@/store/preferences'
@@ -125,9 +125,52 @@ const visibleLeaves = computed<Leaf[]>(() => visibleLeafList(hasColumns.value, i
 // 在 store.sliderDuty 里改语义即可。
 const DEFAULT_WIDTH = 750
 
+// 内容宽度随窗口等比缩放（2026-11-17 拍板）：两侧各留 3% 留白（上限 = 窗口 × 94%），
+// 下限不低于窗口 60%。用户拖滑块时记下「内容宽 / 窗口宽」的比例（localStorage），
+// 之后调整窗口大小按该比例反推内容宽度——不再是写死的绝对 px 上下限。
+const MARGIN_RATIO = 0.03 // 每侧留白 3%
+const MAX_RATIO = 1 - MARGIN_RATIO * 2 // 94%
+const MIN_RATIO = 0.6 // 下限：内容宽不低于窗口 60%
+const RATIO_STORAGE_KEY = 'editor-line-width-ratio'
+
 const parsePx = (value: string): number => {
   const m = value.trim().match(/^(\d+)px$/)
   return m ? Number(m[1]) : DEFAULT_WIDTH
+}
+
+const windowWidth = ref<number>(0)
+
+/** 滑块上限（px）：窗口 × 94%。窗口未测得时退回旧固定 1200。 */
+const maxWidth = computed<number>(() => {
+  const w = windowWidth.value
+  if (!w) return 1200
+  return Math.floor(w * MAX_RATIO)
+})
+
+/** 滑块下限（px）：窗口 × 60%。窗口未测得时退回旧固定 400。 */
+const minWidth = computed<number>(() => {
+  const w = windowWidth.value
+  if (!w) return 400
+  return Math.floor(w * MIN_RATIO)
+})
+
+/** 从 localStorage 读上次记住的「内容宽 / 窗口宽」比例；没有则 null。 */
+const readRatio = (): number | null => {
+  try {
+    const raw = localStorage.getItem(RATIO_STORAGE_KEY)
+    const n = raw == null ? NaN : Number(raw)
+    return Number.isFinite(n) && n > 0 ? n : null
+  } catch {
+    return null
+  }
+}
+
+const writeRatio = (ratio: number): void => {
+  try {
+    localStorage.setItem(RATIO_STORAGE_KEY, String(ratio))
+  } catch {
+    /* 隐私模式等场景下忽略，仅退化为不记忆 */
+  }
 }
 
 const sliderValue = ref<number>(parsePx(editorLineWidth.value))
@@ -142,7 +185,40 @@ const handleSliderChange = () => {
   if (editorLineWidth.value !== px) {
     preferencesStore.SET_SINGLE_PREFERENCE({ type: 'editorLineWidth', value: px })
   }
+  // 记住本次「内容宽 / 窗口宽」比例：下次 resize 按它等比缩放。
+  if (windowWidth.value > 0) {
+    writeRatio(sliderValue.value / windowWidth.value)
+  }
 }
+
+// 窗口宽度变化：若已记住比例，按比例反推内容宽度（写回 px），否则仅刷新上下限。
+const applyRatioOnResize = (): void => {
+  windowWidth.value = window.innerWidth
+  const ratio = readRatio()
+  if (ratio == null || windowWidth.value <= 0) return
+  const next = Math.round(windowWidth.value * ratio)
+  const lo = minWidth.value
+  const hi = maxWidth.value
+  const clamped = Math.min(hi, Math.max(lo, next))
+  sliderValue.value = clamped
+  const px = `${clamped}px`
+  if (editorLineWidth.value !== px) {
+    preferencesStore.SET_SINGLE_PREFERENCE({ type: 'editorLineWidth', value: px })
+  }
+}
+
+onMounted(() => {
+  windowWidth.value = window.innerWidth
+  // 首次挂载：没有记忆比例时，用当前 px 值（或默认）反推一个比例存下，作为后续基准。
+  if (readRatio() == null && windowWidth.value > 0) {
+    writeRatio(sliderValue.value / windowWidth.value)
+  }
+  window.addEventListener('resize', applyRatioOnResize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', applyRatioOnResize)
+})
 </script>
 
 <style scoped>
