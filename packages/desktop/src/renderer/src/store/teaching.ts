@@ -149,11 +149,13 @@ export interface RaceQuestion {
 }
 
 export interface LeaderboardRow {
+  rank?: number
   studentName: string
   studentNo: string
   score: number
   answers: number
   correct: number
+  offRoster?: boolean
 }
 
 /** 收卷揭晓载荷（`teaching.race.revealed`）：答案只在此时下发。 */
@@ -182,6 +184,8 @@ export interface RaceState {
   questionId: number | null
   limitSec: number
   openedAt: number
+  /** 服务端 closeAt 的本地时间戳；倒计时唯一权威，openedAt 只作旧帧兜底 */
+  closeAt: number
   answered: number
   online: number
   reveal: RaceReveal | null
@@ -236,6 +240,13 @@ const asNumber = (value: unknown, fallback = 0): number =>
 
 const asString = (value: unknown): string => (typeof value === 'string' ? value : '')
 
+/** 服务端 LocalDateTime.toString() → 本地时间戳；前端只投影，不再自己推算开题时刻。 */
+const asServerTime = (value: unknown): number => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/.exec(asString(value))
+  if (!m) return 0
+  return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], m[6] ? +m[6] : 0).getTime()
+}
+
 /** race.opened / joined.race 快照 → 当前题；questionKey 缺失时用 roundQid 兜底。 */
 const parseQuestion = (raw: unknown): ActiveQuiz | null => {
   if (!raw || typeof raw !== 'object') return null
@@ -276,6 +287,7 @@ const emptyRace = (): RaceState => ({
   questionId: null,
   limitSec: 30,
   openedAt: 0,
+  closeAt: 0,
   answered: 0,
   online: 0,
   reveal: null,
@@ -324,11 +336,13 @@ const parseLeaderboard = (raw: unknown): LeaderboardRow[] => {
   return raw.slice(0, 20).map((item) => {
     const row = (item ?? {}) as Record<string, unknown>
     return {
+      rank: asNumber(row.rank),
       studentName: asString(row.studentName),
       studentNo: asString(row.studentNo),
       score: asNumber(row.score),
       answers: asNumber(row.answers),
-      correct: asNumber(row.correct)
+      correct: asNumber(row.correct),
+      offRoster: row.offRoster === true
     }
   })
 }
@@ -568,6 +582,7 @@ export const useTeachingStore = defineStore('teaching', () => {
               asNumber(content.race && (content.race as Record<string, unknown>).questionId) ||
               race.value.questionId
             race.value.reveal = null
+            race.value.closeAt = asServerTime((content.race as Record<string, unknown>)?.closeAt)
             if (!race.value.openedAt) race.value.openedAt = Date.now()
           }
         } else if (role === 'student') {
@@ -599,7 +614,11 @@ export const useTeachingStore = defineStore('teaching', () => {
         race.value.questionId = asNumber(content.questionId) || null
         race.value.limitSec = asNumber(content.limitSec, race.value.limitSec)
         race.value.openedAt = Date.now()
+        race.value.closeAt = asServerTime(content.closeAt)
         race.value.answered = 0
+        // 还没收到 answered 广播前，浮层也要显示真实在线数；否则在线/已答两个
+        // 指标会一起停在 0，看起来像「实况没接上」。
+        race.value.online = classroom.value.online || race.value.online
         race.value.reveal = null
         race.value.error = ''
         if (classroom.value.role === 'student') {
@@ -624,6 +643,7 @@ export const useTeachingStore = defineStore('teaching', () => {
         race.value.reveal = parseReveal(content)
         race.value.openId = null
         race.value.questionId = null
+        race.value.closeAt = 0
         // 放映发题浮层（2026-11-16）：host 揭晓后仍要左栏题目+正确项高亮，题快照保留；
         // 学生端维持原语义（题位退回占位）
         if (classroom.value.role !== 'host') {
@@ -639,6 +659,7 @@ export const useTeachingStore = defineStore('teaching', () => {
       case 'teaching.race.voided':
         race.value.openId = null
         race.value.questionId = null
+        race.value.closeAt = 0
         race.value.answered = 0
         race.value.reveal = null
         classroom.value.question = null
@@ -647,6 +668,16 @@ export const useTeachingStore = defineStore('teaching', () => {
           studentQuiz.value.submitted = null
           studentQuiz.value.selected = null
           void refreshStudentDocument()
+        }
+        break
+      case 'teaching.session.taken-over':
+        // 同一教师从文枢 Web / 另一文览窗口接管：本端立刻降级为纯放映，
+        // 不再持有 host 身份，也不再对同一轮次发 open/close/void。
+        if (classroom.value.role === 'host') {
+          classroom.value.role = null
+          classroom.value.sessionId = null
+          classroom.value.error = '本课堂已由另一放映端接管，当前页转为只读放映'
+          race.value = emptyRace()
         }
         break
       case 'teaching.session.closed':
@@ -659,6 +690,7 @@ export const useTeachingStore = defineStore('teaching', () => {
         }
         classroom.value.question = null
         resetStudentQuizRound(studentQuiz.value)
+        race.value.closeAt = 0
         race.value.reveal = null
         void refreshStudentDocument()
         break
@@ -753,7 +785,10 @@ export const useTeachingStore = defineStore('teaching', () => {
    * **放映照常**。已在课中不重复调；未登录 / 学生 / 普通用户根本不进本方法。
    */
   const autoStart = async(pathname?: string): Promise<void> => {
-    if (classroom.value.sessionId != null) return
+    // 短路条件必须同时看 sessionId 与连接态：仅 sessionId 残留（上一次课堂未退出、
+    // 连接已断开）时不能短路——否则重新放映不会重进房，发题上行能成但广播收不到
+    // （教师端不在房间），浮层停在「等待发题 / 在线0 / 已答0」。
+    if (classroom.value.sessionId != null && classroom.value.connected) return
     // 门控（2026-11-15）：只有已登录的教师才检测发布物 / 自动开房。
     // 普通用户（含未登录）与登录的学生一律零请求——不登录也能一文多览。
     const auth = useAuthStore()
