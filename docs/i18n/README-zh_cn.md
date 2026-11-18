@@ -195,6 +195,13 @@ MarkText 正在开发中，请在提交 pull request 之前确保阅读[贡献�
 
 <a href="https://github.com/marktext/marktext/graphs/contributors"><img src="https://opencollective.com/marktext/contributors.svg?width=890" /></a>
 
+## 特别鸣谢
+
+- 信阳师范大学计算机与信息技术学院
+- 数据科学与大数据技术专业2023级本科3-6班同学
+- 数据科学与大数据技术专业2024级本科全班同学
+- 软件专业2024级本科全班同学
+
 ## 许可证
 
 [**MIT**](../../LICENSE).

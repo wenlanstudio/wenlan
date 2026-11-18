@@ -40,6 +40,20 @@
             {{ copyrightContributors }}
           </div>
         </el-col>
+        <el-col :span="24">
+          <div class="acknowledgements">
+            <div class="acknowledgements-title">
+              特别鸣谢
+            </div>
+            <div
+              v-for="line in acknowledgements"
+              :key="line"
+              class="acknowledgements-line"
+            >
+              {{ line }}
+            </div>
+          </div>
+        </el-col>
       </el-row>
     </el-dialog>
   </div>
@@ -57,6 +71,12 @@ const { t } = useI18n()
 const name = '文览'
 const copyright = t('about.copyright', { year: new Date().getFullYear() })
 const copyrightContributors = t('about.copyrightContributors')
+const acknowledgements = [
+  '信阳师范大学计算机与信息技术学院',
+  '数据科学与大数据技术专业2023级本科3-6班同学',
+  '数据科学与大数据技术专业2024级本科全班同学',
+  '软件专业2024级本科全班同学'
+]
 const showAboutDialog = ref(false)
 
 const store = useMainStore()
@@ -100,5 +120,24 @@ onBeforeUnmount(() => {
 
 .about-dialog .text {
   color: var(--floatFontColor);
+}
+
+.about-dialog .acknowledgements {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--floatBorderColor, rgba(128, 128, 128, 0.3));
+  color: var(--floatFontColor);
+  text-align: center;
+}
+
+.about-dialog .acknowledgements-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.about-dialog .acknowledgements-line {
+  font-size: 12px;
+  line-height: 1.7;
+  word-break: break-word;
 }
 </style>

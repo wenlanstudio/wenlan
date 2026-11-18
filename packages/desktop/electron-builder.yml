@@ -66,6 +66,14 @@ extraResources:
     filter:
       - '**/*'
       - '!locales/**/!(*.min).json'
+  # ssh2 是 mdcode2run（link: 依赖）的传递依赖，pnpm 收集器不会递归收它，
+  # 打包版一走远端 shell 就报 "SSH 库未安装"。作为运行时资源单独带一份，
+  # lib/runners/shell.js 的 loadSsh2 在 require 失败时回退到这里。
+  - from: runtime-deps/ssh2
+    to: runtime-deps/ssh2
+    filter:
+      - '**/*'
+      - 'node_modules/**/*'
 npmRebuild: false
 electronLanguages: # Keep Chromium/AppKit locales for the UI languages Wenlan supports
   # Values must cover both spellings: "xx-YY" .pak files on Windows/Linux and

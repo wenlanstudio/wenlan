@@ -3,6 +3,32 @@ import path from 'path'
 import { app, dialog, crashReporter } from 'electron'
 import log from 'electron-log'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
+import { fileURLToPath } from 'url'
+import Module from 'module'
+
+// mdcode2run 以 link: 依赖接入，electron-builder 的 pnpm 收集器不会递归收
+// 它的传递依赖；远端 shell 用的 ssh2 因此进不了 asar，打包版会报
+// "SSH 库未安装：请在 mdcode2run 目录下执行 npm install ssh2"。
+// 构建时把 ssh2 及纯 JS 依赖放进 extraResources/runtime-deps，这里在 main
+// 启动最早期把它注册为模块搜索路径，mdcode2run 的 require("ssh2") 零改动。
+{
+  const runtimeDepsDir = app.isPackaged
+    ? path.join(process.resourcesPath, 'runtime-deps')
+    : path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'runtime-deps')
+  // ssh2 的传递依赖放在 runtime-deps/ssh2/_node_modules（刻意不叫 node_modules，
+  // 否则 electron-builder 的全局 files 排除规则会把它从 extraResources 里剔掉）。
+  // NODE_PATH 只认目录名，不要求它叫 node_modules，require("asn1") 照样能解析。
+  const searchPaths = [
+    path.join(runtimeDepsDir, 'ssh2', '_node_modules'),
+    runtimeDepsDir
+  ]
+  const nodePath = process.env.NODE_PATH
+  process.env.NODE_PATH = nodePath
+    ? `${searchPaths.join(path.delimiter)}${path.delimiter}${nodePath}`
+    : searchPaths.join(path.delimiter)
+  // ESM 构建下 Module 对象仍可刷新 CJS 搜索路径（mdcode2run 是 CJS）。
+  ;(Module as unknown as { _initPaths: () => void })._initPaths()
+}
 
 // CDP 验收配方：electron-vite 对 electron 参数的透传隔着 `--` 分隔（Chromium 不认
 // 这个形态，调试端口起不来）。dev 验收用 WENLAN_CDP_PORT 注入端口；遮挡豁免全局

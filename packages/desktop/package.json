@@ -83,6 +83,7 @@
     "snabbdom": "^3.6.4",
     "snabbdom-to-html": "^7.1.0",
     "snapsvg-cjs": "^0.0.6",
+    "ssh2": "^1.16.0",
     "underscore": "^1.13.8",
     "vue-i18n": "^11.4.13",
     "vue-router": "^5.4.0",
