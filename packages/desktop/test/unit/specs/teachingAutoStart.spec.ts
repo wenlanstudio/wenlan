@@ -123,10 +123,13 @@ describe('teaching store · autoStart 课表自动开房（ADR-24）', () => {
     expect(store.classroom.autoNotice).toBe('')
   })
 
-  it('幂等：已在课中不再调 autoHost（连点示视图不重复判定）', async() => {
+  it('幂等：进房且 ws 连接确认后不再调 autoHost（断连时允许重进）', async() => {
     autoHostMock.mockResolvedValue(hitPayload())
     const store = useTeachingStore()
     await store.autoStart()
+    // 51cb1047 起短路看 sessionId + connected：不确认连接态时重进房是有意行为
+    // （否则发题上行能成、广播收不到）。这里模拟进房后 ws onStatus 帧到达。
+    store.classroom.connected = true
     await store.autoStart()
     expect(autoHostMock).toHaveBeenCalledTimes(1)
   })

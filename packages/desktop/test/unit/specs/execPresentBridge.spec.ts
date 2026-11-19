@@ -52,9 +52,9 @@ const CAP = {
   docPath: '/tmp/demo.md',
   enabled: true,
   blocks: [
-    { line: 2, end: 7, runnable: true, lang: 'python', job: false, replayable: false },
-    { line: 9, end: 13, runnable: true, lang: 'bash', job: false, replayable: true },
-    { line: 19, end: 24, runnable: false, lang: 'mermaid', job: false, replayable: false }
+    { line: 2, end: 7, runnable: true, lang: 'python', job: false },
+    { line: 9, end: 13, runnable: true, lang: 'bash', job: false },
+    { line: 19, end: 24, runnable: false, lang: 'mermaid', job: false }
   ]
 }
 
@@ -91,9 +91,9 @@ describe('exec-present bridge', () => {
     const t = boot(true)
     t.send(CAP)
     const btns = Array.from(t.w.document.querySelectorAll('.md2s-exec-run'))
-    expect(btns).toHaveLength(4) // python 两块切片 + bash 的 ▶/⏩
-    expect(btns.filter(b => b.textContent === '⏩')).toHaveLength(1)
-    expect(t.w.document.querySelectorAll('[data-md2s-activatable]')).toHaveLength(4)
+    expect(btns).toHaveLength(3) // python 两块切片 + bash；20b5842b 起不再注入 ⏩ 重放
+    expect(btns.filter(b => b.textContent === '⏩')).toHaveLength(0)
+    expect(t.w.document.querySelectorAll('[data-md2s-activatable]')).toHaveLength(3)
     expect(t.refreshed()).toBe(1)
     expect(t.w.document.querySelector('pre[data-src-start="20"] .md2s-exec-run')).toBeNull()
     expect(t.w.document.getElementById('md2s-exec-css')).not.toBeNull()
@@ -107,7 +107,8 @@ describe('exec-present bridge', () => {
     const req = t.sent.find(m => m.type === 'md2s:exec')
     expect(req).toBeDefined()
     expect(req?.line).toBe(2)
-    expect(req?.replay).toBe(false)
+    // 新契约：md2s:exec 只带 { reqId, docPath, line }，replay 字段已删（44f1cefa）
+    expect(req).not.toHaveProperty('replay')
     expect(req?.docPath).toBe('/tmp/demo.md')
     expect(t.w.document.querySelector('.md2s-exec-overlay')).not.toBeNull()
   })

@@ -71,10 +71,20 @@ test('a second instance started with --user-data-dir opens its file in the runni
   // CI runner can't use Chromium's SUID sandbox, so start the second instance
   // the same way.
   const sandboxArgs = process.platform === 'linux' ? ['--no-sandbox'] : []
+  // A host IDE can leak ELECTRON_RUN_AS_NODE=1 (as this test runner's sandbox
+  // does). If passed through, the second Electron boots as bare Node and dies
+  // on `electron.app.isPackaged`. Mirror launchElectron(): strip it out.
+  const env = { ...process.env, PERF_TESTING: 'true' }
+  delete env.ELECTRON_RUN_AS_NODE
+  // Use the real electron executable, not the electron.cmd shim: with shell:true
+  // the .cmd wrapper swallowed arguments and the child never signalled exit.
+  const electronExe = process.platform === 'win32'
+    ? path.join(projectRoot, 'node_modules', 'electron', 'dist', 'electron.exe')
+    : getElectronPath()
   const secondInstance = spawn(
-    getElectronPath(),
+    electronExe,
     [projectRoot, 'second.md', '--user-data-dir', userDataDir, ...sandboxArgs],
-    { cwd: docDir, env: { ...process.env, PERF_TESTING: 'true' } }
+    { cwd: docDir, env }
   )
   try {
     const { code, signal, output } = await waitForExit(secondInstance, 15000)

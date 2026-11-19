@@ -54,8 +54,11 @@ test.afterAll(async() => {
 
 test('release editor and preferences enforce web security', async() => {
   expect(new URL(page.url()).protocol).toBe('file:')
+  // The shell no longer exposes a "Settings" button; opening preferences is done
+  // via the mt::open-setting-window ipcMain handler. Fire it on the main side
+  // (sendIpcToRenderer is main->renderer and never reaches ipcMain.on).
   const opened = app.waitForEvent('window')
-  await page.getByRole('button', { name: 'Settings', exact: true }).click()
+  await app.evaluate(({ ipcMain }) => ipcMain.emit('mt::open-setting-window'))
   const preferences = await opened
   try {
     await preferences.waitForSelector('.pref-sidebar .category')

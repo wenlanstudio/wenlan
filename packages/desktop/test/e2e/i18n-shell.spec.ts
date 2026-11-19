@@ -52,6 +52,12 @@ test.describe('i18n shell — language switch re-translates the Vue shell', () =
     app = launched.app
     page = launched.page
     await waitForMenuReady(app)
+    // Drive en -> zh-CN from an English baseline. Seed English via IPC rather
+    // than a partial preferences.json (which would clobber defaults and stop
+    // the editor from mounting).
+    await sendIpcToRenderer(app, 'language-changed', 'en')
+    await sendIpcToRenderer(app, 'mt::user-preference', { language: 'en' })
+    await page.waitForTimeout(300)
   })
 
   test.afterAll(async() => {

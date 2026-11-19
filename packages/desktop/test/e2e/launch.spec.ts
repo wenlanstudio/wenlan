@@ -18,6 +18,7 @@ test.describe('Check Launch MarkText', () => {
 
   test('Empty MarkText', async() => {
     const title = await page.title()
-    expect(/^MarkText|Untitled-1 - MarkText$/.test(title)).toBeTruthy()
+    // Product was renamed to 文览 (Wenlan); accept both the new and legacy titles.
+    expect(title).toMatch(/文览|Wenlan|MarkText/)
   })
 })

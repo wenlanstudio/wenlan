@@ -5,6 +5,7 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import {
   clickMenuById,
+  cssAttr,
   launchElectron,
   openProjectFolder,
   readActiveTabFilename,
@@ -44,17 +45,22 @@ const createFixture = (): Fixture => {
 }
 
 const treeRow = (page: Page, filePath: string) =>
-  page.locator(`.tree-wrapper .side-bar-file[title="${filePath}"]`)
+  page.locator(`.tree-wrapper .side-bar-file[title="${cssAttr(filePath)}"]`)
 
 const folderHeader = (page: Page, folderPath: string) =>
-  page.locator(`.tree-wrapper .folder-name[title="${folderPath}"]`)
+  page.locator(`.tree-wrapper .folder-name[title="${cssAttr(folderPath)}"]`)
 
-// The tab strip is gone: switching to an already-open document is now done from
-// the side bar tree (clicking its row calls UPDATE_CURRENT_FILE), exactly the
-// way a user reaches it.
-const switchToTab = async(page: Page, filePath: string): Promise<void> => {
-  await treeRow(page, filePath).click()
-  await expect.poll(() => readActiveTabFilename(page)).toBe(path.basename(filePath))
+// The tab strip is gone. Cycling open documents is still a first-class command
+// (Ctrl+Tab) and, unlike the tree row, works when the file's folder is collapsed
+// — which is exactly the state these reveal tests set up.
+const switchToTab = async(app: ElectronApplication, page: Page, filePath: string): Promise<void> => {
+  const wanted = path.basename(filePath)
+  for (let i = 0; i < 10; i++) {
+    if ((await readActiveTabFilename(page)) === wanted) return
+    await sendIpcToRenderer(app, 'mt::execute-command-by-id', 'tabs.cycleForward')
+    await page.waitForTimeout(150)
+  }
+  expect(await readActiveTabFilename(page)).toBe(wanted)
 }
 
 // Hide the sidebar through the same View-menu entry the bottom-left button
@@ -82,7 +88,7 @@ const isFolderCollapsed = (page: Page, folderPath: string): Promise<boolean> =>
   page.evaluate((selector) => {
     const arrow = document.querySelector(`${selector} .icon-arrow`)
     return !!arrow && arrow.classList.contains('fold')
-  }, `.tree-wrapper .folder-name[title="${folderPath}"]`)
+  }, `.tree-wrapper .folder-name[title="${cssAttr(folderPath)}"]`)
 
 const setFolderExpanded = async(
   page: Page,
@@ -101,7 +107,7 @@ const isRowVisible = (page: Page, filePath: string): Promise<boolean> =>
     const rowRect = row.getBoundingClientRect()
     const containerRect = container.getBoundingClientRect()
     return rowRect.top >= containerRect.top - 1 && rowRect.bottom <= containerRect.bottom + 1
-  }, `.tree-wrapper .side-bar-file[title="${filePath}"]`)
+  }, `.tree-wrapper .side-bar-file[title="${cssAttr(filePath)}"]`)
 
 const openProject = async(app: ElectronApplication, page: Page, root: string): Promise<void> => {
   await page.waitForSelector('.side-bar', { timeout: 15000 })
@@ -142,7 +148,7 @@ test.describe('#528 reveal active file in the side bar', () => {
     await scrollTreeTo(page, 0)
     await expect(treeRow(page, fixture.deep)).toHaveCount(0)
 
-    await switchToTab(page, fixture.deep)
+    await switchToTab(app, page, fixture.deep)
 
     await expect(treeRow(page, fixture.deep)).toHaveCount(1)
     await expect(treeRow(page, fixture.deep)).toHaveClass(/current/)
@@ -188,7 +194,7 @@ test.describe('#528 reveal with autoRevealInSidebar turned off', () => {
     await setFolderExpanded(page, fixture.target, true)
     await openFileFromTree(page, fixture.deep)
     await openFileFromTree(page, fixture.top)
-    await switchToTab(page, fixture.deep)
+    await switchToTab(app, page, fixture.deep)
     await setFolderExpanded(page, fixture.target, false)
   })
 
@@ -198,8 +204,8 @@ test.describe('#528 reveal with autoRevealInSidebar turned off', () => {
   })
 
   test('switching documents does not touch the tree', async() => {
-    await switchToTab(page, fixture.top)
-    await switchToTab(page, fixture.deep)
+    await switchToTab(app, page, fixture.top)
+    await switchToTab(app, page, fixture.deep)
 
     expect(await isFolderCollapsed(page, fixture.target)).toBe(true)
     await expect(treeRow(page, fixture.deep)).toHaveCount(0)

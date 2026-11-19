@@ -113,6 +113,20 @@ test.describe('Parity G8 — language switch refreshes inline hints', () => {
   test('G8: an empty paragraph\'s quick-insert hint updates on language change', async() => {
     const { app, page } = await launchWithMarkdown('\n')
     await waitForMenuReady(app)
+    // This spec verifies en -> zh hint re-translation. Seed English via the
+    // same IPC the main process uses; writing a partial preferences.json would
+    // clobber defaults and break editor startup.
+    await sendIpcToRenderer(app, 'language-changed', 'en')
+    await sendIpcToRenderer(app, 'mt::user-preference', { language: 'en' })
+    await expect
+      .poll(async() => {
+        const hint = await page.evaluate(() => {
+          const p = document.querySelector('.editor-component span.mu-paragraph-content')
+          return p ? p.getAttribute('empty-hint') : null
+        })
+        return hint && /insert/i.test(hint) ? hint : null
+      }, { timeout: 5000 })
+      .toBeTruthy()
 
     const hintFor = (): Promise<string | null> =>
       page.evaluate(() => {
@@ -130,7 +144,15 @@ test.describe('Parity G8 — language switch refreshes inline hints', () => {
     // locale from the event payload, not from the still-stale `language.value`.
     await sendIpcToRenderer(app, 'language-changed', 'zh-CN')
     await sendIpcToRenderer(app, 'mt::user-preference', { language: 'zh-CN' })
-    await page.waitForTimeout(400)
+    // The main process also answers mt::get-current-language at startup; that
+    // reply can land after our switch and briefly restore English. Poll until
+    // the engine hint actually reflects zh-CN instead of a fixed 400ms sleep.
+    await expect
+      .poll(async() => {
+        const hint = await hintFor()
+        return hint && hint !== enHint ? hint : null
+      }, { timeout: 5000 })
+      .toBeTruthy()
 
     const zhHint = await hintFor()
     expect(zhHint).toBeTruthy()

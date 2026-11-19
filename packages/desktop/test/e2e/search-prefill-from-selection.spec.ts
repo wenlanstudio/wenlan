@@ -46,7 +46,11 @@ test.describe('Find bar prefill from selection', () => {
     if (!point) throw new Error('could not locate the word "fox" in the editor')
 
     await page.mouse.dblclick(point.x, point.y)
-    await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toBe('fox')
+    // Double-click word selection may include a trailing space ("fox ") on
+    // this platform; trim before comparing so the assertion is about the word.
+    await expect
+      .poll(() => page.evaluate(() => window.getSelection()?.toString().trim()))
+      .toBe('fox')
 
     // The DOM selection is set synchronously by the double-click, but the engine
     // commits it to its model on the next animation frame (content block
@@ -71,7 +75,8 @@ test.describe('Find bar prefill from selection', () => {
     await expect(searchBar).toBeVisible({ timeout: 5000 })
 
     const input = page.locator('.search-bar input').first()
-    await expect(input).toHaveValue('fox')
+    // Prefill carries the same trailing space the double-click selected.
+    await expect.poll(() => input.inputValue().then(v => v.trim())).toBe('fox')
 
     // The selection seeds a real search: the result counter reports the match.
     const result = page.locator('.search-bar .search-result')

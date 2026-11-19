@@ -18,7 +18,8 @@ import { launchWithMarkdown, waitForEditor } from './helpers'
  * （浮层里出现结算内容即可）。真跑 Hive 的门控用例在文件末尾。
  */
 
-const LEAF_PRESENT = '.leaf-btn[title="放映（一次一页）"]'
+// The present-leaf button was renamed to include "全屏" + "Esc 退出" (viewSwitcher LEAF_META).
+const LEAF_PRESENT = '.leaf-btn[title="全屏放映（一次一页，Esc 退出）"]'
 
 const MD = `# 放映代码运行 · 应用级回归
 
@@ -51,7 +52,9 @@ test.describe('示视图代码运行 — 完整 Electron 应用', () => {
     const leafBtn = page.locator(LEAF_PRESENT)
     await expect(leafBtn).toBeVisible()
     await leafBtn.click()
-    await expect(leafBtn).toHaveClass(/active/)
+    // Entering the 「映」 leaf hides the toolbar buttons (fullscreen deck takes
+    // over), so the clicked button detaches. The deck iframe below is the real
+    // proof the leaf switched — don't assert a stable /active/ class here.
 
     // ② deckPane 起本地服务、挂跨源 iframe、发 build、收到 ready 后下发能力表
     const deck = page.frameLocator('iframe[src*="deck.html"]')
@@ -88,10 +91,12 @@ test.describe('示视图代码运行 — 完整 Electron 应用', () => {
     const blur = await overlay.evaluate((el) => getComputedStyle(el).backdropFilter)
     expect(blur).toMatch(/blur\(2px\)/)
 
-    // ⑥ Esc 收浮层但不退放映（deckPane 若收到 md2s:esc 会把「示」叶关掉）
+    // ⑥ Esc 收浮层但不退放映（deckPane 若收到 md2s:esc 会把「示」叶关掉）。
+    // Assert the deck iframe is still mounted — the titled leaf button is not
+    // reliably present once the fullscreen toolbar re-renders.
     await overlay.press('Escape')
     await expect(overlay).toHaveCount(0)
-    await expect(page.locator(LEAF_PRESENT)).toHaveClass(/active/)
+    await expect(page.frameLocator('iframe[src*="deck.html"]').locator('body')).toBeAttached()
   })
 })
 

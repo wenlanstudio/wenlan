@@ -19,7 +19,6 @@ type CapBlock = {
   runnable: boolean
   lang: string
   job: boolean
-  replayable: boolean
   code?: string
 }
 
@@ -81,18 +80,18 @@ describe('exec-present ▶ 连接（#18 坐标系错位）', () => {
     const pre1 = makePre(2, "SELECT DATEDIFF('2022-07-01', '2022-05-01');")
     const pre2 = makePre(5, 'SELECT 2;')
     const blocks: CapBlock[] = [
-      { line: 4, end: 7, runnable: true, lang: 'sql', job: false, replayable: false, code: "SELECT DATEDIFF('2022-07-01', '2022-05-01');" },
-      { line: 7, end: 10, runnable: true, lang: 'sql', job: false, replayable: false, code: 'SELECT 2;' }
+      { line: 4, end: 7, runnable: true, lang: 'sql', job: false, code: "SELECT DATEDIFF('2022-07-01', '2022-05-01');" },
+      { line: 7, end: 10, runnable: true, lang: 'sql', job: false, code: 'SELECT 2;' }
     ]
     sendCapability(blocks)
 
     // 旧行号包含匹配下：pre1（composed 1）不在 [4,7) 里——▶ 压根不出现；
     // pre2（composed 4）落进 block1 的区间——▶ 挂错块。修复后各自命中。
     expect(clickRun(pre1)).toContainEqual(
-      expect.objectContaining({ type: 'md2s:exec', docPath: DOC_PATH, line: 4, replay: false })
+      expect.objectContaining({ type: 'md2s:exec', docPath: DOC_PATH, line: 4 })
     )
     expect(clickRun(pre2)).toContainEqual(
-      expect.objectContaining({ type: 'md2s:exec', line: 7, replay: false })
+      expect.objectContaining({ type: 'md2s:exec', line: 7 })
     )
   })
 
@@ -103,7 +102,7 @@ describe('exec-present ▶ 连接（#18 坐标系错位）', () => {
     const head = makePre(1, 'l0\nl1\nl2')
     const tail = makePre(5, 'l3\nl4')
     const blocks: CapBlock[] = [
-      { line: 0, end: 7, runnable: true, lang: 'sql', job: false, replayable: false, code: body }
+      { line: 0, end: 7, runnable: true, lang: 'sql', job: false, code: body }
     ]
     sendCapability(blocks)
 
@@ -114,7 +113,7 @@ describe('exec-present ▶ 连接（#18 坐标系错位）', () => {
   it('宿主未带 code（旧宿主）：退回行号区间包含兜底', () => {
     const pre = makePre(1, 'SELECT 1;')
     const blocks: CapBlock[] = [
-      { line: 0, end: 3, runnable: true, lang: 'sql', job: false, replayable: false }
+      { line: 0, end: 3, runnable: true, lang: 'sql', job: false }
     ]
     sendCapability(blocks)
     expect(clickRun(pre)).toContainEqual(expect.objectContaining({ type: 'md2s:exec', line: 0 }))
@@ -124,9 +123,9 @@ describe('exec-present ▶ 连接（#18 坐标系错位）', () => {
     const pre = makePre(4, 'bar\nbaz')
     const blocks: CapBlock[] = [
       // block A：整行含 bar/baz，行号近（composed 3 vs line 2，距离 1）。
-      { line: 2, end: 6, runnable: true, lang: 'sql', job: false, replayable: false, code: 'foo\nbar\nbaz' },
+      { line: 2, end: 6, runnable: true, lang: 'sql', job: false, code: 'foo\nbar\nbaz' },
       // block B：只有行中片段 "xbar\nbaz y"——containsLineSlice 必须不认。
-      { line: 10, end: 14, runnable: true, lang: 'sql', job: false, replayable: false, code: 'xbar\nbaz y' }
+      { line: 10, end: 14, runnable: true, lang: 'sql', job: false, code: 'xbar\nbaz y' }
     ]
     sendCapability(blocks)
     expect(clickRun(pre)).toContainEqual(expect.objectContaining({ type: 'md2s:exec', line: 2 }))

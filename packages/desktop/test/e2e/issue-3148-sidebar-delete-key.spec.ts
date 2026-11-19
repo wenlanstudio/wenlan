@@ -100,7 +100,9 @@ test.describe('Sidebar Delete key (#3148)', () => {
 
     await expect.poll(() => trashCount(app)).toBe(1)
     const dialogs = await trashDialogs(app)
-    expect(String(dialogs[dialogs.length - 1]?.message)).toContain(String(pathname).split('/').pop())
+    // path.basename handles both Windows backslashes and POSIX slashes;
+    // split('/') returned the whole path on Windows.
+    expect(String(dialogs[dialogs.length - 1]?.message)).toContain(path.basename(String(pathname)))
   })
 
   test('Delete inside the editor edits text instead of trashing the selection', async() => {
