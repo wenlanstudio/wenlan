@@ -1282,7 +1282,7 @@
   },
   "codeExec": {
     "title": "Kod Yürütme",
-    "notes": "Belgelerdeki kod bloklarını çalıştırmak için kullanılan makine ortamı.",
+    "notes": "Kod bloklarını çalıştırmak için kullanılan makine ortamı.",
     "save": "Kaydet",
     "saveOk": "Kaydedildi",
     "saveFailed": "Kaydetme başarısız",

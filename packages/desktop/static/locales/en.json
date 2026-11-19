@@ -1282,7 +1282,7 @@
   },
   "codeExec": {
     "title": "Code Execution",
-    "notes": "Machine environment used to run code blocks in documents.",
+    "notes": "Machine environment used to run code blocks.",
     "save": "Save",
     "saveOk": "Saved",
     "saveFailed": "Save failed",

@@ -1282,7 +1282,7 @@
   },
   "codeExec": {
     "title": "Codeausführung",
-    "notes": "Maschinenumgebung zum Ausführen von Codeblöcken in Dokumenten.",
+    "notes": "Maschinenumgebung zum Ausführen von Codeblöcken.",
     "save": "Speichern",
     "saveOk": "Gespeichert",
     "saveFailed": "Speichern fehlgeschlagen",

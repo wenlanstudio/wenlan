@@ -1282,7 +1282,7 @@
   },
   "codeExec": {
     "title": "Code-uitvoering",
-    "notes": "Machine-omgeving voor het uitvoeren van codeblokken in documenten.",
+    "notes": "Machine-omgeving voor het uitvoeren van codeblokken.",
     "save": "Opslaan",
     "saveOk": "Opgeslagen",
     "saveFailed": "Opslaan mislukt",

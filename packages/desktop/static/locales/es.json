@@ -1282,7 +1282,7 @@
   },
   "codeExec": {
     "title": "Ejecución de código",
-    "notes": "Entorno de la máquina usado para ejecutar los bloques de código de los documentos.",
+    "notes": "Entorno de la máquina usado para ejecutar los bloques de código.",
     "save": "Guardar",
     "saveOk": "Guardado",
     "saveFailed": "Error al guardar",
