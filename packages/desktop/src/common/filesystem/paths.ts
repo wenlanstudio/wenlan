@@ -188,3 +188,22 @@ export const checkPathExcludePattern = (pathname: string, patterns: readonly str
   }
   return false
 }
+
+/**
+ * True for a volume root: `D:\`, `D:/`, `C:\` on Windows, `/` on POSIX, and a
+ * UNC share root such as `\\server\share`. A path with a segment after the
+ * drive (`D:\Projects`) is a normal directory, not a root.
+ *
+ * Using a volume root as the file-tree root makes chokidar enumerate and watch
+ * the whole volume recursively, which freezes the sidebar on large disks.
+ */
+export const isDriveRoot = (pathname: string): boolean => {
+  if (typeof pathname !== 'string') return false
+  const trimmed = pathname.trim()
+  if (!trimmed) return false
+  const normalized = trimmed.replace(/[\\/]+$/, '')
+  // "D:\", "D:/", "D:" → "D:" ; "/" → ""
+  if (/^[A-Za-z]:$/.test(normalized) || normalized === '') return true
+  // UNC share root with no segment below the share
+  return /^(?:\\\\|\/\/)[^\\/]+[\\/][^\\/]+$/.test(normalized)
+}

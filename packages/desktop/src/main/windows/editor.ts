@@ -3,7 +3,7 @@ import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import type { BrowserWindowConstructorOptions } from 'electron'
 import log from 'electron-log'
 import windowStateKeeper from 'electron-window-state'
-import { isChildOfDirectory, isSamePathSync } from 'common/filesystem/paths'
+import { isChildOfDirectory, isDriveRoot, isSamePathSync } from 'common/filesystem/paths'
 import BaseWindow, { WindowLifecycle, WindowType } from './base'
 import type Accessor from '../app/accessor'
 import { ensureWindowPosition, zoomIn, zoomOut } from './utils'
@@ -395,6 +395,16 @@ class EditorWindow extends BaseWindow {
       return
     }
 
+    if (isDriveRoot(pathname)) {
+      this.browserWindow?.webContents.send('mt::show-notification', {
+        title: 'Cannot open folder',
+        type: 'warning',
+        message:
+          'A whole drive cannot be used as the file list. Please select a project folder inside it.'
+      })
+      return
+    }
+
     if (this.lifecycle === WindowLifecycle.READY) {
       const { browserWindow } = this
       const { menu: appMenu, preferences } = this._accessor
@@ -427,6 +437,10 @@ class EditorWindow extends BaseWindow {
     ) {
       return
     }
+
+    // Opening a file directly in a volume root (e.g. D:\notes.md) must not
+    // re-root the tree to the whole drive and trigger a full-disk watch.
+    if (isDriveRoot(pathname)) return
 
     if (this.lifecycle !== WindowLifecycle.READY) return
 

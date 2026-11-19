@@ -5,7 +5,7 @@ import dayjs from 'dayjs'
 import log from 'electron-log'
 import { app, BrowserWindow, clipboard, dialog, nativeTheme, ipcMain, session } from 'electron'
 import type { BrowserWindowConstructorOptions } from 'electron'
-import { isChildOfDirectory } from 'common/filesystem/paths'
+import { isChildOfDirectory, isDriveRoot } from 'common/filesystem/paths'
 import type { IUserPreferences } from '@shared/types/preferences'
 import { isLinux, isOsx, isWindows } from '../config'
 import parseArgs from '../cli/parser'
@@ -853,7 +853,7 @@ class App {
         defaultPath: defaultDirectoryToOpen,
         properties: ['openDirectory', 'createDirectory']
       })
-      if (filePaths && filePaths[0]) {
+      if (filePaths && filePaths[0] && !isDriveRoot(filePaths[0])) {
         preferences.setItems({ defaultDirectoryToOpen: filePaths[0] })
       }
     })

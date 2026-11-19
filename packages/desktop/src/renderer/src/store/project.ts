@@ -203,16 +203,44 @@ export const useProjectStore = defineStore('project', () => {
 
   function LISTEN_FOR_UPDATE_PROJECT(): void {
     window.electron.ipcRenderer.on('mt::update-object-tree', (_e, payload) => {
-      const { type, change } = (payload as { type: string; change: TreeChange }) ?? {}
-      if (!projectTree.value) {
-        pendingTreeEvents.value.push({ type, change })
+      const data = (payload as {
+        type: string
+        change?: TreeChange
+        changes?: Array<{ type: string; change: TreeChange }>
+      }) ?? {}
+      // The main process batches the bulk initial scan into metadata-only
+      // changes. Replay them in order, then bump the version once so the tree
+      // component re-renders a single time instead of once per file.
+      if (data.type === 'batch' && data.changes) {
+        if (!projectTree.value) {
+          for (const event of data.changes) {
+            pendingTreeEvents.value.push(event)
+          }
+          return
+        }
+        for (const event of data.changes) {
+          _applyTreeEvent(event.type, event.change)
+        }
+        treeVersion.value++
         return
       }
-      _processTreeEvent(type, change)
+
+      const { type, change } = data
+      if (!projectTree.value) {
+        pendingTreeEvents.value.push({ type, change: change as TreeChange })
+        return
+      }
+      _processTreeEvent(type, change as TreeChange)
     })
   }
 
   function _processTreeEvent(type: string, change: TreeChange): void {
+    _applyTreeEvent(type, change)
+    // The mutations above are in place, so watchers need a counter to react to.
+    treeVersion.value++
+  }
+
+  function _applyTreeEvent(type: string, change: TreeChange): void {
     const editorStore = useEditorStore()
     switch (type) {
       case 'add': {
@@ -246,9 +274,6 @@ export const useProjectStore = defineStore('project', () => {
         }
         break
     }
-
-    // The mutations above are in place, so watchers need a counter to react to.
-    treeVersion.value++
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

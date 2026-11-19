@@ -4,6 +4,7 @@ import path from 'path'
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import log from 'electron-log'
 import { t } from '../i18n'
+import { isDriveRoot } from 'common/filesystem/paths'
 
 /**
  * 课程工作区（edu-client E3.0）的本地根目录。
@@ -40,7 +41,12 @@ export const defaultProjectsRoot = (): string => path.join(os.homedir(), DEFAULT
 export const ensureProjectsRoot = (): string => {
   const prefs = requirePreferences()
   let root = asPath(prefs.getItem<string>('projectsRoot'))
-  if (!root) {
+  if (!root || isDriveRoot(root)) {
+    // A persisted volume root (e.g. a bad installer handoff or an old build)
+    // would be opened as the file-tree root and watch the entire disk.
+    if (root) {
+      log.warn(`[teaching] ignoring invalid projectsRoot volume root: ${root}`)
+    }
     root = defaultProjectsRoot()
     prefs.setItem('projectsRoot', root)
   }
@@ -71,7 +77,9 @@ export const applyInstallerProjectsRoot = (userDataPath: string): void => {
 
   try {
     const picked = fs.readFileSync(handoff, 'utf16le').replace(/^\uFEFF/, '').trim()
-    if (picked && !asPath(preferences.getItem<string>('projectsRoot'))) {
+    if (picked && isDriveRoot(picked)) {
+      log.warn(`[teaching] installer proposed a volume root, ignoring: ${picked}`)
+    } else if (picked && !asPath(preferences.getItem<string>('projectsRoot'))) {
       preferences.setItem('projectsRoot', picked)
       log.info(`[teaching] projectsRoot seeded from installer: ${picked}`)
     }
@@ -109,6 +117,14 @@ export const chooseProjectsRootForWindow = async(win: BrowserWindow): Promise<st
     properties: ['openDirectory', 'createDirectory']
   })
   if (canceled || !filePaths?.[0]) return null
+
+  if (isDriveRoot(filePaths[0])) {
+    dialog.showErrorBox(
+      t('teaching.workspaceError'),
+      'A whole drive cannot be used as the course workspace. Please select a folder inside it.'
+    )
+    return null
+  }
 
   try {
     requirePreferences().setItem('projectsRoot', filePaths[0])

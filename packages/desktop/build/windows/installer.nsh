@@ -66,6 +66,17 @@ FunctionEnd
 
 Function mtProjectsPageLeave
   ${NSD_GetText} $mtProjectsField $mtProjectsRoot
+  ; 盘符根（如 D:\）会让文览的文件列表递归监听整个磁盘而卡死。
+  ; 长度 <= 3 且形如 X:\ / X: 的输入回退到默认工作区。
+  StrLen $0 "$mtProjectsRoot"
+  ${If} $0 <= 3
+    StrCpy $1 "$mtProjectsRoot" 1
+    StrCpy $2 "$mtProjectsRoot" 1 1
+    ${If} $2 == ":"
+      StrCpy $mtProjectsRoot "$PROFILE\WenlanProjects"
+      ${NSD_SetText} $mtProjectsField "$mtProjectsRoot"
+    ${EndIf}
+  ${EndIf}
 FunctionEnd
 !endif
 

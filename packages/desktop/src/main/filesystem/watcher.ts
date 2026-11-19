@@ -3,7 +3,7 @@ import fsPromises from 'fs/promises'
 import log from 'electron-log'
 import chokidar, { type FSWatcher } from 'chokidar'
 import { exists } from 'common/filesystem'
-import { hasMarkdownExtension, checkPathExcludePattern } from 'common/filesystem/paths'
+import { hasMarkdownExtension, checkPathExcludePattern, isDriveRoot } from 'common/filesystem/paths'
 import { getUniqueId } from '../utils'
 import { loadMarkdownFile } from '../filesystem/markdown'
 import { isLinux, isOsx } from '../config'
@@ -41,6 +41,30 @@ interface WatcherEntry {
   close: () => void
 }
 
+interface FileMeta {
+  pathname: string
+  name: string
+  isFile: boolean
+  isDirectory: boolean
+  birthTime: Date
+  mtimeMs: number
+  isMarkdown: boolean
+}
+
+/** Metadata only — no file content read. Used for the bulk initial scan. */
+const fileMetaOf = async(pathname: string): Promise<FileMeta> => {
+  const stats = await fsPromises.stat(pathname)
+  return {
+    pathname,
+    name: path.basename(pathname),
+    isFile: true,
+    isDirectory: false,
+    birthTime: stats.birthtime,
+    mtimeMs: stats.mtimeMs,
+    isMarkdown: hasMarkdownExtension(pathname)
+  }
+}
+
 const add = async(
   win: BrowserWindow,
   pathname: string,
@@ -50,29 +74,10 @@ const add = async(
   trimTrailingNewline: number,
   autoNormalizeLineEndings: boolean
 ): Promise<void> => {
-  const stats = await fsPromises.stat(pathname)
-  const birthTime = stats.birthtime
-  const mtimeMs = stats.mtimeMs
-  const isMarkdown = hasMarkdownExtension(pathname)
-  const file: {
-    pathname: string
-    name: string
-    isFile: boolean
-    isDirectory: boolean
-    birthTime: Date
-    mtimeMs: number
-    isMarkdown: boolean
+  const file: FileMeta & {
     data?: Awaited<ReturnType<typeof loadMarkdownFile>>
-  } = {
-    pathname,
-    name: path.basename(pathname),
-    isFile: true,
-    isDirectory: false,
-    birthTime,
-    mtimeMs,
-    isMarkdown
-  }
-  if (isMarkdown) {
+  } = await fileMetaOf(pathname)
+  if (file.isMarkdown) {
     // HACK: But this should be removed completely in #1034/#1035.
     try {
       const data = await loadMarkdownFile(
@@ -156,23 +161,23 @@ const change = async(
   }
 }
 
+const directoryMetaOf = (pathname: string) => ({
+  pathname,
+  name: path.basename(pathname),
+  isCollapsed: true,
+  isDirectory: true,
+  isFile: false,
+  isMarkdown: false,
+  folders: [],
+  files: []
+})
+
 const addDir = (win: BrowserWindow, pathname: string, type: WatchType): void => {
   if (type === 'file') return
 
-  const directory = {
-    pathname,
-    name: path.basename(pathname),
-    isCollapsed: true,
-    isDirectory: true,
-    isFile: false,
-    isMarkdown: false,
-    folders: [],
-    files: []
-  }
-
   win.webContents.send('mt::update-object-tree', {
     type: 'addDir',
-    change: directory
+    change: directoryMetaOf(pathname)
   })
 }
 
@@ -198,6 +203,22 @@ class Watcher {
   }
 
   watch(win: BrowserWindow, watchPath: string, type: WatchType = 'dir'): () => void {
+    // A volume root (e.g. D:\) would make chokidar enumerate and watch the
+    // entire disk recursively — thousands of directories and file descriptors
+    // for a file tree nobody asked to see. Refuse at the single choke point so
+    // every caller (open folder, teaching workspace, installer handoff) is
+    // covered. Return a no-op closer to keep the caller contract intact.
+    if (type === 'dir' && isDriveRoot(watchPath)) {
+      log.warn(`Refusing to watch a volume root: ${watchPath}`)
+      win.webContents.send('mt::show-notification', {
+        title: 'Cannot open folder',
+        type: 'warning',
+        message:
+          'A whole drive cannot be used as the file list. Please select a project folder inside it.'
+      })
+      return (): void => {}
+    }
+
     const usePolling = isOsx || isUncPath(watchPath)
       ? true
       : this._preferences.getItem<boolean>('watcherUsePolling')
@@ -256,8 +277,56 @@ class Watcher {
     let enospcReached = false
     let renameTimer: NodeJS.Timeout | null = null
 
+    // Bulk initial scan: chokidar emits one `add` per markdown file and one
+    // `addDir` per directory. On a large tree that is tens of thousands of
+    // individual IPC sends, each also reading full file content. During the
+    // initial scan we instead collect metadata-only changes and flush them in
+    // batches. After `ready`, normal per-event handling resumes so that
+    // newly created files still carry the content the renderer needs to open
+    // them (the `newFileNameCache` path).
+    const BATCH_SIZE = 200
+    const BATCH_FLUSH_MS = 50
+    let initialScanComplete = false
+    let pendingChanges: Array<{ type: string; change: unknown }> = []
+    let batchTimer: NodeJS.Timeout | null = null
+
+    const flushBatch = (): void => {
+      if (batchTimer) {
+        clearTimeout(batchTimer)
+        batchTimer = null
+      }
+      if (!pendingChanges.length) return
+      const changes = pendingChanges
+      pendingChanges = []
+      win.webContents.send('mt::update-object-tree', { type: 'batch', changes })
+    }
+
+    const queueBatch = (event: { type: string; change: unknown }): void => {
+      pendingChanges.push(event)
+      if (pendingChanges.length >= BATCH_SIZE) {
+        flushBatch()
+      } else if (!batchTimer) {
+        batchTimer = setTimeout(flushBatch, BATCH_FLUSH_MS)
+      }
+    }
+
     watcher
+      .on('ready', () => {
+        initialScanComplete = true
+        flushBatch()
+      })
       .on('add', async(pathname: string) => {
+        if (disposed) return
+        if (type === 'dir' && !initialScanComplete) {
+          // Metadata only — no full-content read during the bulk scan.
+          try {
+            const meta = await fileMetaOf(pathname)
+            if (meta.isMarkdown) queueBatch({ type: 'add', change: meta })
+          } catch {
+            // File vanished between the event and stat; the next scan will see it.
+          }
+          return
+        }
         if (!(await this._shouldIgnoreEvent(win.id, pathname, type, usePolling))) {
           const { _preferences } = this
           const eol = _preferences.getPreferredEol() as LineEnding
@@ -297,9 +366,21 @@ class Watcher {
           )
         }
       })
-      .on('unlink', (pathname: string) => unlink(win, pathname, type))
-      .on('addDir', (pathname: string) => addDir(win, pathname, type))
-      .on('unlinkDir', (pathname: string) => unlinkDir(win, pathname, type))
+      .on('unlink', (pathname: string) => {
+        flushBatch()
+        unlink(win, pathname, type)
+      })
+      .on('addDir', (pathname: string) => {
+        if (type === 'dir' && !initialScanComplete) {
+          queueBatch({ type: 'addDir', change: directoryMetaOf(pathname) })
+          return
+        }
+        addDir(win, pathname, type)
+      })
+      .on('unlinkDir', (pathname: string) => {
+        flushBatch()
+        unlinkDir(win, pathname, type)
+      })
       .on('raw', (event: string, subpath: string, details: unknown) => {
         if (
           globalThis.MARKTEXT_DEBUG_VERBOSE >= 3
@@ -354,6 +435,11 @@ class Watcher {
         clearTimeout(renameTimer)
         renameTimer = null
       }
+      if (batchTimer) {
+        clearTimeout(batchTimer)
+        batchTimer = null
+      }
+      pendingChanges = []
       watcher.close()
     }
 
@@ -372,27 +458,20 @@ class Watcher {
     for (const id of Object.keys(this.watchers)) {
       const w = this.watchers[id]
       if (w.win === win && w.pathname === watchPath && w.type === type) {
-        w.watcher.close()
-        delete this.watchers[id]
+        w.close()
         break
       }
     }
   }
 
   unwatchByWindowId(windowId: number): void {
-    const watchers: FSWatcher[] = []
     const watchIds: string[] = []
     for (const id of Object.keys(this.watchers)) {
-      const w = this.watchers[id]
-      if (w.win.id === windowId) {
-        watchers.push(w.watcher)
+      if (this.watchers[id].win.id === windowId) {
         watchIds.push(id)
       }
     }
-    if (watchers.length) {
-      watchIds.forEach((id) => delete this.watchers[id])
-      watchers.forEach((watcher) => watcher.close())
-    }
+    watchIds.forEach((id) => this.watchers[id]?.close())
   }
 
   close(): void {

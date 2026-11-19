@@ -164,7 +164,22 @@ export const usePreferencesStore = defineStore('preferences', {
     // Empty means "resolve to ~/WenlanProjects on the first teaching login".
     projectsRoot: '',
     lastOpenedFolder: '',
-    treePathExcludePatterns: [],
+    // Keep the file-tree walker off generated/noise directories by default.
+    // Users can override this list in Preferences → General → Side bar.
+    treePathExcludePatterns: [
+      '**/node_modules/**',
+      '**/.git/**',
+      '**/.svn/**',
+      '**/dist/**',
+      '**/build/**',
+      '**/target/**',
+      '**/out/**',
+      '**/.cache/**',
+      '**/.idea/**',
+      '**/venv/**',
+      '**/.venv/**',
+      '**/__pycache__/**'
+    ],
     language: 'en',
     showPandocConvert: true,
 
