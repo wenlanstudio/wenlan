@@ -108,6 +108,7 @@
       "frontmatterWenlan": "Wenlan · Kağıt görünümü",
       "frontmatterSlides": "Slaytlar · md2slides",
       "frontmatterCodeRun": "Kod çalıştırma · mdcode2run",
+      "runnableLanguages": "Kod çalıştırma · Dil örnekleri",
       "frontmatterQuiz": "Yarışma · classbuzz"
     },
     "marktext": {
@@ -482,7 +483,13 @@
         },
         "requiresRestart": "Yeniden başlatma gerektirir",
         "hideScrollbars": "Kaydırma çubuklarını gizle",
-        "menuBarAlwaysVisible": "Menü çubuğunu her zaman göster (varsayılan: üzerine gelindiğinde)",
+        "interfaceMode": {
+          "title": "Arayüz modu",
+          "notes": "Normal: menü çubuğu her zaman görünür, içerik başlık çubuğunun altında başlar. Geek: içerik kenara kadar, menü gizli, ayarlar kenar çubuğundaki dişli ile.",
+          "normal": "Normal",
+          "geek": "Geek",
+          "geekGear": "Ayarlar"
+        },
         "openFilesInNewWindow": "Dosyaları yeni pencerede aç",
         "openFoldersInNewWindow": "Klasörleri yeni pencerede aç",
         "zoom": "Yakınlaştırma"

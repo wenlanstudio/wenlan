@@ -47,18 +47,18 @@ describe('static/preference.json stays in sync with the preference schema', () =
   })
 })
 
-describe('graphvizDotPath preference stays in sync', () => {
-  const GRAPHVIZ_KEY = 'graphvizDotPath'
+describe('interfaceMode preference stays in sync', () => {
+  const MODE_KEY = 'interfaceMode'
 
   it('is shipped in the defaults so Preference.init() does not prune it', () => {
-    expect(defaults, `add ${GRAPHVIZ_KEY} to static/preference.json`).toHaveProperty(GRAPHVIZ_KEY)
+    expect(defaults, `add ${MODE_KEY} to static/preference.json`).toHaveProperty(MODE_KEY)
   })
 
   it('has the type the schema declares', () => {
-    expect(typeOf(defaults[GRAPHVIZ_KEY])).toBe(schema[GRAPHVIZ_KEY]?.type)
+    expect(typeOf(defaults[MODE_KEY])).toBe(schema[MODE_KEY]?.type)
   })
 
-  it('has the value the schema calls its default (empty = auto-detect dot)', () => {
-    expect(defaults[GRAPHVIZ_KEY]).toEqual(schema[GRAPHVIZ_KEY]?.default)
+  it('has the value the schema calls its default (normal)', () => {
+    expect(defaults[MODE_KEY]).toEqual(schema[MODE_KEY]?.default)
   })
 })

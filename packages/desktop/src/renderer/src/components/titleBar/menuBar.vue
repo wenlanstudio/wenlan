@@ -89,11 +89,13 @@ const altRevealed = ref(false)
 // 在 keyup 时不再触发（Chromium 菜单栏同款语义，Alt+X 加速键不受扰）。
 let altArmed = false
 
-// 默认悬停/Alt 揭示（hibernate）；偏好 menuBarAlwaysVisible 打开后常驻。
+// normal 模式：菜单栏常驻（吸收原 menuBarAlwaysVisible 开关的语义）。
+// geek 模式菜单栏由父组件整体不渲染，这里不会被挂载。
 // 下拉打开时始终可见，避免收起把用户正在读的菜单从底下抽走。
-const { menuBarAlwaysVisible } = storeToRefs(usePreferencesStore())
+const { interfaceMode } = storeToRefs(usePreferencesStore())
+const alwaysVisible = computed(() => interfaceMode.value === 'normal')
 const expanded = computed(
-  () => menuBarAlwaysVisible.value || hovered.value || openIndex.value !== -1 || altRevealed.value
+  () => alwaysVisible.value || hovered.value || openIndex.value !== -1 || altRevealed.value
 )
 
 const load = async (): Promise<void> => {

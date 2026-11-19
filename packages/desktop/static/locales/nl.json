@@ -108,6 +108,7 @@
       "frontmatterWenlan": "Wenlan · Papierweergave",
       "frontmatterSlides": "Dia's · md2slides",
       "frontmatterCodeRun": "Code-uitvoering · mdcode2run",
+      "runnableLanguages": "Code-uitvoering · Taalvoorbeelden",
       "frontmatterQuiz": "Quiz · classbuzz"
     },
     "marktext": {
@@ -482,7 +483,13 @@
         },
         "requiresRestart": "Herstart vereist",
         "hideScrollbars": "Schuifbalken verbergen",
-        "menuBarAlwaysVisible": "Menubalk altijd zichtbaar (standaard: bij hoveren)",
+        "interfaceMode": {
+          "title": "Interfacemodus",
+          "notes": "Normaal: menubalk altijd zichtbaar, inhoud begint onder de titelbalk. Geek: inhoud tot de rand, menu verborgen, instellingen via het tandwiel in de zijbalk.",
+          "normal": "Normaal",
+          "geek": "Geek",
+          "geekGear": "Instellingen"
+        },
         "openFilesInNewWindow": "Bestanden in nieuw venster openen",
         "openFoldersInNewWindow": "Mappen in nieuw venster openen",
         "zoom": "Zoom"

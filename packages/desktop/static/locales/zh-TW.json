@@ -108,6 +108,7 @@
       "frontmatterWenlan": "文覽 · 紙面葉",
       "frontmatterSlides": "放映 · md2slides",
       "frontmatterCodeRun": "程式碼執行 · mdcode2run",
+      "runnableLanguages": "程式碼執行 · 語言範例",
       "frontmatterQuiz": "課堂競答 · classbuzz"
     },
     "marktext": {
@@ -482,7 +483,13 @@
         },
         "requiresRestart": "需要重新啟動",
         "hideScrollbars": "隱藏捲軸",
-        "menuBarAlwaysVisible": "功能表列始終顯示（預設懸停顯示）",
+        "interfaceMode": {
+          "title": "介面模式",
+          "notes": "常規：功能表列永遠顯示，內容從標題列下方開始。極客：內容通頂、功能表列隱藏，設定由側邊欄齒輪進入。",
+          "normal": "常規",
+          "geek": "極客",
+          "geekGear": "設定"
+        },
         "openFilesInNewWindow": "在新視窗中開啟檔案",
         "openFoldersInNewWindow": "在新視窗中開啟資料夾",
         "zoom": "縮放"

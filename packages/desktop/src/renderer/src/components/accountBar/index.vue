@@ -2,6 +2,32 @@
   <div class="account-bar">
     <login-dialog v-model="showLogin" />
 
+    <!-- geek 模式：菜单栏隐藏，设置入口落到侧栏右下角齿轮（ZCode 式）。 -->
+    <button
+      v-if="isGeek"
+      class="gear-entry"
+      :title="t('preferences.general.window.interfaceMode.geekGear')"
+      @click="openPreferences"
+    >
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="3"
+        />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+      </svg>
+    </button>
+
     <button
       v-if="!auth.state.loggedIn"
       class="account-entry"
@@ -58,10 +84,18 @@ import { t } from '@/i18n'
 import { useAuthStore } from '@/store/auth'
 import { useTeachingStore } from '@/store/teaching'
 import { useLayoutStore } from '@/store/layout'
+import { usePreferencesStore } from '@/store/preferences'
 import LoginDialog from './loginDialog.vue'
 
 const auth = useAuthStore()
 const { state } = storeToRefs(auth)
+const { interfaceMode } = storeToRefs(usePreferencesStore())
+
+const isGeek = computed(() => interfaceMode.value === 'geek')
+
+const openPreferences = (): void => {
+  window.electron.ipcRenderer.send('mt::open-setting-window')
+}
 
 const showLogin = ref(false)
 
@@ -118,6 +152,26 @@ function onCommand(command: string): void {
 
 .account-entry:hover {
   background: var(--sideBarItemHoverBg, rgba(0, 0, 0, 0.05));
+}
+
+.gear-entry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--editorColor50, #888);
+  cursor: pointer;
+}
+
+.gear-entry:hover {
+  background: var(--sideBarItemHoverBg, rgba(0, 0, 0, 0.05));
+  color: var(--editorColor, #333);
 }
 
 .entry-icon {

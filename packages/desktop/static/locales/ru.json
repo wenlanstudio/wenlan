@@ -108,6 +108,7 @@
       "frontmatterWenlan": "Вэньлань · Бумажный вид",
       "frontmatterSlides": "Слайды · md2slides",
       "frontmatterCodeRun": "Запуск кода · mdcode2run",
+      "runnableLanguages": "Запуск кода · Примеры языков",
       "frontmatterQuiz": "Викторина · classbuzz"
     },
     "marktext": {
@@ -482,7 +483,13 @@
         },
         "requiresRestart": "Требуется перезапуск",
         "hideScrollbars": "Скрыть полосы прокрутки",
-        "menuBarAlwaysVisible": "Всегда показывать строку меню (по умолчанию: при наведении)",
+        "interfaceMode": {
+          "title": "Режим интерфейса",
+          "notes": "Обычный: строка меню всегда видна, содержимое ниже заголовка. Гик: содержимое до края, меню скрыто, настройки через шестерёнку в боковой панели.",
+          "normal": "Обычный",
+          "geek": "Гик",
+          "geekGear": "Настройки"
+        },
         "openFilesInNewWindow": "Открывать файлы в новом окне",
         "openFoldersInNewWindow": "Открывать папки в новом окне",
         "zoom": "Масштаб"

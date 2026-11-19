@@ -108,6 +108,7 @@
       "frontmatterWenlan": "Wenlan · Vista de papel",
       "frontmatterSlides": "Diapositivas · md2slides",
       "frontmatterCodeRun": "Ejecución de código · mdcode2run",
+      "runnableLanguages": "Ejecución de código · Ejemplos de lenguaje",
       "frontmatterQuiz": "Concurso · classbuzz"
     },
     "marktext": {
@@ -482,7 +483,13 @@
         },
         "requiresRestart": "Requiere reinicio",
         "hideScrollbars": "Ocultar barras de desplazamiento",
-        "menuBarAlwaysVisible": "Mostrar siempre la barra de menús (predeterminado: al pasar el cursor)",
+        "interfaceMode": {
+          "title": "Modo de interfaz",
+          "notes": "Normal: barra de menús siempre visible, contenido bajo la barra de título. Geek: contenido hasta el borde, menú oculto, ajustes desde el engranaje de la barra lateral.",
+          "normal": "Normal",
+          "geek": "Geek",
+          "geekGear": "Ajustes"
+        },
         "openFilesInNewWindow": "Abrir archivos en nueva ventana",
         "openFoldersInNewWindow": "Abrir carpetas en nueva ventana",
         "zoom": "Zoom"

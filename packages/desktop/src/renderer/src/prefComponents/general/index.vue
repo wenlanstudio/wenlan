@@ -45,10 +45,12 @@
           :bool="hideScrollbar"
           :on-change="(value) => onSelectChange('hideScrollbar', value)"
         />
-        <bool
-          :description="t('preferences.general.window.menuBarAlwaysVisible')"
-          :bool="menuBarAlwaysVisible"
-          :on-change="(value) => onSelectChange('menuBarAlwaysVisible', value)"
+        <cur-select
+          :description="t('preferences.general.window.interfaceMode.title')"
+          :notes="t('preferences.general.window.interfaceMode.notes')"
+          :value="interfaceMode"
+          :options="getInterfaceModeOptions()"
+          :on-change="(value) => onSelectChange('interfaceMode', value)"
         />
         <bool
           :description="t('preferences.general.window.openFilesInNewWindow')"
@@ -234,6 +236,7 @@ import { isMac } from '@/util'
 
 import {
   getTitleBarStyleOptions,
+  getInterfaceModeOptions,
   zoomOptions,
   getFileSortByOptions,
   getFileSortOrderOptions,
@@ -253,7 +256,7 @@ const {
   treePathExcludePatterns: projectPaths,
   zoom,
   hideScrollbar,
-  menuBarAlwaysVisible,
+  interfaceMode,
   wordWrapInToc,
   fileSortBy,
   fileSortOrder,

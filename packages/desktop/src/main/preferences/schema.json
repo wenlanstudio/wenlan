@@ -37,10 +37,11 @@
     "type": "boolean",
     "default": false
   },
-  "menuBarAlwaysVisible": {
-    "description": "General--Keep the custom menu bar always visible instead of auto-hiding until hover/Alt.",
-    "type": "boolean",
-    "default": false
+  "interfaceMode": {
+    "description": "General--Interface layout mode: normal (in-app title bar + always-visible menu bar) or geek (edge-to-edge panes, menu bar hidden, settings via sidebar gear).",
+    "type": "string",
+    "enum": ["normal", "geek"],
+    "default": "normal"
   },
   "wordWrapInToc": {
     "description": "General--Whether to enable word wrap in TOC.",

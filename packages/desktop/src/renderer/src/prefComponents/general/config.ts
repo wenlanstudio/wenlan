@@ -12,6 +12,17 @@ export const getTitleBarStyleOptions = (): PrefSelectOption<string>[] => [
   }
 ]
 
+export const getInterfaceModeOptions = (): PrefSelectOption<string>[] => [
+  {
+    label: t('preferences.general.window.interfaceMode.normal'),
+    value: 'normal'
+  },
+  {
+    label: t('preferences.general.window.interfaceMode.geek'),
+    value: 'geek'
+  }
+]
+
 export const zoomOptions: PrefSelectOption<number>[] = [
   {
     label: '50.0%',

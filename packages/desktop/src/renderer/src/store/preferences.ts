@@ -7,6 +7,7 @@ import { setLanguage } from '../i18n'
 // narrow casts on consumers that read raw values from disk.
 export type EndOfLine = 'default' | 'lf' | 'crlf'
 export type TitleBarStyle = 'custom' | 'native'
+export type InterfaceMode = 'normal' | 'geek'
 export type StartUpAction = 'restoreAll' | 'lastSession' | 'blank'
 export type TextDirection = 'ltr' | 'rtl'
 export type BulletListMarker = '*' | '+' | '-'
@@ -28,7 +29,8 @@ export interface PreferencesState {
   openFolderInNewWindow: boolean
   zoom: number
   hideScrollbar: boolean
-  menuBarAlwaysVisible: boolean
+  /** Interface layout mode. Overrides titleBarStyle/topInset/menu-bar behavior. */
+  interfaceMode: InterfaceMode
   wordWrapInToc: boolean
   fileSortBy: FileSortBy | string
   fileSortOrder: FileSortOrder | string
@@ -155,7 +157,7 @@ export const usePreferencesStore = defineStore('preferences', {
     openFolderInNewWindow: false,
     zoom: 1.0,
     hideScrollbar: false,
-    menuBarAlwaysVisible: false,
+    interfaceMode: 'normal',
     wordWrapInToc: false,
     // 与文件系统默认一致：按名称自然序（文件夹恒在前，treeCtrl 结构保证）。
     fileSortBy: 'title',

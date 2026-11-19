@@ -19,6 +19,7 @@ import registerSpellcheckerListeners from '../spellchecker'
 import { watchers } from '../utils/imagePathAutoComplement'
 import { onInternalChannel } from '../utils/internalIpc'
 import { scheduleStartupUpdateCheck } from '../updateStartup'
+import type { HelpSection } from '../windows/help'
 import { WindowType } from '../windows/base'
 import EditorWindow from '../windows/editor'
 import SettingWindow from '../windows/setting'
@@ -860,6 +861,14 @@ class App {
 
     ipcMain.on('mt::open-setting-window', () => {
       this._openSettingsWindow()
+    })
+
+    // 极客模式：命令面板触发离线帮助文档（帮助菜单的等价入口）。
+    // openHelpWindow 内部用 isHelpSection 守卫，非法值回落到 overview。
+    ipcMain.on('mt::open-help-docs', (_e, section: string) => {
+      void import('../windows/help').then(({ openHelpWindow }) =>
+        openHelpWindow(section as HelpSection)
+      )
     })
 
     ipcMain.on('mt::make-screenshot', (e) => {

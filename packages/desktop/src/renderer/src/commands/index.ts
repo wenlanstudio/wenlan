@@ -704,6 +704,64 @@ const commands: CommandDescriptor[] = [
   },
 
   // --------------------------------------------------------------------------
+  // Help / About（极客模式：菜单栏隐藏后的等价入口，复用菜单的 IPC 与外链）
+  {
+    id: 'help.about',
+    execute: async() => {
+      bus.emit('aboutDialog')
+    }
+  },
+  {
+    id: 'help.help-docs',
+    subcommands: [
+      { id: 'help.docs-wenlan', description: '', value: 'wenlan' },
+      { id: 'help.docs-slides', description: '', value: 'md2slides' },
+      { id: 'help.docs-coderun', description: '', value: 'mdcode2run' },
+      { id: 'help.docs-runnable', description: '', value: 'runnable-languages' },
+      { id: 'help.docs-quiz', description: '', value: 'classbuzz' }
+    ],
+    executeSubcommand: async(_, section) => {
+      window.electron.ipcRenderer.send('mt::open-help-docs', String(section))
+    }
+  },
+  {
+    id: 'help.changelog',
+    execute: async() => {
+      window.electron.shell.openExternal('https://github.com/wenlanstudio/wenlan/releases')
+    }
+  },
+  {
+    id: 'help.markdown-reference',
+    execute: async() => {
+      window.electron.shell.openExternal('https://marktext.me/docs/markdown-syntax')
+    }
+  },
+  {
+    id: 'help.ask-question',
+    execute: async() => {
+      window.electron.shell.openExternal('https://github.com/wenlanstudio/wenlan/issues')
+    }
+  },
+  {
+    id: 'help.report-bug',
+    execute: async() => {
+      window.electron.shell.openExternal('https://github.com/wenlanstudio/wenlan/issues/new/choose')
+    }
+  },
+  {
+    id: 'help.view-source',
+    execute: async() => {
+      window.electron.shell.openExternal('https://github.com/wenlanstudio/wenlan')
+    }
+  },
+  {
+    id: 'help.license',
+    execute: async() => {
+      window.electron.shell.openExternal('https://github.com/wenlanstudio/wenlan/blob/develop/LICENSE')
+    }
+  },
+
+  // --------------------------------------------------------------------------
   // Misc
 
   {
@@ -798,6 +856,23 @@ const commands: CommandDescriptor[] = [
       if (!useAuthStore().state.loggedIn) return
       const error = await useTeachingStore().restoreCurrentDoc()
       if (error) ElMessage.warning(error)
+    }
+  },
+  // 教学菜单的另两项（工作区打开/换位置）：极客模式下从这里触达。
+  {
+    id: 'teaching.workspace-open',
+    isVisible: () => useAuthStore().state.loggedIn,
+    execute: async() => {
+      if (!useAuthStore().state.loggedIn) return
+      await window.teachingWorkspace.openProjectsRoot()
+    }
+  },
+  {
+    id: 'teaching.workspace-choose',
+    isVisible: () => useAuthStore().state.loggedIn,
+    execute: async() => {
+      if (!useAuthStore().state.loggedIn) return
+      await window.teachingWorkspace.chooseProjectsRoot()
     }
   }
 ]

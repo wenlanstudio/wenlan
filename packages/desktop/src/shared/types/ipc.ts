@@ -348,6 +348,7 @@ export interface IpcSendChannels {
   'mt::open-file-by-window-id': [windowId: number, filePath: string, options?: unknown]
   'mt::open-keybindings-config': []
   'mt::open-setting-window': []
+  'mt::open-help-docs': [section: string]
   'mt::rename': [
     payload: { id: string; pathname: string; newPathname: string; currentFile?: unknown }
   ]

@@ -1,7 +1,7 @@
 <template>
   <div>
     <div
-      v-if="showTitleBar"
+      v-if="showTitleBar && !isGeek"
       class="title-bar-editor-bg"
     />
     <div
@@ -10,7 +10,8 @@
       :class="[
         { active: active },
         { frameless: titleBarStyle === 'custom' },
-        { isOsx: isOsx }
+        { isOsx: isOsx },
+        { solid: !isGeek }
       ]"
     >
       <div
@@ -26,7 +27,7 @@
         />
       </div>
       <div
-        v-if="showCustomTitleBar"
+        v-if="showCustomTitleBar && !isGeek"
         class="left-toolbar title-no-drag"
       >
         <menu-bar />
@@ -133,7 +134,11 @@ onMounted(async () => {
   }
 })
 
-const { titleBarStyle } = storeToRefs(preferencesStore)
+const { titleBarStyle, interfaceMode } = storeToRefs(preferencesStore)
+
+// geek 模式：菜单栏不渲染、标题栏透明、两栏通顶（sideBar topInset=0）。
+// normal 模式：标题栏铺不透明底色成完整一条，菜单栏常驻。
+const isGeek = computed(() => interfaceMode.value === 'geek')
 
 const showCustomTitleBar = computed(() => {
   return titleBarStyle.value === 'custom' && !isOsx
@@ -229,6 +234,11 @@ onBeforeUnmount(() => {
   transition: color 0.4s ease-in-out;
   cursor: default;
 }
+/* normal 模式：标题栏自己铺满不透明底色，盖住下方两栏的顶边，
+   让菜单栏成为完整一条而不是被侧栏灰底/编辑器白底劈成两半。 */
+.title-bar.solid {
+  background: var(--editorBgColor);
+}
 .active {
   color: var(--editorColor);
 }
@@ -293,10 +303,10 @@ div.title > .save-dot {
   height: 100%;
   position: absolute;
   top: 0;
-  right: 0;
-  width: 138px;
+  right: 8px;
   display: flex;
   align-items: center;
+  gap: 2px;
   flex-direction: row-reverse;
   & .item {
     margin-right: 10px;
@@ -306,29 +316,31 @@ div.title > .save-dot {
 .title-no-drag {
   -webkit-app-region: no-drag;
 }
-/* frameless window controls */
+/* frameless window controls — macOS/鸿蒙式小圆按钮：小尺寸、圆角、
+   hover 才显浅色圆底，关闭按钮 hover 转红。 */
 .frameless-titlebar-button {
   position: relative;
-  display: block;
-  width: 46px;
-  height: var(--titleBarHeight);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  cursor: default;
+  transition: background-color 0.15s ease;
 }
 .frameless-titlebar-button > div {
-  position: absolute;
   display: inline-flex;
-  top: 50%;
-  left: 50%;
-  transform: translateX(-50%) translateY(-50%);
 }
 .frameless-titlebar-close:hover {
   background-color: rgb(228, 79, 79);
 }
 .frameless-titlebar-minimize:hover,
 .frameless-titlebar-toggle:hover {
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: rgba(0, 0, 0, 0.08);
 }
 .frameless-titlebar-button svg {
-  fill: #000000;
+  fill: var(--editorColor50, #888);
 }
 .frameless-titlebar-close:hover svg {
   fill: #ffffff;

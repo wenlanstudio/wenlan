@@ -108,6 +108,7 @@
       "frontmatterWenlan": "문람 · 용지 보기",
       "frontmatterSlides": "슬라이드 · md2slides",
       "frontmatterCodeRun": "코드 실행 · mdcode2run",
+      "runnableLanguages": "코드 실행 · 언어 예제",
       "frontmatterQuiz": "퀴즈 · classbuzz"
     },
     "marktext": {
@@ -482,7 +483,13 @@
         },
         "requiresRestart": "재시작 필요",
         "hideScrollbars": "스크롤바 숨기기",
-        "menuBarAlwaysVisible": "메뉴 모음 항상 표시 (기본: 마우스 오버 시 표시)",
+        "interfaceMode": {
+          "title": "인터페이스 모드",
+          "notes": "일반: 메뉴 모음을 항상 표시하고 콘텐츠는 제목 표시줄 아래에서 시작. 기크: 콘텐츠를 끝까지 표시하고 메뉴는 숨기며 설정은 사이드바 기어로.",
+          "normal": "일반",
+          "geek": "기크",
+          "geekGear": "설정"
+        },
         "openFilesInNewWindow": "새 창에서 파일 열기",
         "openFoldersInNewWindow": "새 창에서 폴더 열기",
         "zoom": "확대/축소"

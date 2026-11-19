@@ -217,6 +217,23 @@ const COMMAND_KEY_MAP: Record<string, string> = {
   // ============================================
   'docs.user-guide': 'commands.docs.userGuide',
   'docs.markdown-syntax': 'commands.docs.markdownSyntax',
+  // 极客模式：菜单栏隐藏后，帮助/关于/教学 workspace 从命令面板触达。
+  // 复用 menu.* / teaching.* 已有键（12 语言齐全），不新增文案。
+  'help.about': 'menu.help.about',
+  'help.help-docs': 'menu.help.frontmatterDocs',
+  'help.docs-wenlan': 'menu.help.frontmatterWenlan',
+  'help.docs-slides': 'menu.help.frontmatterSlides',
+  'help.docs-coderun': 'menu.help.frontmatterCodeRun',
+  'help.docs-runnable': 'menu.help.runnableLanguages',
+  'help.docs-quiz': 'menu.help.frontmatterQuiz',
+  'help.changelog': 'menu.help.changelog',
+  'help.markdown-reference': 'menu.help.markdownReference',
+  'help.ask-question': 'menu.help.askQuestion',
+  'help.report-bug': 'menu.help.reportBug',
+  'help.view-source': 'menu.help.viewSource',
+  'help.license': 'menu.help.license',
+  'teaching.workspace-open': 'teaching.workspaceOpen',
+  'teaching.workspace-choose': 'teaching.workspaceChoose',
 
   // ============================================
   // # Table Operations（Typora 风格，仅光标在表格内时生效）

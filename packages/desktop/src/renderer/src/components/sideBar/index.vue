@@ -63,13 +63,16 @@ const sideBarViewWidth = ref(280)
 const { sidebarTab, showSideBar, sideBarWidth } = storeToRefs(layoutStore)
 
 const { projectTree } = storeToRefs(projectStore)
-const { titleBarStyle } = storeToRefs(preferencesStore)
+const { titleBarStyle, interfaceMode } = storeToRefs(preferencesStore)
 
 // The in-app title bar is `position: fixed` across the *whole window width*, so
 // it overlays this column's top too — inset everything below it, here, instead
 // of leaving every panel to invent its own clearance.
+// geek 模式刻意通顶（菜单栏隐藏），不给顶部留白。
 const topInset = computed<string>(() =>
-  shouldShowInAppTitleBar(titleBarStyle.value, isMac) ? 'var(--titleBarHeight)' : '0px'
+  interfaceMode.value !== 'geek' && shouldShowInAppTitleBar(titleBarStyle.value, isMac)
+    ? 'var(--titleBarHeight)'
+    : '0px'
 )
 
 // Typora-style sidebar: the two content tabs are drawn on the panel itself,

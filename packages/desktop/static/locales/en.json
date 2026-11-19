@@ -108,6 +108,7 @@
       "frontmatterWenlan": "Wenlan · Paper Leaf",
       "frontmatterSlides": "Slides · md2slides",
       "frontmatterCodeRun": "Code Runner · mdcode2run",
+      "runnableLanguages": "Code Runner · Language Examples",
       "frontmatterQuiz": "Quiz · classbuzz"
     },
     "marktext": {
@@ -482,7 +483,13 @@
         },
         "requiresRestart": "Requires restart",
         "hideScrollbars": "Hide scrollbars",
-        "menuBarAlwaysVisible": "Keep menu bar always visible (default: auto-hide)",
+        "interfaceMode": {
+          "title": "Interface mode",
+          "notes": "Normal: menu bar always visible, panes below the title bar. Geek: edge-to-edge panes, menu hidden, settings via the sidebar gear.",
+          "normal": "Normal",
+          "geek": "Geek",
+          "geekGear": "Settings"
+        },
         "openFilesInNewWindow": "Open files in new window",
         "openFoldersInNewWindow": "Open folders in new window",
         "zoom": "Zoom"

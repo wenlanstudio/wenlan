@@ -108,6 +108,7 @@
       "frontmatterWenlan": "文覧 · 紙面",
       "frontmatterSlides": "スライド · md2slides",
       "frontmatterCodeRun": "コード実行 · mdcode2run",
+      "runnableLanguages": "コード実行 · 言語例",
       "frontmatterQuiz": "クイズ · classbuzz"
     },
     "marktext": {
@@ -482,7 +483,13 @@
         },
         "requiresRestart": "再起動が必要",
         "hideScrollbars": "スクロールバーを隠す",
-        "menuBarAlwaysVisible": "メニュー バーを常に表示する（既定はホバーで表示）",
+        "interfaceMode": {
+          "title": "インターフェース モード",
+          "notes": "通常：メニュー バーを常に表示し、コンテンツはタイトル バーの下から開始。ギーク：コンテンツを上端まで表示し、メニューを非表示にして設定はサイドバーのギアから。",
+          "normal": "通常",
+          "geek": "ギーク",
+          "geekGear": "設定"
+        },
         "openFilesInNewWindow": "新しいウィンドウでファイルを開く",
         "openFoldersInNewWindow": "新しいウィンドウでフォルダーを開く",
         "zoom": "ズーム"

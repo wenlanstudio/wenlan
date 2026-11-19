@@ -108,6 +108,7 @@
       "frontmatterWenlan": "文览 · 纸面叶",
       "frontmatterSlides": "放映 · md2slides",
       "frontmatterCodeRun": "代码运行 · mdcode2run",
+      "runnableLanguages": "代码运行 · 语言示例",
       "frontmatterQuiz": "课堂竞答 · classbuzz"
     },
     "marktext": {
@@ -482,7 +483,13 @@
         },
         "requiresRestart": "需要重启",
         "hideScrollbars": "隐藏滚动条",
-        "menuBarAlwaysVisible": "菜单栏始终显示（默认悬停显现）",
+        "interfaceMode": {
+          "title": "界面模式",
+          "notes": "常规：菜单栏常显，内容从标题栏下方开始。极客：内容通顶、菜单栏隐藏，设置从侧栏齿轮进入。",
+          "normal": "常规",
+          "geek": "极客",
+          "geekGear": "设置"
+        },
         "openFilesInNewWindow": "在新窗口中打开文件",
         "openFoldersInNewWindow": "在新窗口中打开文件夹",
         "zoom": "缩放"

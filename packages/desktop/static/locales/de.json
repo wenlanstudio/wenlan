@@ -108,6 +108,7 @@
       "frontmatterWenlan": "Wenlan · Papieransicht",
       "frontmatterSlides": "Folien · md2slides",
       "frontmatterCodeRun": "Code-Ausführung · mdcode2run",
+      "runnableLanguages": "Code-Ausführung · Sprachbeispiele",
       "frontmatterQuiz": "Quiz · classbuzz"
     },
     "marktext": {
@@ -482,7 +483,13 @@
         },
         "requiresRestart": "Erfordert Neustart",
         "hideScrollbars": "Bildlaufleisten ausblenden",
-        "menuBarAlwaysVisible": "Menüleiste immer anzeigen (Standard: bei Hover anzeigen)",
+        "interfaceMode": {
+          "title": "Oberflächenmodus",
+          "notes": "Normal: Menüleiste immer sichtbar, Inhalt beginnt unter der Titelleiste. Geek: Inhalt bis zum Rand, Menü ausgeblendet, Einstellungen über das Zahnrad in der Seitenleiste.",
+          "normal": "Normal",
+          "geek": "Geek",
+          "geekGear": "Einstellungen"
+        },
         "openFilesInNewWindow": "Dateien in neuem Fenster öffnen",
         "openFoldersInNewWindow": "Ordner in neuem Fenster öffnen",
         "zoom": "Zoom"
