@@ -482,6 +482,7 @@
         },
         "requiresRestart": "Yeniden başlatma gerektirir",
         "hideScrollbars": "Kaydırma çubuklarını gizle",
+        "menuBarAlwaysVisible": "Menü çubuğunu her zaman göster (varsayılan: üzerine gelindiğinde)",
         "openFilesInNewWindow": "Dosyaları yeni pencerede aç",
         "openFoldersInNewWindow": "Klasörleri yeni pencerede aç",
         "zoom": "Yakınlaştırma"

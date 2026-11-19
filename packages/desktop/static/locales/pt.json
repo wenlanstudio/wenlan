@@ -482,6 +482,7 @@
         },
         "requiresRestart": "Requer reinicialização",
         "hideScrollbars": "Ocultar barras de rolagem",
+        "menuBarAlwaysVisible": "Manter a barra de menus sempre visível (padrão: ao passar o mouse)",
         "openFilesInNewWindow": "Abrir arquivos em nova janela",
         "openFoldersInNewWindow": "Abrir pastas em nova janela",
         "zoom": "Zoom"

@@ -482,6 +482,7 @@
         },
         "requiresRestart": "需要重新啟動",
         "hideScrollbars": "隱藏捲軸",
+        "menuBarAlwaysVisible": "功能表列始終顯示（預設懸停顯示）",
         "openFilesInNewWindow": "在新視窗中開啟檔案",
         "openFoldersInNewWindow": "在新視窗中開啟資料夾",
         "zoom": "縮放"

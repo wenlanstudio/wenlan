@@ -28,6 +28,7 @@ export interface PreferencesState {
   openFolderInNewWindow: boolean
   zoom: number
   hideScrollbar: boolean
+  menuBarAlwaysVisible: boolean
   wordWrapInToc: boolean
   fileSortBy: FileSortBy | string
   fileSortOrder: FileSortOrder | string
@@ -154,6 +155,7 @@ export const usePreferencesStore = defineStore('preferences', {
     openFolderInNewWindow: false,
     zoom: 1.0,
     hideScrollbar: false,
+    menuBarAlwaysVisible: false,
     wordWrapInToc: false,
     // 与文件系统默认一致：按名称自然序（文件夹恒在前，treeCtrl 结构保证）。
     fileSortBy: 'title',

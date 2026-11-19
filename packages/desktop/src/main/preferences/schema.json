@@ -37,6 +37,11 @@
     "type": "boolean",
     "default": false
   },
+  "menuBarAlwaysVisible": {
+    "description": "General--Keep the custom menu bar always visible instead of auto-hiding until hover/Alt.",
+    "type": "boolean",
+    "default": false
+  },
   "wordWrapInToc": {
     "description": "General--Whether to enable word wrap in TOC.",
     "type": "boolean",

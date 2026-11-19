@@ -482,6 +482,7 @@
         },
         "requiresRestart": "Requires restart",
         "hideScrollbars": "Hide scrollbars",
+        "menuBarAlwaysVisible": "Keep menu bar always visible (default: auto-hide)",
         "openFilesInNewWindow": "Open files in new window",
         "openFoldersInNewWindow": "Open folders in new window",
         "zoom": "Zoom"

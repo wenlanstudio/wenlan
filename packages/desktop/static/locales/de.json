@@ -482,6 +482,7 @@
         },
         "requiresRestart": "Erfordert Neustart",
         "hideScrollbars": "Bildlaufleisten ausblenden",
+        "menuBarAlwaysVisible": "Menüleiste immer anzeigen (Standard: bei Hover anzeigen)",
         "openFilesInNewWindow": "Dateien in neuem Fenster öffnen",
         "openFoldersInNewWindow": "Ordner in neuem Fenster öffnen",
         "zoom": "Zoom"

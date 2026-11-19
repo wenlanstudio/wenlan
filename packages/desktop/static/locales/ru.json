@@ -482,6 +482,7 @@
         },
         "requiresRestart": "Требуется перезапуск",
         "hideScrollbars": "Скрыть полосы прокрутки",
+        "menuBarAlwaysVisible": "Всегда показывать строку меню (по умолчанию: при наведении)",
         "openFilesInNewWindow": "Открывать файлы в новом окне",
         "openFoldersInNewWindow": "Открывать папки в новом окне",
         "zoom": "Масштаб"

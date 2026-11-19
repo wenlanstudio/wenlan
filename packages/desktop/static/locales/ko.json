@@ -482,6 +482,7 @@
         },
         "requiresRestart": "재시작 필요",
         "hideScrollbars": "스크롤바 숨기기",
+        "menuBarAlwaysVisible": "메뉴 모음 항상 표시 (기본: 마우스 오버 시 표시)",
         "openFilesInNewWindow": "새 창에서 파일 열기",
         "openFoldersInNewWindow": "새 창에서 폴더 열기",
         "zoom": "확대/축소"

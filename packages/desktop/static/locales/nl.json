@@ -482,6 +482,7 @@
         },
         "requiresRestart": "Herstart vereist",
         "hideScrollbars": "Schuifbalken verbergen",
+        "menuBarAlwaysVisible": "Menubalk altijd zichtbaar (standaard: bij hoveren)",
         "openFilesInNewWindow": "Bestanden in nieuw venster openen",
         "openFoldersInNewWindow": "Mappen in nieuw venster openen",
         "zoom": "Zoom"

@@ -75,6 +75,7 @@ import bus from '@/bus'
 import { t } from '@/i18n'
 import { useLayoutStore } from '@/store/layout'
 import { useAuthStore } from '@/store/auth'
+import { usePreferencesStore } from '@/store/preferences'
 
 const menus = ref<MenuStructureItem[]>([])
 const openIndex = ref(-1)
@@ -88,10 +89,12 @@ const altRevealed = ref(false)
 // 在 keyup 时不再触发（Chromium 菜单栏同款语义，Alt+X 加速键不受扰）。
 let altArmed = false
 
-// The entries are hidden until the pointer arrives, and stay visible while a
-// dropdown is open so hiding the bar can never pull it out from under the
-// menu the user is reading.
-const expanded = computed(() => hovered.value || openIndex.value !== -1 || altRevealed.value)
+// 默认悬停/Alt 揭示（hibernate）；偏好 menuBarAlwaysVisible 打开后常驻。
+// 下拉打开时始终可见，避免收起把用户正在读的菜单从底下抽走。
+const { menuBarAlwaysVisible } = storeToRefs(usePreferencesStore())
+const expanded = computed(
+  () => menuBarAlwaysVisible.value || hovered.value || openIndex.value !== -1 || altRevealed.value
+)
 
 const load = async (): Promise<void> => {
   try {

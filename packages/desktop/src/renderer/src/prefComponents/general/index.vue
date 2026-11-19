@@ -46,6 +46,11 @@
           :on-change="(value) => onSelectChange('hideScrollbar', value)"
         />
         <bool
+          :description="t('preferences.general.window.menuBarAlwaysVisible')"
+          :bool="menuBarAlwaysVisible"
+          :on-change="(value) => onSelectChange('menuBarAlwaysVisible', value)"
+        />
+        <bool
           :description="t('preferences.general.window.openFilesInNewWindow')"
           :bool="openFilesInNewWindow"
           :on-change="(value) => onSelectChange('openFilesInNewWindow', value)"
@@ -248,6 +253,7 @@ const {
   treePathExcludePatterns: projectPaths,
   zoom,
   hideScrollbar,
+  menuBarAlwaysVisible,
   wordWrapInToc,
   fileSortBy,
   fileSortOrder,
