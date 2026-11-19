@@ -1,4 +1,5 @@
 import type { IMuyaOptions } from '@muyajs/core'
+import { DEFAULT_PLANTUML_SERVER } from '@shared/types/preferences'
 import { DEFAULT_CODE_FONT_FAMILY, DEFAULT_EDITOR_FONT_FAMILY } from '@/config'
 import { usePreferencesStore } from '@/store/preferences'
 import { useEditorStore } from '@/store/editor'
@@ -54,7 +55,6 @@ export function buildMuyaViewOptions(): Partial<IMuyaOptions> {
     softNewlineAsSpace,
     sequenceTheme,
     theme,
-    plantumlServer,
     drawioServer
   } = preferencesStore
 
@@ -96,7 +96,7 @@ export function buildMuyaViewOptions(): Partial<IMuyaOptions> {
     // These drive the live editor too, so they follow the current theme.
     mermaidTheme: isDark ? 'dark' : 'default',
     vegaTheme: isDark ? 'dark' : 'latimes',
-    plantumlServer,
+    plantumlServer: DEFAULT_PLANTUML_SERVER,
     drawioServer,
     // Out-of-process diagram rendering (matplotlib runs the document's Python
     // in the main process). Shared here so every engine instance — the live

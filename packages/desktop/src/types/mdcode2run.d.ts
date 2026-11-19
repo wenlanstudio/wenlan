@@ -28,7 +28,7 @@ declare module 'mdcode2run' {
   export interface MdcodeFence {
     lang: string
     code: string
-    meta: { role: string; job?: boolean; file?: string; problems: string[] }
+    meta: { role: string; job?: boolean; file?: string; fileScope?: 'chapter' | 'document'; problems: string[] }
     line: number
     end: number
   }
@@ -70,8 +70,6 @@ declare module 'mdcode2run' {
     workdir?: string
     compileOnly?: boolean
     jdkHome?: string
-    hadoopHome?: string
-    winutilsHome?: string
     timeoutMs?: number
     id?: string
     onChunk?: (info: { stream: string; text: string }) => void

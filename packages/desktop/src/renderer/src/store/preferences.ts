@@ -90,11 +90,9 @@ export interface PreferencesState {
   isHtmlEnabled: boolean
   softNewlineAsSpace: boolean
   sequenceTheme: SequenceTheme | string
-  plantumlServer: string
   drawioServer: string
   matplotlibEnabled: boolean
   matplotlibPythonPath: string
-  graphvizDotPath: string
 
   // ----- Theme -----
   theme: string
@@ -218,14 +216,11 @@ export const usePreferencesStore = defineStore('preferences', {
     isHtmlEnabled: true,
     softNewlineAsSpace: false,
     sequenceTheme: 'hand',
-    plantumlServer: 'https://www.plantuml.com/plantuml',
     drawioServer: 'https://embed.diagrams.net',
     // An empty path means "detect one with matplotlib", which is what most
     // machines can answer without being told where Python lives.
     matplotlibEnabled: true,
     matplotlibPythonPath: '',
-    // Empty = auto-detect dot; the WASM renderer covers machines without it.
-    graphvizDotPath: '',
 
     theme: 'typora',
     followSystemTheme: true,

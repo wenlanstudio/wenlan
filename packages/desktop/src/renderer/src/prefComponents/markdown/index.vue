@@ -143,12 +143,6 @@
           more="https://bramp.github.io/js-sequence-diagrams/"
         />
         <text-box
-          :description="t('preferences.markdown.diagrams.plantumlServer.title')"
-          :input="plantumlServer"
-          :on-change="(value) => onSelectChange('plantumlServer', value)"
-          :default-value="'https://www.plantuml.com/plantuml'"
-        />
-        <text-box
           :description="t('preferences.markdown.diagrams.drawioServer.title')"
           :input="drawioServer"
           :on-change="(value) => onSelectChange('drawioServer', value)"
@@ -163,13 +157,6 @@
           :description="t('preferences.markdown.diagrams.matplotlib.pythonPath.title')"
           :input="matplotlibPythonPath"
           :on-change="(value) => onSelectChange('matplotlibPythonPath', value)"
-          :default-value="''"
-        />
-        <text-box
-          :description="t('preferences.markdown.diagrams.graphviz.dotPath.title')"
-          :notes="t('preferences.markdown.diagrams.graphviz.dotPath.notes')"
-          :input="graphvizDotPath"
-          :on-change="(value) => onSelectChange('graphvizDotPath', value)"
           :default-value="''"
         />
       </template>
@@ -235,11 +222,9 @@ const {
   isHtmlEnabled,
   softNewlineAsSpace,
   sequenceTheme,
-  plantumlServer,
   drawioServer,
   matplotlibEnabled,
-  matplotlibPythonPath,
-  graphvizDotPath
+  matplotlibPythonPath
 } = storeToRefs(preferenceStore)
 
 const onSelectChange = (type: keyof PreferencesState, value: unknown): void => {

@@ -691,9 +691,6 @@
           "handDrawn": "Hand Drawn",
           "simple": "Simple"
         },
-        "plantumlServer": {
-          "title": "PlantUML Server URL"
-        },
         "drawioServer": {
           "title": "DrawIO Embed Server URL"
         },
@@ -703,12 +700,6 @@
           },
           "pythonPath": {
             "title": "Python Executable Path"
-          }
-        },
-        "graphviz": {
-          "dotPath": {
-            "title": "Graphviz dot Executable Path",
-            "notes": "Leave empty to auto-detect dot (GRAPHVIZ_DOT, the usual install folders, PATH). Wenlan prefers it over the built-in WASM renderer and falls back automatically when dot is unavailable."
           }
         }
       },
@@ -1291,35 +1282,28 @@
   },
   "codeExec": {
     "title": "Code Execution",
-    "notes": "Machine-specific environment for running code blocks in lectures. Lower priority than the document front-matter code-exec block; document values override these. Saved to ~/.wenlan/mdcode2run.json and takes effect for newly opened documents.",
+    "notes": "Machine environment used to run code blocks in documents.",
     "save": "Save",
     "saveOk": "Saved",
     "saveFailed": "Save failed",
     "loadFailed": "Failed to load configuration",
     "configPath": "Config file",
-    "language": {
-      "title": "Language runtimes",
-      "javaHome": "JAVA_HOME",
-      "javaHomeNotes": "JDK root or bin directory (JDK 11+). Leave empty to fall back to the system JAVA_HOME.",
-      "javaHomePlaceholder": "e.g. D:/Program Files/Java/jdk-17.0.20.1",
-      "classPath": "CLASS_PATH",
-      "classPathNotes": "Optional; when empty, derived from HADOOP_HOME (8 client jar dirs). ;-separated or dir/*.",
-      "classPathPlaceholder": "leave empty to derive from HADOOP_HOME",
-      "pythonPath": "PYTHON_PATH",
-      "pythonPathNotes": "Python interpreter path.",
+    "runtime": {
+      "title": "Runtimes",
+      "jdkHome": "JDK home",
+      "jdkHomeNotes": "Leave empty to use the system JAVA_HOME.",
+      "jdkHomePlaceholder": "e.g. D:/Program Files/Java/jdk-17.0.20.1",
+      "pythonPath": "Python interpreter",
+      "pythonPathNotes": "Leave empty to use python from the system PATH.",
       "pythonPathPlaceholder": "auto-detected if empty"
     },
-    "mr": {
-      "title": "MapReduce executor",
-      "notes": "Local job submission (mr-job documents). Empty falls back to the environment variables.",
-      "jdkHome": "JDK home",
-      "jdkHomePlaceholder": "e.g. D:/Program Files/Java/jdk-17.0.20.1",
-      "hadoopHome": "Hadoop home",
-      "hadoopHomeNotes": "Full distribution with share/hadoop and bin/winutils.exe.",
-      "hadoopHomePlaceholder": "e.g. D:/bigdata/hadoop/hadoop-3.1.3",
-      "winutilsHome": "Winutils home",
-      "winutilsHomeNotes": "Optional; defaults to Hadoop home on single-baseline 3.1.3.",
-      "winutilsHomePlaceholder": "same as Hadoop home usually"
+    "detected": {
+      "title": "Detected environment (read-only)",
+      "notes": "Detected automatically from environment variables / PATH; change the system variables to update.",
+      "hadoopHome": "Hadoop home (HADOOP_HOME)",
+      "dotPath": "Graphviz dot",
+      "plantumlServer": "PlantUML server",
+      "unset": "Not detected"
     }
   }
 }

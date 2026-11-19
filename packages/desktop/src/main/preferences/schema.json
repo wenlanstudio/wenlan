@@ -325,12 +325,6 @@
     "enum": ["hand", "simple"],
     "default": "hand"
   },
-  "plantumlServer": {
-    "description": "Markdown--PlantUML server URL for rendering diagrams",
-    "type": "string",
-    "pattern": "^(https?://|$)",
-    "default": "https://www.plantuml.com/plantuml"
-  },
   "drawioServer": {
     "description": "Markdown--DrawIO embed server URL for rendering diagrams",
     "type": "string",
@@ -344,11 +338,6 @@
   },
   "matplotlibPythonPath": {
     "description": "Markdown--Python executable used to render matplotlib diagrams (empty: detect one with matplotlib automatically)",
-    "type": "string",
-    "default": ""
-  },
-  "graphvizDotPath": {
-    "description": "Markdown--Graphviz dot executable used to render Graphviz diagrams (empty: detect it automatically; the built-in WASM renderer is used when dot is unavailable)",
     "type": "string",
     "default": ""
   },

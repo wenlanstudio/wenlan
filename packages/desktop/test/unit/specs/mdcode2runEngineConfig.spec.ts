@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   engineConfigPath,
   loadEngineProfile,
-  loadMrProfile,
+  mrJdkHome,
   resolveEngineConfig
 } from '../../../src/main/mdcode2run/registry'
 
@@ -92,26 +92,20 @@ describe('mdcode2run 引擎配置文件', () => {
     if (merged.python.PYTHON_PATH) expect(typeof merged.python.PYTHON_PATH).toBe('string')
   })
 
-  // mr 执行器（runDocument）的机器三路径：只从 mr 键读，空串按缺省（引擎回落环境变量）。
-  it('mr 段：三路径原样透出，空串/非字符串按缺省', () => {
+  // mr 执行器（runDocument）的 JDK 与 java 块共用 java.JAVA_HOME 一处；
+  // Hadoop 走系统 HADOOP_HOME、winutils 并入 Hadoop bin，均不再从配置读。
+  it('mr JDK 复用 java.JAVA_HOME，空串/非字符串按缺省', () => {
     vi.stubEnv(
       'MD2R_CONFIG_FILE',
-      writeConfig(
-        JSON.stringify({
-          mr: { jdkHome: 'D:/jdk8', hadoopHome: 'D:/hadoop-3.1.3', winutilsHome: '   ' }
-        })
-      )
+      writeConfig(JSON.stringify({ java: { JAVA_HOME: 'D:/jdk17' }, mr: { hadoopHome: 'D:/ignored' } }))
     )
-    expect(loadMrProfile()).toEqual({
-      jdkHome: 'D:/jdk8',
-      hadoopHome: 'D:/hadoop-3.1.3',
-      winutilsHome: undefined
-    })
+    expect(mrJdkHome()).toBe('D:/jdk17')
+    vi.stubEnv(
+      'MD2R_CONFIG_FILE',
+      writeConfig(JSON.stringify({ java: { JAVA_HOME: '   ' } }))
+    )
+    expect(mrJdkHome()).toBeUndefined()
     vi.stubEnv('MD2R_CONFIG_FILE', writeConfig(JSON.stringify({ hive: {} })))
-    expect(loadMrProfile()).toEqual({
-      jdkHome: undefined,
-      hadoopHome: undefined,
-      winutilsHome: undefined
-    })
+    expect(mrJdkHome()).toBeUndefined()
   })
 })

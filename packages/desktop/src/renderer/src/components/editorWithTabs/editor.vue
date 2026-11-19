@@ -104,6 +104,7 @@ import {
   type TableActionType
 } from '@muyajs/core'
 import { getMuyaLocale } from '@/util/muyaLocale'
+import { DEFAULT_PLANTUML_SERVER } from '@shared/types/preferences'
 import { buildMuyaViewOptions, resolveCodeFont, resolveEditorFont } from '@/util/muyaViewOptions'
 import { exportStyledHTML, type HeaderFooterPart } from '@/util/exportHtml'
 import { applyCursor, isIndexCursor, serializeCursor } from '@/util/cursor'
@@ -585,15 +586,6 @@ watch(sequenceTheme, (value, oldValue) => {
     editor.value.setOptions({ sequenceTheme: toSequenceTheme(value) }, true)
   }
 })
-
-watch(
-  () => preferencesStore.plantumlServer,
-  (value, oldValue) => {
-    if (value !== oldValue && editor.value) {
-      editor.value.setOptions({ plantumlServer: value }, true)
-    }
-  }
-)
 
 watch(
   () => preferencesStore.drawioServer,
@@ -2301,7 +2293,7 @@ onMounted(() => {
         preview: payload.preview,
         mermaidTheme: options?.mermaidTheme ?? 'default',
         vegaTheme: options?.vegaTheme ?? 'latimes',
-        plantumlServer: options?.plantumlServer ?? '',
+        plantumlServer: options?.plantumlServer ?? DEFAULT_PLANTUML_SERVER,
         drawioServer: options?.drawioServer ?? 'https://embed.diagrams.net',
         sequenceTheme: toSequenceTheme(sequenceTheme.value)
       },

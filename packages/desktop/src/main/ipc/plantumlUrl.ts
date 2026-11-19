@@ -1,13 +1,10 @@
+import { DEFAULT_PLANTUML_SERVER } from '@shared/types/preferences'
+
 export type PlantumlFormat = 'svg' | 'png'
 
 const SERVER = /^https?:\/\/[^\s?#@]{1,512}$/
 const ENCODED = /^[A-Za-z0-9_-]{1,20000}$/
 const FORMATS: readonly PlantumlFormat[] = ['svg', 'png']
-
-// An empty preference means "unset", and muya renders against this instead —
-// keep the two in step or an export would be refused for a diagram that is on
-// screen.
-export const PLANTUML_DEFAULT_SERVER = 'https://www.plantuml.com/plantuml'
 
 const normalize = (server: string): string => server.trim().replace(/\/+$/, '')
 
@@ -28,7 +25,7 @@ export const buildPlantumlUrl = (
   if (!FORMATS.includes(format)) return null
   if (!SERVER.test(server) || !ENCODED.test(encoded)) return null
 
-  const allowed = normalize(configured) || PLANTUML_DEFAULT_SERVER
+  const allowed = normalize(configured) || DEFAULT_PLANTUML_SERVER
   if (!SERVER.test(allowed) || normalize(server) !== allowed) return null
 
   return `${allowed}/${format}/${encoded}`

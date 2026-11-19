@@ -8,8 +8,6 @@
  * a given diagram.
  */
 
-import { usePreferencesStore } from '@/store/preferences'
-
 export type GraphvizExeResult =
   | { ok: true; mime: string; dataUrl: string }
   | { ok: false; error: string }
@@ -28,16 +26,9 @@ const hashSource = (code: string): string => {
   return (hash >>> 0).toString(36)
 }
 
-/** The configured dot path is part of the key, so changing it re-renders. */
-const engineToken = (): string => {
-  try {
-    return usePreferencesStore().graphvizDotPath
-  }
-  catch {
-    // Unit tests and standalone callers have no active pinia.
-    return ''
-  }
-}
+/** dot 走自动探测（main 侧），路径不再是用户偏好——token 固定；失败结果不缓存，
+ * 首次未装 Graphviz 后补装仍会在下次渲染重新探测。 */
+const engineToken = (): string => ''
 
 const invokeDot = async(code: string): Promise<GraphvizExeResult> => {
   try {

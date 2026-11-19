@@ -174,29 +174,15 @@ export const resolveEngineConfig = (): Record<string, Record<string, unknown>> =
 }
 
 /**
- * mr 执行器（runDocument）的机器配置：配置文件 `mr` 键下的三路径，例：
- * { "mr": { "jdkHome": "D:/Program Files/Java/jdk1.8.0_471",
- *           "hadoopHome": "D:/bigdata/hadoop/hadoop-3.1.3",
- *           "winutilsHome": "D:/bigdata/hadoop/hadoop-3.1.0" } }
- * 空值/缺键 → 引擎回落环境变量（MDX_JDK_HOME / MDX_HADOOP_HOME / MDX_WINUTILS_HOME）。
+ * mr 执行器（runDocument）的 JDK：与 java 块共用同一个 `java.JAVA_HOME`——面板只让
+ * 填一处 JDK，不再有独立 mr.jdkHome。Hadoop 走系统 HADOOP_HOME（引擎侧解析），
+ * winutils 合并进 Hadoop 自己的 bin，故这里只需给引擎传 jdkHome。
+ *
+ * 优先级与 java 块一致：面板 java.JAVA_HOME（覆盖系统）→ 引擎回落 JAVA_HOME。
  */
-export interface Md2rMrProfile {
-  jdkHome?: string
-  hadoopHome?: string
-  winutilsHome?: string
-}
-
-export const loadMrProfile = (): Md2rMrProfile => {
-  const raw = loadEngineProfile().mr
-  const pick = (key: string): string | undefined => {
-    const v = raw?.[key]
-    return typeof v === 'string' && v.trim() ? v.trim() : undefined
-  }
-  return {
-    jdkHome: pick('jdkHome'),
-    hadoopHome: pick('hadoopHome'),
-    winutilsHome: pick('winutilsHome')
-  }
+export const mrJdkHome = (): string | undefined => {
+  const v = loadEngineProfile().java?.JAVA_HOME
+  return typeof v === 'string' && v.trim() ? v.trim() : undefined
 }
 
 const wireEvents = (entry: EngineEntry): void => {

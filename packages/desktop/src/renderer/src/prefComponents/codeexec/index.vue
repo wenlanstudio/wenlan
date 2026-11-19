@@ -5,61 +5,52 @@
     <compound :notes="t('codeExec.notes')">
       <template #head>
         <h6 class="title">
-          {{ t('codeExec.language.title') }}
+          {{ t('codeExec.runtime.title') }}
         </h6>
       </template>
       <template #children>
         <text-box
-          :description="t('codeExec.language.javaHome')"
-          :notes="t('codeExec.language.javaHomeNotes')"
+          :description="t('codeExec.runtime.jdkHome')"
+          :notes="t('codeExec.runtime.jdkHomeNotes')"
           :input="form.java.JAVA_HOME"
-          :placeholder="t('codeExec.language.javaHomePlaceholder')"
+          :placeholder="t('codeExec.runtime.jdkHomePlaceholder')"
           :on-change="(v) => setField('java', 'JAVA_HOME', v)"
         />
         <text-box
-          :description="t('codeExec.language.classPath')"
-          :notes="t('codeExec.language.classPathNotes')"
-          :input="form.java.CLASS_PATH"
-          :placeholder="t('codeExec.language.classPathPlaceholder')"
-          :on-change="(v) => setField('java', 'CLASS_PATH', v)"
-        />
-        <text-box
-          :description="t('codeExec.language.pythonPath')"
-          :notes="t('codeExec.language.pythonPathNotes')"
+          :description="t('codeExec.runtime.pythonPath')"
+          :notes="t('codeExec.runtime.pythonPathNotes')"
           :input="form.python.PYTHON_PATH"
-          :placeholder="t('codeExec.language.pythonPathPlaceholder')"
+          :placeholder="t('codeExec.runtime.pythonPathPlaceholder')"
           :on-change="(v) => setField('python', 'PYTHON_PATH', v)"
         />
       </template>
     </compound>
 
-    <compound :notes="t('codeExec.mr.notes')">
+    <compound :notes="t('codeExec.detected.notes')">
       <template #head>
         <h6 class="title">
-          {{ t('codeExec.mr.title') }}
+          {{ t('codeExec.detected.title') }}
         </h6>
       </template>
       <template #children>
-        <text-box
-          :description="t('codeExec.mr.jdkHome')"
-          :input="form.mr.jdkHome"
-          :placeholder="t('codeExec.mr.jdkHomePlaceholder')"
-          :on-change="(v) => setField('mr', 'jdkHome', v)"
-        />
-        <text-box
-          :description="t('codeExec.mr.hadoopHome')"
-          :notes="t('codeExec.mr.hadoopHomeNotes')"
-          :input="form.mr.hadoopHome"
-          :placeholder="t('codeExec.mr.hadoopHomePlaceholder')"
-          :on-change="(v) => setField('mr', 'hadoopHome', v)"
-        />
-        <text-box
-          :description="t('codeExec.mr.winutilsHome')"
-          :notes="t('codeExec.mr.winutilsHomeNotes')"
-          :input="form.mr.winutilsHome"
-          :placeholder="t('codeExec.mr.winutilsHomePlaceholder')"
-          :on-change="(v) => setField('mr', 'winutilsHome', v)"
-        />
+        <dl class="detected-list">
+          <div class="detected-row">
+            <dt>{{ t('codeExec.detected.hadoopHome') }}</dt>
+            <dd :class="{ unset: !detected.hadoopHome }">
+              {{ detected.hadoopHome || t('codeExec.detected.unset') }}
+            </dd>
+          </div>
+          <div class="detected-row">
+            <dt>{{ t('codeExec.detected.dotPath') }}</dt>
+            <dd :class="{ unset: !detected.dotPath }">
+              {{ detected.dotPath || t('codeExec.detected.unset') }}
+            </dd>
+          </div>
+          <div class="detected-row">
+            <dt>{{ t('codeExec.detected.plantumlServer') }}</dt>
+            <dd>{{ detected.plantumlServer }}</dd>
+          </div>
+        </dl>
       </template>
     </compound>
 
@@ -92,18 +83,23 @@ import { onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Compound from '../common/compound/index.vue'
 import TextBox from '../common/textBox/index.vue'
+import type { Md2rDetectedEnv } from '@shared/types/mdcode2run'
 
 const { t } = useI18n()
 
 /** 面板编辑的起点 = 落盘原文（saved），不含自动探测打底，避免保存时把探测结果固化。 */
 const form = reactive<{
-  java: { JAVA_HOME: string; CLASS_PATH: string }
+  java: { JAVA_HOME: string }
   python: { PYTHON_PATH: string }
-  mr: { jdkHome: string; hadoopHome: string; winutilsHome: string }
 }>({
-  java: { JAVA_HOME: '', CLASS_PATH: '' },
-  python: { PYTHON_PATH: '' },
-  mr: { jdkHome: '', hadoopHome: '', winutilsHome: '' }
+  java: { JAVA_HOME: '' },
+  python: { PYTHON_PATH: '' }
+})
+
+const detected = reactive<Md2rDetectedEnv>({
+  hadoopHome: '',
+  dotPath: '',
+  plantumlServer: ''
 })
 
 const configPath = ref('')
@@ -112,7 +108,7 @@ const saveOk = ref(false)
 const saveError = ref('')
 
 const setField = (
-  family: 'java' | 'python' | 'mr',
+  family: 'java' | 'python',
   key: string,
   value: string
 ): void => {
@@ -127,11 +123,13 @@ onMounted(async () => {
     configPath.value = res.path
     const s = res.saved
     form.java.JAVA_HOME = asString(s.java?.JAVA_HOME)
-    form.java.CLASS_PATH = asString(s.java?.CLASS_PATH)
     form.python.PYTHON_PATH = asString(s.python?.PYTHON_PATH)
-    form.mr.jdkHome = asString(s.mr?.jdkHome)
-    form.mr.hadoopHome = asString(s.mr?.hadoopHome)
-    form.mr.winutilsHome = asString(s.mr?.winutilsHome)
+    const d = res.detected
+    if (d) {
+      detected.hadoopHome = asString(d.hadoopHome)
+      detected.dotPath = asString(d.dotPath)
+      detected.plantumlServer = asString(d.plantumlServer)
+    }
   } catch {
     saveError.value = t('codeExec.loadFailed')
   }
@@ -147,12 +145,8 @@ const save = async (): Promise<void> => {
     const patch: Record<string, Record<string, unknown>> = {}
     // 只写有值的字段；空串走不了「清空」语义（saveEngineProfile 按族 merge），
     // 空值字段直接不写，保留文件里的旧值。
-    if (form.java.JAVA_HOME) patch.java = { ...(patch.java ?? {}), JAVA_HOME: form.java.JAVA_HOME }
-    if (form.java.CLASS_PATH) patch.java = { ...(patch.java ?? {}), CLASS_PATH: form.java.CLASS_PATH }
+    if (form.java.JAVA_HOME) patch.java = { JAVA_HOME: form.java.JAVA_HOME }
     if (form.python.PYTHON_PATH) patch.python = { PYTHON_PATH: form.python.PYTHON_PATH }
-    if (form.mr.jdkHome) patch.mr = { ...(patch.mr ?? {}), jdkHome: form.mr.jdkHome }
-    if (form.mr.hadoopHome) patch.mr = { ...(patch.mr ?? {}), hadoopHome: form.mr.hadoopHome }
-    if (form.mr.winutilsHome) patch.mr = { ...(patch.mr ?? {}), winutilsHome: form.mr.winutilsHome }
     const res = await window.mdcode2run.setEngineConfig(patch)
     if (res.ok) {
       saveOk.value = true
@@ -170,6 +164,33 @@ const save = async (): Promise<void> => {
 <style scoped>
 .pref-codeexec {
   max-width: 640px;
+}
+
+.detected-list {
+  margin: 0;
+}
+
+.detected-row {
+  display: flex;
+  gap: 12px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.detected-row dt {
+  flex: 0 0 120px;
+  color: var(--secondaryTextColor, #888);
+}
+
+.detected-row dd {
+  margin: 0;
+  flex: 1;
+  word-break: break-all;
+}
+
+.detected-row dd.unset {
+  color: var(--secondaryTextColor, #888);
+  font-style: italic;
 }
 
 .config-path {

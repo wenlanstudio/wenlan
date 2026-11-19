@@ -691,9 +691,6 @@
           "handDrawn": "Desenhado à Mão",
           "simple": "Simples"
         },
-        "plantumlServer": {
-          "title": "URL do servidor PlantUML"
-        },
         "drawioServer": {
           "title": "URL do servidor DrawIO"
         },
@@ -703,12 +700,6 @@
           },
           "pythonPath": {
             "title": "Caminho do executável Python"
-          }
-        },
-        "graphviz": {
-          "dotPath": {
-            "title": "Graphviz dot Executable Path",
-            "notes": "Leave empty to auto-detect dot (GRAPHVIZ_DOT, the usual install folders, PATH). Wenlan prefers it over the built-in WASM renderer and falls back automatically when dot is unavailable."
           }
         }
       },
@@ -1291,35 +1282,28 @@
   },
   "codeExec": {
     "title": "Execução de código",
-    "notes": "Ambiente específico da máquina para executar blocos de código. Prioridade inferior a front-matter code-exec.",
+    "notes": "Ambiente da máquina usado para executar os blocos de código dos documentos.",
     "save": "Salvar",
     "saveOk": "Salvo",
     "saveFailed": "Falha ao salvar",
     "loadFailed": "Falha ao carregar a configuração",
     "configPath": "Arquivo de configuração",
-    "language": {
-      "title": "Runtimes de linguagem",
-      "javaHome": "JAVA_HOME",
-      "javaHomeNotes": "Diretório raiz ou bin do JDK (JDK 11+). Vazio = JAVA_HOME do sistema.",
-      "javaHomePlaceholder": "ex. D:/Program Files/Java/jdk-17.0.20.1",
-      "classPath": "CLASS_PATH",
-      "classPathNotes": "Opcional; vazio = derivado de HADOOP_HOME.",
-      "classPathPlaceholder": "vazio para derivar de HADOOP_HOME",
-      "pythonPath": "PYTHON_PATH",
-      "pythonPathNotes": "Caminho do interpretador Python.",
-      "pythonPathPlaceholder": "detecção automática se vazio"
-    },
-    "mr": {
-      "title": "Executor MapReduce",
-      "notes": "Envio de job local (mr-job). Vazio = variáveis de ambiente.",
+    "runtime": {
+      "title": "Ambientes de execução",
       "jdkHome": "Diretório JDK",
-      "jdkHomePlaceholder": "ex. D:/Program Files/Java/jdk-17.0.20.1",
-      "hadoopHome": "Diretório Hadoop",
-      "hadoopHomeNotes": "Distribuição completa com share/hadoop e bin/winutils.exe.",
-      "hadoopHomePlaceholder": "ex. D:/bigdata/hadoop/hadoop-3.1.3",
-      "winutilsHome": "Diretório Winutils",
-      "winutilsHomeNotes": "Opcional; igual a Hadoop por padrão.",
-      "winutilsHomePlaceholder": "normalmente igual a Hadoop"
+      "jdkHomeNotes": "Deixe vazio para usar o JAVA_HOME do sistema.",
+      "jdkHomePlaceholder": "ex.: D:/Program Files/Java/jdk-17.0.20.1",
+      "pythonPath": "Interpretador Python",
+      "pythonPathNotes": "Deixe vazio para usar o python do PATH do sistema.",
+      "pythonPathPlaceholder": "vazio = detectar automaticamente"
+    },
+    "detected": {
+      "title": "Ambiente detectado (somente leitura)",
+      "notes": "Detectado automaticamente das variáveis de ambiente / PATH; altere as variáveis do sistema para atualizar.",
+      "hadoopHome": "Diretório Hadoop (HADOOP_HOME)",
+      "dotPath": "Graphviz dot",
+      "plantumlServer": "Servidor PlantUML",
+      "unset": "Não detectado"
     }
   }
 }

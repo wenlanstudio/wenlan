@@ -187,9 +187,9 @@ import QRCode from 'qrcode'
 import { storeToRefs } from 'pinia'
 import { diagramTypeOfLang } from '@muyajs/core'
 import type { Md2rEvent } from '@shared/types/mdcode2run'
+import { DEFAULT_PLANTUML_SERVER } from '@shared/types/preferences'
 import { useEditorStore } from '@/store/editor'
 import { useEditorViewStore } from '@/store/editorView'
-import { usePreferencesStore } from '@/store/preferences'
 import { useTeachingStore } from '@/store/teaching'
 import { followTargetOf, shouldSnapBack } from '@/util/classroomFollow'
 import { renderGraphvizToDataUrl, renderPlantumlToDataUrl, renderMatplotlibToDataUrl } from '@/util/md2slidesDiagram'
@@ -233,7 +233,6 @@ const props = defineProps<{
 
 const editorStore = useEditorStore()
 const editorViewStore = useEditorViewStore()
-const preferencesStore = usePreferencesStore()
 const teachingStore = useTeachingStore()
 
 // ── ADR-24 封面叠码：课表命中自动开房后，第 1 页叠学生入会二维码 ──
@@ -307,7 +306,6 @@ watch(
   },
   { immediate: true }
 )
-const { plantumlServer } = storeToRefs(preferencesStore)
 const { isSplit, presentExclusive, presentImmersive } = storeToRefs(editorViewStore)
 const { classroom } = storeToRefs(teachingStore)
 
@@ -660,7 +658,7 @@ const onRpc = async (data: { id: number; diagramType: string; source: string }):
   try {
     const dataUrl =
       data.diagramType === 'plantuml'
-        ? await renderPlantumlToDataUrl(data.source, plantumlServer.value)
+        ? await renderPlantumlToDataUrl(data.source, DEFAULT_PLANTUML_SERVER)
         : data.diagramType === 'matplotlib'
           ? await renderMatplotlibToDataUrl(data.source)
           : await renderGraphvizToDataUrl(data.source)

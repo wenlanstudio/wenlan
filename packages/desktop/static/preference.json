@@ -14,7 +14,20 @@
   "defaultDirectoryToOpen": "",
   "projectsRoot": "",
   "lastOpenedFolder": "",
-  "treePathExcludePatterns": [],
+  "treePathExcludePatterns": [
+    "**/node_modules/**",
+    "**/.git/**",
+    "**/.svn/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/target/**",
+    "**/out/**",
+    "**/.cache/**",
+    "**/.idea/**",
+    "**/venv/**",
+    "**/.venv/**",
+    "**/__pycache__/**"
+  ],
   "language": "en",
 
   "editorFontFamily": "Open Sans",
@@ -64,11 +77,9 @@
   "isHtmlEnabled": true,
   "softNewlineAsSpace": false,
   "sequenceTheme": "hand",
-  "plantumlServer": "https://www.plantuml.com/plantuml",
   "drawioServer": "https://embed.diagrams.net",
   "matplotlibEnabled": true,
   "matplotlibPythonPath": "",
-  "graphvizDotPath": "",
 
   "theme": "light",
   "followSystemTheme": true,

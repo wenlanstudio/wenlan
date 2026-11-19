@@ -48,6 +48,7 @@ import App from './app'
 import { t } from './i18n'
 import { registerSandboxIpcHandlers } from './ipc'
 import { setPlantumlServerSource } from './ipc/diagram'
+import { DEFAULT_PLANTUML_SERVER } from '@shared/types/preferences'
 import { setMatplotlibSource, warmUpPythonDetection } from './ipc/matplotlib'
 import { setGraphvizSource } from './ipc/graphviz'
 import { initAuthManager, getAuthManager } from './auth'
@@ -157,9 +158,8 @@ try {
   }
   process.exit(1)
 }
-// Preferences only exist now; the fetch handler refuses everything until it
-// knows which server the user configured.
-setPlantumlServerSource(() => accessor.preferences.getItem<string>('plantumlServer') ?? '')
+// PlantUML 服务地址归入只读探测（2026-11-19）：内置默认常量，不再由偏好面板配置。
+setPlantumlServerSource(() => DEFAULT_PLANTUML_SERVER)
 // matplotlib runs the document's Python only while the preference says so.
 // An empty path means "find one", which is the default: probing spawns a
 // process per candidate, so start it here rather than on the first diagram.
@@ -168,9 +168,9 @@ setMatplotlibSource(() => ({
   pythonPath: accessor.preferences.getItem<string>('matplotlibPythonPath') ?? ''
 }))
 warmUpPythonDetection()
-// Empty = detect dot automatically; a configured path wins. Read on every
-// render so changing the preference needs no restart.
-setGraphvizSource(() => accessor.preferences.getItem<string>('graphvizDotPath') ?? '')
+// dot 路径归入只读探测（2026-11-19）：空串 = 走 GRAPHVIZ_DOT / 安装目录 / PATH 自动探测，
+// 不再由偏好面板配置。
+setGraphvizSource(() => '')
 
 // 课程工作区根目录：安装器交接文件在此采用一次，偏好就绪后才能解析。
 initTeachingProjects(accessor.preferences, appEnvironment.paths.userDataPath)

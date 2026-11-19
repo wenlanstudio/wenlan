@@ -52,7 +52,7 @@ import {
   disposeEngine,
   engineConfigPath,
   loadEngineProfile,
-  loadMrProfile,
+  mrJdkHome,
   resolveEngineConfig,
   saveEngineProfile,
   setEventSink,
@@ -61,6 +61,8 @@ import {
   unwatchAllFor,
   watchEngine
 } from '../mdcode2run/registry'
+import { resolveDotBinary } from './graphviz'
+import { DEFAULT_PLANTUML_SERVER } from '@shared/types/preferences'
 
 /** parse 结果的序列化投影：剥离 fences（含 code 正文）、章只留围栏行号，体裁透传。 */
 const serializeParse = (parsed: {
@@ -146,13 +148,11 @@ const runDocumentHandler = async(
     throw new Error('Invalid mdcode2run run-document request')
   }
   const { entry } = watchEngine(opts.docPath, e.sender.id)
-  const mr = loadMrProfile()
+  // JDK 只有一个来源：面板 java.JAVA_HOME（覆盖系统）；Hadoop 走引擎侧 HADOOP_HOME。
   return entry.engine.runDocument(opts.md, {
     timeoutMs: opts.timeoutMs,
     compileOnly: opts.compileOnly,
-    jdkHome: mr.jdkHome,
-    hadoopHome: mr.hadoopHome,
-    winutilsHome: mr.winutilsHome
+    jdkHome: mrJdkHome()
   })
 }
 
@@ -309,10 +309,16 @@ const labReportHandler = (e: IpcMainInvokeEvent, opts: Md2rLabReportOpts): Md2rL
 // ── 引擎层配置（~/.wenlan/mdcode2run.json）：设置面板读写 ──────────────────
 
 /** 读：合并探测打底 + 文件覆盖（config），另带落盘原文（saved）供面板编辑。 */
-const getEngineConfigHandler = (_e: IpcMainInvokeEvent): Md2rGetEngineConfigResult => ({
+const getEngineConfigHandler = async(_e: IpcMainInvokeEvent): Promise<Md2rGetEngineConfigResult> => ({
   path: engineConfigPath(),
   config: resolveEngineConfig(),
-  saved: loadEngineProfile()
+  saved: loadEngineProfile(),
+  // 只读探测区：Hadoop 走系统变量、dot 走 PATH/安装目录自动探测、PlantUML 内置默认。
+  detected: {
+    hadoopHome: (process.env.HADOOP_HOME ?? '').trim(),
+    dotPath: (await resolveDotBinary('')) ?? '',
+    plantumlServer: DEFAULT_PLANTUML_SERVER
+  }
 })
 
 /**

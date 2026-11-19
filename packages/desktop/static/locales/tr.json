@@ -691,9 +691,6 @@
           "handDrawn": "El Çizimi",
           "simple": "Basit"
         },
-        "plantumlServer": {
-          "title": "PlantUML Sunucu URL'si"
-        },
         "drawioServer": {
           "title": "DrawIO gömme sunucu URL'si"
         },
@@ -703,12 +700,6 @@
           },
           "pythonPath": {
             "title": "Python çalıştırılabilir dosyası yolu"
-          }
-        },
-        "graphviz": {
-          "dotPath": {
-            "title": "Graphviz dot Executable Path",
-            "notes": "Leave empty to auto-detect dot (GRAPHVIZ_DOT, the usual install folders, PATH). Wenlan prefers it over the built-in WASM renderer and falls back automatically when dot is unavailable."
           }
         }
       },
@@ -1291,35 +1282,28 @@
   },
   "codeExec": {
     "title": "Kod Yürütme",
-    "notes": "Kod bloklarını yürütmek için makine ortamı. front-matter code-exec'ten daha düşük öncelik.",
+    "notes": "Belgelerdeki kod bloklarını çalıştırmak için kullanılan makine ortamı.",
     "save": "Kaydet",
     "saveOk": "Kaydedildi",
     "saveFailed": "Kaydetme başarısız",
     "loadFailed": "Yapılandırma yüklenemedi",
     "configPath": "Yapılandırma dosyası",
-    "language": {
-      "title": "Dil çalışma zamanları",
-      "javaHome": "JAVA_HOME",
-      "javaHomeNotes": "JDK kök veya bin dizini (JDK 11+). Boş = sistem JAVA_HOME.",
-      "javaHomePlaceholder": "örn. D:/Program Files/Java/jdk-17.0.20.1",
-      "classPath": "CLASS_PATH",
-      "classPathNotes": "İsteğe bağlı; boş = HADOOP_HOME'dan türetilir.",
-      "classPathPlaceholder": "HADOOP_HOME'dan türetmek için boş bırakın",
-      "pythonPath": "PYTHON_PATH",
-      "pythonPathNotes": "Python yorumlayıcı yolu.",
-      "pythonPathPlaceholder": "boşsa otomatik algılanır"
-    },
-    "mr": {
-      "title": "MapReduce yürütücüsü",
-      "notes": "Yerel iş gönderimi (mr-job). Boş = ortam değişkenleri.",
+    "runtime": {
+      "title": "Çalışma zamanları",
       "jdkHome": "JDK dizini",
+      "jdkHomeNotes": "Sistem JAVA_HOME’unu kullanmak için boş bırakın.",
       "jdkHomePlaceholder": "örn. D:/Program Files/Java/jdk-17.0.20.1",
-      "hadoopHome": "Hadoop dizini",
-      "hadoopHomeNotes": "share/hadoop ve bin/winutils.exe içeren tam dağıtım.",
-      "hadoopHomePlaceholder": "örn. D:/bigdata/hadoop/hadoop-3.1.3",
-      "winutilsHome": "Winutils dizini",
-      "winutilsHomeNotes": "İsteğe bağlı; varsayılan Hadoop ile aynı.",
-      "winutilsHomePlaceholder": "genellikle Hadoop ile aynı"
+      "pythonPath": "Python yorumlayıcı",
+      "pythonPathNotes": "Sistem PATH’indeki python’u kullanmak için boş bırakın.",
+      "pythonPathPlaceholder": "boş = otomatik algıla"
+    },
+    "detected": {
+      "title": "Algılanan ortam (salt okunur)",
+      "notes": "Ortam değişkenlerinden / PATH’den otomatik algılanır; güncellemek için sistem değişkenlerini değiştirin.",
+      "hadoopHome": "Hadoop dizini (HADOOP_HOME)",
+      "dotPath": "Graphviz dot",
+      "plantumlServer": "PlantUML sunucusu",
+      "unset": "Algılanmadı"
     }
   }
 }

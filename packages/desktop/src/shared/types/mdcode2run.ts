@@ -385,6 +385,16 @@ export type Md2rEngineFamilyConfig = Record<string, unknown>
 /** 引擎层配置全文：family → { KEY: value }。`secrets` 给 preset ${NAME} 取真值。 */
 export type Md2rEngineConfig = Record<string, Md2rEngineFamilyConfig>
 
+/** 只读环境探测结果（跟随系统变量 / PATH / 内置默认，面板展示用，不可编辑）。 */
+export interface Md2rDetectedEnv {
+  /** 系统 HADOOP_HOME（未设为空串）；原生层 bin 固定与之同目录。 */
+  hadoopHome: string
+  /** 自动探测到的 Graphviz dot 可执行文件（未找到为空串）。 */
+  dotPath: string
+  /** PlantUML 渲染服务地址（内置默认）。 */
+  plantumlServer: string
+}
+
 /** 读当前引擎配置（含自动探测打底，如 Python 解释器路径）。 */
 export interface Md2rGetEngineConfigResult {
   /** 配置文件的绝对路径（面板展示用，只读）。 */
@@ -393,6 +403,8 @@ export interface Md2rGetEngineConfigResult {
   config: Md2rEngineConfig
   /** 配置文件里原始落盘内容（面板编辑的起点，不含探测结果）。 */
   saved: Md2rEngineConfig
+  /** 只读环境探测：Hadoop / Graphviz dot / PlantUML。 */
+  detected: Md2rDetectedEnv
 }
 
 /** 写回引擎配置。merge 到现有文件，不整文件覆盖。 */
