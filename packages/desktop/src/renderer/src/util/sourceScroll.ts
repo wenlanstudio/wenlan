@@ -41,6 +41,27 @@ export const sourceTopLine = (editor: ISourceEditor, container: HTMLElement | nu
 }
 
 /**
+ * 视口顶的实数行位（§6.0 的 ρ_source）：整数部分 = 行（1 基），小数部分 =
+ * 行内像素进度。本视图的单位就是源码行、CM 逐行有精确坐标——全系统最细的
+ * 实现算子，行位在这里无损。
+ */
+export const sourceTopRealLine = (
+  editor: ISourceEditor,
+  container: HTMLElement | null
+): { line: number; frac: number } => {
+  if (!container) return { line: 0, frac: 0 }
+  const scroller = editor.getScrollerElement()
+  if (!scroller) return { line: 0, frac: 0 }
+
+  const y = container.getBoundingClientRect().top - scroller.getBoundingClientRect().top
+  const line = editor.lineAtHeight(Math.max(0, y), 'local')
+  const top = editor.heightAtLine(line, 'local')
+  const height = editor.heightAtLine(line + 1, 'local') - top
+  const frac = height > 0 ? Math.min(1, Math.max(0, (y - top) / height)) : 0
+  return { line: line + 1, frac }
+}
+
+/**
  * Scroll the source editor so `line` (0-based) sits at the top of the
  * viewport. The caret is left alone — the caller decides whether the scroll
  * should also move it.
@@ -53,5 +74,25 @@ export const scrollSourceToLine = (
 ): void => {
   if (!container) return
   const top = editor.heightAtLine(line, 'local') + contentOffset(editor, container)
+  container.scrollTo({ top, behavior })
+}
+
+/**
+ * Scroll so the real-valued line (1-based；小数部分 = 行内进度) sits at the
+ * viewport top — `sourceTopRealLine` 的逆（§6.0 的 R_source）。行高逐行精确
+ * 线性插值，是模型里唯一无损的实现算子。caret 不动。
+ */
+export const scrollSourceToRealLine = (
+  editor: ISourceEditor,
+  realLine: number,
+  container: HTMLElement | null,
+  behavior: ScrollBehavior = 'auto'
+): void => {
+  if (!container) return
+  const line = Math.max(1, Math.floor(realLine))
+  const frac = Math.min(1, Math.max(0, realLine - line))
+  const top0 = editor.heightAtLine(line - 1, 'local')
+  const height = editor.heightAtLine(line, 'local') - top0
+  const top = top0 + height * frac + contentOffset(editor, container)
   container.scrollTo({ top, behavior })
 }

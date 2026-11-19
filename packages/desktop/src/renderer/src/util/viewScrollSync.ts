@@ -2,6 +2,8 @@
 // 位置存储收口到 util/docAnchor.ts 的单槽锚服务——本文件只保留 DOM 序列
 // （contentBlocks 域）与 text 桥换算，供锚服务与各视图消费）。
 
+import { blockLineSpan, type DocAnchor } from './docAnchor'
+
 /**
  * 一个视图的视口位置。字段按视图填充，读取方用自己认得的那个坐标，缺失时
  * 退回到 `text` 换算（锚存储在 util/docAnchor.ts，本类型是其 topBlock/
@@ -128,8 +130,14 @@ export function findBlockIndex(blocks: Element[], text: string): number {
   return -1
 }
 
-/** 视口顶部第一个可见块的锚点；无可见块时退化为最后一块。 */
-export function viewAnchorOf(container: HTMLElement | null): ViewAnchor | null {
+/** 视口顶部第一个可见块的锚点；无可见块时退化为最后一块。markdown 给定时
+ * 补行位坐标（§6.0 归一化量）：块内像素进度 x（几何活读）→ 实数行位
+ * ℓ* = a + x·d → topLine = ⌊ℓ*⌋、topFrac = 小数部分。行覆盖脏窗口（span
+ * 缺失）只写 topBlock/text，消费面退回块顶语义。 */
+export function viewAnchorOf(
+  container: HTMLElement | null,
+  markdown?: string
+): Partial<Pick<DocAnchor, 'topBlock' | 'topLine' | 'topFrac' | 'text'>> | null {
   if (!container)
     return null
 
@@ -142,7 +150,22 @@ export function viewAnchorOf(container: HTMLElement | null): ViewAnchor | null {
   const index = blocks.findIndex((el) => el.getBoundingClientRect().bottom > viewTop)
   const at = index === -1 ? blocks.length - 1 : index
 
-  return { blockIndex: at, text: blockText(blocks[at]) }
+  const anchor: Partial<Pick<DocAnchor, 'topBlock' | 'topLine' | 'topFrac' | 'text'>> = {
+    topBlock: at,
+    text: blockText(blocks[at])
+  }
+
+  const span = markdown ? blockLineSpan(markdown, at) : null
+  if (span) {
+    const rect = blocks[at].getBoundingClientRect()
+    const x = rect.height > 0 ? Math.min(1, Math.max(0, (viewTop - rect.top) / rect.height)) : 0
+    const real = span.start + x * (span.end - span.start + 1)
+    const line = Math.floor(real)
+    anchor.topLine = line
+    anchor.topFrac = real - line
+  }
+
+  return anchor
 }
 
 /**
@@ -199,6 +222,9 @@ export function scrollViewToAnchorIn(
   const target = blocks[Math.max(0, Math.min(index, blocks.length - 1))]
   const top = scroller.scrollTop
     + target.getBoundingClientRect().top - scroller.getBoundingClientRect().top
+  // 幂等守卫（§6.2）：目标与当前相差不足 1px 视为已在位，不动——反向定位 →
+  // 编辑面滚动 → 再跟随的链路靠幂等自然收敛，也避免 smooth 动画无谓重启。
+  if (Math.abs(top - scroller.scrollTop) < 1) return
   // smooth 才走 scrollTo（可动画）；auto 直接赋值（瞬时，且 jsdom 的 scrollTo
   // 是 no-op，单测环境靠这条路径断言 scrollTop）。
   if (options?.behavior === 'smooth') scroller.scrollTo({ top, behavior: 'smooth' })

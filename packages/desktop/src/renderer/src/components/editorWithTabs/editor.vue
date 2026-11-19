@@ -122,6 +122,7 @@ import {
   blockIndexToLine,
   flushDocAnchorWrite,
   lastEditingSurface,
+  lineToBlockIndex,
   onDocAnchorChange,
   readDocAnchor,
   rememberSurface,
@@ -1429,7 +1430,7 @@ const handleLensDblClick = (event: MouseEvent): void => {
   // 切顶级视图 source（挂载恢复落在该行）；否则走文（下述同实例路径）。
   if (topIndex != null && lastEditingSurface() === 'source') {
     const line = blockIndexToLine(props.markdown ?? '', topIndex)
-    if (line != null) writeDocAnchor({ topLine: line, origin: 'reverse' })
+    if (line != null) writeDocAnchor({ topLine: line, topFrac: undefined, origin: 'reverse' })
     editorViewStore.toggleSourceMode()
     return
   }
@@ -1458,14 +1459,22 @@ const LINE_TABLE_DEBOUNCE_MS = 300
 let lineTableTimer = 0
 
 // 反向定位：只读面（栏右投影等）发来的锚 → 文/栏透镜就地滚到对应块（不落
-// 光标、不移焦点）。自己滚动写的锚（origin=scroll）不吃回声。
+// 光标、不移焦点）。自己滚动写的锚（origin=scroll）不吃回声。行位是基准
+// 单位（§6.0）——优先 topLine 经本文覆盖换算（栏投影写的 topBlock 是它的
+// 私有域，块序与本域不齐），覆盖缺失退 topBlock 直通；块顶对齐（§6.3
+// 反向定位粒度=块级）。
 const offDocAnchor = onDocAnchorChange((anchor) => {
   if (anchor?.origin !== 'reverse') return
   if (props.lens !== 'flow' && props.lens !== 'column') return
   requestAnimationFrame(() => {
+    let index = anchor.topBlock
+    if (anchor.topLine != null) {
+      const at = lineToBlockIndex(props.markdown ?? '', Math.max(1, Math.floor(anchor.topLine)))
+      if (at != null) index = at
+    }
     scrollViewToAnchor(
       getScrollContainer(),
-      { blockIndex: anchor.topBlock, text: anchor.text },
+      { blockIndex: index, text: anchor.text },
       { behavior: 'smooth' }
     )
   })
@@ -2230,11 +2239,12 @@ onMounted(() => {
   scrollHandler = () => {
     if (currentFile.value) {
       editorStore.updateScrollPosition(currentFile.value.id, container.scrollTop)
-      // 视图间滚动同步（§6.1 锚服务）：rAF 合帧记录视口顶块（topBlock+text）。
+      // 视图间滚动同步（§6.0/§6.1 锚服务）：rAF 合帧写归一化量——视口顶块
+      // （topBlock+text）+ 实数行位（topLine+topFrac，块内像素进度换算）。
       // origin 显式写 'scroll'——writeDocAnchor 是合并写，不显式覆盖会让单击
       // 右栏留下的 'reverse' 永久残留，反向订阅把自己的滚动回声又当成定位
       // 指令，自激循环卡死滚动。
-      scheduleDocAnchorWrite(() => ({ ...viewAnchorOf(container), origin: 'scroll' as const }))
+      scheduleDocAnchorWrite(() => ({ ...viewAnchorOf(container, props.markdown ?? ''), origin: 'scroll' as const }))
     }
   }
   container.addEventListener('scroll', scrollHandler, { passive: true })
@@ -2254,7 +2264,14 @@ onMounted(() => {
   requestAnimationFrame(() => {
     const anchor = readDocAnchor()
     if (anchor !== null) {
-      scrollViewToAnchor(getScrollContainer(), { blockIndex: anchor.topBlock, text: anchor.text })
+      // 行位优先（§6.0）：本切回来的锚带 topLine（topBlock 可能是更早文会话
+      // 的残留——合并写不清旧值），经本文覆盖换算；覆盖缺失退 topBlock。
+      let index = anchor.topBlock
+      if (anchor.topLine != null) {
+        const at = lineToBlockIndex(props.markdown ?? '', Math.max(1, Math.floor(anchor.topLine)))
+        if (at != null) index = at
+      }
+      scrollViewToAnchor(getScrollContainer(), { blockIndex: index, text: anchor.text })
     }
   })
 
@@ -2456,7 +2473,7 @@ onBeforeUnmount(() => {
   if (currentFile.value?.id) {
     const container = getScrollContainer()
     if (container)
-      flushDocAnchorWrite(() => ({ ...viewAnchorOf(container), origin: 'scroll' as const }))
+      flushDocAnchorWrite(() => ({ ...viewAnchorOf(container, props.markdown ?? ''), origin: 'scroll' as const }))
   }
   window.clearTimeout(lineTableTimer)
   offDocAnchor()

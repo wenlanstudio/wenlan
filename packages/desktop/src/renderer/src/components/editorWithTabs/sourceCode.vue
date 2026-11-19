@@ -10,7 +10,7 @@ import { ref, shallowRef, markRaw, watch, onMounted, onBeforeUnmount, nextTick }
 import { useEditorStore } from '@/store/editor'
 import { usePreferencesStore } from '@/store/preferences'
 import { findMarkdownHeadingLine, scrollSourceEditorToLine } from '@/util/sourceModeToc'
-import { scrollSourceToLine, sourceTopLine } from '@/util/sourceScroll'
+import { scrollSourceToLine, scrollSourceToRealLine, sourceTopRealLine } from '@/util/sourceScroll'
 import { blockIndexToLine, flushDocAnchorWrite, readDocAnchor, rememberSurface, writeDocAnchor } from '@/util/docAnchor'
 import { findLineByText, sourceAnchorOf } from '@/util/viewScrollSync'
 import { storeToRefs } from 'pinia'
@@ -399,12 +399,13 @@ const handleScroll = () => {
     const container = sourceCodeContainer.value
     if (!cm || !container) return
 
-    const line = sourceTopLine(cm, container)
-    const { line: bridgeLine, text } = sourceAnchorOf(cm.getValue(), line + 1)
-    // 合并写进单槽锚：topLine 记真实视口顶行（源码内部恢复精度），text 供
-    // 其它视图 text 桥兜底；origin 显式 'scroll'（防 reverse 残留自激）；
-    // cursorLine 随光标移动单独更新（览/映跟随用）。
-    writeDocAnchor({ topLine: bridgeLine, text, origin: 'scroll' })
+    // 实数行位（§6.0 ρ_source）：行 + 行内进度——本视图单位即源码行、CM
+    // 逐行精确坐标，行位在这里无损。topLine 记真实视口顶行（源码内部恢复
+    // 精度），topFrac 记行内进度；text 供其它视图 text 桥兜底；origin 显式
+    // 'scroll'（防 reverse 残留自激）；cursorLine 随光标移动单独更新。
+    const { line, frac } = sourceTopRealLine(cm, container)
+    const { line: bridgeLine, text } = sourceAnchorOf(cm.getValue(), line)
+    writeDocAnchor({ topLine: bridgeLine, topFrac: frac, text, origin: 'scroll' })
   })
 }
 
@@ -431,7 +432,14 @@ const restoreViewAnchor = (cm: CodeMirror.Editor, markdown: string): void => {
 
   // The line heights are only known after the editor laid out — wait a frame.
   requestAnimationFrame(() => {
-    scrollSourceToLine(cm, line! - 1, sourceCodeContainer.value)
+    // 行位精确路径（§6.0 R_source）：解析行 == 锚行且带行内进度时逐行高插值；
+    // 其余（行表/文本桥兜底）退回整行对齐。
+    if (anchor.topFrac != null && line === anchor.topLine) {
+      scrollSourceToRealLine(cm, line! + anchor.topFrac, sourceCodeContainer.value)
+    }
+    else {
+      scrollSourceToLine(cm, line! - 1, sourceCodeContainer.value)
+    }
   })
 }
 
@@ -533,11 +541,9 @@ onBeforeUnmount(() => {
     const cm = editor.value
     const container = sourceCodeContainer.value
     if (cm && container) {
-      const { line: bridgeLine, text } = sourceAnchorOf(
-        cm.getValue(),
-        sourceTopLine(cm, container) + 1
-      )
-      flushDocAnchorWrite(() => ({ topLine: bridgeLine, text, origin: 'scroll' }))
+      const { line, frac } = sourceTopRealLine(cm, container)
+      const { line: bridgeLine, text } = sourceAnchorOf(cm.getValue(), line)
+      flushDocAnchorWrite(() => ({ topLine: bridgeLine, topFrac: frac, text, origin: 'scroll' }))
     }
   }
 

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest'
+import { updateLineTable } from '@/util/docAnchor'
 import {
   contentBlocks,
   findBlockIndex,
@@ -96,7 +97,7 @@ describe('contentBlocks — the anchor sequence', () => {
     mockRects(container, [0, 100])
 
     expect(contentBlocks(container).map(b => b.textContent)).toEqual(['p0', 'p1'])
-    expect(viewAnchorOf(container)?.blockIndex).toBe(0)
+    expect(viewAnchorOf(container)?.topBlock).toBe(0)
     expect(viewAnchorOf(container)?.text).toBe('p0')
   })
 })
@@ -110,19 +111,41 @@ describe('viewAnchorOf / scrollViewToAnchor', () => {
     // b0 完全在视口上方，b1 贴着视口顶 → 锚点 1。
     mockRects(container, [-100, 0, 100, 200])
 
-    expect(viewAnchorOf(container)?.blockIndex).toBe(1)
+    expect(viewAnchorOf(container)?.topBlock).toBe(1)
   })
 
   it('falls back to the last block when everything is scrolled past', () => {
     mockRects(container, [-800, -700, -600, -500])
 
-    expect(viewAnchorOf(container)?.blockIndex).toBe(3)
+    expect(viewAnchorOf(container)?.topBlock).toBe(3)
   })
 
   it('carries the visible block text so other views can convert the position', () => {
     mockRects(container, [-100, 0, 100, 200])
 
     expect(viewAnchorOf(container)?.text).toBe('b1')
+  })
+
+  it('carries the real-valued source line when the cover is available（§6.0）', () => {
+    // 4 行文档、每块一行；b1 = 第 2 行。jsdom 几何：块顶贴视口顶（+1 亚像素
+    // 容差）→ 块内进度 ≈ 1/100 → ℓ* ≈ 2.01。
+    const markdown = 'a\nb\nc\nd'
+    updateLineTable(markdown, [1, 2, 3, 4])
+    mockRects(container, [-100, 0, 100, 200])
+
+    const anchor = viewAnchorOf(container, markdown)
+    expect(anchor?.topBlock).toBe(1)
+    expect(anchor?.topLine).toBe(2)
+    expect(anchor?.topFrac).toBeCloseTo(0.01, 6)
+  })
+
+  it('omits the line coordinates while the cover is dirty（行表脏窗口）', () => {
+    mockRects(container, [-100, 0, 100, 200])
+
+    const anchor = viewAnchorOf(container, 'untouched markdown')
+    expect(anchor?.topBlock).toBe(1)
+    expect(anchor?.topLine).toBeUndefined()
+    expect(anchor?.topFrac).toBeUndefined()
   })
 
   it('returns null for an empty container', () => {

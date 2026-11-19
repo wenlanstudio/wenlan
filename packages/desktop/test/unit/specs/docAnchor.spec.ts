@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   blockIndexToLine,
+  blockLineSpan,
   flushDocAnchorWrite,
   lastEditingSurface,
   lineToBlockIndex,
@@ -123,6 +124,54 @@ describe('line table conversion', () => {
     expect(lineToBlockIndex(mdA, 99)).toBe(3) // 尾块吞到文档尾
     expect(lineToBlockIndex(mdA, 0)).toBeNull() // 首块之前
     expect(lineToBlockIndex(mdB, 1)).toBeNull() // 表脏
+  })
+
+  it('lineToBlockIndex：零行块同行开始取最后一个 start ≤ line 的单元', () => {
+    const md = 'a\nb\nc\nd\ne'
+    updateLineTable(md, [1, 2, 2, 4])
+    expect(lineToBlockIndex(md, 2)).toBe(2)
+    expect(lineToBlockIndex(md, 3)).toBe(2)
+    expect(lineToBlockIndex(md, 4)).toBe(3)
+  })
+})
+
+describe('blockLineSpan — 行区间（块内插值的 d 来源，§6.0）', () => {
+  it('区间 = [start, 下一块 start − 1]，末块封口到文档总行数', () => {
+    // 20 行文档，表 [1, 3, 8, 15]
+    const md = Array.from({ length: 20 }, (_, i) => `line ${i + 1}`).join('\n')
+    updateLineTable(md, [1, 3, 8, 15])
+    expect(blockLineSpan(md, 0)).toEqual({ start: 1, end: 2 })
+    expect(blockLineSpan(md, 1)).toEqual({ start: 3, end: 7 })
+    expect(blockLineSpan(md, 3)).toEqual({ start: 15, end: 20 })
+  })
+
+  it('覆盖 miss（md 不符 / 已失效 / 越界）返回 null', () => {
+    reviseMarkdown(mdA)
+    updateLineTable(mdA, [1, 3, 5, 12])
+    expect(blockLineSpan(mdB, 0)).toBeNull()
+    expect(blockLineSpan(mdA, 4)).toBeNull()
+    expect(blockLineSpan(mdA, -1)).toBeNull()
+    expect(blockLineSpan(mdA, undefined)).toBeNull()
+    updateLineTable(mdA, null)
+    expect(blockLineSpan(mdA, 0)).toBeNull()
+  })
+})
+
+describe('topFrac — 实数行位（§6.0）', () => {
+  it('合并写携带 topFrac', () => {
+    reviseMarkdown(mdA)
+    writeDocAnchor({ topLine: 42, topFrac: 0.37 })
+    const anchor = readDocAnchor()
+    expect(anchor?.topLine).toBe(42)
+    expect(anchor?.topFrac).toBeCloseTo(0.37)
+  })
+
+  it('显式写 undefined 清除（反向定位的块顶语义对冲）', () => {
+    reviseMarkdown(mdA)
+    writeDocAnchor({ topLine: 42, topFrac: 0.37 })
+    writeDocAnchor({ topLine: 7, topFrac: undefined })
+    expect(readDocAnchor()?.topFrac).toBeUndefined()
+    expect(readDocAnchor()?.topLine).toBe(7)
   })
 })
 

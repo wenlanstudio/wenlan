@@ -1,19 +1,25 @@
-// 一文多览锚服务（视图模型 §6.1）：全窗口单槽 docAnchor + mdRev + 块首行表
-// 换算。吸收 viewScrollSync 的切换恢复存储（per-tab Map 退役）；text 桥降级
-// 为行表不可用时的兜底（viewScrollSync 保留纯 DOM/文本换算函数）。
+// 一文多览锚服务（视图模型 §6.0/§6.1）：全窗口单槽 docAnchor + mdRev + 行
+// 覆盖换算。锚存的是**归一化后的量**——基准单位「源码行」的实数行位
+// ℓ* = topLine + topFrac（§6.0），结构版本化于 mdRev、几何活读。text 桥是
+// 行覆盖不可用时的兜底（viewScrollSync 保留纯 DOM/文本换算函数）。
 //
 // 多标签页已关闭：锚无 tab 维度；多窗口各是独立 renderer 进程，模块级单槽
-// 天然隔离。坐标**合并写**（各面只算得出自己的坐标：文/栏有 topBlock、本有
-// topLine/cursorLine），读时按需取、缺者经行表换算——与 viewScrollSync 的
-// ViewAnchor 合并哲学同源。
+// 天然隔离。坐标**合并写**（各面只算得出自己的坐标），读时按需取、缺者经
+// 行覆盖换算——视图之间从不直接换算，全部经行位基准转手。
+
+import { locateSpan, spansFromStarts, type LineSpan } from './docPos'
 
 export interface DocAnchor {
   /** 写锚时的 markdown 版本（reviseMarkdown 每逢内容变化 +1） */
   mdRev: number
-  /** 视口顶内容块下标（contentBlocks 展平域：栏组展开、独立标记块剔除） */
+  /** 视口顶内容块下标（contentBlocks 展平域：栏组展开、独立标记块剔除）。
+   * 写锚面的私有域坐标，消费面只作行覆盖缺失时的兜底 */
   topBlock?: number
-  /** 视口顶源行（1 基） */
+  /** 视口顶源行（1 基；topLine + topFrac = 实数行位 ℓ*） */
   topLine?: number
+  /** 视口顶行内进度（[0,1) 小数；块顶语义为 0/缺省）。块内行比例是跨面
+   * 可迁移的最细粒度——像素不迁移，行位迁移（§6.0） */
+  topFrac?: number
   /** 光标源行（1 基；览/映跟随用，本视图原生产出） */
   cursorLine?: number
   /** 兜底桥证据（视口顶块/行的纯文本） */
@@ -96,38 +102,47 @@ export function flushDocAnchorWrite(compute?: () => Partial<DocAnchor> | null): 
   if (patch) writeDocAnchor(patch)
 }
 
-// —— 块首行表缓存：行表与 md 绑定，由持有活引擎的面（editor.vue）在
-// json-change 防抖后重建；只读面与本视图只读。表 miss 时换算返回 null，
+// —— 行覆盖缓存：覆盖与 md 绑定（mdRev 世代），由持有活引擎的面（editor.vue）
+// 在 json-change 防抖后重建；只读面与本视图只读。覆盖 miss 时换算返回 null，
 // 调用方退回 text 桥。
-let tableCache: { md: string; table: number[] | null } | null = null
+let tableCache: { md: string; spans: LineSpan[] | null } | null = null
 
 export function updateLineTable(md: string, table: number[] | null): void {
-  tableCache = { md, table }
+  if (table == null) {
+    tableCache = { md, spans: null }
+    return
+  }
+  // 末块封口需要文档总行数——md 在手，此处一次算清（每次重建一次，不进热路径）。
+  tableCache = { md, spans: spansFromStarts(table, md ? md.split('\n').length : 0) }
 }
 
-function lineTableFor(md: string): number[] | null {
-  return tableCache?.md === md ? tableCache.table : null
+function spansFor(md: string): LineSpan[] | null {
+  return tableCache?.md === md ? tableCache.spans : null
 }
 
-/** 内容块下标 → 块首行（1 基）；表 miss / 越界返回 null。 */
+/** 内容块下标 → 块首行（1 基）；覆盖 miss / 越界返回 null。 */
 export function blockIndexToLine(md: string, blockIndex: number | undefined | null): number | null {
   if (blockIndex == null) return null
-  const table = lineTableFor(md)
-  if (!table || blockIndex < 0 || blockIndex >= table.length) return null
-  return table[blockIndex] ?? null
+  const spans = spansFor(md)
+  if (!spans || blockIndex < 0 || blockIndex >= spans.length) return null
+  return spans[blockIndex]!.start
 }
 
 /** 源行（1 基）→ 包含该行的内容块下标（最后一个 startLine ≤ line 的块）；
- * 表 miss / 行在首块之前返回 null。 */
+ * 覆盖 miss / 行在首块之前返回 null。 */
 export function lineToBlockIndex(md: string, line: number): number | null {
-  const table = lineTableFor(md)
-  if (!table || !table.length || line < table[0]!) return null
-  let index = 0
-  for (let i = 0; i < table.length; i++) {
-    if (table[i]! <= line) index = i
-    else break
-  }
-  return index
+  const spans = spansFor(md)
+  if (!spans || !spans.length) return null
+  return locateSpan(spans, line)
+}
+
+/** 内容块的行区间 [start, end]（1 基含端点；末块 end = 文档总行数）。跟随的
+ * 块内插值（§6.0 进度换算）用它取 d；覆盖 miss / 越界返回 null。 */
+export function blockLineSpan(md: string, blockIndex: number | undefined | null): LineSpan | null {
+  if (blockIndex == null) return null
+  const spans = spansFor(md)
+  if (!spans || blockIndex < 0 || blockIndex >= spans.length) return null
+  return spans[blockIndex]!
 }
 
 // —— 最近编辑面记忆（跳转编辑目标规则，视图模型 §6.3）：跳转目标是屏上

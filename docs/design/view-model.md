@@ -171,11 +171,51 @@
 发锚方——栏是只读态活引擎，照常按滚动发锚；览经 §6.3 反向定位发锚——右叶
 照 §6.2 分工跟随。
 
+### 6.0 数学模型：一个量纲，多套单位，归一到行（2026-11-20 落地）
+
+同步定位的量纲只有一个：**源码行**。归一化后的文档位置是实数**行位**
+ℓ* ∈ [1, N]（N = 总行数；整数部分 = 行，小数部分 = 块内行进度）。各面把
+自己的单位换算到行（**组合换算**：精确、单调、与排版无关），把行实现到
+自己的像素（**实现映射**：私有几何、活读）。粒度阶梯（行 → 块 → {节, 页}）
+是商集链：目录的「节」与页面的「页」都由块分组而来、互不包含；块 → 页是
+唯一破缺的边（一块可被分页切开），首现页规则就是这条边的补丁。两阶层定义：
+
+- **行覆盖**（σᵢ：行 → 单元，总映射）：面 i 的单元序列各自声明行区间
+  [a, b]；σᵢ(ℓ) = 含 ℓ 的**首现**单元（区间重叠取文档序最先——分页克隆件
+  继承标注的消歧规则），行落空隙或超尾归最近前驱，行在首单元之前为 null。
+  muya 域的覆盖即块首行表（块 i 占 [starts[i], starts[i+1]−1]，末块封口到
+  N）；本域的单元就是源码行自身。
+- **实现算子**（Rᵢ：行 → 像素）与**读出算子**（ρᵢ：像素 → 行）：
+
+  ```
+  Rᵢ(ℓ*) = top(u) + x·h(u)，u = σᵢ⁻¹(ℓ*)，x = (ℓ* − a_u) / d_u ∈ [0, 1]
+  ρᵢ(s)  = a_{u*} + d_{u*} · (s − top(u*)) / h(u*)，u* = 含视口顶的单元
+  ```
+
+  文/栏的单元是块（块内按比例）；本的单元是行（CodeMirror 逐行有精确坐标，
+  Rᵢ 退化为行内精确插值）；页/览/映的单元是页（首现页规则，同步精度天然到
+  页）。不变量：**ρᵢ ∘ Rᵢ = id**（单元边界精确、块内按比例近似——两侧块高
+  不同（换行宽窄、晚到图片）时块内是投影对齐，块界不动）。同步的是**文档
+  位置，不是像素位置**。
+
+**锚 = 归一化后的量**：`{ mdRev, topLine, topFrac, cursorLine, text, origin }`，
+topLine + topFrac = ℓ*。写锚面算出自己的 ρᵢ，读锚面套自己的 Rᵢ——视图之间
+从不直接换算（N 张 σᵢ 表，不是 N² 张两两表），text 桥只作覆盖不可用时的
+兜底。两条纪律由此而来：
+
+- **结构版本化、几何活读**：σᵢ 随 mdRev 重建（锚带版本，过期丢弃）；
+  top/h 在应用时现量——晚到资源只改几何、不动换算。
+- **单向 + 幂等**：跟随面不回写锚；|目标 − 当前| < ε 不动。「反向定位 →
+  编辑面滚动 → 其余面跟随」一步收敛，不构成迭代。
+
 ### 6.1 锚与货币：docAnchor 单槽，两层坐标
 
 ```
-docAnchor = { mdRev, topBlock?, topLine?, cursorLine? }
+docAnchor = { mdRev, topBlock?, topLine?, topFrac?, cursorLine? }
 ```
+
+- `topLine + topFrac` = 实数行位 ℓ*（§6.0）；topBlock 是写锚面的私有域坐标，
+  消费面只作行覆盖缺失时的兜底。
 
 - **两层货币按解析域分工，跨域不做文本换算**（货币换掉的理由是实测：
   2026-11-07 探针验证 text 桥对表格断链——源码行带 `|` 而渲染块文本无；
@@ -201,8 +241,8 @@ docAnchor = { mdRev, topBlock?, topLine?, cursorLine? }
 
 ### 6.2 跟随：编辑面 → 览面（裁决 1：分工）
 
-- **连续面跟随滚动**：页、栏投影消费 `topBlock/topLine`——视口顶
-  块（含视口内偏移）滚到本面视口顶；投影重建（250ms 防抖
+- **连续面跟随滚动**：页、栏投影消费行位 ℓ*（topLine + topFrac，§6.0）——
+  目标 = 块顶 + 块内行进度 × 块高（Rᵢ）；投影重建（250ms 防抖
   setContent / replaceChildren）后按锚恢复，废止像素 scrollTop 残值与
   deck 侧 scrollY 数字回放的自保。
 - **翻页面跟随光标**：览/映消费 `cursorLine`——放映语义，改哪页跳哪
@@ -215,9 +255,12 @@ docAnchor = { mdRev, topBlock?, topLine?, cursorLine? }
 - 跟随是**单向**的；览面自身滚动/翻页不发锚（反向定位见 §6.3；唯一例外：
   无编辑面的分屏里左 pane 充当发锚方，见 §6 头注）。
 - 发锚节流：滚动 rAF 合帧、编辑防抖——沿 viewScrollSync 现有形状。
-- 幂等消回环：跟随动作目标不变则不动（页号相同 no-op）。「反向定位 →
-  编辑面滚动 → 再跟随」链路靠幂等自然收敛，无需回声抑制标记；防抖
-  窗口吸收页界换算的 ±1 页抖动。
+- 幂等消回环：跟随动作目标与当前相差不足 ε 则不动（页号相同 no-op）。
+  「反向定位 → 编辑面滚动 → 再跟随」链路的编辑面回声由三层消化：origin
+  纪律（编辑面写锚显式 'scroll'，不覆盖 reverse 残留）、**反向宽限窗**
+  （只读面发 reverse 后短窗内不吃 scroll 锚——对齐动画途中经过的中间块
+  也是回声，§6.3「右栏不得动」）、目标块精确判定（== 最近 reverse 行）；
+  防抖窗口吸收页界换算的 ±1 页抖动。
 
 ### 6.3 反向定位与跳转编辑：只读面 → 编辑面
 
@@ -332,6 +375,7 @@ rect 全 0）、表/图透镜滚顶（标题 display:none）、览/映无响应�
 | 资产分发                               | 改 md2slides 后 `npm run pack:marktext` + fork `scripts/sync-md2slides.mjs`，重启 dev 生效；`resources/` 是 gitignored 生成物，CI 由 `.github/actions/md2slides-assets` 从钉死提交自动产包，所有 `build:*` 前置 `scripts/check-md2slides-assets.mjs` 闸门，防「装得上、点览/映才报缺包」的残包                                  |
 | 页叶测量基座                           | 测量/拟合 `util/paperPagination.ts`（paginateBlocksV2 行级 + 分栏组 `band` 横带）+ `assets/styles/paperLens.css`（A4 版式基 + 页叶分栏 flex）；分片 `paperProjection.vue`（fragmentBand）；分页符族 `@muyajs/core` `utils/markers/pagebreak.ts`；决策内核 vendor `vendor/md2slides/layout-core.js`（单源 md2slides）；设计见 §5 |
 | 一文多览锚服务                         | `util/docAnchor.ts`（新增：docAnchor 单槽 / mdRev / 跟随与反向定位；吸收 viewScrollSync 的切换恢复与 rAF 合帧，text 桥降级为表脏兜底；§6）                                                                                                                                                                                      |
+| 公共坐标换算（σᵢ / ρᵢ / Rᵢ）           | `util/docPos.ts`（行覆盖 span 构造 + 首现定位二分 + 块内行进度 + 像素↔行位互逆算子，纯函数；§6.0）+ `util/sourceScroll.ts`（本域逐行精确实现/读出）                                                                                                                                                                             |
 | 块首行表                               | `@muyajs/core` `state/markdownToState.ts` 顶层块 `meta.startLine`（解析副产物，会话级不落盘；§6.1 裁决 3）                                                                                                                                                                                                                      |
 | 览/映 locate 协议                      | md2slides 仓 `host/marktext/deck-full-entry.js`（行→页映射与点击取行，基于现成 `data-src-start/end`——标注源头 `core/parse/markdown.js`；`md2s:locate-up{line, edit?}`）+ fork `deckPane.vue`（`md2s:locate{line}`；§6.2/§6.3）                                                                                                  |
 | 跳转编辑（只读面 → 文/本）             | `store/editorView.ts`（目标编辑面的会话记忆 + 换左叶 / 清顶级视图）+ `editor.vue` `revealSourceLine`（`setCursorByOffset`，先例：执行窗 `execPanel.vue` 的 `mdcode2run-reveal-line`）+ `sourceCode.vue` 行定位；只读锁 `editor.vue` 的 readOnly watcher（§6.3/§6.6 M0）                                                         |
