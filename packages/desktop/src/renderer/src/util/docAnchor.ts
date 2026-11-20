@@ -27,8 +27,9 @@ export interface DocAnchor {
   /** 锚来源：scroll=编辑面滚动（默认）；reverse=只读面反向定位/跳转编辑 */
   origin?: 'scroll' | 'reverse'
   /** 写锚面标识（滚动同步双向化 §6.2 2026-11-20 再裁决）：flow=文活引擎、
-   * column=栏投影、source=本。跟随面据此忽略自己引发的回声。 */
-  source?: 'flow' | 'column' | 'source'
+   * column=栏投影、source=本、deck=映（md2slides 列表态）。跟随面据此忽略
+   * 自己引发的回声。 */
+  source?: 'flow' | 'column' | 'source' | 'deck'
   /** 写锚面正处在**程序对齐动画**中（跟随/反向引发的滚动回声）：接收面一律
    * 忽略。由对齐发起方自己打标——时间窗内无法区分用户滚动与动画帧，只有
    * 发起方知道这次滚动是不是自己引发的。 */

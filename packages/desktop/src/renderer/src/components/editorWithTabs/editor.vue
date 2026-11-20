@@ -1494,8 +1494,8 @@ const offDocAnchor = onDocAnchorChange((anchor) => {
     return
   }
 
-  // 栏投影（或其他面）的用户滚动：行位比例对齐。
-  if (anchor.source === 'column' && anchor.topLine != null) {
+  // 栏投影/映列表态（deck）的用户滚动：行位比例对齐。
+  if ((anchor.source === 'column' || anchor.source === 'deck') && anchor.topLine != null) {
     requestAnimationFrame(() => {
       const scroller = getScrollContainer()
       if (!scroller) return
@@ -1513,12 +1513,13 @@ const offDocAnchor = onDocAnchorChange((anchor) => {
       const base = scroller.scrollTop + rect.top - scroller.getBoundingClientRect().top
       const target = base + rect.height * spanProgress(span, real)
       if (Math.abs(target - scroller.scrollTop) < 1) return
-      // 追赶节拍：连续锚（拖动）瞬移不掉队，单次跳转平滑
+      // 追赶节拍：连续锚（拖动）瞬移不掉队，单次跳转平滑。对齐动画窗在
+      // 发起时统一打标——smooth 的中间帧同样是对齐回声，漏标会让对面把
+      // 映/栏拽着中间帧跑（deck 双向真机时间序列抓出）。
       const now = Date.now()
       const behavior = now - lastFollowApply < 200 ? 'auto' : 'smooth'
       lastFollowApply = now
-      // 'auto' 瞬移也触发 scroll 事件——同窗打标
-      if (behavior === 'auto') alignUntil = Date.now() + 700
+      alignUntil = now + 700
       if (behavior === 'auto') scroller.scrollTop = target
       else scroller.scrollTo({ top: target, behavior: 'smooth' })
     })

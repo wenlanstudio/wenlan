@@ -192,6 +192,7 @@ import { useEditorStore } from '@/store/editor'
 import { useEditorViewStore } from '@/store/editorView'
 import { useTeachingStore } from '@/store/teaching'
 import { followTargetOf, shouldSnapBack } from '@/util/classroomFollow'
+import { matchesCurrentMarkdown, onDocAnchorChange, writeDocAnchor } from '@/util/docAnchor'
 import { renderGraphvizToDataUrl, renderPlantumlToDataUrl, renderMatplotlibToDataUrl } from '@/util/md2slidesDiagram'
 
 /**
@@ -512,6 +513,37 @@ const sendFollow = (): void => {
 
 watch([() => followTarget.value.page, () => followTarget.value.locked], () => sendFollow())
 
+// —— 滚动同步（§6.2 双向化 2026-11-20 / M3 locate 切片，仅 slide 列表态）——
+// 文/栏的行位锚 → md2s:locate 让 deck 列表滚到对应页（页变更才动，幂等在
+// 页面侧）；deck 列表的**用户滚动**经 md2s:locate-up 回来 → 发锚
+// （source=deck），文按行位比例跟随。echo 锚（编辑面对齐动画的滚动回声）
+// 与自己的 source 一律不吃——回声协议与栏投影同构（谁引发运动谁负责标注）。
+let lastUpLine: number | null = null // 最近 locate-up 发布的行（文对齐落定回声的判定基线）
+
+if (props.leaf === 'slide') {
+  let locateRaf = 0
+  const offDeckAnchor = onDocAnchorChange((anchor) => {
+    if (!anchor || anchor.echo || anchor.source === 'deck') return
+    if (!matchesCurrentMarkdown(props.markdown ?? '')) return
+    // 位置感知回声判定（§6.2，与栏投影同构）：文跟着 deck 落到我们刚发布的
+    // 行（±0.5 行内）是「对齐落定回声」——不回发 locate，否则把映拽离用户
+    // 刚选的位置（e2e 真机抓到的回弹 ping-pong）。
+    const inbound = (anchor.topLine ?? 0) + (anchor.topFrac ?? 0)
+    if (lastUpLine != null && Math.abs(inbound - lastUpLine) < 0.5) return
+    const line = anchor.topLine ?? anchor.cursorLine
+    if (line == null) return
+    if (locateRaf) cancelAnimationFrame(locateRaf)
+    locateRaf = requestAnimationFrame(() => {
+      locateRaf = 0
+      postToDeck({ type: 'md2s:locate', line })
+    })
+  })
+  onBeforeUnmount(() => {
+    offDeckAnchor()
+    if (locateRaf) cancelAnimationFrame(locateRaf)
+  })
+}
+
 // —— 放映执行桥（只有 present 叶启用）——
 // 页面侧 exec-present.js 是跨源 iframe 里的纯 postMessage 客户端，碰不到 IPC；
 // 本层负责：① 把「可跑块能力表」下发让它装饰 ▶；② 把 ▶ 请求转成
@@ -704,6 +736,15 @@ const onMessage = (ev: MessageEvent): void => {
       status.value = '正在构建幻灯片…'
       sendBuild()
       break
+    case 'md2s:locate-up': {
+      // deck 列表的用户滚动（页面侧页变更才发）→ 发锚让文跟随（§6.2 双向）。
+      const line = Number(data.line)
+      if (Number.isFinite(line) && line > 0) {
+        lastUpLine = line
+        writeDocAnchor({ topLine: line, topFrac: 0, origin: 'scroll', source: 'deck' })
+      }
+      break
+    }
     case 'md2s:ready':
       error.value = ''
       contractIssues.value = []
