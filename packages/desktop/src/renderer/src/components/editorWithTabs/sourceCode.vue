@@ -367,7 +367,7 @@ const listenChange = (cm: CodeMirror.Editor) => {
     bus.emit('cursor-position', { line: cursor.line + 1, ch: cursor.ch + 1 })
     // 锚服务：cursorLine 随光标走（览/映「改哪页跳哪页」跟随用，1 基）；
     // 编辑面活动，origin 同步归位 'scroll'（清掉可能的 reverse 残留）。
-    writeDocAnchor({ cursorLine: cursor.line + 1, origin: 'scroll' })
+    writeDocAnchor({ cursorLine: cursor.line + 1, origin: 'scroll', source: 'source' })
   })
 }
 
@@ -405,7 +405,7 @@ const handleScroll = () => {
     // 'scroll'（防 reverse 残留自激）；cursorLine 随光标移动单独更新。
     const { line, frac } = sourceTopRealLine(cm, container)
     const { line: bridgeLine, text } = sourceAnchorOf(cm.getValue(), line)
-    writeDocAnchor({ topLine: bridgeLine, topFrac: frac, text, origin: 'scroll' })
+    writeDocAnchor({ topLine: bridgeLine, topFrac: frac, text, origin: 'scroll', source: 'source' })
   })
 }
 
@@ -543,7 +543,7 @@ onBeforeUnmount(() => {
     if (cm && container) {
       const { line, frac } = sourceTopRealLine(cm, container)
       const { line: bridgeLine, text } = sourceAnchorOf(cm.getValue(), line)
-      flushDocAnchorWrite(() => ({ topLine: bridgeLine, topFrac: frac, text, origin: 'scroll' }))
+      flushDocAnchorWrite(() => ({ topLine: bridgeLine, topFrac: frac, text, origin: 'scroll', source: 'source' }))
     }
   }
 

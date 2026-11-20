@@ -148,3 +148,36 @@ test('source view restores the real line（frac 精确路径）', async() => {
   const back = await fracOf(page.locator('.pane-left .editor-component').first())
   expect(back?.text).toContain('FENCE')
 })
+
+test('双向滚动同步：滚「栏」→ 文按行位跟随，栏不被回弹拉走（§6.2 再裁决）', async() => {
+  await splitFlowColumn()
+  const left = page.locator('.pane-left .editor-component').first()
+  const right = page.locator('.pane-right .leaf-projection').first()
+
+  // 编辑面先回顶（保证有位移），再把**投影**滚到 FENCE-TWO 块内 45% 深度
+  await left.evaluate(el => { el.scrollTop = 0 })
+  await page.waitForTimeout(300)
+  await right.evaluate(el => {
+    const container = el.querySelector('.mu-container') || el
+    const block = Array.from(container.children)
+      .find(b => (b.textContent || '').includes('FENCE-TWO'))
+    if (!block) return
+    const r = block.getBoundingClientRect()
+    const s = el.getBoundingClientRect()
+    el.scrollTop = el.scrollTop + (r.top - s.top) + 0.45 * r.height
+  })
+  await page.waitForTimeout(1300) // 投影发锚 + 文跟随（smooth）
+
+  const [l, r] = await Promise.all([fracOf(left), fracOf(right)])
+  // 文跟随进同一块、相近比例
+  expect(l?.text).toContain('FENCE-TWO')
+  expect(Math.abs(l!.frac - r!.frac)).toBeLessThan(0.15)
+  // 发起面（栏）守在自己的位置，不被文的对齐回声拉走
+  expect(r!.frac).toBeGreaterThan(0.3)
+  // 静置后再采样：位置稳定（无自激漂移）
+  await page.waitForTimeout(800)
+  const l2 = await fracOf(left)
+  const r2 = await fracOf(right)
+  expect(Math.abs(l2!.frac - l!.frac)).toBeLessThan(0.02)
+  expect(Math.abs(r2!.frac - r!.frac)).toBeLessThan(0.02)
+})

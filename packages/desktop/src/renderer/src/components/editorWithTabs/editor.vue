@@ -120,6 +120,7 @@ import { isMac, animatedScrollTo } from '@/util'
 import { scrollViewToAnchor, contentBlocks, blockText, viewAnchorOf } from '@/util/viewScrollSync'
 import {
   blockIndexToLine,
+  blockLineSpan,
   flushDocAnchorWrite,
   lastEditingSurface,
   lineToBlockIndex,
@@ -130,6 +131,7 @@ import {
   updateLineTable,
   writeDocAnchor
 } from '@/util/docAnchor'
+import { spanProgress } from '@/util/docPos'
 import { moveImageToFolder, uploadImage } from '@/util/fileSystem'
 import { guessClipboardFilePath } from '@/util/clipboard'
 import { dataURLToFile } from '@/util/dataURLToFile'
@@ -1458,26 +1460,69 @@ const handleLensDblClick = (event: MouseEvent): void => {
 const LINE_TABLE_DEBOUNCE_MS = 300
 let lineTableTimer = 0
 
-// 反向定位：只读面（栏右投影等）发来的锚 → 文/栏透镜就地滚到对应块（不落
-// 光标、不移焦点）。自己滚动写的锚（origin=scroll）不吃回声。行位是基准
-// 单位（§6.0）——优先 topLine 经本文覆盖换算（栏投影写的 topBlock 是它的
-// 私有域，块序与本域不齐），覆盖缺失退 topBlock 直通；块顶对齐（§6.3
-// 反向定位粒度=块级）。
+// 锚订阅（§6.2 双向滚动同步 2026-11-20 再裁决）：文是双向的对等面——
+// ① reverse 锚（栏投影单击/双击）→ 块顶对齐（§6.3 粒度=块级）；② 栏投影
+// 用户滚动发来的 scroll 锚（source=column）→ 按**行位比例**对齐（R_flow：
+// 块顶 + 块内行进度×块高，与投影同一阅读进度）；连续锚用追赶节拍（近距
+// 离瞬移、远距离平滑）。自己写的锚（source=flow）不吃——自身滚动引发的
+// 回声由各面的宽限窗与 ε 幂等消化，这里再挡一层。
+let lastFollowApply = 0
+// 程序对齐动画窗：跟随/反向对齐发起后短窗内，本面的 scroll 锚是动画回声，
+// 打 echo 标（接收面无条件丢弃）；用户在窗内的真实滚动也会被标——代价是
+// 对面最多滞后一个窗长，换取不追动画中间帧（/causer 打标原则）。
+let alignUntil = 0
+
 const offDocAnchor = onDocAnchorChange((anchor) => {
-  if (anchor?.origin !== 'reverse') return
+  if (!anchor) return
   if (props.lens !== 'flow' && props.lens !== 'column') return
-  requestAnimationFrame(() => {
-    let index = anchor.topBlock
-    if (anchor.topLine != null) {
-      const at = lineToBlockIndex(props.markdown ?? '', Math.max(1, Math.floor(anchor.topLine)))
-      if (at != null) index = at
-    }
-    scrollViewToAnchor(
-      getScrollContainer(),
-      { blockIndex: index, text: anchor.text },
-      { behavior: 'smooth' }
-    )
-  })
+  if (anchor.source === 'flow') return // 自己的回声
+
+  if (anchor.origin === 'reverse') {
+    alignUntil = Date.now() + 700
+    requestAnimationFrame(() => {
+      let index = anchor.topBlock
+      if (anchor.topLine != null) {
+        const at = lineToBlockIndex(props.markdown ?? '', Math.max(1, Math.floor(anchor.topLine)))
+        if (at != null) index = at
+      }
+      scrollViewToAnchor(
+        getScrollContainer(),
+        { blockIndex: index, text: anchor.text },
+        { behavior: 'smooth' }
+      )
+    })
+    return
+  }
+
+  // 栏投影（或其他面）的用户滚动：行位比例对齐。
+  if (anchor.source === 'column' && anchor.topLine != null) {
+    requestAnimationFrame(() => {
+      const scroller = getScrollContainer()
+      if (!scroller) return
+      const md = props.markdown ?? ''
+      const real = anchor.topLine! + (anchor.topFrac ?? 0)
+      const at = lineToBlockIndex(md, Math.max(1, Math.floor(real)))
+      const span = at != null ? blockLineSpan(md, at) : null
+      const el = at != null ? contentBlocks(scroller)[at] : undefined
+      if (!el || !span) {
+        // 覆盖缺失：退块顶对齐（text 校验 → text 桥兜底在 scrollViewToAnchorIn）
+        scrollViewToAnchor(scroller, { blockIndex: at ?? undefined, text: anchor.text }, { behavior: 'smooth' })
+        return
+      }
+      const rect = el.getBoundingClientRect()
+      const base = scroller.scrollTop + rect.top - scroller.getBoundingClientRect().top
+      const target = base + rect.height * spanProgress(span, real)
+      if (Math.abs(target - scroller.scrollTop) < 1) return
+      // 追赶节拍：连续锚（拖动）瞬移不掉队，单次跳转平滑
+      const now = Date.now()
+      const behavior = now - lastFollowApply < 200 ? 'auto' : 'smooth'
+      lastFollowApply = now
+      // 'auto' 瞬移也触发 scroll 事件——同窗打标
+      if (behavior === 'auto') alignUntil = Date.now() + 700
+      if (behavior === 'auto') scroller.scrollTop = target
+      else scroller.scrollTo({ top: target, behavior: 'smooth' })
+    })
+  }
 })
 
 /**
@@ -2243,8 +2288,8 @@ onMounted(() => {
       // （topBlock+text）+ 实数行位（topLine+topFrac，块内像素进度换算）。
       // origin 显式写 'scroll'——writeDocAnchor 是合并写，不显式覆盖会让单击
       // 右栏留下的 'reverse' 永久残留，反向订阅把自己的滚动回声又当成定位
-      // 指令，自激循环卡死滚动。
-      scheduleDocAnchorWrite(() => ({ ...viewAnchorOf(container, props.markdown ?? ''), origin: 'scroll' as const }))
+      // 指令，自激循环卡死滚动。source='flow' 供双向滚动的各面识别回声。
+      scheduleDocAnchorWrite(() => ({ ...viewAnchorOf(container, props.markdown ?? ''), origin: 'scroll' as const, source: 'flow' as const, echo: Date.now() < alignUntil }))
     }
   }
   container.addEventListener('scroll', scrollHandler, { passive: true })
@@ -2271,6 +2316,7 @@ onMounted(() => {
         const at = lineToBlockIndex(props.markdown ?? '', Math.max(1, Math.floor(anchor.topLine)))
         if (at != null) index = at
       }
+      alignUntil = Date.now() + 700
       scrollViewToAnchor(getScrollContainer(), { blockIndex: index, text: anchor.text })
     }
   })
@@ -2473,7 +2519,7 @@ onBeforeUnmount(() => {
   if (currentFile.value?.id) {
     const container = getScrollContainer()
     if (container)
-      flushDocAnchorWrite(() => ({ ...viewAnchorOf(container, props.markdown ?? ''), origin: 'scroll' as const }))
+      flushDocAnchorWrite(() => ({ ...viewAnchorOf(container, props.markdown ?? ''), origin: 'scroll' as const, source: 'flow' as const, echo: Date.now() < alignUntil }))
   }
   window.clearTimeout(lineTableTimer)
   offDocAnchor()

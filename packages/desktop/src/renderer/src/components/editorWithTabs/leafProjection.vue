@@ -20,8 +20,9 @@
  * - markdown 变化 250ms 防抖 `setContent`（每次都是全量块树重建，不能跟
  *   打字同频；左 pane 的活引擎才是实时面）。
  *
- * M1 锚服务（§6.0/§6.1/§6.3）：消费单槽 docAnchor 跟随与恢复——行位基准
- * （topLine + topFrac 跨域一致，σ⁻¹ 经本域覆盖二分），实现算子带块内插值；
+ * M1 锚服务（§6.0/§6.1/§6.2/§6.3）：双向对等面——消费锚跟随/恢复（行位
+ * 基准：topLine + topFrac 跨域一致，σ⁻¹ 经本域覆盖二分；实现算子带块内
+ * 插值），用户滚动也发锚（source=column，ρ_column 读出行位，§6.2 再裁决）；
  * 单击 = 反向定位（发锚 origin=reverse，写行位），双击 = 跳转编辑（同上并
  * 切文，光标落在对应块）。
  *
@@ -42,7 +43,7 @@ import {
   readDocAnchor,
   writeDocAnchor
 } from '@/util/docAnchor'
-import { locateSpan, spanProgress, spansFromStarts, type LineSpan } from '@/util/docPos'
+import { locateSpan, realLineForPixel, spanProgress, spansFromStarts, type LineSpan } from '@/util/docPos'
 import { blockText, contentBlocks, scrollViewToAnchorIn } from '@/util/viewScrollSync'
 
 const props = defineProps<{
@@ -137,32 +138,101 @@ const scrollToAnchor = (
     const target = base + rect.height * x
     // 幂等守卫（§6.2）：目标即当前（<1px）不动，反向链路一步收敛、动画不重启。
     if (Math.abs(target - scroller.scrollTop) < 1) return
+    armSelfWrite(real)
     if (behavior === 'smooth') scroller.scrollTo({ top: target, behavior: 'smooth' })
     else scroller.scrollTop = target
     return
   }
   // span/几何不可量：块顶对齐兜底（text 校验 → text 桥，scrollViewToAnchorIn 内建）。
+  armSelfWrite(real)
   scrollViewToAnchorIn(scroller, root, { blockIndex: index, text: anchor.text }, { behavior })
 }
 
-// —— 回声抑制（两层）：① 反向宽限窗——反向定位/跳转编辑后，编辑面平滑
-// 对齐途中逐帧发 scroll 锚，目标依次经过中间块——这些全是「编辑面正在向
-// 我们走来」的回声，宽限窗内一律原地不动（§6.3 用户明说右栏不得动；窗长
-// 须盖过编辑面的 smooth 动画）。② 窗外精确判定——目标块首行 == 最近
-// reverse 行时吞掉（用户随后手动滚走、行不同即恢复跟随）。
+// —— 双向滚动同步的回声控制（§6.2 2026-11-20 再裁决，四层）——
+// 栏投影现在是对等面：自己的用户滚动也发锚（source=column），编辑面与其余
+// 投影跟随。四层防线防互激：
+// ① 入站宽限窗（位置感知）：本面发布锚（反向定位/用户滚动）后短窗内，
+//    「指向我刚发布位置」的未标注入站锚一律不吃——编辑面对齐动画的落定
+//    帧是回声；远处未标注的锚是窗口期内的用户真实滚动，立即生效（最新
+//    用户意图优先）。对齐动画的**中间帧**由发起方打 echo 标，无条件丢弃。
+// ② 出站自抑制窗（位置感知）：本面作为跟随者被拉动（smooth 动画）期间，
+//    收敛在已消费目标附近的帧不发锚——动画中间帧不是用户意图；偏离目标
+//    （用户抢滚本面）立即放行，最新用户意图永不被时间窗吞掉；
+// ③ 量化去抖：ρᵢ 读数与最近一次「已发布/已消费」行位差 < 0.05 行不发——
+//    1px 抖动与动画尾帧不产生锚（ρᵢ∘Rᵢ=id 保证本面读回自己滚到的位置
+//    是精确的）；
+// ④ ε 幂等：跟随目标与当前 <1px 不动（scrollToAnchor 内建）。
 const REVERSE_GRACE_MS = 1200
-let reverseGraceUntil = 0
+let inboundGraceUntil = 0
+let selfWriteUntil = 0
+let lastSettledReal: number | null = null
 let lastReverseLine: number | null = null
+let scrollRaf = 0
+
+/** 本面发起滚动（跟随消费或双击自滚）后：出站自抑制 + 记下已对账行位。 */
+const armSelfWrite = (real: number | null): void => {
+  selfWriteUntil = Date.now() + 900
+  if (real != null) lastSettledReal = real
+}
+
+/** 用户滚动本投影 → 发锚（source=column），编辑面与其余面按行位跟随。 */
+const handleProjectionScroll = (): void => {
+  if (scrollRaf) return
+  scrollRaf = requestAnimationFrame(() => {
+    scrollRaf = 0
+    const root = muya.value?.domNode as HTMLElement | null | undefined
+    const scroller = (root?.parentElement as HTMLElement | null) ?? null
+    const spans = localSpans.value
+    if (!root || !scroller || !spans?.length) return
+    const blocks = contentBlocks(root)
+    if (!blocks.length) return
+    const viewTop = scroller.getBoundingClientRect().top + 1
+    let idx = -1
+    for (let i = 0; i < blocks.length; i++) {
+      if (blocks[i]!.getBoundingClientRect().bottom > viewTop) { idx = i; break }
+    }
+    if (idx === -1) idx = blocks.length - 1
+    const span = spans[idx]
+    if (!span) return
+    const rect = blocks[idx]!.getBoundingClientRect()
+    // ρ_column：视口顶像素 → 实数行位（§6.0 读出算子，本面自洽精确）
+    const real = realLineForPixel(rect.top, rect.height, span, viewTop)
+    // ② 出站自抑制（**位置感知**）：本面跟随动画期间，收敛在已消费目标
+    //    附近的帧是动画自身的中间帧，不发锚；偏离目标（用户抢滚）立即
+    //    放行——用户最新意图永不被时间窗吞掉。
+    if (Date.now() < selfWriteUntil && lastSettledReal != null && Math.abs(real - lastSettledReal) < 0.2) return
+    // ③ 量化去抖
+    if (lastSettledReal != null && Math.abs(real - lastSettledReal) < 0.05) return
+    lastSettledReal = real
+    // ① 入站宽限窗：编辑面对齐我们这个位置的途中，其 scroll 锚全是回声
+    inboundGraceUntil = Date.now() + REVERSE_GRACE_MS
+    writeDocAnchor({
+      topBlock: idx,
+      topLine: Math.floor(real),
+      topFrac: real - Math.floor(real),
+      text: blockText(blocks[idx]!),
+      origin: 'scroll',
+      source: 'column'
+    })
+  })
+}
 
 const offDocAnchor = onDocAnchorChange(anchor => {
   if (!anchor || !matchesCurrentMarkdown(props.markdown ?? '')) return
   if (anchor.origin === 'reverse') return // 自己发的锚不吃回声
-  if (Date.now() < reverseGraceUntil) return // 编辑面对齐途中的回声
+  if (anchor.source === 'column') return // ④ 自己写的（滚动发布）不吃
+  if (anchor.echo) return // 编辑面对齐动画回声（发起方自己打标，无条件丢弃）
+  const real = anchor.topLine != null ? anchor.topLine + (anchor.topFrac ?? 0) : null
+  if (Date.now() < inboundGraceUntil) {
+    // ① 位置感知宽限：窗内只吞「指向我刚发布位置」的未标注回声（对齐落定
+    // 帧）；远处的未标注锚是窗口期内的用户真实滚动——立即生效（最新用户
+    // 意图优先，不被宽限窗吞掉）。
+    if (real == null || lastSettledReal == null || Math.abs(real - lastSettledReal) < 0.5) return
+  }
   requestAnimationFrame(() => {
     const spans = localSpans.value
     // 回声判定要在换算后的本域目标块上做：目标块首行 == 最近 reverse 行
     // ⇒ 这是反向定位的连锁，右栏不动。
-    const real = anchor.topLine != null ? anchor.topLine + (anchor.topFrac ?? 0) : null
     let targetIndex = -1
     if (real != null && spans?.length) {
       const at = locateSpan(spans, Math.max(1, Math.floor(real)))
@@ -198,13 +268,14 @@ const handleClick = (event: MouseEvent): void => {
   // 行覆盖换算（块序差 3 的跨域直通从此不进主路径）；topBlock 留作同域兜底。
   // 块顶语义：显式清 topFrac（合并写不覆盖旧值的对冲）。
   lastReverseLine = at.line
-  reverseGraceUntil = Date.now() + REVERSE_GRACE_MS
+  inboundGraceUntil = Date.now() + REVERSE_GRACE_MS
   writeDocAnchor({
     topBlock: at.index,
     topLine: at.line ?? undefined,
     topFrac: undefined,
     text: at.text,
-    origin: 'reverse'
+    origin: 'reverse',
+    source: 'column'
   })
 }
 
@@ -214,14 +285,15 @@ const handleDblClick = (event: MouseEvent): void => {
   // 跳转定位（§6.3 裁决口径：想编辑 = 跳转滚动到相应区域）——右栏先滚到
   // 双击块顶（平滑），左栏经 reverse 锚跟随对齐；不切视图、不落光标。
   lastReverseLine = at.line
-  reverseGraceUntil = Date.now() + REVERSE_GRACE_MS
+  inboundGraceUntil = Date.now() + REVERSE_GRACE_MS
   scrollToAnchor({ topBlock: at.index, topLine: at.line ?? undefined, text: at.text }, 'smooth')
   writeDocAnchor({
     topBlock: at.index,
     topLine: at.line ?? undefined,
     topFrac: undefined,
     text: at.text,
-    origin: 'reverse'
+    origin: 'reverse',
+    source: 'column'
   })
 }
 
@@ -264,12 +336,17 @@ onMounted(() => {
   const root = instance.domNode
   root?.addEventListener('click', handleClick)
   root?.addEventListener('dblclick', handleDblClick)
+  // 双向滚动同步（§6.2 再裁决）：本投影的用户滚动发锚（滚动容器是 domNode
+  // 的父 .leaf-projection，见 scrollToAnchor 注释的换壳陷阱）。
+  root?.parentElement?.addEventListener('scroll', handleProjectionScroll, { passive: true })
 })
 
 onBeforeUnmount(() => {
   window.clearTimeout(applyTimer)
   offDocAnchor()
-  // 投影不写锚（跟随是单向的，锚代表编辑面位置；§6.2）。
+  if (scrollRaf) cancelAnimationFrame(scrollRaf)
+  // 双向化后投影也是发锚方；但卸载前不再补发（容器将脱离，量出 0 毫无意义）。
+  muya.value?.domNode?.parentElement?.removeEventListener('scroll', handleProjectionScroll)
   muya.value?.destroy()
   muya.value = null
 })
