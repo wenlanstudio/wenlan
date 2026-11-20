@@ -630,6 +630,8 @@ class EditorWindow extends BaseWindow {
         preferences.getAll()
 
       const fileOpenRequests: Promise<void>[] = []
+      // 恢复时发现文件已不在磁盘上的标签页：从本次恢复里静默剔除。
+      const tabsToDrop = new Set<RestoredTab>()
       for (const tab of bufferState.tabs) {
         if (!tab.pathname) {
           continue
@@ -659,9 +661,17 @@ class EditorWindow extends BaseWindow {
               }
             })
             .catch((err: Error) => {
-              if (tab.isPendingCreation && (err as NodeJS.ErrnoException).code === 'ENOENT') {
-                if (!this._openedFiles!.includes(tab.pathname))
-                  this._openedFiles!.push(tab.pathname)
+              if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+                // 文件在磁盘上没了（多数是用户自己删除/改名）：静默处理，不在启动时
+                // 弹「please save your work」——否则每次开机都要为已经不要的文件点一次。
+                // pendingCreation 是尚未落盘的新文档，缓冲区内容还要留给渲染层恢复。
+                if (tab.isPendingCreation) {
+                  if (!this._openedFiles!.includes(tab.pathname))
+                    this._openedFiles!.push(tab.pathname)
+                  return
+                }
+                log.warn(`[WARN] Skip restored tab, file no longer exists: ${tab.pathname}`)
+                tabsToDrop.add(tab)
                 return
               }
               const { message, stack } = err
@@ -678,6 +688,9 @@ class EditorWindow extends BaseWindow {
 
       Promise.all(fileOpenRequests)
         .then(() => {
+          if (tabsToDrop.size > 0) {
+            bufferState.tabs = bufferState.tabs.filter((tab) => !tabsToDrop.has(tab))
+          }
           // After all files are loaded, we can send the state to the renderer and open the tabs
           browserWindow!.webContents.send('mt::load-state', bufferState)
         })
