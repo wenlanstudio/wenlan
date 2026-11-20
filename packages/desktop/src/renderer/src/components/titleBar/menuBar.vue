@@ -43,6 +43,7 @@
       </svg>
     </div>
     <div
+      v-if="!isGeek"
       class="menu-bar-roots"
       :class="{ 'is-expanded': expanded }"
     >
@@ -90,9 +91,10 @@ const altRevealed = ref(false)
 let altArmed = false
 
 // normal 模式：菜单栏常驻（吸收原 menuBarAlwaysVisible 开关的语义）。
-// geek 模式菜单栏由父组件整体不渲染，这里不会被挂载。
+// geek 模式：父组件照样挂载本组件，但只留左上角「文」字开关切侧栏，条目整条不渲染。
 // 下拉打开时始终可见，避免收起把用户正在读的菜单从底下抽走。
 const { interfaceMode } = storeToRefs(usePreferencesStore())
+const isGeek = computed(() => interfaceMode.value === 'geek')
 const alwaysVisible = computed(() => interfaceMode.value === 'normal')
 const expanded = computed(
   () => alwaysVisible.value || hovered.value || openIndex.value !== -1 || altRevealed.value
@@ -166,6 +168,8 @@ const onDocumentClick = (): void => {
 }
 
 const onKeydown = (event: KeyboardEvent): void => {
+  // geek 模式没有菜单条目，Alt 唤出无意义，别触发一次无用的菜单结构加载。
+  if (isGeek.value) return
   if (event.key === 'Escape') {
     close()
     altRevealed.value = false
@@ -180,6 +184,7 @@ const onKeydown = (event: KeyboardEvent): void => {
 }
 
 const onKeyup = (event: KeyboardEvent): void => {
+  if (isGeek.value) return
   if (event.key === 'Alt' && altArmed) {
     altArmed = false
     void handleAltToggle()

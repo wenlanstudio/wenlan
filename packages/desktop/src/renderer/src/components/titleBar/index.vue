@@ -27,7 +27,7 @@
         />
       </div>
       <div
-        v-if="showCustomTitleBar && !isGeek"
+        v-if="showCustomTitleBar"
         class="left-toolbar title-no-drag"
       >
         <menu-bar />
@@ -136,8 +136,8 @@ onMounted(async () => {
 
 const { titleBarStyle, interfaceMode } = storeToRefs(preferencesStore)
 
-// geek 模式：菜单栏不渲染、标题栏透明、两栏通顶（sideBar topInset=0）。
-// normal 模式：标题栏铺不透明底色成完整一条，菜单栏常驻。
+// geek 模式：只保留左上角「文」字开关（menu-bar 内部隐藏条目）、标题栏透明、两栏通顶。
+// normal 模式：标题栏铺不透明底色成完整一条，菜单栏含条目常驻。
 const isGeek = computed(() => interfaceMode.value === 'geek')
 
 const showCustomTitleBar = computed(() => {

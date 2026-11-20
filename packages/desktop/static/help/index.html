@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-sources-hash="0a10e33757f7d145">
+<html lang="zh-CN" data-sources-hash="e6b15716ca5cae03">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -54,6 +54,7 @@
   body:has(#wenlan:target) .nav-item[data-id="wenlan"],
   body:has(#md2slides:target) .nav-item[data-id="md2slides"],
   body:has(#mdcode2run:target) .nav-item[data-id="mdcode2run"],
+  body:has(#runnable-languages:target) .nav-item[data-id="runnable-languages"],
   body:has(#classbuzz:target) .nav-item[data-id="classbuzz"],
   body:not(:has(.doc:target)) .nav-item[data-id="overview"] {
     background: var(--nav-active-bg); border-color: var(--line);
@@ -62,6 +63,7 @@
   body:has(#wenlan:target) .nav-item[data-id="wenlan"] .nav-title,
   body:has(#md2slides:target) .nav-item[data-id="md2slides"] .nav-title,
   body:has(#mdcode2run:target) .nav-item[data-id="mdcode2run"] .nav-title,
+  body:has(#runnable-languages:target) .nav-item[data-id="runnable-languages"] .nav-title,
   body:has(#classbuzz:target) .nav-item[data-id="classbuzz"] .nav-title,
   body:not(:has(.doc:target)) .nav-item[data-id="overview"] .nav-title { color: var(--accent); }
   .source {
@@ -120,7 +122,7 @@
       <nav class="nav">
         <a href="#overview" data-id="overview" class="nav-item">
           <span class="nav-title">总览</span>
-          <span class="nav-sub">四个组件的文档配置</span>
+          <span class="nav-sub">五份参照文档的查阅入口</span>
         </a>
         <a href="#wenlan" data-id="wenlan" class="nav-item">
           <span class="nav-title">文览 · 纸面叶</span>
@@ -128,25 +130,29 @@
         </a>
         <a href="#md2slides" data-id="md2slides" class="nav-item">
           <span class="nav-title">放映 · md2slides</span>
-          <span class="nav-sub">16 键：封面 / 分页 / 主题 / 放映</span>
+          <span class="nav-sub">封面 / 分页 / 主题 / 放映</span>
         </a>
         <a href="#mdcode2run" data-id="mdcode2run" class="nav-item">
           <span class="nav-title">代码运行 · mdcode2run</span>
           <span class="nav-sub">code-exec 段 / 顶层旧写法</span>
+        </a>
+        <a href="#runnable-languages" data-id="runnable-languages" class="nav-item">
+          <span class="nav-title">代码运行 · 语言示例</span>
+          <span class="nav-sub">7 种语言 / 开栏写法 / 旗标速查</span>
         </a>
         <a href="#classbuzz" data-id="classbuzz" class="nav-item">
           <span class="nav-title">课堂竞答 · classbuzz</span>
           <span class="nav-sub">无 YAML frontmatter · 题注 + 房间</span>
         </a>
       </nav>
-      <div class="sidebar-footer">文览生态 · 四份文档分别由各项目维护</div>
+      <div class="sidebar-footer">文览生态 · 五份文档分别由各项目维护</div>
     </aside>
     <main class="content">
       <section class="doc" id="overview" data-index="0">
         <div class="source">来源：<code>wenlan/packages/desktop/static/help/sources/overview.md</code> · 由各项目维护，经 <code>sync-help-docs.mjs</code> 同步</div>
-<p>文览生态由四个组件协作：<strong>文览（编辑器）</strong>、<strong>放映（md2slides）</strong>、<strong>代码运行（mdcode2run）</strong>、<strong>课堂竞答（classbuzz）</strong>。它们各自定义了「写在文档里、控制渲染或运行行为」的配置。左侧目录可切换到任意一个组件的完整清单。</p>
+<p>文览生态由四个组件协作：<strong>文览（编辑器）</strong>、<strong>放映（md2slides）</strong>、<strong>代码运行（mdcode2run）</strong>、<strong>课堂竞答（classbuzz）</strong>。它们各自定义了「写在文档里、控制渲染或运行行为」的配置。左侧目录可切换到任意一个组件的完整清单；另有一份「代码运行 · 语言示例」，汇总执行窗支持的全部语言与开栏写法，供查阅参照。</p>
 <blockquote>
-<p>本文是面向查阅的入口。四份完整清单由各项目在自己的 <code>docs/FRONTMATTER.md</code> 维护，本帮助窗口内的内容是它们的离线快照。有功能变更时，各项目先更新自己的文档，再由 wenlan 同步。</p>
+<p>本文是面向查阅的入口。四份 frontmatter 清单由各项目在自己的 <code>docs/FRONTMATTER.md</code> 维护，语言示例在 <code>mdcode2run/docs/RUNNABLE-LANGUAGES.md</code>；本帮助窗口内的内容是它们的离线快照。有功能变更时，各项目先更新自己的文档，再由 wenlan 同步。</p>
 </blockquote>
 <h2>四组件对比</h2>
 <table>
@@ -169,7 +175,7 @@
 <tr>
 <td>放映 · md2slides</td>
 <td>文档顶部 <code>---</code> 围栏</td>
-<td>是（16 键）</td>
+<td>是（元数据 + 渲染键）</td>
 <td>封面、分页、主题、放映形态</td>
 <td><code>title</code>、<code>theme</code>、<code>headingDivider</code>、<code>toc</code></td>
 </tr>
@@ -294,7 +300,7 @@ paperTheme: thesis
 <strong>有则作者的话全算数</strong>，未声明的键不补默认值。</li>
 <li>未知键被忽略，不报错。</li>
 </ul>
-<h2>1. 元数据键（<code>deckMeta</code>，11 键）</h2>
+<h2>1. 元数据键（<code>deckMeta</code>，13 键）</h2>
 <p>去向：封面页 + PPTX 文件属性（title→标题、subtitle→主题、author→作者）。</p>
 <table>
 <thead>
@@ -370,6 +376,12 @@ paperTheme: thesis
 <td><code>true</code> / <code>false</code></td>
 <td>仅 <code>show: page</code> 有意义：逐元素游走（默认）/ 纯整页翻</td>
 <td><code>null</code>（回退壳 config）</td>
+</tr>
+<tr>
+<td><code>stepLines</code></td>
+<td><code>true</code> / <code>false</code></td>
+<td>代码块行粒度遍历：<code>true</code> = 放映态把代码块逐行拆成一步（老师逐行讲解）；逐行<strong>运行</strong>与否由宿主 exec 桥按语言族判定（会话族 java/python 逐行执行、共享变量，bash 等一次性 shell 只遍历不逐行运行）</td>
+<td><code>false</code>（整块一步）</td>
 </tr>
 </tbody></table>
 <h2>2. 渲染键（<code>frontMatterPairs</code> → compose 消费）</h2>
@@ -522,14 +534,318 @@ paperTheme: thesis
 </tbody></table>
 <h2>3. 优先级链</h2>
 <pre><code>java  JAVA_HOME : code-exec.java.JAVA_HOME → 顶层 JAVA_HOME → 引擎 java.JAVA_HOME → 环境变量 JAVA_HOME
-java  class-path: code-exec.java.class-path → 顶层 class-path → 引擎 java.CLASS_PATH
+java  class-path: code-exec.java.class-path → 顶层 class-path → 引擎 java.CLASS_PATH → HADOOP_HOME 派生（8 段客户端 jar 全集）
 python 解释器    : code-exec.python.PYTHON_PATH → 引擎 python.PYTHON_PATH
 mysql 连接四键   : code-exec.mysql.* → 引擎 mysql.*（password 只在引擎层）
 shell 目标       : 块内提示符 [user@host] &gt; 顶层 host/user &gt; 引擎 shell.HOST/USER
 </code></pre>
+<p><code>class-path</code> 末级新增（2026-11-17）：未在文档 / 引擎层写死时，从 <code>HADOOP_HOME</code> 指向的
+完整发行版自动派生 <code>common / common/lib / hdfs / hdfs/lib / mapreduce / mapreduce/lib / yarn / yarn/lib</code> 全部 jar——讲义不必手写一长串 <code>share/hadoop/*</code> 路径，换机器也不炸。</p>
 
       </section>
-      <section class="doc" id="classbuzz" data-index="4">
+      <section class="doc" id="runnable-languages" data-index="4">
+        <div class="source">来源：<code>mdcode2run/docs/RUNNABLE-LANGUAGES.md</code> · 由各项目维护，经 <code>sync-help-docs.mjs</code> 同步</div>
+<blockquote>
+<p>本仓库自带的<strong>可运行参照</strong>：一份 Markdown 演示执行窗支持的全部 7 种运行语言，
+每种给一段示例开栏写法与预期结果。这里是<strong>查阅版</strong>；要真跑，把示例复制到自己的
+讲义里并按下面配好执行环境。</p>
+</blockquote>
+<h2>前置配置（<code>code-exec</code>）</h2>
+<p>执行环境写在文档<strong>顶部</strong>的 YAML front-matter <code>code-exec:</code> 段，换机器只改这里的路径。
+密码不写进讲义（只在引擎配置层）：</p>
+<pre><code class="language-yaml">code-exec:
+  session-boundary: h1
+  java:
+    JAVA_HOME: &quot;&lt;JDK 根目录或 bin&gt;&quot;
+  python:
+    PYTHON_PATH: &quot;&lt;python.exe 路径&gt;&quot;
+  mysql:
+    HOST: 127.0.0.1
+    PORT: 3306
+    USER: root
+    DATABASE: &quot;&lt;库名&gt;&quot;
+</code></pre>
+<p>键的完整清单见本帮助窗的「代码运行 · mdcode2run」（<code>FRONTMATTER.md</code>）。</p>
+<p><strong>运行前提</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>语言族</th>
+<th>围栏标记</th>
+<th>解释器</th>
+<th>前置</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>python</td>
+<td><code>python</code> <code>py</code></td>
+<td>Anaconda</td>
+<td><code>code-exec.python.PYTHON_PATH</code></td>
+</tr>
+<tr>
+<td>java</td>
+<td><code>java</code> <code>jshell</code></td>
+<td>JDK 17</td>
+<td><code>code-exec.java.JAVA_HOME</code></td>
+</tr>
+<tr>
+<td>shell</td>
+<td><code>bash</code> <code>sh</code> <code>shell</code></td>
+<td>Git Bash 或 WSL</td>
+<td>装其一；WSL 要配 <code>RUNTIME: wsl</code></td>
+</tr>
+<tr>
+<td>powershell</td>
+<td><code>powershell</code> <code>pwsh</code> <code>ps1</code></td>
+<td>Windows PowerShell 5.1</td>
+<td>系统自带</td>
+</tr>
+<tr>
+<td>mysql</td>
+<td><code>sql</code> <code>mysql</code></td>
+<td>mysql 客户端</td>
+<td>客户端在 PATH + 数据库可连</td>
+</tr>
+<tr>
+<td>hive</td>
+<td><code>hive</code> <code>hql</code> <code>hiveql</code> <code>sparksql</code></td>
+<td>beeline</td>
+<td>HS2 可连</td>
+</tr>
+<tr>
+<td>file</td>
+<td><code>file=&lt;路径&gt;</code></td>
+<td><strong>不执行语言</strong>，点 ▶ 写盘</td>
+<td>无</td>
+</tr>
+</tbody></table>
+<p><strong>三条通则</strong>：</p>
+<ol>
+<li><strong>章 = 会话边界</strong>：同一 <code>#</code> 章节内，<code>python</code> / <code>java</code> 的多次运行共享命名空间（变量、import 一直留着）；<code>h1</code> 换章就换会话。</li>
+<li><strong><code>shell</code> / <code>powershell</code> / <code>sql</code> / <code>hive</code> / <code>file</code> 是一次性</strong>：跑完即断，靠数据（文件、数据库表）传递，不靠会话变量。</li>
+<li><strong>点 ▶ 的前提</strong>：块必须有 <code>runnable</code>——语言标记被识别、没有冲突旗标（<code>demo</code> / <code>job</code>+远端 / 非法 <code>file=</code> 路径会挡住）。</li>
+</ol>
+<hr>
+<h2>一、Python（常驻会话）</h2>
+<p>同章内变量继续用。最后一行表达式会直接显示值，不用 <code>print</code>。</p>
+<pre><code class="language-python">x = 6
+y = 7
+</code></pre>
+<pre><code class="language-python">x * y
+</code></pre>
+<blockquote>
+<p>预期：第一段无输出（赋值）；第二段显示 <code>42</code>。两段共享 <code>x</code> <code>y</code>——这就是&quot;会话&quot;。</p>
+</blockquote>
+<hr>
+<h2>二、Java JShell（常驻会话）</h2>
+<p><code>java</code> 块走常驻 JShell，同章 <code>import</code> 只写一次。最后一行表达式显示值。</p>
+<pre><code class="language-java">import java.util.stream.IntStream;
+</code></pre>
+<pre><code class="language-java">IntStream.rangeClosed(1, 10).sum()
+</code></pre>
+<blockquote>
+<p>预期：第二段显示 <code>55</code>。JShell 每次会话从头初始化，第一段的 import 在同章后面一直有效。</p>
+</blockquote>
+<hr>
+<h2>三、Shell（Git Bash，一次性）</h2>
+<p>默认 <code>RUNTIME: auto</code>：本机有 Git Bash 就走 <code>bash -c</code>，没有才回退 WSL。</p>
+<pre><code class="language-bash">echo &quot;hello from shell&quot;
+pwd
+uname -s
+</code></pre>
+<blockquote>
+<p>预期：<code>hello from shell</code>、当前文档目录、系统名（Git Bash 下是 <code>MINGW64_NT-...</code>）。</p>
+</blockquote>
+<h3>异步作业（<code>job</code> 旗标）</h3>
+<p>长任务用 <code>```bash job</code>，启动即返回作业号，日志持续外发，可执行窗的终止按钮停掉。</p>
+<pre><code class="language-bash">for i in 1 2 3 4 5; do echo &quot;tick $i&quot;; sleep 1; done
+</code></pre>
+<blockquote>
+<p>预期：立即返回&quot;作业 #N 已启动&quot;，随后每秒吐一行 <code>tick</code>。</p>
+</blockquote>
+<h3>切到 WSL</h3>
+<p>在文档顶部 front-matter 的 <code>code-exec:</code> 下（照上面的前置配置示例）加一段 <code>shell:</code>，整篇 <code>bash</code> 块就改在 WSL 里跑（Git Bash 的块不受影响，本节只有 shell 族）：</p>
+<pre><code class="language-yaml">shell:
+  RUNTIME: wsl
+  WSL_DISTRO: Ubuntu-22.04   # 可选：不写用默认发行版
+</code></pre>
+<p>切完再点上面那个 bash 块，<code>uname -s</code> 会变成 <code>Linux</code>。配置含义：</p>
+<table>
+<thead>
+<tr>
+<th>键值</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>RUNTIME: auto</code></td>
+<td>默认，Git Bash 优先，缺失回退 WSL</td>
+</tr>
+<tr>
+<td><code>RUNTIME: git-bash</code></td>
+<td>强制 Git Bash，找不到就报错（不偷偷回退）</td>
+</tr>
+<tr>
+<td><code>RUNTIME: wsl</code></td>
+<td>强制 WSL，忽略 Git Bash</td>
+</tr>
+<tr>
+<td><code>WSL_EXE</code></td>
+<td>钉死 wsl.exe 路径（可选）</td>
+</tr>
+<tr>
+<td><code>WSL_DISTRO</code></td>
+<td><code>wsl.exe -d &lt;名&gt;</code> 指定发行版（可选）</td>
+</tr>
+<tr>
+<td><code>LOCAL_SHELL</code></td>
+<td>旧的通用旋钮，两种模式都认（可选）</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>四、PowerShell（一次性）</h2>
+<p>Windows 命令走这里。<strong>注意 5.1 的参数拆词坑</strong>：<code>-Dxxx=yyy</code> 这类要加单引号，否则 5.1 会拆成两个参数。</p>
+<pre><code class="language-powershell">$PSVersionTable.PSVersion.ToString()
+Get-Location
+</code></pre>
+<pre><code class="language-powershell"># 5.1 下裸写 -Dfile.encoding=UTF-8 会被拆坏；加引号即可
+$text = &quot;编码对齐示例&quot;
+Write-Output $text
+</code></pre>
+<blockquote>
+<p>预期：第一段显示版本号（5.1.x）与当前文档目录；第二段输出中文不乱码。</p>
+</blockquote>
+<hr>
+<h2>五、MySQL（query，出行列）</h2>
+<p>需要本机 PATH 上有 <code>mysql</code> 客户端、且 <code>code-exec.mysql</code> 指向的数据库能连。结果以<strong>行列</strong>形式回来，不是纯文本。</p>
+<pre><code class="language-sql">SELECT 1 AS one, &#39;ok&#39; AS status;
+</code></pre>
+<blockquote>
+<p>预期：返回一行两列 <code>one=1 / status=ok</code>。连不上时错误卡片会显示客户端报错（主机 / 凭据在 front-matter，密码只放引擎配置层，讲义里写不了）。</p>
+</blockquote>
+<hr>
+<h2>六、Hive（query，走 beeline）</h2>
+<p>需要 HS2 可连、beeline 可用。若本机没装 beeline，此块点 ▶ 会报&quot;找不到 beeline&quot;——属正常，按你集群的 <code>code-exec.hive</code> 配好即可。</p>
+<pre><code class="language-hive">SELECT 1 AS one, &#39;ok&#39; AS status;
+</code></pre>
+<blockquote>
+<p>预期：结构化一行两列。<code>hive</code> <code>hql</code> <code>hiveql</code> <code>sparksql</code> 四个标记等价。</p>
+</blockquote>
+<hr>
+<h2>七、File（点 ▶ 写文件，不执行语言）</h2>
+<p><code>file=&lt;路径&gt;</code> 是<strong>声明</strong>：点它的 ▶ 只把块内容写成文件，不跑代码。路径默认相对<strong>章临时工作目录</strong>；<code>../</code> 开头落到<strong>文档所在目录的下级</strong>（课程里 <code>{course}/doc/</code> 的 <code>../code/</code> 就是课程 <code>code/</code>）。</p>
+<p>下面演示默认落点（章临时沙箱），不在本仓库里造垃圾目录：</p>
+<pre><code class="language-text">Hello from mdcode2run.
+这个文件是点上面那个 ▶ 写出来的，不是被别的块顺带生成的。
+</code></pre>
+<blockquote>
+<p>预期：点 ▶ 后写进章临时沙箱（<code>%TEMP%\md-exec-chapters\&lt;章指纹&gt;\hello-from-fence.txt</code>，执行窗结果里会回显落点）。想落到文档同级目录写 <code>file=../code/X</code>；每次点都覆盖，自己改过要另存副本。这也是<strong>唯一</strong>有 ▶ 的非执行块——<code>demo</code> / <code>invalid</code> 没有 ▶。</p>
+</blockquote>
+<hr>
+<h2>八、不执行的块（对照）</h2>
+<table>
+<thead>
+<tr>
+<th>标记</th>
+<th>效果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>demo</code></td>
+<td>只展示，<code>▶</code> 灰掉，不跑不写</td>
+</tr>
+<tr>
+<td><code>text</code>（无 <code>file=</code>）</td>
+<td>纯文本，没 ▶（除非配 <code>LANGS</code> 当成某族）</td>
+</tr>
+<tr>
+<td><code>expect=&lt;串&gt;</code></td>
+<td>断言旗标，跟 <code>code</code> 块配合，执行后核对输出</td>
+</tr>
+<tr>
+<td><code>file=&lt;非法路径&gt;</code></td>
+<td>降级为 <code>invalid</code>，没有 ▶</td>
+</tr>
+</tbody></table>
+<pre><code class="language-sql">这是一段示意代码，故意不让它跑：
+SELECT * FROM 不存在的表;
+</code></pre>
+<hr>
+<h2>九、旗标速查</h2>
+<table>
+<thead>
+<tr>
+<th>开栏写法</th>
+<th>角色</th>
+<th>▶</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>```python</code></td>
+<td>code</td>
+<td>✓</td>
+<td>常驻会话</td>
+</tr>
+<tr>
+<td><code>```java</code></td>
+<td>code</td>
+<td>✓</td>
+<td>常驻 JShell</td>
+</tr>
+<tr>
+<td><code>```bash</code></td>
+<td>code</td>
+<td>✓</td>
+<td>一次性 shell</td>
+</tr>
+<tr>
+<td><code>```bash job</code></td>
+<td>code</td>
+<td>✓</td>
+<td>异步作业，返回作业号</td>
+</tr>
+<tr>
+<td><code>```powershell</code></td>
+<td>code</td>
+<td>✓</td>
+<td>一次性 PowerShell</td>
+</tr>
+<tr>
+<td><code>```sql</code></td>
+<td>code</td>
+<td>✓</td>
+<td>MySQL 查询，出行列</td>
+</tr>
+<tr>
+<td><code>```hive</code></td>
+<td>code</td>
+<td>✓</td>
+<td>Hive 查询，出行列</td>
+</tr>
+<tr>
+<td><code>```text file=xxx</code></td>
+<td>file</td>
+<td>✓</td>
+<td>点 ▶ 写文件</td>
+</tr>
+<tr>
+<td><code>```python demo</code></td>
+<td>demo</td>
+<td>✗</td>
+<td>只展示</td>
+</tr>
+<tr>
+<td><code>```text</code></td>
+<td>—</td>
+<td>✗</td>
+<td>未注册语言，无 ▶</td>
+</tr>
+</tbody></table>
+<p>冲突组合（如 <code>demo setup</code>、<code>file= expect=</code>）降级成纯展示块。完整规则见本仓库 <code>../FENCE.md</code>；front-matter 配置见 <code>FRONTMATTER.md</code>。</p>
+
+      </section>
+      <section class="doc" id="classbuzz" data-index="5">
         <div class="source">来源：<code>classbuzz/docs/FRONTMATTER.md</code> · 由各项目维护，经 <code>sync-help-docs.mjs</code> 同步</div>
 <blockquote>
 <p>依据源码逐项核实（2026-11-06）：题目标记由 md2slides 的 <code>core/quiz/parse.js</code> 解析，

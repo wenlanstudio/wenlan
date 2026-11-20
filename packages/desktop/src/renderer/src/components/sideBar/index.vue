@@ -3,6 +3,7 @@
     v-show="showSideBar && !hidden"
     ref="sideBar"
     class="side-bar"
+    :class="{ 'is-geek': interfaceMode === 'geek' }"
     :style="[{ paddingTop: topInset }, { width: `${finalSideBarWidth}px` }]"
   >
     <div class="side-bar-tabs">
@@ -192,6 +193,24 @@ const handleTabClick = (id: SidebarTab): void => {
   font-weight: 600;
   color: var(--editorColor);
   border-bottom-color: var(--editorColor);
+}
+
+/* geek 模式两栏通顶（topInset=0），tabs 从 y=0 起落进 fixed 标题栏
+   （z-index:2、-webkit-app-region:drag）的拖动热区，点击被当成拖窗口而非切 tab。
+   把 tabs 这一行抬到标题栏之上恢复点击（不抬整条侧栏）。 */
+.side-bar.is-geek .side-bar-tabs {
+  position: relative;
+  z-index: 3;
+  -webkit-app-region: no-drag;
+  /* tabs 行整条抬到标题栏之上后，容器盒子会横跨左上角「文」字开关区域，
+     把按钮的点击吃掉。容器本身不接收指针事件，让按钮区穿透到下层标题栏；
+     仅 .tab 子元素恢复接收，既保住 tab 切换又不挡按钮。 */
+  pointer-events: none;
+  /* 给按钮让出左侧 46px（=10px toolbar padding + 30px 按钮 + 6px 间距）。 */
+  padding-left: 46px;
+}
+.side-bar.is-geek .side-bar-tabs .tab {
+  pointer-events: auto;
 }
 
 .side-bar-content {
