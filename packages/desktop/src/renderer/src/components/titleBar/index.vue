@@ -11,7 +11,8 @@
         { active: active },
         { frameless: titleBarStyle === 'custom' },
         { isOsx: isOsx },
-        { solid: !isGeek }
+        { solid: !isGeek },
+        { 'is-geek': isGeek }
       ]"
     >
       <div
@@ -238,6 +239,22 @@ onBeforeUnmount(() => {
    让菜单栏成为完整一条而不是被侧栏灰底/编辑器白底劈成两半。 */
 .title-bar.solid {
   background: var(--editorBgColor);
+}
+/* geek 模式：标题栏从侧栏右缘开始，把侧栏顶部整条让出来。它是整窗宽的
+   `-webkit-app-region: drag` 热区，而 no-drag 只对 drag 元素自己的后代生效——
+   侧栏 tab 行是兄弟节点，抬 z-index / 加 no-drag 都打不穿这层 OS 拖动区，
+   点击会被当成拖窗口（tab「点不中 / 像被盖住」的真因）。缩短标题栏后
+   tab 行不在任何 drag 盒里，保持贴顶也可点。 */
+.title-bar.is-geek {
+  left: var(--sideBarWidth, 0px);
+}
+/* 标题栏让出侧栏后，左上角「文」按钮仍要贴窗口左缘：fixed 定位不受
+   left 偏移影响（祖上没有 transform/contain 之类的包含块）。 */
+.title-bar.is-geek .left-toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: var(--titleBarHeight);
 }
 .active {
   color: var(--editorColor);

@@ -4,7 +4,8 @@
     class="editor-container"
     :style="{
       '--workspaceHeight': `${workspaceHeight}px`,
-      '--bottomPanelHeight': `${bottomPanelHeight}px`
+      '--bottomPanelHeight': `${bottomPanelHeight}px`,
+      '--sideBarWidth': `${layoutStore.effectiveSideBarWidth}px`
     }"
   >
     <!-- 工作区（JetBrains 三段式）：左右侧栏 + 编辑器列。侧栏是贯穿到底的

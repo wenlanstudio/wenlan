@@ -195,22 +195,22 @@ const handleTabClick = (id: SidebarTab): void => {
   border-bottom-color: var(--editorColor);
 }
 
-/* geek 模式两栏通顶（topInset=0），tabs 从 y=0 起落进 fixed 标题栏
-   （z-index:2、-webkit-app-region:drag）的拖动热区，点击被当成拖窗口而非切 tab。
-   把 tabs 这一行抬到标题栏之上恢复点击（不抬整条侧栏）。 */
+/* geek 模式两栏通顶（topInset=0），tabs 直接贴在窗口顶边。标题栏在 geek 下
+   只覆盖主列（见 titleBar 的 .title-bar.is-geek），侧栏顶部不再是 OS 拖动热区，
+   所以这里只需给左上角「文」字开关让位，不再需要 z-index / no-drag 那套
+   打不穿 app-region 的补丁。 */
 .side-bar.is-geek .side-bar-tabs {
-  position: relative;
-  z-index: 3;
-  -webkit-app-region: no-drag;
-  /* tabs 行整条抬到标题栏之上后，容器盒子会横跨左上角「文」字开关区域，
-     把按钮的点击吃掉。容器本身不接收指针事件，让按钮区穿透到下层标题栏；
-     仅 .tab 子元素恢复接收，既保住 tab 切换又不挡按钮。 */
-  pointer-events: none;
-  /* 给按钮让出左侧 46px（=10px toolbar padding + 30px 按钮 + 6px 间距）。 */
-  padding-left: 46px;
+  /* 文按钮占 x=10~40，容器 border box 从 x=46 起。 */
+  margin-left: 46px;
+  padding-left: 0;
+  /* gap 减半，配合下方 tab 左右各 8px padding，视觉文字间距不变（16+8+8=32），
+     但每个 tab 的可点宽度多出 16px。 */
+  gap: 16px;
 }
+/* 扩大 tab 的可点热区（原来只能点中文字本身）。 */
 .side-bar.is-geek .side-bar-tabs .tab {
-  pointer-events: auto;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 .side-bar-content {
