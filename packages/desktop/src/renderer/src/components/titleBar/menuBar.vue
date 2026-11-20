@@ -13,9 +13,10 @@
          「文件」). -->
     <div
       class="menu-bar-burger"
-      :class="{ 'is-open': openIndex !== -1 }"
+      :class="{ 'is-open': openIndex !== -1 || menuRevealed }"
       :title="t('sideBar.toggle')"
       @click.stop="handleBurgerClick"
+      @contextmenu="handleBurgerContextMenu"
     >
       <!-- 品牌「文」字图标（#10 字形）：底色/字色随侧栏开关切换，作状态指示——
            展开=米黄底 #FDFAF3 + 墨篆「文」#1A1A1C；隐藏=黑底 #1A1A1C + 米黄篆
@@ -42,10 +43,11 @@
         </g>
       </svg>
     </div>
+    <!-- geek 模式也渲染条目，但做成标题栏下方的浮层（见样式 is-geek-float）：
+         既不占标题栏宽度，也不会因为整条透明容器横在侧栏 tab 上而吃掉点击。 -->
     <div
-      v-if="!isGeek"
       class="menu-bar-roots"
-      :class="{ 'is-expanded': expanded }"
+      :class="{ 'is-expanded': expanded, 'is-geek-float': isGeek }"
     >
       <div
         v-for="(menu, index) of menus"
@@ -83,16 +85,18 @@ const openIndex = ref(-1)
 const hovered = ref(false)
 // 侧栏开关状态：汉堡图标用它做底色/字色指示（展开=米黄底黑字，隐藏=黑底米黄字）。
 const { showSideBar } = storeToRefs(useLayoutStore())
-// Alt 唤出（#8）：单独按 Alt 展开菜单栏并打开首个菜单（「文件」）。
-// 与悬停揭示互不干扰，Esc / 再按 Alt / 点外面收起。
-const altRevealed = ref(false)
+// 菜单浮层被「唤出」的状态：单独按 Alt，或（geek 下）右键左上角「文」。
+// normal 里此前只给 Alt 用；geek 的浮层菜单同样落在这里。
+// Esc / 再按 Alt / 点外面收起。
+const menuRevealed = ref(false)
 // Alt 组合键判别：Alt 按下后若夹进任何其它键，就不是「单独 Alt」——
 // 在 keyup 时不再触发（Chromium 菜单栏同款语义，Alt+X 加速键不受扰）。
 let altArmed = false
 
 // normal 模式：菜单栏默认常驻；用户打开「自动隐藏」后改走 hovered 机制
 // （鼠标进入菜单栏那条区域才展开，离开收起，Alt 唤出仍可用）。
-// geek 模式：父组件照样挂载本组件，但只留左上角「文」字开关切侧栏，条目整条不渲染。
+// geek 模式：条目不横排在标题栏里，而是收成标题栏下方的浮层菜单；Alt 或
+// 右键「文」唤出（hovered 不参与，免得鼠标扫过左上角就弹菜单）。
 // 下拉打开时始终可见，避免收起把用户正在读的菜单从底下抽走。
 const { interfaceMode, menuBarAutoHide } = storeToRefs(usePreferencesStore())
 const isGeek = computed(() => interfaceMode.value === 'geek')
@@ -100,7 +104,11 @@ const alwaysVisible = computed(
   () => interfaceMode.value === 'normal' && !menuBarAutoHide.value
 )
 const expanded = computed(
-  () => alwaysVisible.value || hovered.value || openIndex.value !== -1 || altRevealed.value
+  () =>
+    alwaysVisible.value ||
+    (!isGeek.value && hovered.value) ||
+    openIndex.value !== -1 ||
+    menuRevealed.value
 )
 
 const load = async (): Promise<void> => {
@@ -117,17 +125,25 @@ const close = (): void => {
   openIndex.value = -1
 }
 
-// Alt 唤出与收起（#8）：已开 → 收；未开 → 展示菜单栏并打开首个菜单。
-const handleAltToggle = async (): Promise<void> => {
-  if (openIndex.value !== -1) {
+// 唤出/收起浮层菜单：geek 的右键「文」与两种模式的 Alt 都走这里。
+const toggleMenuPanel = async (): Promise<void> => {
+  if (openIndex.value !== -1 || menuRevealed.value) {
     close()
-    altRevealed.value = false
+    menuRevealed.value = false
     return
   }
-  altRevealed.value = true
+  menuRevealed.value = true
   await load()
-  if (!menus.value.length) return
-  openIndex.value = 0
+}
+
+// Alt 唤出（#8）：normal 下沿用原语义，展开并直接落到首个菜单「文件」；
+// geek 下只亮出浮层，由用户再点顶层菜单（浮层里没有横条可“落”）。
+const handleAltToggle = async (): Promise<void> => {
+  const willOpen = openIndex.value === -1 && !menuRevealed.value
+  await toggleMenuPanel()
+  if (willOpen && !isGeek.value && menus.value.length) {
+    openIndex.value = 0
+  }
 }
 
 const toggle = async (index: number): Promise<void> => {
@@ -141,8 +157,11 @@ const toggle = async (index: number): Promise<void> => {
 
 // Once one menu is open the whole bar stays hot, so sliding sideways across
 // the remaining menus opens them — same as every other flat menu bar.
+// geek 的浮层一旦被唤出（Alt/右键「文」）也直接算热态：光标移到哪个顶级项
+// 就展开哪个，不需要先点一下；常规模式保持「点击才开、开着才随光标切换」。
 const handleEnter = (index: number): void => {
-  if (openIndex.value === -1) return
+  const menuHot = openIndex.value !== -1 || (isGeek.value && menuRevealed.value)
+  if (!menuHot) return
   openIndex.value = index
 }
 
@@ -155,27 +174,44 @@ const handleBarLeave = (): void => {
 }
 
 const handleBurgerClick = (): void => {
-  // 汉堡按钮 = 侧边栏开关（走 View 菜单同一条入口，原生菜单勾选态才能同步）。
+  // 左键仍是侧边栏开关（走 View 菜单同一条入口，原生菜单勾选态才能同步）；
+  // 顺手收起唤出的浮层，避免切完侧栏还浮着一层菜单。
+  close()
+  menuRevealed.value = false
   bus.emit('view:toggle-layout-entry', 'showSideBar')
+}
+
+// geek 的鼠标路径：右键「文」唤出/收起浮层菜单。normal 不接管右键。
+const handleBurgerContextMenu = (event: MouseEvent): void => {
+  if (!isGeek.value) return
+  event.preventDefault()
+  event.stopPropagation()
+  void toggleMenuPanel()
 }
 
 const run = (item: MenuStructureItem): void => {
   close()
+  // 执行完条目即收起浮层：geek 没有横条常驻，留着会挡住正文。
+  menuRevealed.value = false
   if (!item.id) return
   window.electron.windowControl.executeMenuItem(item.id)
 }
 
 const onDocumentClick = (): void => {
   close()
-  altRevealed.value = false
+  menuRevealed.value = false
+}
+
+// 切到别的应用时既收起子菜单，也收起 geek 的浮层（blur 收不到 document click）。
+const handleWindowBlur = (): void => {
+  close()
+  menuRevealed.value = false
 }
 
 const onKeydown = (event: KeyboardEvent): void => {
-  // geek 模式没有菜单条目，Alt 唤出无意义，别触发一次无用的菜单结构加载。
-  if (isGeek.value) return
   if (event.key === 'Escape') {
     close()
-    altRevealed.value = false
+    menuRevealed.value = false
     return
   }
   if (event.key === 'Alt' && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
@@ -187,7 +223,6 @@ const onKeydown = (event: KeyboardEvent): void => {
 }
 
 const onKeyup = (event: KeyboardEvent): void => {
-  if (isGeek.value) return
   if (event.key === 'Alt' && altArmed) {
     altArmed = false
     void handleAltToggle()
@@ -200,7 +235,7 @@ onMounted(async () => {
   document.addEventListener('click', onDocumentClick)
   document.addEventListener('keydown', onKeydown)
   document.addEventListener('keyup', onKeyup)
-  window.addEventListener('blur', close)
+  window.addEventListener('blur', handleWindowBlur)
 })
 
 // 「教学」菜单随登录态显隐（main 侧已按新登录态重建菜单）：缓存的结构跟着刷新，
@@ -217,7 +252,7 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', onDocumentClick)
   document.removeEventListener('keydown', onKeydown)
   document.removeEventListener('keyup', onKeyup)
-  window.removeEventListener('blur', close)
+  window.removeEventListener('blur', handleWindowBlur)
 })
 </script>
 
@@ -265,6 +300,36 @@ onBeforeUnmount(() => {
 .menu-bar-roots.is-expanded {
   visibility: visible;
   opacity: 1;
+}
+
+/* geek：条目收成「文」按钮下方的浮层菜单。
+   fixed 让它脱离 flex 布局——否则这条透明容器会横在侧栏 tab 上吃掉点击；
+   下移到标题栏之外，也避开 OS 的 app-region 拖动热区。 */
+.menu-bar-roots.is-geek-float {
+  position: fixed;
+  top: calc(var(--titleBarHeight) + 8px);
+  left: 10px;
+  height: auto;
+  min-width: 190px;
+  padding: 4px 0;
+  flex-direction: column;
+  align-items: stretch;
+  background: var(--floatBgColor, var(--sideBarBgColor));
+  border: 1px solid var(--editorColor10);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 18%);
+  z-index: 100;
+}
+
+.menu-bar-roots.is-geek-float .menu-bar-root {
+  height: 26px;
+  padding: 0 12px;
+}
+
+/* 横条时子菜单向下展开；浮层里改成向右飞。 */
+.menu-bar-roots.is-geek-float .menu-bar-panel {
+  top: -5px;
+  left: 100%;
 }
 
 .menu-bar-root {

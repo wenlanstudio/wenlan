@@ -488,6 +488,7 @@
           "notes": "Normal: menü çubuğu her zaman görünür, içerik başlık çubuğunun altında başlar. Geek: içerik kenara kadar, menü gizli, ayarlar kenar çubuğundaki dişli ile.",
           "normal": "Normal",
           "geek": "Geek",
+          "geekMenuHint": "Geek modunda menü çubuğu gizlidir: göstermek için Alt tuşuna basın veya sol üstteki «文» düğmesine sağ tıklayın; Ctrl+Shift+P komut paletini açar.",
           "geekGear": "Ayarlar"
         },
         "menuBar": {

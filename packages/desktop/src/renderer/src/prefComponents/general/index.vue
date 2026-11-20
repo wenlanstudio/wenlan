@@ -47,7 +47,7 @@
         />
         <cur-select
           :description="t('preferences.general.window.interfaceMode.title')"
-          :notes="t('preferences.general.window.interfaceMode.notes')"
+          :notes="interfaceModeNotes"
           :value="interfaceMode"
           :options="getInterfaceModeOptions()"
           :on-change="(value) => onSelectChange('interfaceMode', value)"
@@ -274,6 +274,15 @@ const {
   autoRevealInSidebar,
   showPandocConvert
 } = storeToRefs(preferenceStore)
+
+// 极客模式把菜单栏收起来了：入口提示就挂在「界面模式」这一项下面，
+// 用户刚做完选择时正好看到（Alt / 右键「文」唤出，Ctrl+Shift+P 命令面板）。
+const interfaceModeNotes = computed<string>(() => {
+  const notes = t('preferences.general.window.interfaceMode.notes')
+  return interfaceMode.value === 'geek'
+    ? `${notes} ${t('preferences.general.window.interfaceMode.geekMenuHint')}`
+    : notes
+})
 
 const pandocProbe = ref<PandocCommandInfo | null>(null)
 const isProbing = ref(false)

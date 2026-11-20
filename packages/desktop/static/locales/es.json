@@ -488,6 +488,7 @@
           "notes": "Normal: barra de menús siempre visible, contenido bajo la barra de título. Geek: contenido hasta el borde, menú oculto, ajustes desde el engranaje de la barra lateral.",
           "normal": "Normal",
           "geek": "Geek",
+          "geekMenuHint": "En el modo Geek la barra de menús está oculta: pulsa Alt o haz clic derecho en el botón «文» de la esquina superior izquierda para mostrarla; Ctrl+Shift+P abre la paleta de comandos.",
           "geekGear": "Ajustes"
         },
         "menuBar": {

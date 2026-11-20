@@ -488,6 +488,7 @@
           "notes": "Normaal: menubalk altijd zichtbaar, inhoud begint onder de titelbalk. Geek: inhoud tot de rand, menu verborgen, instellingen via het tandwiel in de zijbalk.",
           "normal": "Normaal",
           "geek": "Geek",
+          "geekMenuHint": "In de geek-modus is de menubalk verborgen: druk op Alt of klik met de rechtermuisknop op de knop '文' linksboven om hem te tonen; Ctrl+Shift+P opent het opdrachtenpalet.",
           "geekGear": "Instellingen"
         },
         "menuBar": {

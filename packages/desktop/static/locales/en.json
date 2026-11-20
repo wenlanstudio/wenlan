@@ -488,6 +488,7 @@
           "notes": "Normal: menu bar always visible, panes below the title bar. Geek: edge-to-edge panes, menu hidden, settings via the sidebar gear.",
           "normal": "Normal",
           "geek": "Geek",
+          "geekMenuHint": "In Geek mode the menu bar is hidden: press Alt or right-click the 文 button at the top-left to reveal it; Ctrl+Shift+P opens the command palette.",
           "geekGear": "Settings"
         },
         "menuBar": {

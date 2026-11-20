@@ -488,6 +488,7 @@
           "notes": "Normal: Menüleiste immer sichtbar, Inhalt beginnt unter der Titelleiste. Geek: Inhalt bis zum Rand, Menü ausgeblendet, Einstellungen über das Zahnrad in der Seitenleiste.",
           "normal": "Normal",
           "geek": "Geek",
+          "geekMenuHint": "Im Geek-Modus ist die Menüleiste ausgeblendet: Alt drücken oder mit der rechten Maustaste auf „文“ oben links klicken, um sie einzublenden; Ctrl+Shift+P öffnet die Befehlspalette.",
           "geekGear": "Einstellungen"
         },
         "menuBar": {
