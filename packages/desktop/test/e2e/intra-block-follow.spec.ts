@@ -60,7 +60,8 @@ const scrollToFrac = async(marker: string, frac: number): Promise<void> => {
     const s = el.getBoundingClientRect()
     el.scrollTop = el.scrollTop + (r.top - s.top) + (f as number) * r.height
   }, [marker, frac])
-  await page.waitForTimeout(1100)
+  // 对齐动画（≤1.4s echo 窗）+ 投影 smooth 跟随 + 量化去抖全部落定后再采样
+  await page.waitForTimeout(1800)
 }
 
 test('fence: projection follows INTO the block, not to its top（块内插值）', async() => {

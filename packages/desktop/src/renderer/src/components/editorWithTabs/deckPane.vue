@@ -530,8 +530,11 @@ if (props.leaf === 'slide') {
     // 刚选的位置（e2e 真机抓到的回弹 ping-pong）。
     const inbound = (anchor.topLine ?? 0) + (anchor.topFrac ?? 0)
     if (lastUpLine != null && Math.abs(inbound - lastUpLine) < 0.5) return
-    const line = anchor.topLine ?? anchor.cursorLine
-    if (line == null) return
+    const base = anchor.topLine ?? anchor.cursorLine
+    if (base == null) return
+    // 发**实数行位**（topLine+topFrac）：deck 侧按页行域插值到页内位置，
+    // 只发整数会丢块内进度（文×览双向精度）。
+    const line = base + (anchor.topLine != null ? (anchor.topFrac ?? 0) : 0)
     if (locateRaf) cancelAnimationFrame(locateRaf)
     locateRaf = requestAnimationFrame(() => {
       locateRaf = 0
@@ -737,11 +740,13 @@ const onMessage = (ev: MessageEvent): void => {
       sendBuild()
       break
     case 'md2s:locate-up': {
-      // deck 列表的用户滚动（页面侧页变更才发）→ 发锚让文跟随（§6.2 双向）。
+      // deck 列表的用户滚动（页面侧页行域内插值上报）→ 发锚让文跟随（§6.2
+      // 双向）：实数行位 = 行 + 页内进度，文按块内比例落到同一阅读深度。
       const line = Number(data.line)
+      const frac = Number(data.frac) || 0
       if (Number.isFinite(line) && line > 0) {
-        lastUpLine = line
-        writeDocAnchor({ topLine: line, topFrac: 0, origin: 'scroll', source: 'deck' })
+        lastUpLine = line + frac
+        writeDocAnchor({ topLine: line, topFrac: frac, origin: 'scroll', source: 'deck' })
       }
       break
     }

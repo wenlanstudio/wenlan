@@ -1469,7 +1469,9 @@ let lineTableTimer = 0
 let lastFollowApply = 0
 // 程序对齐动画窗：跟随/反向对齐发起后短窗内，本面的 scroll 锚是动画回声，
 // 打 echo 标（接收面无条件丢弃）；用户在窗内的真实滚动也会被标——代价是
-// 对面最多滞后一个窗长，换取不追动画中间帧（/causer 打标原则）。
+// 对面最多滞后一个窗长，换取不追动画中间帧（/causer 打标原则）。窗长必须
+// 盖过 Chromium smooth 滚动全程（700ms 会在长距对齐的中后段漏标，对面逐帧
+// 追动画——deck 双向真机 trace 抓出）。
 let alignUntil = 0
 
 const offDocAnchor = onDocAnchorChange((anchor) => {
@@ -1478,7 +1480,7 @@ const offDocAnchor = onDocAnchorChange((anchor) => {
   if (anchor.source === 'flow') return // 自己的回声
 
   if (anchor.origin === 'reverse') {
-    alignUntil = Date.now() + 700
+    alignUntil = Date.now() + 1400
     requestAnimationFrame(() => {
       let index = anchor.topBlock
       if (anchor.topLine != null) {
@@ -1519,7 +1521,7 @@ const offDocAnchor = onDocAnchorChange((anchor) => {
       const now = Date.now()
       const behavior = now - lastFollowApply < 200 ? 'auto' : 'smooth'
       lastFollowApply = now
-      alignUntil = now + 700
+      alignUntil = now + 1400
       if (behavior === 'auto') scroller.scrollTop = target
       else scroller.scrollTo({ top: target, behavior: 'smooth' })
     })
@@ -1758,6 +1760,15 @@ const setMarkdownToEditor = (payload: unknown) => {
     // `setContent` resets the document and clears the undo history; only set a
     // cursor afterwards (a freshly-opened file has no history to restore).
     editor.value.setContent(newMarkdown ?? '')
+    // 行表随文件装载即时重建（§6.0）：运行中 mt::open-file / file-changed 换
+    // 内容走本路径，不一定触发 json-change——行表缓存会滞留装载前的旧 md，
+    // 跟随链路的行位换算（viewAnchorOf/块内插值）全部失效。与 json-change
+    // 的防抖重建同源。
+    try {
+      updateLineTable(editor.value.getMarkdown(), editor.value.getBlockStartLines())
+    } catch (e) {
+      console.error('[editor] line table seed on file load failed:', e)
+    }
     // The freshly loaded content is this tab's clean baseline (id 0). Re-seed
     // the monotonic save-tracking allocator so undoing an edit back to this
     // content reads as clean again (matches the store's `lastSavedHistoryId: 0`).
@@ -2317,7 +2328,7 @@ onMounted(() => {
         const at = lineToBlockIndex(props.markdown ?? '', Math.max(1, Math.floor(anchor.topLine)))
         if (at != null) index = at
       }
-      alignUntil = Date.now() + 700
+      alignUntil = Date.now() + 1400
       scrollViewToAnchor(getScrollContainer(), { blockIndex: index, text: anchor.text })
     }
   })
