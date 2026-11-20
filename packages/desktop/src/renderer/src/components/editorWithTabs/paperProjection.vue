@@ -351,6 +351,37 @@ const fragment = (): void => {
       cards[pageIndexOf(boundaries, b.top)]!.appendChild(el)
     }
   }
+
+  trimTailCard(cards)
+}
+
+/**
+ * 末页按内容裁短：纸面预览不该在文末再拖一整张 A4 的空白。打印仍是完整
+ * A4（页数不受影响），这里只裁可见页卡的高度——内容底 + 纸下边距。
+ * 空文档不裁（保持整张空白 A4 卡），内容超高（诚实溢出）也不裁。
+ */
+const trimTailCard = (cards: HTMLElement[]): void => {
+  const last = cards[cards.length - 1]
+  if (!last) return
+  const kids = [...last.children].filter((el) => !el.classList.contains('mu-paper-page-num'))
+  if (!kids.length) return
+  // 空文档必须仍是整张空白 A4 卡：muya 会给空文一个空段落，按高度裁会把卡
+  // 压成一条。没有文字、也没有图/表/代码/分隔线等内容时保持原高。
+  // 只看 kids（页数码徽章也是卡的孩子，但它不是内容）。
+  const hasContent = kids.some(
+    (el) =>
+      el.textContent.trim().length > 0 ||
+      el.matches('img, svg, table, pre, figure, hr') ||
+      el.querySelector('img, svg, table, pre, figure, hr, .mu-diagram-block') !== null
+  )
+  if (!hasContent) return
+  const cardRect = last.getBoundingClientRect()
+  const contentBottom = Math.max(...kids.map((el) => el.getBoundingClientRect().bottom))
+  const padBottom = Number.parseFloat(getComputedStyle(last).paddingBottom) || 0
+  const needed = Math.ceil(contentBottom - cardRect.top + padBottom)
+  if (needed <= 0 || needed >= cardRect.height) return
+  last.style.setProperty('min-height', '0px', 'important')
+  last.style.setProperty('height', `${needed}px`, 'important')
 }
 
 /** 世代号：新重建使旧的 rAF 链作废——挂载重建与 fonts.ready 重建可能

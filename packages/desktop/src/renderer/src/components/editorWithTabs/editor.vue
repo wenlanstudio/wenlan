@@ -2596,13 +2596,13 @@ onBeforeUnmount(() => {
   overflow-anchor: none !important;
 }
 
-/* 尾部留白按「当前编辑视口」给，不按整窗：底部工具窗口展开时
-   --editorViewportHeight 由本组件的 ResizeObserver 实测后更新，留白随之收缩，
-   文档不会再有一整屏的内容铺在面板背后（issue #2）。只读投影没有这个变量，
-   回退到 app.vue 实测的 --workspaceHeight；独立窗口再回退 100vh。 */
+/* 尾部留白只留与顶部对称的 20px：原先给一整屏（100vh→编辑视口高）是为了
+   末行能滚到顶部，但代价是滚到文末后还能继续滚进一整屏空白。正文画布本身
+   已由 .editor-component 铺满视口，不需要再用 padding 撑高。
+   （--editorViewportHeight 仍供打字机居中位/纸面投影使用。） */
 .editor-component .mu-container {
   padding-top: 20px;
-  padding-bottom: var(--editorViewportHeight, var(--workspaceHeight, 100vh));
+  padding-bottom: 20px;
   zoom: var(--editor-zoom, 1);
 }
 
