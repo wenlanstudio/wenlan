@@ -490,6 +490,12 @@
           "geek": "Geek",
           "geekGear": "Instellingen"
         },
+        "menuBar": {
+          "title": "Menubalk",
+          "notes": "Alleen in de normale modus (aangepaste titelbalk). Automatisch verbergen: de menu-items verschijnen zolang de aanwijzer op de menubalk staat.",
+          "alwaysShow": "Altijd tonen",
+          "autoHide": "Automatisch verbergen"
+        },
         "openFilesInNewWindow": "Bestanden in nieuw venster openen",
         "openFoldersInNewWindow": "Mappen in nieuw venster openen",
         "zoom": "Zoom"

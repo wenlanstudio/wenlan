@@ -490,6 +490,12 @@
           "geek": "Geek",
           "geekGear": "Ayarlar"
         },
+        "menuBar": {
+          "title": "Menü çubuğu",
+          "notes": "Yalnızca normal modda (özel başlık çubuğu). Otomatik gizle: işaretçi menü çubuğunun üzerindeyken menü öğeleri gösterilir.",
+          "alwaysShow": "Her zaman göster",
+          "autoHide": "Otomatik gizle"
+        },
         "openFilesInNewWindow": "Dosyaları yeni pencerede aç",
         "openFoldersInNewWindow": "Klasörleri yeni pencerede aç",
         "zoom": "Yakınlaştırma"

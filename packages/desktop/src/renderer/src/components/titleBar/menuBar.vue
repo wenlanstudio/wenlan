@@ -90,12 +90,15 @@ const altRevealed = ref(false)
 // 在 keyup 时不再触发（Chromium 菜单栏同款语义，Alt+X 加速键不受扰）。
 let altArmed = false
 
-// normal 模式：菜单栏常驻（吸收原 menuBarAlwaysVisible 开关的语义）。
+// normal 模式：菜单栏默认常驻；用户打开「自动隐藏」后改走 hovered 机制
+// （鼠标进入菜单栏那条区域才展开，离开收起，Alt 唤出仍可用）。
 // geek 模式：父组件照样挂载本组件，但只留左上角「文」字开关切侧栏，条目整条不渲染。
 // 下拉打开时始终可见，避免收起把用户正在读的菜单从底下抽走。
-const { interfaceMode } = storeToRefs(usePreferencesStore())
+const { interfaceMode, menuBarAutoHide } = storeToRefs(usePreferencesStore())
 const isGeek = computed(() => interfaceMode.value === 'geek')
-const alwaysVisible = computed(() => interfaceMode.value === 'normal')
+const alwaysVisible = computed(
+  () => interfaceMode.value === 'normal' && !menuBarAutoHide.value
+)
 const expanded = computed(
   () => alwaysVisible.value || hovered.value || openIndex.value !== -1 || altRevealed.value
 )

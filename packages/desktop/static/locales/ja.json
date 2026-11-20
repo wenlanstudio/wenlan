@@ -490,6 +490,12 @@
           "geek": "ギーク",
           "geekGear": "設定"
         },
+        "menuBar": {
+          "title": "メニューバー",
+          "notes": "通常モード（カスタムタイトルバー）のみ有効。自動非表示：ポインターがメニューバー領域にある間だけメニュー項目を表示します。",
+          "alwaysShow": "常に表示",
+          "autoHide": "自動的に隠す"
+        },
         "openFilesInNewWindow": "新しいウィンドウでファイルを開く",
         "openFoldersInNewWindow": "新しいウィンドウでフォルダーを開く",
         "zoom": "ズーム"

@@ -490,6 +490,12 @@
           "geek": "기크",
           "geekGear": "설정"
         },
+        "menuBar": {
+          "title": "메뉴 표시줄",
+          "notes": "일반 모드(사용자 지정 제목 표시줄)에서만 적용됩니다. 자동 숨김: 포인터가 메뉴 표시줄 영역에 있는 동안 메뉴 항목을 표시합니다.",
+          "alwaysShow": "항상 표시",
+          "autoHide": "자동 숨김"
+        },
         "openFilesInNewWindow": "새 창에서 파일 열기",
         "openFoldersInNewWindow": "새 창에서 폴더 열기",
         "zoom": "확대/축소"

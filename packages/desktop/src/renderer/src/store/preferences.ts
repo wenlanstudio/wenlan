@@ -31,6 +31,8 @@ export interface PreferencesState {
   hideScrollbar: boolean
   /** Interface layout mode. Overrides titleBarStyle/topInset/menu-bar behavior. */
   interfaceMode: InterfaceMode
+  /** Normal mode only: hide the in-app menu bar until the pointer enters its area. */
+  menuBarAutoHide: boolean
   wordWrapInToc: boolean
   fileSortBy: FileSortBy | string
   fileSortOrder: FileSortOrder | string
@@ -158,6 +160,8 @@ export const usePreferencesStore = defineStore('preferences', {
     zoom: 1.0,
     hideScrollbar: false,
     interfaceMode: 'normal',
+    // 常规模式的菜单栏默认常显；开启后悬停标题栏左侧菜单区才展开。
+    menuBarAutoHide: false,
     wordWrapInToc: false,
     // 与文件系统默认一致：按名称自然序（文件夹恒在前，treeCtrl 结构保证）。
     fileSortBy: 'title',

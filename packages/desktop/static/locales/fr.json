@@ -490,6 +490,12 @@
           "geek": "Geek",
           "geekGear": "Paramètres"
         },
+        "menuBar": {
+          "title": "Barre de menus",
+          "notes": "Uniquement en mode normal (barre de titre personnalisée). Masquer automatiquement : les entrées du menu s'affichent tant que le pointeur est sur la barre de menus.",
+          "alwaysShow": "Toujours afficher",
+          "autoHide": "Masquer automatiquement"
+        },
         "openFilesInNewWindow": "Ouvrir les fichiers dans une nouvelle fenêtre",
         "openFoldersInNewWindow": "Ouvrir les dossiers dans une nouvelle fenêtre",
         "zoom": "Zoom"

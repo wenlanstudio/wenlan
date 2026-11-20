@@ -23,6 +23,21 @@ export const getInterfaceModeOptions = (): PrefSelectOption<string>[] => [
   }
 ]
 
+/**
+ * 常规模式下的菜单栏行为（子配置）：常显示 / 自动隐藏。
+ * UI 用 alwaysShow/autoHide 两个语义值，落到偏好里是 menuBarAutoHide 布尔。
+ */
+export const getMenuBarBehaviorOptions = (): PrefSelectOption<string>[] => [
+  {
+    label: t('preferences.general.window.menuBar.alwaysShow'),
+    value: 'alwaysShow'
+  },
+  {
+    label: t('preferences.general.window.menuBar.autoHide'),
+    value: 'autoHide'
+  }
+]
+
 export const zoomOptions: PrefSelectOption<number>[] = [
   {
     label: '50.0%',

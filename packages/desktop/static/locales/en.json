@@ -490,6 +490,12 @@
           "geek": "Geek",
           "geekGear": "Settings"
         },
+        "menuBar": {
+          "title": "Menu bar",
+          "notes": "Normal mode with the in-app title bar only. Auto hide shows the menu entries while the pointer is over the menu bar area.",
+          "alwaysShow": "Always show",
+          "autoHide": "Auto hide"
+        },
         "openFilesInNewWindow": "Open files in new window",
         "openFoldersInNewWindow": "Open folders in new window",
         "zoom": "Zoom"

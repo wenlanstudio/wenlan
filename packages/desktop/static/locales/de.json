@@ -490,6 +490,12 @@
           "geek": "Geek",
           "geekGear": "Einstellungen"
         },
+        "menuBar": {
+          "title": "Menüleiste",
+          "notes": "Nur im normalen Modus (eigene Titelleiste). Automatisch ausblenden: Die Menüeinträge werden angezeigt, solange der Zeiger über der Menüleiste ist.",
+          "alwaysShow": "Immer anzeigen",
+          "autoHide": "Automatisch ausblenden"
+        },
         "openFilesInNewWindow": "Dateien in neuem Fenster öffnen",
         "openFoldersInNewWindow": "Ordner in neuem Fenster öffnen",
         "zoom": "Zoom"

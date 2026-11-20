@@ -52,6 +52,14 @@
           :options="getInterfaceModeOptions()"
           :on-change="(value) => onSelectChange('interfaceMode', value)"
         />
+        <cur-select
+          v-if="interfaceMode === 'normal'"
+          :description="t('preferences.general.window.menuBar.title')"
+          :notes="t('preferences.general.window.menuBar.notes')"
+          :value="menuBarAutoHide ? 'autoHide' : 'alwaysShow'"
+          :options="getMenuBarBehaviorOptions()"
+          :on-change="(value) => onSelectChange('menuBarAutoHide', value === 'autoHide')"
+        />
         <bool
           :description="t('preferences.general.window.openFilesInNewWindow')"
           :bool="openFilesInNewWindow"
@@ -237,6 +245,7 @@ import { isMac } from '@/util'
 import {
   getTitleBarStyleOptions,
   getInterfaceModeOptions,
+  getMenuBarBehaviorOptions,
   zoomOptions,
   getFileSortByOptions,
   getFileSortOrderOptions,
@@ -257,6 +266,7 @@ const {
   zoom,
   hideScrollbar,
   interfaceMode,
+  menuBarAutoHide,
   wordWrapInToc,
   fileSortBy,
   fileSortOrder,

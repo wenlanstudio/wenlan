@@ -38,10 +38,15 @@
     "default": false
   },
   "interfaceMode": {
-    "description": "General--Interface layout mode: normal (in-app title bar + always-visible menu bar) or geek (edge-to-edge panes, menu bar hidden, settings via sidebar gear).",
+    "description": "General--Interface layout mode: normal (in-app title bar + menu bar) or geek (edge-to-edge panes, menu bar hidden, settings via sidebar gear).",
     "type": "string",
     "enum": ["normal", "geek"],
     "default": "normal"
+  },
+  "menuBarAutoHide": {
+    "description": "General--In normal interface mode, hide the in-app menu bar until the pointer enters the menu bar area (false = always visible).",
+    "type": "boolean",
+    "default": false
   },
   "wordWrapInToc": {
     "description": "General--Whether to enable word wrap in TOC.",

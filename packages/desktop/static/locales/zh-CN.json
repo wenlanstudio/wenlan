@@ -490,6 +490,12 @@
           "geek": "极客",
           "geekGear": "设置"
         },
+        "menuBar": {
+          "title": "菜单栏",
+          "notes": "仅常规模式（自定义标题栏）生效。自动隐藏：鼠标移到菜单栏区域时显示，离开后隐藏。",
+          "alwaysShow": "常显示",
+          "autoHide": "自动隐藏"
+        },
         "openFilesInNewWindow": "在新窗口中打开文件",
         "openFoldersInNewWindow": "在新窗口中打开文件夹",
         "zoom": "缩放"

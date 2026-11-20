@@ -490,6 +490,12 @@
           "geek": "極客",
           "geekGear": "設定"
         },
+        "menuBar": {
+          "title": "選單列",
+          "notes": "僅一般模式（自訂標題列）生效。自動隱藏：滑鼠移到選單列區域時顯示，離開後隱藏。",
+          "alwaysShow": "常顯示",
+          "autoHide": "自動隱藏"
+        },
         "openFilesInNewWindow": "在新視窗中開啟檔案",
         "openFoldersInNewWindow": "在新視窗中開啟資料夾",
         "zoom": "縮放"

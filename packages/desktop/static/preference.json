@@ -7,6 +7,7 @@
   "zoom": 1.0,
   "hideScrollbar": false,
   "interfaceMode": "normal",
+  "menuBarAutoHide": false,
   "wordWrapInToc": false,
   "fileSortBy": "created",
   "fileSortOrder": "asc",
