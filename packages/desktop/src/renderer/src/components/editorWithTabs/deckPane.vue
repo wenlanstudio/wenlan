@@ -728,7 +728,10 @@ const onMessage = (ev: MessageEvent): void => {
       // 滚动上报已随降级移除）→ 发锚 origin=reverse 让文/栏对齐到该页行位。
       const line = Number(data.line)
       if (data.click && Number.isFinite(line) && line > 0) {
-        writeDocAnchor({ topLine: line, topFrac: 0, origin: 'reverse', source: 'deck' })
+        // 清残留证据（topBlock/text 是文/滚动的旧值，合并写不清会让
+        // scrollViewToAnchorIn 的 text 校验否决正确目标块、退 text 桥滚回
+        // 旧位置——「点览文不动」的根因）。deck 只知道行号，别无证据。
+        writeDocAnchor({ topLine: line, topFrac: 0, topBlock: undefined, text: undefined, origin: 'reverse', source: 'deck' })
       }
       break
     }
