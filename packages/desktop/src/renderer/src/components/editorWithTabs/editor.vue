@@ -119,6 +119,7 @@ import { SpellChecker } from '@/spellchecker'
 import { isMac, animatedScrollTo } from '@/util'
 import { scrollViewToAnchor, contentBlocks, blockText, viewAnchorOf, cursorAnchorOf } from '@/util/viewScrollSync'
 import {
+  POSITION_SYNC_ENABLED,
   blockIndexToLine,
   bumpCursorSeq,
   flushDocAnchorWrite,
@@ -1476,7 +1477,7 @@ let alignUntil = 0
 let clickCursorPending = false
 
 const offDocAnchor = onDocAnchorChange((anchor) => {
-  if (!anchor) return
+  if (!anchor || !POSITION_SYNC_ENABLED) return
   if (props.lens !== 'flow' && props.lens !== 'column') return
   if (anchor.source === 'flow') return // 自己的回声
 
@@ -2419,7 +2420,7 @@ onMounted(() => {
     // 进度由 cursorAnchorOf 从光标像素位置换算）。打字/键盘导航不写——点击
     // 是唯一同步触发；拖选（非折叠选区）也不写，避免拖选期间览面乱跳。
     console.debug('[trace][cursor] pending=', clickCursorPending, 'y=', y, 'caretInContainer=', caretInContainer)
-    if (clickCursorPending && y != null && caretInContainer) {
+    if (POSITION_SYNC_ENABLED && clickCursorPending && y != null && caretInContainer) {
       const sel = document.getSelection()
       const collapsed = !!sel && sel.anchorNode === sel.focusNode && sel.anchorOffset === sel.focusOffset
       if (collapsed) {

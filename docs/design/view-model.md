@@ -244,6 +244,11 @@ docAnchor = { mdRev, topBlock?, topLine?, topFrac?, cursorLine?, source?, echo? 
 
 ### 6.2 跟随：编辑面 → 览面（裁决 1：分工）
 
+> **2026-11-21 终裁：位置同步默认禁用**（`util/docAnchor.ts` 的
+> `POSITION_SYNC_ENABLED = false`）——多视图间不同步位置，各视图滚动/点击互
+> 不影响；本节描述的点击驱动实现保留在开关后面，待真机验证成熟后再评估
+> 开启。禁用期看守：视图间滚动静默（e2e）。
+
 - **跟随的行位语义**（触发已降级为点击，见上）：栏/页消费行位 ℓ*
   （cursorLine + cursorFrac，§6.0）——目标 = 块顶 + 块内行进度 × 块高
   （Rᵢ）；投影重建（250ms 防抖 setContent / replaceChildren）后按锚恢复，

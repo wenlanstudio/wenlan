@@ -9,6 +9,14 @@
 
 import { locateSpan, spansFromStarts, type LineSpan } from './docPos'
 
+/**
+ * 位置同步总开关（2026-11-21 用户裁决：**默认禁用**——多视图间不同步位置，
+ * 各视图滚动/点击互不影响。点击驱动同步的实现保留在开关后面，待真机验证
+ * 成熟后再评估开启）。闸点：editor 的落光标写锚与 reverse 对齐、栏投影的
+ * 跟随与点击发锚、deckPane 的 cursor 定位与 locate-up 消费。
+ */
+export const POSITION_SYNC_ENABLED = false
+
 export interface DocAnchor {
   /** 写锚时的 markdown 版本（reviseMarkdown 每逢内容变化 +1） */
   mdRev: number

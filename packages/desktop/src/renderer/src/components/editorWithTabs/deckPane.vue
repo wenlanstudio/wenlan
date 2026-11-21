@@ -192,7 +192,7 @@ import { useEditorStore } from '@/store/editor'
 import { useEditorViewStore } from '@/store/editorView'
 import { useTeachingStore } from '@/store/teaching'
 import { followTargetOf, shouldSnapBack } from '@/util/classroomFollow'
-import { matchesCurrentMarkdown, onDocAnchorChange, writeDocAnchor } from '@/util/docAnchor'
+import { POSITION_SYNC_ENABLED, matchesCurrentMarkdown, onDocAnchorChange, writeDocAnchor } from '@/util/docAnchor'
 import { renderGraphvizToDataUrl, renderPlantumlToDataUrl, renderMatplotlibToDataUrl } from '@/util/md2slidesDiagram'
 
 /**
@@ -522,7 +522,7 @@ if (props.leaf === 'slide') {
   // 帧（文滚动/对齐回声）一律忽略——否则 deck 被拽回文旧光标位。
   let lastCursorSeq: number | null = null
   const offDeckAnchor = onDocAnchorChange((anchor) => {
-    if (!anchor || !matchesCurrentMarkdown(props.markdown ?? '')) return
+    if (!anchor || !POSITION_SYNC_ENABLED || !matchesCurrentMarkdown(props.markdown ?? '')) return
     if (anchor.cursorSeq == null || anchor.cursorSeq === lastCursorSeq) return
     lastCursorSeq = anchor.cursorSeq
     if (anchor.cursorLine == null) return
@@ -724,6 +724,7 @@ const onMessage = (ev: MessageEvent): void => {
       sendBuild()
       break
     case 'md2s:locate-up': {
+      if (!POSITION_SYNC_ENABLED) break
       // 点击驱动（§6.2 降级）：仅消费页面侧**点击某页**的上报（click 标记；
       // 滚动上报已随降级移除）→ 发锚 origin=reverse 让文/栏对齐到该页行位。
       const line = Number(data.line)

@@ -42,7 +42,7 @@ const topTextOf = (root: ReturnType<typeof page.locator>): Promise<string | null
     return first ? (first.textContent ?? '').slice(0, 24) : null
   })
 
-test('click in 文 → projection follows the cursor line（点击驱动 §6.2 降级）', async() => {
+test.fixme('click in 文 → projection follows the cursor line（点击驱动 §6.2 降级）', async() => {
   await splitFlowColumn()
 
   const left = page.locator('.pane-left .editor-component').first()

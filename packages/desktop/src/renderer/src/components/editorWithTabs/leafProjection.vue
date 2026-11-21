@@ -37,6 +37,7 @@ import { buildMuyaViewOptions } from '@/util/muyaViewOptions'
 import { getMuyaLocale } from '@/util/muyaLocale'
 import { parsePaperTheme } from '@/util/paperPagination'
 import {
+  POSITION_SYNC_ENABLED,
   blockIndexToLine,
   matchesCurrentMarkdown,
   onDocAnchorChange,
@@ -156,7 +157,7 @@ const scrollToAnchor = (
 let lastCursorSeq: number | null = null
 
 const offDocAnchor = onDocAnchorChange(anchor => {
-  if (!anchor || !matchesCurrentMarkdown(props.markdown ?? '')) return
+  if (!anchor || !POSITION_SYNC_ENABLED || !matchesCurrentMarkdown(props.markdown ?? '')) return
   // 只认**新的点击序号**：合并写的旧 cursorLine 会残留在文滚动/对齐锚里，
   // 按值判会把这些残值帧当成新点击（deck 被拽回文旧光标位——真机抓出）。
   // 新 seq = 一次真实落光标；重复点同一行也带新 seq，照样重新对齐。
@@ -179,6 +180,7 @@ const locateBlockAt = (event: MouseEvent): { index: number; text: string; line: 
 }
 
 const handleClick = (event: MouseEvent): void => {
+  if (!POSITION_SYNC_ENABLED) return
   const at = locateBlockAt(event)
   if (!at) return
   // 反向定位（§6.3）：发锚 origin=reverse，编辑面滚到对应块（不切视图、
@@ -196,6 +198,7 @@ const handleClick = (event: MouseEvent): void => {
 }
 
 const handleDblClick = (event: MouseEvent): void => {
+  if (!POSITION_SYNC_ENABLED) return
   const at = locateBlockAt(event)
   if (!at) return
   // 跳转定位（§6.3 裁决口径：想编辑 = 跳转滚动到相应区域）——右栏先滚到

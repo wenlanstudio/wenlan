@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 // 点击驱动的落光标时序敏感（异步 selection-change × 拖选窗口）：允许一次重试。
+// 2026-11-21 裁决：位置同步默认禁用（POSITION_SYNC_ENABLED=false）——点击跟
+// 随用例 fixme，滚动静默看守继续生效。
 test.describe.configure({ retries: 2 })
 import type { ElectronApplication, Page } from 'playwright'
 import { launchWithDoc } from './helpers'
@@ -76,7 +78,7 @@ const clickAt = async(marker: string, frac: number): Promise<void> => {
   await page.waitForTimeout(1500)
 }
 
-test('fence: projection follows INTO the block, not to its top（块内插值）', async() => {
+test.fixme('fence: projection follows INTO the block, not to its top（块内插值）', async() => {
   await splitFlowColumn()
   await clickAt('FENCE-ONE', 0.4)
 
@@ -97,7 +99,7 @@ test('fence: projection follows INTO the block, not to its top（块内插值）
   expect(r!.frac, 'not snapped to block top').toBeGreaterThan(0.15)
 })
 
-test('wrapped paragraph: click lands the projection proportionally（异高块）', async() => {
+test.fixme('wrapped paragraph: click lands the projection proportionally（异高块）', async() => {
   await splitFlowColumn()
   // 段落甲在右栏更窄、换行更多 → 块更高；比例是投影对齐，容差放宽到 0.2。
   await clickAt('段落甲', 0.5)
