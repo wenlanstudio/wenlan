@@ -355,6 +355,9 @@ export interface IpcSendChannels {
   'mt::request-keybindings': []
   'mt::set-editor-format-menus-enabled': [windowId: number, enabled: boolean]
   'mt::switch-directory': [directoryPath: string]
+  // External rename: the renderer's rename pairing retargeted an open tab to
+  // the new path — main re-points the per-file watcher + opened-files list.
+  'mt::window-change-file-path': [newPathname: string, oldPathname: string]
   'mt::response-export': [
     payload: {
       type: ExportType

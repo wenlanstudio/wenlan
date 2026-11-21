@@ -317,6 +317,11 @@ export const useProjectStore = defineStore('project', () => {
   function followExternalRename(src: string, dest: string): void {
     retargetActiveItem(src, dest)
     useEditorStore().RENAME_IF_NEEDED({ src, dest })
+    // Re-point the per-file watcher and the main-process opened-files list so
+    // content changes on the renamed file still reach the retargeted tab
+    // (and the stale watcher on the old path stops firing for it). Main
+    // dedupes repeated notifications for an already-retargeted tab.
+    window.electron.ipcRenderer.send('mt::window-change-file-path', dest, src)
   }
 
   const pairOptions = (at: number) => ({

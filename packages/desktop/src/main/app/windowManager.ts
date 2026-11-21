@@ -409,6 +409,19 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
       }
     })
 
+    // External rename: the renderer's rename pairing retargeted an open tab
+    // to the new path — re-point the per-file watcher and the opened-files
+    // list so content changes on the renamed file still reach the tab.
+    // Safe to send repeatedly: an already-retargeted list is left as-is.
+    ipcMain.on('mt::window-change-file-path', (e, newPathname: string, oldPathname: string) => {
+      const win = BrowserWindow.fromWebContents(e.sender)
+      if (!win) return
+      const editor = this.get(win.id) as EditorWindow | undefined
+      if (editor) {
+        editor.changeOpenedFilePath(newPathname, oldPathname)
+      }
+    })
+
     ipcMain.on('mt::window-toggle-always-on-top', (e) => {
       const win = BrowserWindow.fromWebContents(e.sender)
       if (!win) return

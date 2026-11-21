@@ -470,8 +470,10 @@ class EditorWindow extends BaseWindow {
     const { _openedFiles, browserWindow } = this
     const index = _openedFiles!.findIndex((p) => p === oldPathname)
     if (index === -1) {
-      // The old path was not found but add the new one.
-      _openedFiles!.push(pathname)
+      // The old path was not found (already retargeted); add the new one
+      // unless it is tracked already — repeated rename notifications must not
+      // duplicate the entry.
+      if (!_openedFiles!.includes(pathname)) _openedFiles!.push(pathname)
     } else {
       _openedFiles![index] = pathname
     }

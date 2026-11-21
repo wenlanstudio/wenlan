@@ -33,6 +33,7 @@ import type {
   TabOptions
 } from '@shared/types/files'
 import { DEFAULT_PLANTUML_SERVER } from '@shared/types/preferences'
+import { RENAME_PAIR_WINDOW_MS } from './treeRenamePair'
 
 // ----------------------------------------------------------------------------
 // Local helper types
@@ -159,6 +160,15 @@ export interface EditorState {
 }
 
 const autoSaveTimers = new Map<string, ReturnType<typeof setTimeout>>()
+
+// File-watcher "removed on disk" marks that wait out the rename-pairing
+// window before touching the tab (see LISTEN_FOR_FILE_CHANGE's unlink case).
+const pendingFileUnlinkMarks = new Map<string, ReturnType<typeof setTimeout>>()
+const stashPendingFileUnlink = (pathname: string, timer: ReturnType<typeof setTimeout>): void => {
+  const existing = pendingFileUnlinkMarks.get(pathname)
+  if (existing) clearTimeout(existing)
+  pendingFileUnlinkMarks.set(pathname, timer)
+}
 
 // Sidebar opens record whether the editor should take focus once that pathname
 // finishes loading. Keyed by pathname so concurrent opens keep their own intent.
@@ -1725,15 +1735,27 @@ export const useEditorStore = defineStore('editor', {
           const { id, isSaved, filename } = tab
           switch (type) {
             case 'unlink': {
-              tab.isSaved = false
-              this.pushTabNotification({
-                tabId: id,
-                msg: t('store.editor.fileRemovedOnDisk', { name: filename }),
-                style: 'warn',
-                showConfirm: false,
-                exclusiveType: 'file_changed'
-              })
-              debouncedSendBufferedState()
+              // A rename also fires this unlink for the old path on the file
+              // watcher, racing the directory watcher's rename pairing in
+              // project.ts: whichever lands first decides whether the tab is
+              // still on the old path. Wait out the pairing window and
+              // re-resolve then — if the tab already followed the rename to
+              // its new path this is a rename, not a removal, and neither the
+              // dirty mark nor the "removed on disk" notification may fire.
+              stashPendingFileUnlink(pathname, setTimeout(() => {
+                pendingFileUnlinkMarks.delete(pathname)
+                const markedTab = this.tabs.find((t) => window.fileUtils.isSamePathSync(t.pathname, pathname))
+                if (!markedTab) return
+                markedTab.isSaved = false
+                this.pushTabNotification({
+                  tabId: markedTab.id,
+                  msg: t('store.editor.fileRemovedOnDisk', { name: markedTab.filename }),
+                  style: 'warn',
+                  showConfirm: false,
+                  exclusiveType: 'file_changed'
+                })
+                debouncedSendBufferedState()
+              }, RENAME_PAIR_WINDOW_MS))
               break
             }
             case 'add':
