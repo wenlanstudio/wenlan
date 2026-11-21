@@ -2421,12 +2421,22 @@ onMounted(() => {
     if (clickCursorPending && y != null && caretInContainer) {
       const sel = document.getSelection()
       const collapsed = !!sel && sel.anchorNode === sel.focusNode && sel.anchorOffset === sel.focusOffset
-      console.debug('[trace][cursor] collapsed=', collapsed)
       if (collapsed) {
-        const patch = cursorAnchorOf(container, y, props.markdown ?? '')
-        console.debug('[trace][cursor] patch=', JSON.stringify(patch))
-        if (patch?.cursorLine != null) {
-          writeDocAnchor({ ...patch, origin: 'scroll', source: 'flow' })
+        // cursorLine 取 muya 自身的光标偏移（**永不过期**——行表缓存死亡也不会
+        // 让点击同步失效，「点着点着不跟随」的根因）；cursorFrac 取像素几何
+        // （行表脏时退 0，降级为行首对齐）。
+        const offset = editor.value?.getCursorOffset()
+        const focus = offset?.focus
+        if (focus) {
+          const patch = cursorAnchorOf(container, y, props.markdown ?? '')
+          writeDocAnchor({
+            cursorLine: focus.line + 1,
+            cursorFrac: patch?.cursorFrac ?? 0,
+            topBlock: patch?.topBlock,
+            text: patch?.text,
+            origin: 'scroll',
+            source: 'flow'
+          })
         }
       }
       clickCursorPending = false

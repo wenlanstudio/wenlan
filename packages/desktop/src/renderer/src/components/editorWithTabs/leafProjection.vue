@@ -152,14 +152,12 @@ const scrollToAnchor = (
 // 本投影的单击/双击发 reverse 锚（§6.3）——文对齐时光标不动（cursorLine
 // 不变），不构成回路；连续跟随时代的回声防护机械（宽限窗/量化/自抑制）
 // 随滚动发布一并退役。
-let lastCursorLine: number | null = null
 
 const offDocAnchor = onDocAnchorChange(anchor => {
-  console.debug('[trace][proj] anchor', anchor && anchor.cursorLine, '/', anchor && anchor.source, 'matches', anchor ? matchesCurrentMarkdown(props.markdown ?? '') : false)
   if (!anchor || !matchesCurrentMarkdown(props.markdown ?? '')) return
-  if (anchor.cursorLine == null || anchor.cursorLine === lastCursorLine) return
-  lastCursorLine = anchor.cursorLine
-  console.debug('[trace][proj] follow cursorLine', anchor.cursorLine, '+', anchor.cursorFrac)
+  // 不按 cursorLine 去重：重复点同一行也要能重新对齐（deck/文漂移后拉得
+  // 回来）——重复定位由 scrollToAnchor 的 ε 幂等自然挡掉。
+  if (anchor.cursorLine == null) return
   scrollToAnchor({ topLine: anchor.cursorLine, topFrac: anchor.cursorFrac }, 'smooth')
 })
 

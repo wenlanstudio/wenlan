@@ -518,12 +518,11 @@ watch([() => followTarget.value.page, () => followTarget.value.locked], () => se
 // 列表滚到该行位所在页的页内对应位置（页面侧按页行域插值）。deck 里**点击
 // 某页** → locate-up(click) 回来 → 发锚 origin=reverse 让文/栏对齐（onMessage）。
 if (props.leaf === 'slide') {
-  let lastCursorLine: number | null = null
+  // 不按 cursorLine 去重（重复点同一行也要能拉回）；deck 侧 locateLine 的
+  // ε 幂等（±2px no-op）自然挡重复。
   const offDeckAnchor = onDocAnchorChange((anchor) => {
     if (!anchor || !matchesCurrentMarkdown(props.markdown ?? '')) return
-    if (anchor.cursorLine == null || anchor.cursorLine === lastCursorLine) return
-    lastCursorLine = anchor.cursorLine
-    console.debug('[trace][deckPane] cursor locate', anchor.cursorLine, '+', anchor.cursorFrac)
+    if (anchor.cursorLine == null) return
     postToDeck({ type: 'md2s:locate', line: anchor.cursorLine + (anchor.cursorFrac ?? 0) })
   })
   onBeforeUnmount(() => offDeckAnchor())
