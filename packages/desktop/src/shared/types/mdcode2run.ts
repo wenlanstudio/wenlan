@@ -66,12 +66,18 @@ export interface Md2rParseResult {
   kind: 'mr' | 'generic'
 }
 
-/** 章会话 HUD：同章同 family 共享会话，seq 是章内执行序号（▶ ran #N）。 */
+/**
+ * 章会话信息（run 结果里的投影）：会话族（java/python）由引擎 sessionRun.decorate
+ * 带 ran/total/stale 等 HUD 字段；一次性族（shell/powershell/mysql/hive/file/job）由
+ * 记账时补一个只装 seq 的壳——所有族执行后宿主都能显示「▶ ran #N」（章内序号）。
+ */
 export interface Md2rSessionInfo {
-  family: string
-  key: string
-  workdirKey?: string
   seq?: number
+  /** 会话族 HUD：本章已跑块数 / 可跑块总数 / 过期块数 / 是否重放。 */
+  ran?: number
+  total?: number
+  stale?: number
+  replayed?: boolean
 }
 
 /** 作业句柄的序列化投影——stop 函数留在 main，经 mt::mdcode2run::job-stop 调。 */
