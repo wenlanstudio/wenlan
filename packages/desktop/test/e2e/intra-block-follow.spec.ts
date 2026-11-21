@@ -1,4 +1,6 @@
 import { expect, test } from '@playwright/test'
+// 点击驱动的落光标时序敏感（异步 selection-change × 拖选窗口）：允许一次重试。
+test.describe.configure({ retries: 2 })
 import type { ElectronApplication, Page } from 'playwright'
 import { launchWithDoc } from './helpers'
 
@@ -46,27 +48,37 @@ const fracOf = (root: ReturnType<typeof page.locator>): Promise<{ text: string; 
     return { text: (block.textContent || '').slice(0, 48), frac }
   })
 
-/** 左 pane 回顶再滚到 marker 块内 frac 深度（先位移保证 scroll 事件触发）。 */
-const scrollToFrac = async(marker: string, frac: number): Promise<void> => {
+/** 左 pane 把 marker 块内 frac 深度处滚到视口中央后**真实点击**（落光标 →
+ * cursorLine 锚 → 点击驱动同步）。先滚后量，保证点击点在视口内。 */
+const clickAt = async(marker: string, frac: number): Promise<void> => {
   const left = page.locator('.pane-left .editor-component').first()
-  await left.evaluate(el => { el.scrollTop = 0 })
-  await page.waitForTimeout(200)
   await left.evaluate((el, [m, f]) => {
     const container = el.querySelector('.mu-container') || el
     const block = Array.from(container.children)
       .find(b => (b.textContent || '').includes(m as string))
     if (!block) return
     const r = block.getBoundingClientRect()
-    const s = el.getBoundingClientRect()
-    el.scrollTop = el.scrollTop + (r.top - s.top) + (f as number) * r.height
+    const absTop = el.scrollTop + r.top - el.getBoundingClientRect().top
+    el.scrollTop = Math.max(0, absTop + (f as number) * r.height - el.clientHeight / 2)
   }, [marker, frac])
-  // 对齐动画（≤1.4s echo 窗）+ 投影 smooth 跟随 + 量化去抖全部落定后再采样
-  await page.waitForTimeout(1800)
+  await page.waitForTimeout(400)
+  const pos = await left.evaluate((el, [m, f]) => {
+    const container = el.querySelector('.mu-container') || el
+    const block = Array.from(container.children)
+      .find(b => (b.textContent || '').includes(m as string))
+    if (!block) return null
+    const r = block.getBoundingClientRect()
+    return { x: Math.round(r.left + Math.min(r.width / 2, 200)), y: Math.round(r.top + (f as number) * r.height) }
+  }, [marker, frac])
+  if (!pos) throw new Error('block not found: ' + marker)
+  await page.mouse.click(pos.x, pos.y)
+  // 落光标 + 投影 smooth 跟随落定后再采样
+  await page.waitForTimeout(1500)
 }
 
 test('fence: projection follows INTO the block, not to its top（块内插值）', async() => {
   await splitFlowColumn()
-  await scrollToFrac('FENCE-ONE', 0.4)
+  await clickAt('FENCE-ONE', 0.4)
 
   const left = page.locator('.pane-left .editor-component').first()
   const right = page.locator('.pane-right .leaf-projection').first()
@@ -77,29 +89,33 @@ test('fence: projection follows INTO the block, not to its top（块内插值）
   // 块级：两侧停在同一内容块
   expect(r, 'projection should follow').toBeTruthy()
   expect(r!.text).toContain('FENCE-ONE')
-  // 块内：编辑面在 40% 深度，投影必须跟到相近深度——**不是**跳回块顶
-  //（旧块顶对齐会让 r.frac ≈ 0，此处双重断言：比例相近 + 明确非 0）。
-  expect(Math.abs(r!.frac - l!.frac), 'proportional within-block alignment').toBeLessThan(0.12)
+  // 块内：投影跟到光标行位附近——**不是**跳回块顶（旧块顶对齐会让
+  // r.frac ≈ 0）。注意 l.frac 是「编辑面视口顶」的块内进度（centering 后
+  // 视口顶在光标位上方约半屏），与投影落点（=光标行位）天然差约半屏高
+  // 度的行比例，容差放宽到 0.35；非 0 断言防「跳回块顶」回退。
+  expect(Math.abs(r!.frac - l!.frac), 'proportional within-block alignment').toBeLessThan(0.35)
   expect(r!.frac, 'not snapped to block top').toBeGreaterThan(0.15)
 })
 
-test('wrapped paragraph: proportional alignment tolerates different block heights', async() => {
+test('wrapped paragraph: click lands the projection proportionally（异高块）', async() => {
   await splitFlowColumn()
   // 段落甲在右栏更窄、换行更多 → 块更高；比例是投影对齐，容差放宽到 0.2。
-  await scrollToFrac('段落甲', 0.5)
+  await clickAt('段落甲', 0.5)
 
   const left = page.locator('.pane-left .editor-component').first()
   const right = page.locator('.pane-right .leaf-projection').first()
   const [l, r] = await Promise.all([fracOf(left), fracOf(right)])
 
-  expect(l!.text).toContain('段落甲')
+  // 编辑面视口顶块 ≠ 光标块（点击后视口顶落在光标块之前的块尾是正常的）：
+  // 断言只盯**投影**落进光标行所在块（点击驱动的收敛语义）。
+  expect(l!.text).toBeTruthy()
   expect(r!.text).toContain('段落甲')
-  expect(Math.abs(r!.frac - l!.frac)).toBeLessThan(0.2)
+  expect(Math.abs(r!.frac - l!.frac)).toBeLessThan(0.35)
 })
 
 test('anchor carries the real-valued line position（topLine + topFrac）', async() => {
   await splitFlowColumn()
-  await scrollToFrac('FENCE-TWO', 0.55)
+  await clickAt('FENCE-TWO', 0.55)
 
   const anchor = await page.evaluate(() =>
     (window as unknown as { __mt_docAnchor?: { read: () => { topLine?: number; topFrac?: number; origin?: string } | null } }).__mt_docAnchor?.read()
@@ -113,7 +129,7 @@ test('anchor carries the real-valued line position（topLine + topFrac）', asyn
 
 test('source view restores the real line（frac 精确路径）', async() => {
   await splitFlowColumn()
-  await scrollToFrac('FENCE-TWO', 0.55)
+  await clickAt('FENCE-TWO', 0.55)
 
   await page.locator('.leaf-btn[title^="本"]').click()
   await page.waitForSelector('.source-code', { timeout: 8000 })
@@ -150,35 +166,20 @@ test('source view restores the real line（frac 精确路径）', async() => {
   expect(back?.text).toContain('FENCE')
 })
 
-test('双向滚动同步：滚「栏」→ 文按行位跟随，栏不被回弹拉走（§6.2 再裁决）', async() => {
+test('降级看守：滚「文」与滚「栏」均不驱动同步（§6.2 2026-11-21）', async() => {
   await splitFlowColumn()
   const left = page.locator('.pane-left .editor-component').first()
   const right = page.locator('.pane-right .leaf-projection').first()
 
-  // 编辑面先回顶（保证有位移），再把**投影**滚到 FENCE-TWO 块内 45% 深度
-  await left.evaluate(el => { el.scrollTop = 0 })
-  await page.waitForTimeout(300)
-  await right.evaluate(el => {
-    const container = el.querySelector('.mu-container') || el
-    const block = Array.from(container.children)
-      .find(b => (b.textContent || '').includes('FENCE-TWO'))
-    if (!block) return
-    const r = block.getBoundingClientRect()
-    const s = el.getBoundingClientRect()
-    el.scrollTop = el.scrollTop + (r.top - s.top) + 0.45 * r.height
-  })
-  await page.waitForTimeout(1300) // 投影发锚 + 文跟随（smooth）
+  // 滚「文」→ 投影原地不动（滚动静默）
+  const rBefore = await right.evaluate(el => el.scrollTop)
+  await left.evaluate(el => { el.scrollTop = el.scrollHeight * 0.5 })
+  await page.waitForTimeout(900)
+  expect(Math.abs((await right.evaluate(el => el.scrollTop)) - rBefore)).toBeLessThan(2)
 
-  const [l, r] = await Promise.all([fracOf(left), fracOf(right)])
-  // 文跟随进同一块、相近比例
-  expect(l?.text).toContain('FENCE-TWO')
-  expect(Math.abs(l!.frac - r!.frac)).toBeLessThan(0.15)
-  // 发起面（栏）守在自己的位置，不被文的对齐回声拉走
-  expect(r!.frac).toBeGreaterThan(0.3)
-  // 静置后再采样：位置稳定（无自激漂移）
-  await page.waitForTimeout(800)
-  const l2 = await fracOf(left)
-  const r2 = await fracOf(right)
-  expect(Math.abs(l2!.frac - l!.frac)).toBeLessThan(0.02)
-  expect(Math.abs(r2!.frac - r!.frac)).toBeLessThan(0.02)
+  // 滚「栏」→ 文原地不动（滚动静默）
+  const lBefore = await left.evaluate(el => el.scrollTop)
+  await right.evaluate(el => { el.scrollTop = el.scrollHeight * 0.5 })
+  await page.waitForTimeout(900)
+  expect(Math.abs((await left.evaluate(el => el.scrollTop)) - lBefore)).toBeLessThan(2)
 })

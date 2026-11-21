@@ -42,47 +42,39 @@ const topTextOf = (root: ReturnType<typeof page.locator>): Promise<string | null
     return first ? (first.textContent ?? '').slice(0, 24) : null
   })
 
-test('column projection follows the editor scroll (M1 §6.2)', async() => {
+test('click in 文 → projection follows the cursor line（点击驱动 §6.2 降级）', async() => {
   await splitFlowColumn()
 
   const left = page.locator('.pane-left .editor-component').first()
   const right = page.locator('.pane-right .leaf-projection').first()
   await left.waitFor({ state: 'visible', timeout: 8000 })
 
-  const rightBefore = await right.evaluate(el => el.scrollTop)
+  // 真实点击「文」的中部段落（落光标 → cursorLine 锚 → 投影跟随）。
+  const target = page.locator('.pane-left .mu-container > *').nth(12)
+  await target.scrollIntoViewIfNeeded()
+  await target.click()
+  await page.waitForTimeout(1200)
 
-  // 左 pane 滚到中部（真实滚轮语义，触发 scroll 监听 → 锚 → 订阅链）。
-  await left.evaluate(el => {
-    el.scrollTop = el.scrollHeight * 0.4
-  })
-  await page.waitForTimeout(600) // rAF 写锚 + 订阅传播 + 投影滚动
-
-  const rightAfter = await right.evaluate(el => el.scrollTop)
-  expect(rightAfter).not.toBe(rightBefore)
-  expect(rightAfter).toBeGreaterThan(0)
+  // 投影视口顶块 = 光标所在块（点击驱动：一次点击一次对齐）。
+  const [leftText, rightText] = await Promise.all([topTextOf(left), topTextOf(right)])
+  expect(leftText).toBeTruthy()
+  expect(rightText).toBe(leftText)
 })
 
-test('projection lands on the same block the editor shows (block-level)', async() => {
+test('downgrade guard: editor scroll does NOT drive the projection（滚动静默）', async() => {
   await splitFlowColumn()
 
   const left = page.locator('.pane-left .editor-component').first()
   const right = page.locator('.pane-right .leaf-projection').first()
 
-  // 左 pane 先回顶再滚到 40%：同值赋值不触发 scroll 事件（两用例共享页面，
-  // 左栏可能已在目标位置——真实用户的滚动必有位移，这里模拟之）。
-  await left.evaluate(el => {
-    el.scrollTop = 0
-  })
-  await page.waitForTimeout(300)
+  const rightBefore = await right.evaluate(el => el.scrollTop)
   await left.evaluate(el => {
     el.scrollTop = el.scrollHeight * 0.4
   })
-  await page.waitForTimeout(600)
+  await page.waitForTimeout(700)
 
-  // 左右视口顶块应是同一个内容块（块级同步语义）：比较首可见块的文本。
-  const [leftText, rightText] = await Promise.all([topTextOf(left), topTextOf(right)])
-  expect(leftText).toBeTruthy()
-  expect(rightText).toBe(leftText)
+  const rightAfter = await right.evaluate(el => el.scrollTop)
+  expect(Math.abs(rightAfter - rightBefore)).toBeLessThan(2)
 })
 
 test('single click aligns the editor without moving the projection (§6.3)', async() => {

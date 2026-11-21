@@ -513,38 +513,20 @@ const sendFollow = (): void => {
 
 watch([() => followTarget.value.page, () => followTarget.value.locked], () => sendFollow())
 
-// —— 滚动同步（§6.2 双向化 2026-11-20 / M3 locate 切片，仅 slide 列表态）——
-// 文/栏的行位锚 → md2s:locate 让 deck 列表滚到对应页（页变更才动，幂等在
-// 页面侧）；deck 列表的**用户滚动**经 md2s:locate-up 回来 → 发锚
-// （source=deck），文按行位比例跟随。echo 锚（编辑面对齐动画的滚动回声）
-// 与自己的 source 一律不吃——回声协议与栏投影同构（谁引发运动谁负责标注）。
-let lastUpLine: number | null = null // 最近 locate-up 发布的行（文对齐落定回声的判定基线）
-
+// —— 点击驱动同步（§6.2 降级 2026-11-21，仅 slide 列表态）——滚动不再驱动
+// 同步；只消费**光标行变化**（文/本落光标，离散触发）→ md2s:locate 让 deck
+// 列表滚到该行位所在页的页内对应位置（页面侧按页行域插值）。deck 里**点击
+// 某页** → locate-up(click) 回来 → 发锚 origin=reverse 让文/栏对齐（onMessage）。
 if (props.leaf === 'slide') {
-  let locateRaf = 0
+  let lastCursorLine: number | null = null
   const offDeckAnchor = onDocAnchorChange((anchor) => {
-    if (!anchor || anchor.echo || anchor.source === 'deck') return
-    if (!matchesCurrentMarkdown(props.markdown ?? '')) return
-    // 位置感知回声判定（§6.2，与栏投影同构）：文跟着 deck 落到我们刚发布的
-    // 行（±0.5 行内）是「对齐落定回声」——不回发 locate，否则把映拽离用户
-    // 刚选的位置（e2e 真机抓到的回弹 ping-pong）。
-    const inbound = (anchor.topLine ?? 0) + (anchor.topFrac ?? 0)
-    if (lastUpLine != null && Math.abs(inbound - lastUpLine) < 0.5) return
-    const base = anchor.topLine ?? anchor.cursorLine
-    if (base == null) return
-    // 发**实数行位**（topLine+topFrac）：deck 侧按页行域插值到页内位置，
-    // 只发整数会丢块内进度（文×览双向精度）。
-    const line = base + (anchor.topLine != null ? (anchor.topFrac ?? 0) : 0)
-    if (locateRaf) cancelAnimationFrame(locateRaf)
-    locateRaf = requestAnimationFrame(() => {
-      locateRaf = 0
-      postToDeck({ type: 'md2s:locate', line })
-    })
+    if (!anchor || !matchesCurrentMarkdown(props.markdown ?? '')) return
+    if (anchor.cursorLine == null || anchor.cursorLine === lastCursorLine) return
+    lastCursorLine = anchor.cursorLine
+    console.debug('[trace][deckPane] cursor locate', anchor.cursorLine, '+', anchor.cursorFrac)
+    postToDeck({ type: 'md2s:locate', line: anchor.cursorLine + (anchor.cursorFrac ?? 0) })
   })
-  onBeforeUnmount(() => {
-    offDeckAnchor()
-    if (locateRaf) cancelAnimationFrame(locateRaf)
-  })
+  onBeforeUnmount(() => offDeckAnchor())
 }
 
 // —— 放映执行桥（只有 present 叶启用）——
@@ -740,13 +722,11 @@ const onMessage = (ev: MessageEvent): void => {
       sendBuild()
       break
     case 'md2s:locate-up': {
-      // deck 列表的用户滚动（页面侧页行域内插值上报）→ 发锚让文跟随（§6.2
-      // 双向）：实数行位 = 行 + 页内进度，文按块内比例落到同一阅读深度。
+      // 点击驱动（§6.2 降级）：仅消费页面侧**点击某页**的上报（click 标记；
+      // 滚动上报已随降级移除）→ 发锚 origin=reverse 让文/栏对齐到该页行位。
       const line = Number(data.line)
-      const frac = Number(data.frac) || 0
-      if (Number.isFinite(line) && line > 0) {
-        lastUpLine = line + frac
-        writeDocAnchor({ topLine: line, topFrac: frac, origin: 'scroll', source: 'deck' })
+      if (data.click && Number.isFinite(line) && line > 0) {
+        writeDocAnchor({ topLine: line, topFrac: 0, origin: 'reverse', source: 'deck' })
       }
       break
     }

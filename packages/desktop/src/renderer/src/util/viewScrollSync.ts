@@ -231,6 +231,50 @@ export function scrollViewToAnchorIn(
   else scroller.scrollTop = top
 }
 
+/** 光标位置 → 锚补丁（点击驱动同步 §6.2 降级 2026-11-21）：y 为光标的视口
+ * 坐标（muya cursorCoords）。落在哪块 → 块内像素进度 → 实数行位
+ * ℓ* = start + x·span → cursorLine = ⌊ℓ*⌋、cursorFrac = 小数。行覆盖脏窗口
+ * 只回 cursorLine 的小数部分缺省（0）。 */
+export function cursorAnchorOf(
+  container: HTMLElement | null,
+  y: number,
+  markdown?: string
+): Partial<Pick<DocAnchor, 'cursorLine' | 'cursorFrac' | 'topBlock' | 'text'>> | null {
+  if (!container)
+    return null
+
+  const blocks = contentBlocks(container)
+  if (!blocks.length)
+    return null
+
+  let idx = blocks.findIndex((el) => {
+    const r = el.getBoundingClientRect()
+    return y >= r.top && y < r.bottom
+  })
+  if (idx === -1) {
+    // 光标 rect 不落在任何块内（行间空隙）：取第一个底边越过 y 的块。
+    idx = blocks.findIndex((el) => el.getBoundingClientRect().bottom > y)
+    if (idx === -1) idx = blocks.length - 1
+  }
+
+  const patch: Partial<Pick<DocAnchor, 'cursorLine' | 'cursorFrac' | 'topBlock' | 'text'>> = {
+    topBlock: idx,
+    text: blockText(blocks[idx])
+  }
+
+  const span = markdown ? blockLineSpan(markdown, idx) : null
+  if (span) {
+    const rect = blocks[idx].getBoundingClientRect()
+    const x = rect.height > 0 ? Math.min(1, Math.max(0, (y - rect.top) / rect.height)) : 0
+    const real = span.start + x * (span.end - span.start + 1)
+    const line = Math.max(1, Math.floor(real))
+    patch.cursorLine = line
+    patch.cursorFrac = real - line
+  }
+
+  return patch
+}
+
 /**
  * 源码视图：某一行对应的锚点（1-based 行号 + 该行的纯文本）。视口顶部行常是
  * 空行 / 代码围栏 / 纯标记行，`stripMarkdownSyntax` 后为空——空 text 会让

@@ -117,10 +117,9 @@ import Printer from '@/services/printService'
 import { SpellcheckerLanguageCommand } from '@/commands'
 import { SpellChecker } from '@/spellchecker'
 import { isMac, animatedScrollTo } from '@/util'
-import { scrollViewToAnchor, contentBlocks, blockText, viewAnchorOf } from '@/util/viewScrollSync'
+import { scrollViewToAnchor, contentBlocks, blockText, viewAnchorOf, cursorAnchorOf } from '@/util/viewScrollSync'
 import {
   blockIndexToLine,
-  blockLineSpan,
   flushDocAnchorWrite,
   lastEditingSurface,
   lineToBlockIndex,
@@ -131,7 +130,6 @@ import {
   updateLineTable,
   writeDocAnchor
 } from '@/util/docAnchor'
-import { spanProgress } from '@/util/docPos'
 import { moveImageToFolder, uploadImage } from '@/util/fileSystem'
 import { guessClipboardFilePath } from '@/util/clipboard'
 import { dataURLToFile } from '@/util/dataURLToFile'
@@ -1466,13 +1464,15 @@ let lineTableTimer = 0
 // 块顶 + 块内行进度×块高，与投影同一阅读进度）；连续锚用追赶节拍（近距
 // 离瞬移、远距离平滑）。自己写的锚（source=flow）不吃——自身滚动引发的
 // 回声由各面的宽限窗与 ε 幂等消化，这里再挡一层。
-let lastFollowApply = 0
 // 程序对齐动画窗：跟随/反向对齐发起后短窗内，本面的 scroll 锚是动画回声，
 // 打 echo 标（接收面无条件丢弃）；用户在窗内的真实滚动也会被标——代价是
 // 对面最多滞后一个窗长，换取不追动画中间帧（/causer 打标原则）。窗长必须
 // 盖过 Chromium smooth 滚动全程（700ms 会在长距对齐的中后段漏标，对面逐帧
 // 追动画——deck 双向真机 trace 抓出）。
 let alignUntil = 0
+// 点击驱动同步（§6.2 降级 2026-11-21）：mousedown 置位，selection-change 里
+// 落光标时消费——打字/键盘移动光标不触发同步，点击是唯一触发。
+let clickCursorPending = false
 
 const offDocAnchor = onDocAnchorChange((anchor) => {
   if (!anchor) return
@@ -1496,36 +1496,8 @@ const offDocAnchor = onDocAnchorChange((anchor) => {
     return
   }
 
-  // 栏投影/映列表态（deck）的用户滚动：行位比例对齐。
-  if ((anchor.source === 'column' || anchor.source === 'deck') && anchor.topLine != null) {
-    requestAnimationFrame(() => {
-      const scroller = getScrollContainer()
-      if (!scroller) return
-      const md = props.markdown ?? ''
-      const real = anchor.topLine! + (anchor.topFrac ?? 0)
-      const at = lineToBlockIndex(md, Math.max(1, Math.floor(real)))
-      const span = at != null ? blockLineSpan(md, at) : null
-      const el = at != null ? contentBlocks(scroller)[at] : undefined
-      if (!el || !span) {
-        // 覆盖缺失：退块顶对齐（text 校验 → text 桥兜底在 scrollViewToAnchorIn）
-        scrollViewToAnchor(scroller, { blockIndex: at ?? undefined, text: anchor.text }, { behavior: 'smooth' })
-        return
-      }
-      const rect = el.getBoundingClientRect()
-      const base = scroller.scrollTop + rect.top - scroller.getBoundingClientRect().top
-      const target = base + rect.height * spanProgress(span, real)
-      if (Math.abs(target - scroller.scrollTop) < 1) return
-      // 追赶节拍：连续锚（拖动）瞬移不掉队，单次跳转平滑。对齐动画窗在
-      // 发起时统一打标——smooth 的中间帧同样是对齐回声，漏标会让对面把
-      // 映/栏拽着中间帧跑（deck 双向真机时间序列抓出）。
-      const now = Date.now()
-      const behavior = now - lastFollowApply < 200 ? 'auto' : 'smooth'
-      lastFollowApply = now
-      alignUntil = now + 1400
-      if (behavior === 'auto') scroller.scrollTop = target
-      else scroller.scrollTo({ top: target, behavior: 'smooth' })
-    })
-  }
+  // §6.2 降级（2026-11-21）：滚动不再驱动同步——column/deck 的滚动锚不在
+  // 此消费（无滚动跟随）。reverse（栏/览的点击）走上方分支。
 })
 
 /**
@@ -2305,6 +2277,14 @@ onMounted(() => {
     }
   }
   container.addEventListener('scroll', scrollHandler, { passive: true })
+  // 点击驱动同步：按下置位、抬起**延迟**清位——muya 的 selection-change 在
+  // mousedown 后异步派发，立即清位会错过窗口（真机 trace 抓出）；300ms 内
+  // 的落光标都算点击发起。**必须捕获阶段**（muya 在自己的 mousedown 处理器
+  // 里就地落光标，冒泡监听晚于它）。
+  container.addEventListener('mousedown', () => { clickCursorPending = true }, true)
+  container.addEventListener('mouseup', () => {
+    window.setTimeout(() => { clickCursorPending = false }, 600)
+  }, true)
 
   // M0 跳转编辑：只读透镜（栏/表）上双击 → 跳回文的对应块。原生 dblclick
   // 不受引擎 readOnly 事件闸影响；handler 自带透镜判据，文/页透镜零开销早退。
@@ -2433,6 +2413,23 @@ onMounted(() => {
       if (focus) {
         bus.emit('cursor-position', { line: focus.line + 1, ch: focus.ch + 1 })
       }
+    }
+    // 点击驱动同步（§6.2 降级）：mousedown 后的落光标 → cursorLine 锚（块内
+    // 进度由 cursorAnchorOf 从光标像素位置换算）。打字/键盘导航不写——点击
+    // 是唯一同步触发；拖选（非折叠选区）也不写，避免拖选期间览面乱跳。
+    console.debug('[trace][cursor] pending=', clickCursorPending, 'y=', y, 'caretInContainer=', caretInContainer)
+    if (clickCursorPending && y != null && caretInContainer) {
+      const sel = document.getSelection()
+      const collapsed = !!sel && sel.anchorNode === sel.focusNode && sel.anchorOffset === sel.focusOffset
+      console.debug('[trace][cursor] collapsed=', collapsed)
+      if (collapsed) {
+        const patch = cursorAnchorOf(container, y, props.markdown ?? '')
+        console.debug('[trace][cursor] patch=', JSON.stringify(patch))
+        if (patch?.cursorLine != null) {
+          writeDocAnchor({ ...patch, origin: 'scroll', source: 'flow' })
+        }
+      }
+      clickCursorPending = false
     }
     // Persist the caret so a click/arrow-key move (which never fires
     // `json-change`) survives an in-session tab switch — `tab.cursor` is what
