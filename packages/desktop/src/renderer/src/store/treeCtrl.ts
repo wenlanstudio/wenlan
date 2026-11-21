@@ -243,6 +243,46 @@ export const resortTree = (tree: TreeFolder, sortBy: string, sortOrder: string):
 }
 
 /**
+ * Find a file node by pathname, or null when it is not in the tree.
+ * Used to read a node's birthTime just before an unlink removes it.
+ */
+export const findFileNode = (tree: TreeFolder, pathname: string): TreeFile | null => {
+  const dirname = window.path.dirname(pathname)
+  const subDirectories = getSubdirectoriesFromRoot(tree.pathname, dirname)
+
+  let currentFolder: TreeFolder = tree
+  let currentSubFolders: TreeFolder[] = tree.folders
+  for (const directoryName of subDirectories) {
+    const childFolder = currentSubFolders.find((f) => f.name === directoryName)
+    if (!childFolder) return null
+    currentFolder = childFolder
+    currentSubFolders = childFolder.folders
+  }
+
+  return currentFolder.files.find((f) => f.pathname === pathname) ?? null
+}
+
+/**
+ * Find a folder node by pathname, or null when it is not in the tree
+ * (the root itself is not addressable — it is never unlinked).
+ */
+export const findFolderNode = (tree: TreeFolder, pathname: string): TreeFolder | null => {
+  const subDirectories = getSubdirectoriesFromRoot(tree.pathname, pathname)
+  if (!subDirectories.length) return null
+
+  let currentFolder: TreeFolder = tree
+  let currentSubFolders: TreeFolder[] = tree.folders
+  for (const directoryName of subDirectories) {
+    const childFolder = currentSubFolders.find((f) => f.name === directoryName)
+    if (!childFolder) return null
+    currentFolder = childFolder
+    currentSubFolders = childFolder.folders
+  }
+
+  return currentFolder
+}
+
+/**
  * Remove the given file from the tree list.
  */
 export const unlinkFile = (tree: TreeFolder, file: { pathname: string }): void => {

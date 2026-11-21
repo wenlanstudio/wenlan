@@ -7,8 +7,16 @@ import {
   unlinkDirectory,
   resortTree,
   updateFileMtime,
-  expandAncestors
+  expandAncestors,
+  findFileNode,
+  findFolderNode
 } from './treeCtrl'
+import {
+  RENAME_PAIR_WINDOW_MS,
+  isDirRenamePair,
+  takeRenamePartner,
+  type DirMapping
+} from './treeRenamePair'
 import { usePreferencesStore } from './preferences'
 import bus from '../bus'
 import { create, paste, rename, type FileCreateType, type PasteOptions } from '../util/fileSystem'
@@ -152,6 +160,8 @@ export const useProjectStore = defineStore('project', () => {
     // The old tree's selection and in-progress name inputs do not survive a new root.
     activeItem.value = {}
     CLEAR_NAME_INPUT_STATE()
+    // Renaming stashes from the previous root must not pair across projects.
+    CLEAR_RENAME_PAIR_STATE()
 
     if (activateTab) {
       const layout: LayoutPartial = {
@@ -189,6 +199,7 @@ export const useProjectStore = defineStore('project', () => {
       pendingTreeEvents.value = []
       activeItem.value = {}
       CLEAR_NAME_INPUT_STATE()
+      CLEAR_RENAME_PAIR_STATE()
     }
   }
 
@@ -219,7 +230,7 @@ export const useProjectStore = defineStore('project', () => {
           return
         }
         for (const event of data.changes) {
-          _applyTreeEvent(event.type, event.change)
+          _applyTreeEvent(event.type, event.change, true)
         }
         treeVersion.value++
         return
@@ -235,15 +246,227 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   function _processTreeEvent(type: string, change: TreeChange): void {
-    _applyTreeEvent(type, change)
+    _applyTreeEvent(type, change, false)
     // The mutations above are in place, so watchers need a counter to react to.
     treeVersion.value++
   }
 
-  function _applyTreeEvent(type: string, change: TreeChange): void {
+  // --- external-rename pairing ----------------------------------------------
+  // chokidar emits a rename as a bare `add`(new) + `unlink`(old) pair (add
+  // first on Windows, unlink first on Linux). Pair the two so that open tabs
+  // follow the new path (RENAME_IF_NEEDED keeps tab id, content and save
+  // state) and the "removed on disk" dirty mark never fires for a mere
+  // rename. Without pairing, an external rename of an open file lights the
+  // phantom dirty dot and Ctrl+S would resurrect the file under its old name.
+  //
+  // Known limits (accepted): single-file windows (type='file' watcher) still
+  // report the removal, and the main process' openedFiles bookkeeping is not
+  // updated for external renames.
+  interface RenamePairEntry {
+    pathname: string
+    birthTime?: number | Date
+    at: number
+    timer?: ReturnType<typeof setTimeout>
+  }
+
+  const renamePairState = {
+    recentAdds: new Map<string, RenamePairEntry>(),
+    pendingUnlinks: new Map<string, RenamePairEntry>(),
+    pendingDirUnlinks: new Map<string, RenamePairEntry>(),
+    pendingDirAdds: new Map<string, RenamePairEntry>(),
+    dirMappings: [] as DirMapping[],
+    // Birthtimes of a removed subtree: a directory rename unlinks the whole
+    // folder before the per-file `unlink` events arrive, so the old child
+    // rows (their birthTimes) are already gone when the pairing runs.
+    removedDirBirthTimes: new Map<string, { birthTime?: number | Date; at: number }>()
+  }
+
+  const dropEntry = (map: Map<string, RenamePairEntry>, key: string): void => {
+    const entry = map.get(key)
+    if (entry?.timer) clearTimeout(entry.timer)
+    map.delete(key)
+  }
+
+  // Re-stashing the same path must not orphan the previous entry's timer.
+  const stashEntry = (map: Map<string, RenamePairEntry>, entry: RenamePairEntry): void => {
+    dropEntry(map, entry.pathname)
+    map.set(entry.pathname, entry)
+  }
+
+  function CLEAR_RENAME_PAIR_STATE(): void {
+    const { recentAdds, pendingUnlinks, pendingDirUnlinks, pendingDirAdds } = renamePairState
+    for (const key of [...recentAdds.keys()]) dropEntry(recentAdds, key)
+    for (const key of [...pendingUnlinks.keys()]) dropEntry(pendingUnlinks, key)
+    for (const key of [...pendingDirUnlinks.keys()]) dropEntry(pendingDirUnlinks, key)
+    for (const key of [...pendingDirAdds.keys()]) dropEntry(pendingDirAdds, key)
+    renamePairState.dirMappings = []
+    renamePairState.removedDirBirthTimes.clear()
+  }
+
+  // Keep the sidebar selection on the renamed node (same as RENAME_IN_SIDEBAR).
+  function retargetActiveItem(src: string, dest: string): void {
+    if (activeItem.value?.pathname === src) {
+      activeItem.value = {
+        ...activeItem.value,
+        pathname: dest,
+        name: window.path.basename(dest)
+      }
+    }
+  }
+
+  function followExternalRename(src: string, dest: string): void {
+    retargetActiveItem(src, dest)
+    useEditorStore().RENAME_IF_NEEDED({ src, dest })
+  }
+
+  const pairOptions = (at: number) => ({
+    at,
+    windowMs: RENAME_PAIR_WINDOW_MS,
+    dirMappings: renamePairState.dirMappings
+  })
+
+  function handleRuntimeUnlink(change: TreeChange): void {
+    const editorStore = useEditorStore()
+    const { pathname } = change
+    const at = Date.now()
+
+    // Read the row's birthTime before the removal; a directory rename has
+    // already removed the folder row, so fall back to the captured subtree.
+    const row = findFileNode(projectTree.value!, pathname)
+    const birthTime = row?.birthTime ?? renamePairState.removedDirBirthTimes.get(pathname)?.birthTime
+    unlinkFile(projectTree.value!, change)
+
+    const partner = takeRenamePartner(
+      renamePairState.recentAdds,
+      { pathname, birthTime, at },
+      pairOptions(at)
+    )
+    if (partner) {
+      if (partner.timer) clearTimeout(partner.timer)
+      followExternalRename(pathname, partner.pathname)
+      return
+    }
+
+    // No partner (yet). Defer the dirty mark by one pairing window so a
+    // slightly delayed rename partner can still claim this unlink; a real
+    // removal just lights the dot ~600ms later, imperceptibly.
+    stashEntry(renamePairState.pendingUnlinks, {
+      pathname,
+      birthTime,
+      at,
+      timer: setTimeout(() => {
+        renamePairState.pendingUnlinks.delete(pathname)
+        editorStore.SET_SAVE_STATUS_WHEN_REMOVE({ pathname })
+      }, RENAME_PAIR_WINDOW_MS)
+    })
+  }
+
+  function handleRuntimeAdd(change: TreeChange): void {
+    const editorStore = useEditorStore()
+    const { pathname, data, isMarkdown, birthTime } = change as typeof change & {
+      birthTime?: number | Date
+    }
+    addFile(projectTree.value!, change as Parameters<typeof addFile>[1], String(preferencesStore.fileSortBy), String(preferencesStore.fileSortOrder))
+    if (isMarkdown && newFileNameCache.value && pathname === newFileNameCache.value) {
+      const fileState = getFileStateFromData(data as Record<string, unknown>)
+      editorStore.UPDATE_CURRENT_FILE(fileState)
+      newFileNameCache.value = ''
+    }
+
+    const at = Date.now()
+    // Linux order: the unlink arrived first and is waiting for this add.
+    const partner = takeRenamePartner(
+      renamePairState.pendingUnlinks,
+      { pathname, birthTime, at },
+      pairOptions(at)
+    )
+    if (partner) {
+      if (partner.timer) clearTimeout(partner.timer)
+      followExternalRename(partner.pathname, pathname)
+      return
+    }
+
+    // Windows order: stash this add as the rename destination candidate.
+    stashEntry(renamePairState.recentAdds, {
+      pathname,
+      birthTime,
+      at,
+      timer: setTimeout(() => renamePairState.recentAdds.delete(pathname), RENAME_PAIR_WINDOW_MS)
+    })
+  }
+
+  function handleRuntimeAddDir(change: TreeChange): void {
+    addDirectory(projectTree.value!, change)
+    const { pathname } = change
+    const at = Date.now()
+
+    for (const [key, entry] of renamePairState.pendingDirUnlinks) {
+      if (isDirRenamePair(entry.pathname, pathname, entry.at, at)) {
+        dropEntry(renamePairState.pendingDirUnlinks, key)
+        renamePairState.dirMappings.push({ from: entry.pathname, to: pathname, at })
+        return
+      }
+    }
+
+    // Reverse order (unlinkDir arriving after addDir): stash for the pairing.
+    stashEntry(renamePairState.pendingDirAdds, {
+      pathname,
+      at,
+      timer: setTimeout(() => renamePairState.pendingDirAdds.delete(pathname), RENAME_PAIR_WINDOW_MS)
+    })
+  }
+
+  function handleRuntimeUnlinkDir(change: TreeChange): void {
+    const { pathname } = change
+    const at = Date.now()
+
+    // Capture the subtree's file birthTimes before the folder row (and its
+    // children) is removed — the delayed per-file unlinks still need them.
+    // Prune stale captures from long-past folder removals first.
+    const staleCutoff = at - RENAME_PAIR_WINDOW_MS * 10
+    for (const [key, captured] of renamePairState.removedDirBirthTimes) {
+      if (captured.at < staleCutoff) renamePairState.removedDirBirthTimes.delete(key)
+    }
+    const folder = findFolderNode(projectTree.value!, pathname)
+    if (folder) {
+      const collect = (node: typeof folder): void => {
+        for (const file of node.files) {
+          renamePairState.removedDirBirthTimes.set(file.pathname, {
+            birthTime: file.birthTime,
+            at
+          })
+        }
+        for (const child of node.folders) collect(child)
+      }
+      collect(folder)
+    }
+    unlinkDirectory(projectTree.value!, change)
+
+    for (const [key, entry] of renamePairState.pendingDirAdds) {
+      if (isDirRenamePair(entry.pathname, pathname, entry.at, at)) {
+        dropEntry(renamePairState.pendingDirAdds, key)
+        renamePairState.dirMappings.push({ from: pathname, to: entry.pathname, at })
+        return
+      }
+    }
+
+    stashEntry(renamePairState.pendingDirUnlinks, {
+      pathname,
+      at,
+      timer: setTimeout(() => {
+        renamePairState.pendingDirUnlinks.delete(pathname)
+      }, RENAME_PAIR_WINDOW_MS)
+    })
+  }
+
+  function _applyTreeEvent(type: string, change: TreeChange, fromBatch: boolean): void {
     const editorStore = useEditorStore()
     switch (type) {
       case 'add': {
+        if (!fromBatch) {
+          handleRuntimeAdd(change)
+          break
+        }
         const { pathname, data, isMarkdown } = change
         addFile(projectTree.value!, change as Parameters<typeof addFile>[1], String(preferencesStore.fileSortBy), String(preferencesStore.fileSortOrder))
         if (isMarkdown && newFileNameCache.value && pathname === newFileNameCache.value) {
@@ -254,13 +477,25 @@ export const useProjectStore = defineStore('project', () => {
         break
       }
       case 'unlink':
+        if (!fromBatch) {
+          handleRuntimeUnlink(change)
+          break
+        }
         unlinkFile(projectTree.value!, change)
         editorStore.SET_SAVE_STATUS_WHEN_REMOVE(change)
         break
       case 'addDir':
+        if (!fromBatch) {
+          handleRuntimeAddDir(change)
+          break
+        }
         addDirectory(projectTree.value!, change)
         break
       case 'unlinkDir':
+        if (!fromBatch) {
+          handleRuntimeUnlinkDir(change)
+          break
+        }
         unlinkDirectory(projectTree.value!, change)
         break
       case 'change':
@@ -520,13 +755,7 @@ export const useProjectStore = defineStore('project', () => {
       .then(() => {
         // Keep the selection on the new path so a following F2 / Delete acts on
         // the renamed node instead of the one that no longer exists.
-        if (activeItem.value?.pathname === src) {
-          activeItem.value = {
-            ...activeItem.value,
-            pathname: dest,
-            name: window.path.basename(dest)
-          }
-        }
+        retargetActiveItem(src, dest)
         editorStore.RENAME_IF_NEEDED({ src, dest })
       })
       .catch((err) => {
