@@ -38,8 +38,12 @@
 
 ```
 java  JAVA_HOME : code-exec.java.JAVA_HOME → 顶层 JAVA_HOME → 引擎 java.JAVA_HOME → 环境变量 JAVA_HOME
-java  class-path: code-exec.java.class-path → 顶层 class-path → 引擎 java.CLASS_PATH
+java  class-path: code-exec.java.class-path → 顶层 class-path → 引擎 java.CLASS_PATH → HADOOP_HOME 派生（8 段客户端 jar 全集）
 python 解释器    : code-exec.python.PYTHON_PATH → 引擎 python.PYTHON_PATH
 mysql 连接四键   : code-exec.mysql.* → 引擎 mysql.*（password 只在引擎层）
 shell 目标       : 块内提示符 [user@host] > 顶层 host/user > 引擎 shell.HOST/USER
 ```
+
+`class-path` 末级新增（2026-11-17）：未在文档 / 引擎层写死时，从 `HADOOP_HOME` 指向的
+完整发行版自动派生 `common / common/lib / hdfs / hdfs/lib / mapreduce / mapreduce/lib /
+yarn / yarn/lib` 全部 jar——讲义不必手写一长串 `share/hadoop/*` 路径，换机器也不炸。

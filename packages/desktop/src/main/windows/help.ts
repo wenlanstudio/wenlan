@@ -7,7 +7,7 @@ import { isOsx } from '../config'
 /**
  * 离线帮助窗口（文档配置 / frontmatter）。
  *
- * 为什么要独立窗口：四份文档合起来篇幅较长，编辑器主窗口的左侧 side-bar
+ * 为什么要独立窗口：五份文档合起来篇幅较长，编辑器主窗口的左侧 side-bar
  * 已经是「项目文件树」，再往里塞一套帮助导航会与它争抢同一块位置、语义打架。
  * 独立 BrowserWindow 自带左侧目录、可缩放/多开对比、不受主窗口布局影响。
  *
@@ -15,8 +15,8 @@ import { isOsx } from '../config'
  * 状态，不该参与编辑器窗口的生命周期与菜单状态机（activeWindow / 退出拦截）。
  * 这里用模块级单例自己管，关闭即释放引用。
  *
- * 页面是 `static/help/index.html` —— 由 scripts/sync-help-docs.mjs 把四个
- * 组件的 docs/FRONTMATTER.md 预渲染成的一份自包含静态页（无外部资源、
+ * 页面是 `static/help/index.html` —— 由 scripts/sync-help-docs.mjs 把五个
+ * 组件的 docs/ 参照文档预渲染成的一份自包含静态页（无外部资源、
  * 无运行时依赖）。static/ 已经由 electron-builder 的 extraResources 随包发布，
  * 因此离线可用，独立发布 CI 里没有兄弟仓也不会缺件。
  */
@@ -27,6 +27,7 @@ export const HELP_SECTIONS = [
   'wenlan',
   'md2slides',
   'mdcode2run',
+  'runnable-languages',
   'classbuzz'
 ] as const
 

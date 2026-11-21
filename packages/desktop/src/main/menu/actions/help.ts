@@ -7,7 +7,7 @@ export const showAboutDialog = (win: BrowserWindow | null | undefined): void => 
   }
 }
 
-/** 帮助菜单 → 文档配置的四个子项：打开独立离线帮助窗口并定位到对应章节。 */
+/** 帮助菜单 → 文档配置的五个子项：打开独立离线帮助窗口并定位到对应章节。 */
 export const showHelpDocs = (section: HelpSection): void => {
   openHelpWindow(section)
 }

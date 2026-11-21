@@ -30,7 +30,7 @@ const isUpdatable = (): boolean => {
 
 export default function(): MenuItemConstructorOptions {
   const submenu: MenuItemConstructorOptions[] = [
-    // 离线帮助：四份 frontmatter 文档分别由各项目维护，构建时同步进 static/help/。
+    // 离线帮助：五份参照文档分别由各项目维护，构建时同步进 static/help/。
     // 独立窗口承载（不与主窗口的 side-bar 文件树争左侧位置），可离线查阅。
     {
       label: t('menu.help.frontmatterDocs'),
@@ -51,6 +51,12 @@ export default function(): MenuItemConstructorOptions {
           label: t('menu.help.frontmatterCodeRun'),
           click() {
             actions.showHelpDocs('mdcode2run')
+          }
+        },
+        {
+          label: t('menu.help.runnableLanguages'),
+          click() {
+            actions.showHelpDocs('runnable-languages')
           }
         },
         {

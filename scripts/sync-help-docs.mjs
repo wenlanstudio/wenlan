@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 /**
- * sync-help-docs.mjs — 把生态四个组件的 frontmatter 文档同步进 app 离线帮助。
+ * sync-help-docs.mjs — 把生态五个组件/场景的参照文档同步进 app 离线帮助。
  *
  * 设计：
- *   - 真源在**各项目自己的** `docs/FRONTMATTER.md`：本仓、md2slides、mdcode2run、classbuzz。
- *   - 本脚本「活拉」四份源文档 → 快照写进 `packages/desktop/static/help/sources/*.md`（进 git）。
+ *   - 真源在**各项目自己的** `docs/`：本仓、md2slides、mdcode2run、classbuzz 的
+ *     FRONTMATTER.md，外加 mdcode2run 的 RUNNABLE-LANGUAGES.md（语言参照）。
+ *   - 本脚本「活拉」五份源文档 → 快照写进 `packages/desktop/static/help/sources/*.md`（进 git）。
  *     再统一预渲染成 `packages/desktop/static/help/index.html`（进 git、随包、完全自包含）。
  *   - `static/` 已被 electron-builder 的 extraResources 打进安装包，因此**无需构建期步骤**：
  *     独立发布 CI 里没有兄弟仓也能直接打出带完整帮助的包（用已提交的快照）。
@@ -36,7 +37,7 @@ const pagePath = resolve(helpDir, 'index.html')
 
 const CHECK = process.argv.includes('--check')
 
-/** 四份由兄弟仓/本仓维护的真源。id 同时是查看器里的 hash 与菜单参数。 */
+/** 五份由兄弟仓/本仓维护的真源。id 同时是查看器里的 hash 与菜单参数。 */
 const SOURCES = [
   {
     id: 'wenlan',
@@ -48,7 +49,7 @@ const SOURCES = [
   {
     id: 'md2slides',
     title: '放映 · md2slides',
-    subtitle: '16 键：封面 / 分页 / 主题 / 放映',
+    subtitle: '封面 / 分页 / 主题 / 放映',
     sourceLabel: 'md2slides/docs/FRONTMATTER.md',
     src: resolve(ecosystem, 'md2slides', 'docs', 'FRONTMATTER.md')
   },
@@ -60,6 +61,13 @@ const SOURCES = [
     src: resolve(ecosystem, 'mdcode2run', 'docs', 'FRONTMATTER.md')
   },
   {
+    id: 'runnable-languages',
+    title: '代码运行 · 语言示例',
+    subtitle: '7 种语言 / 开栏写法 / 旗标速查',
+    sourceLabel: 'mdcode2run/docs/RUNNABLE-LANGUAGES.md',
+    src: resolve(ecosystem, 'mdcode2run', 'docs', 'RUNNABLE-LANGUAGES.md')
+  },
+  {
     id: 'classbuzz',
     title: '课堂竞答 · classbuzz',
     subtitle: '无 YAML frontmatter · 题注 + 房间',
@@ -68,12 +76,12 @@ const SOURCES = [
   }
 ]
 
-/** 查看器页面顺序：总览是落地页（wenlan 侧维护），其后四个组件。 */
+/** 查看器页面顺序：总览是落地页（wenlan 侧维护），其后五份组件参照。 */
 const PAGES = [
   {
     id: 'overview',
     title: '总览',
-    subtitle: '四个组件的文档配置',
+    subtitle: '五份参照文档的查阅入口',
     sourceLabel: 'wenlan/packages/desktop/static/help/sources/overview.md'
   },
   ...SOURCES
@@ -244,7 +252,7 @@ ${activeTitleSelectors} { color: var(--accent); }
       <nav class="nav">
 ${nav}
       </nav>
-      <div class="sidebar-footer">文览生态 · 四份文档分别由各项目维护</div>
+      <div class="sidebar-footer">文览生态 · 五份文档分别由各项目维护</div>
     </aside>
     <main class="content">
 ${sections}
