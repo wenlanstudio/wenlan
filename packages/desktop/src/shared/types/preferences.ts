@@ -6,6 +6,12 @@
 // Kept intentionally open with `[key: string]: unknown` until the schema
 // is mechanically derived from schema.json in a follow-up.
 
+/**
+ * PlantUML 渲染服务地址：2026-11-19 起归入只读探测，不再作为用户可配置偏好。
+ * 与 Markdown / 代码执行面板探测区、main 注入源共用这一处常量。
+ */
+export const DEFAULT_PLANTUML_SERVER = 'https://www.plantuml.com/plantuml'
+
 export interface IUserPreferences {
   autoSave?: boolean
   autoSaveDelay?: number

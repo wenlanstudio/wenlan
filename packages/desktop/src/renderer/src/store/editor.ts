@@ -32,6 +32,7 @@ import type {
   PageOptions,
   TabOptions
 } from '@shared/types/files'
+import { DEFAULT_PLANTUML_SERVER } from '@shared/types/preferences'
 
 // ----------------------------------------------------------------------------
 // Local helper types
@@ -1619,7 +1620,7 @@ export const useEditorStore = defineStore('editor', {
       const exportMarkdown = await substituteDiagramFences(markdown, {
         mermaidTheme: 'default',
         vegaTheme: 'latimes',
-        plantumlServer: preferencesStore.plantumlServer,
+        plantumlServer: DEFAULT_PLANTUML_SERVER,
         sequenceTheme: preferencesStore.sequenceTheme as 'hand' | 'simple',
         drawioServer: preferencesStore.drawioServer
       })
