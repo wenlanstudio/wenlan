@@ -16,6 +16,7 @@ const block = (over: Partial<Md2rBlockInfo> = {}): Md2rBlockInfo => ({
   role: 'code',
   job: false,
   file: undefined,
+  fileScope: 'chapter',
   expect: undefined,
   todo: null,
   fillable: false,

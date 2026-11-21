@@ -27,6 +27,8 @@ export interface Md2rBlockInfo {
   job: boolean
   /** file= 物化的相对路径（file 角色时）。 */
   file: string | undefined
+  /** file= 的作用域：chapter = 章临时目录；document = 相对文档所在目录（../）。 */
+  fileScope: 'chapter' | 'document'
   /** 块级断言标注（expect=），非断言块为 undefined。 */
   expect: string | undefined
   /** mr-job project 档的 TODO 定位标注：{ class?, file?, method? }。 */
