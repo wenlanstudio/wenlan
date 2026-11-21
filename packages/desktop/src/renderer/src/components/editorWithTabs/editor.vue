@@ -1298,9 +1298,16 @@ const scrollToCords = (y: number) => {
   // Hence, container.scrollHeight < [saved scrollTop]
   // What we need to do is to temporarily add a padding to the container so that we can actually set the scrollTop without getting clamped.
 
+  // 上次 restore 留下的临时 padding 必须先清掉再量高度：padding 没拆干净时
+  // scrollHeight 被它垫高，y 永远「够得着」，下面的补设与拆除逻辑都不会再
+  // 触发，文末拖着的空白就一直甩不掉（见 handleResetPaddingBottom）。
+  const editorId = container.firstElementChild as HTMLElement | null
+  if (editorId) {
+    editorId.style.paddingBottom = ''
+  }
+
   const maxScrollHeight = container.scrollHeight - container.clientHeight // max scroll height is actually calculated as such
   if (y > maxScrollHeight) {
-    const editorId = container.firstElementChild as HTMLElement | null
     if (editorId) {
       editorId.style.paddingBottom = `${y - maxScrollHeight + 100}px` // 100px is the default editor padding
       // attach a resize observer so we know when to remove the padding when it is of the "correct" height
@@ -1987,8 +1994,12 @@ const handleResetPaddingBottom = () => {
     container.scrollHeight - container.clientHeight - parseFloat(firstChild.style.paddingBottom)
 
   if (currentFile.value && newScrollableHeightWithoutPadding > currentFile.value.scrollTop) {
-    container.style.paddingBottom = ''
-    resizeObserverForEditor.unobserve(firstChild) // unobserve #ag-editor-id since we have removed the padding
+    // 临时 padding 写在 firstElementChild（.mu-container）上，就得从它身上撤——
+    // 原先清的是 container（从没被写过，纯上游化石），内联 padding 永久残留：
+    // 内联样式盖过样式表里的 20px 尾距，文末拖出一段上次滚动深度长度的可滚
+    // 空白（2026-11-21「文视图末尾非常多空白」根因，marktext 上游遗留）。
+    firstChild.style.paddingBottom = ''
+    resizeObserverForEditor.unobserve(firstChild) // padding 已撤，停止观察
   }
 }
 
