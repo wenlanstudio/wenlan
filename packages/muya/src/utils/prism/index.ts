@@ -1,6 +1,7 @@
 import Fuse from 'fuse.js';
 import Prism from 'prismjs';
 import { languages } from 'prismjs/components.js';
+import { diagramLangs } from '../diagram/fence';
 import initLoadLanguage, { loadedLanguages, transformAliasToOrigin } from './loadLanguage';
 
 const prism = Prism;
@@ -49,6 +50,21 @@ for (const name of Object.keys(languages)) {
                 })),
             );
         }
+    }
+}
+
+// The fence picker's suggestion pool must cover more than Prism grammars:
+//   • diagram languages (utils/diagram/fence) — picking one converts the fence
+//     into a diagram block (the #5060 machinery in codeBlockLanguageSelector);
+//   • executable-language aliases (mdcode2run 语言族) that Prism has no grammar
+//     for — the picker must still suggest them; highlighting falls back to
+//     plain text while execution reads the fence lang directly.
+const EXTRA_LANGS = ['pwsh', 'ps1', 'jshell', 'mysql', 'hive', 'hql', 'hiveql', 'sparksql'];
+const knownLangNames = new Set(langs.map(lang => lang.name));
+for (const name of [...diagramLangs(), ...EXTRA_LANGS]) {
+    if (!knownLangNames.has(name)) {
+        knownLangNames.add(name);
+        langs.push({ name });
     }
 }
 
