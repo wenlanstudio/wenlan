@@ -153,10 +153,15 @@ const scrollToAnchor = (
 // 不变），不构成回路；连续跟随时代的回声防护机械（宽限窗/量化/自抑制）
 // 随滚动发布一并退役。
 
+let lastCursorSeq: number | null = null
+
 const offDocAnchor = onDocAnchorChange(anchor => {
   if (!anchor || !matchesCurrentMarkdown(props.markdown ?? '')) return
-  // 不按 cursorLine 去重：重复点同一行也要能重新对齐（deck/文漂移后拉得
-  // 回来）——重复定位由 scrollToAnchor 的 ε 幂等自然挡掉。
+  // 只认**新的点击序号**：合并写的旧 cursorLine 会残留在文滚动/对齐锚里，
+  // 按值判会把这些残值帧当成新点击（deck 被拽回文旧光标位——真机抓出）。
+  // 新 seq = 一次真实落光标；重复点同一行也带新 seq，照样重新对齐。
+  if (anchor.cursorSeq == null || anchor.cursorSeq === lastCursorSeq) return
+  lastCursorSeq = anchor.cursorSeq
   if (anchor.cursorLine == null) return
   scrollToAnchor({ topLine: anchor.cursorLine, topFrac: anchor.cursorFrac }, 'smooth')
 })

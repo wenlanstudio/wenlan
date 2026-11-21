@@ -120,6 +120,7 @@ import { isMac, animatedScrollTo } from '@/util'
 import { scrollViewToAnchor, contentBlocks, blockText, viewAnchorOf, cursorAnchorOf } from '@/util/viewScrollSync'
 import {
   blockIndexToLine,
+  bumpCursorSeq,
   flushDocAnchorWrite,
   lastEditingSurface,
   lineToBlockIndex,
@@ -2432,6 +2433,7 @@ onMounted(() => {
           writeDocAnchor({
             cursorLine: focus.line + 1,
             cursorFrac: patch?.cursorFrac ?? 0,
+            cursorSeq: bumpCursorSeq(),
             topBlock: patch?.topBlock,
             text: patch?.text,
             origin: 'scroll',

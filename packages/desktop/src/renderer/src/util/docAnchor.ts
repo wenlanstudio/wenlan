@@ -25,6 +25,10 @@ export interface DocAnchor {
   cursorLine?: number
   /** 光标行内进度（[0,1) 小数；行位 ℓ* = cursorLine + cursorFrac） */
   cursorFrac?: number
+  /** 点击序号（每次真实落光标 +1）：消费面只认**新序号**——合并写的旧
+   * cursorLine 会残留在后续滚动/对齐锚里，按值去重挡不住，序号才是
+   * 「这是一次新点击」的可靠判据（§6.2 降级）。 */
+  cursorSeq?: number
   /** 兜底桥证据（视口顶块/行的纯文本） */
   text?: string
   /** 锚来源：scroll=编辑面滚动（默认）；reverse=只读面反向定位/跳转编辑 */
@@ -74,6 +78,12 @@ export function readDocAnchor(): DocAnchor | null {
 export function writeDocAnchor(patch: Partial<DocAnchor>): void {
   anchor = { ...(anchor ?? { mdRev: rev }), ...patch, mdRev: rev }
   for (const cb of listeners) cb(anchor)
+}
+
+// 点击序号发号器：cursor 写入方（文/本落光标）每次点击取一个新号。
+let cursorSeq = 0
+export function bumpCursorSeq(): number {
+  return ++cursorSeq
 }
 
 export function onDocAnchorChange(cb: Listener): () => void {
