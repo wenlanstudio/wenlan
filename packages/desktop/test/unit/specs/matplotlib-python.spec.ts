@@ -88,6 +88,29 @@ describe('BOOTSTRAP', () => {
     expect(BOOTSTRAP).toContain('b"\\n"')
     expect(BOOTSTRAP).not.toContain('${')
   })
+
+  it('registers every Animation the snippet builds, before it runs', () => {
+    // The hook has to be in place before `exec`: an animation created by the
+    // snippet must land in ANIMATIONS for the GIF path to see it. Holding the
+    // reference also keeps an unassigned animation alive.
+    const hookIndex = BOOTSTRAP.indexOf('_anim.Animation.__init__ = _record_anim_init')
+    const execIndex = BOOTSTRAP.indexOf('exec(compile(code')
+    expect(hookIndex).toBeGreaterThan(-1)
+    expect(execIndex).toBeGreaterThan(hookIndex)
+    expect(BOOTSTRAP).toContain('ANIMATIONS.append((self, fig))')
+  })
+
+  it('saves a registered animation as GIF through PillowWriter', () => {
+    // Pillow is a hard matplotlib dependency, so the writer needs no install;
+    // the frame cap stops `frames=None` (itertools.count) from drawing until
+    // the render timeout kills the interpreter.
+    expect(BOOTSTRAP).toContain('PillowWriter')
+    expect(BOOTSTRAP).toContain('GIF_MAX_FRAMES')
+    expect(BOOTSTRAP).toContain('GIF_MAX_BYTES')
+    expect(BOOTSTRAP).toContain('"mime": "image/gif"')
+    // The animation branch must not fall through to the static SVG emit.
+    expect(BOOTSTRAP).toContain('sys.exit(0)')
+  })
 })
 
 describe('pythonCandidates', () => {

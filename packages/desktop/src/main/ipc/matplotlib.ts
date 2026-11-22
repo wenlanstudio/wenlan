@@ -7,7 +7,8 @@ import { graphvizDotPath, renderGraphvizWithDot } from './graphviz'
 
 // Matplotlib has no browser implementation: the code has to run under a real
 // Python. The main process runs the document's snippet in a short-lived
-// interpreter and hands the renderer back an image.
+// interpreter and hands the renderer back an image — a GIF when the snippet
+// registered a matplotlib Animation, a static SVG otherwise.
 //
 // This executes the code the user wrote in their own document, so it is off
 // until the preference turns it on (and a python interpreter must be
@@ -29,7 +30,7 @@ import { graphvizDotPath, renderGraphvizWithDot } from './graphviz'
 const RESULT_PREFIX = '__MT_DIAGRAM__'
 
 export const BOOTSTRAP = `
-import base64, io, json, sys
+import base64, io, json, os, sys, tempfile, time
 
 # The channel is UTF-8 whatever the machine's locale says. Left to the text
 # layer, a Chinese Windows decodes stdin as GBK with surrogateescape: every
@@ -82,10 +83,109 @@ try:
 except Exception:
     namespace = {"__name__": "__diagram__", "plt": plt}
 
+# An animation (FuncAnimation / ArtistAnimation) draws nothing by itself: the
+# static capture below would freeze the block on its first frame. Registering
+# every Animation the snippet builds turns the block into a GIF instead — and
+# holding a strong reference keeps an unassigned FuncAnimation(...) alive,
+# which otherwise dies to the garbage collector before a single frame runs.
+GIF_MAX_FRAMES = 200
+# Slow animations need far fewer frames than fast ones: a 20ms snippet is fine
+# with 200 frames while a 1s flicker reads completely after ~24, and a 3D
+# figure spends half a second redrawing each of them. The cap follows the
+# interval so a frames=None flicker lands near a 20-second loop instead of
+# burning the whole render budget.
+GIF_TARGET_LOOP_MS = 20000
+# Second belt: one slowly-rendering frame must not push the save past the IPC
+# timeout — stop grabbing once this budget is spent.
+GIF_TIME_BUDGET_S = 90
+GIF_MAX_BYTES = 8 * 1024 * 1024
+ANIMATIONS = []
+try:
+    import matplotlib.animation as _anim
+
+    _orig_anim_init = _anim.Animation.__init__
+
+    def _record_anim_init(self, fig, *args, **kwargs):
+        ANIMATIONS.append((self, fig))
+        return _orig_anim_init(self, fig, *args, **kwargs)
+
+    _anim.Animation.__init__ = _record_anim_init
+except Exception:
+    pass
+
 try:
     exec(compile(code, "<diagram>", "exec"), namespace)
 except Exception as err:
     fail(type(err).__name__ + ": " + str(err))
+
+if ANIMATIONS:
+    ani, anim_fig = ANIMATIONS[-1]
+    interval = getattr(ani, "_interval", None) or 200
+    # 1s-间隔的闪烁要按 1s 播，fps 下限放宽到 1（GIF 延迟是 10ms 整数倍，1fps=100cs）。
+    fps = max(1, min(50, int(round(1000.0 / float(interval)))))
+    frame_cap = max(24, min(GIF_MAX_FRAMES, int(round(GIF_TARGET_LOOP_MS / float(interval)))))
+    base_dpi = float(getattr(anim_fig, "dpi", None) or 100)
+
+    if not hasattr(_anim, "PillowWriter"):
+        fail("matplotlib is too old to render animations (PillowWriter needs matplotlib >= 3.2)")
+
+    class _GifFrameCap(Exception):
+        pass
+
+    class _CappedPillowWriter(_anim.PillowWriter):
+        # Two belts against pathological sources: frames=None builds an
+        # itertools.count source (frame cap), and a figure that redraws slowly
+        # must not push the save past the IPC timeout (time budget).
+        def __init__(self, fps, cap):
+            super().__init__(fps=fps)
+            self._mt_cap = cap
+            self._mt_count = 0
+            self._mt_start = None
+
+        def grab_frame(self, **kwargs):
+            now = time.monotonic()
+            if self._mt_start is None:
+                self._mt_start = now
+            self._mt_count += 1
+            if self._mt_count > self._mt_cap or now - self._mt_start > GIF_TIME_BUDGET_S:
+                raise _GifFrameCap()
+            return super().grab_frame(**kwargs)
+
+    def write_gif(scale):
+        writer = _CappedPillowWriter(fps=fps, cap=frame_cap)
+        try:
+            ani.save(tmp_path, writer=writer, dpi=base_dpi * scale)
+        except _GifFrameCap:
+            # MovieWriter.saving runs finish() in its finally clause, so the
+            # file on disk already holds a valid GIF with the frames so far.
+            pass
+        with open(tmp_path, "rb") as handle:
+            return handle.read()
+
+    tmp = tempfile.NamedTemporaryFile(suffix=".gif", delete=False)
+    tmp.close()
+    tmp_path = tmp.name
+    try:
+        try:
+            gif = write_gif(1.0)
+            if len(gif) > GIF_MAX_BYTES:
+                gif = write_gif(0.6)
+                if len(gif) > GIF_MAX_BYTES:
+                    fail("The animation is too large to embed - shorten it (fewer frames) or shrink the figure")
+        except Exception as err:
+            fail("Could not save the animation: " + str(err))
+
+        emit({
+            "ok": True,
+            "mime": "image/gif",
+            "data": base64.b64encode(gif).decode("ascii")
+        })
+        sys.exit(0)
+    finally:
+        try:
+            os.unlink(tmp.name)
+        except OSError:
+            pass
 
 figures = [plt.figure(n) for n in plt.get_fignums()]
 if not figures:

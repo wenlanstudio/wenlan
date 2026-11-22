@@ -129,15 +129,19 @@ const rasterizeMarkup = (markup: string): Promise<string> =>
   })
 
 /**
- * matplotlib 源码 → PNG data URL。
+ * matplotlib 源码 → 位图 data URL。
  *
  * 与「文」视图同一条 IPC（`window.diagram.renderExternal`），因此共用同一个开关与
  * Python 路径偏好：文视图能画的，览/映就能画；文视图关着，这边也会明确报错。
  * IPC 回的是 SVG（编辑器要矢量），deck 要**冻结位图**（分页 / IR / PPTX 同一份字节），
- * 所以在这里栅格成 PNG。
+ * 所以静态图在这里栅格成 PNG。
+ *
+ * 动画块回来的是成品 GIF：位图契约直接可过，不能再走栅格——canvas 会把多帧压成
+ * 首帧。deck 分页量的内在尺寸即 GIF 首帧尺寸，与 PNG 同一套盒模型。
  */
 export const renderMatplotlibToDataUrl = async(source: string): Promise<string> => {
   const result = await window.diagram.renderExternal('matplotlib', source)
   if (!result.ok) throw new Error(`matplotlib 渲染失败：${result.error}`)
+  if (result.mime === 'image/gif') return `data:image/gif;base64,${result.data}`
   return rasterizeMarkup(decodeBase64Utf8(result.data))
 }

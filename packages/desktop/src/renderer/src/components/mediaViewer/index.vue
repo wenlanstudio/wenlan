@@ -227,12 +227,20 @@ const save = async (format: ExportFormat) => {
 
   try {
     const image = await exportDiagram(source, format, canvasBackground())
+    // Filter name follows the mime, not the extension: an animated diagram
+    // exports its own gif bytes, which must not present themselves as PNG.
+    const filterName =
+      image.mime === 'image/svg+xml'
+        ? 'Scalable Vector Graphics'
+        : image.mime === 'image/gif'
+          ? 'Graphics Interchange Format'
+          : 'Portable Network Graphics'
     const filePath = await window.electron.dialog.showSave({
       title: t('editor.mediaViewer.saveTitle'),
       defaultPath: `${source.type}-diagram.${image.extension}`,
       filters: [
         {
-          name: image.extension === 'svg' ? 'Scalable Vector Graphics' : 'Portable Network Graphics',
+          name: filterName,
           extensions: [image.extension]
         }
       ]

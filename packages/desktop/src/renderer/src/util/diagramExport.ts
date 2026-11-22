@@ -21,7 +21,9 @@ export interface DiagramSource extends DiagramThemes {
 export interface ExportedImage {
   data: Uint8Array
   mime: string
-  extension: ExportFormat
+  // The extension follows the mime: a bitmap export keeps its own raster
+  // format (png/gif/jpeg), so this is wider than ExportFormat.
+  extension: string
 }
 
 const PNG_SCALE = 2
@@ -242,6 +244,13 @@ const decodeDataUrl = (src: string): { mime: string; data: Uint8Array } | null =
 
 // matplotlib hands back a finished image, so exporting is decoding the data
 // URL — plus a rasterising detour when the requested format differs.
+const BITMAP_EXTENSION: Record<string, string> = {
+  'image/png': 'png',
+  'image/gif': 'gif',
+  'image/jpeg': 'jpg',
+  'image/webp': 'webp'
+}
+
 const exportExternalImage = async(
   source: DiagramSource,
   format: ExportFormat
@@ -253,7 +262,11 @@ const exportExternalImage = async(
 
   const isSvg = decoded.mime.includes('svg')
   if (format === 'svg' && isSvg) return { ...decoded, extension: 'svg' }
-  if (format === 'png' && !isSvg) return { ...decoded, extension: 'png' }
+  if (format === 'png' && !isSvg) {
+    // The bitmap is already a finished raster: keep its own format instead of
+    // relabelling gif bytes as .png.
+    return { ...decoded, extension: BITMAP_EXTENSION[decoded.mime] ?? 'png' }
+  }
 
   // `src` is already a data URL (SVG or PNG); wrapping it as SVG markup would
   // turn it into an unreadable `data:image/svg+xml,...data%3Aimage...` string.
@@ -368,9 +381,13 @@ export const renderDiagramCodeToPngDataUrl = async(
 
   if (type === 'matplotlib') {
     // The main process runs the Python and hands back a finished SVG whose pt
-    // dimensions become the pixel size the image loads at.
+    // dimensions become the pixel size the image loads at. An animated block
+    // arrives as a finished GIF instead: pandoc embeds it by mime (Word shows
+    // the first frame), so hand it over untouched — a canvas detour would
+    // flatten it to one frame.
     const result = await window.diagram.renderExternal(type, code)
     if (!result.ok) throw new Error(result.error)
+    if (result.mime === 'image/gif') return `data:image/gif;base64,${result.data}`
     return rasterizeToPngDataUrl(await loadImage(`data:${result.mime};base64,${result.data}`))
   }
 
