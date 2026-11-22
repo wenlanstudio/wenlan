@@ -190,6 +190,7 @@ import type { Md2rEvent } from '@shared/types/mdcode2run'
 import { DEFAULT_PLANTUML_SERVER } from '@shared/types/preferences'
 import { useEditorStore } from '@/store/editor'
 import { useEditorViewStore } from '@/store/editorView'
+import { usePreferencesStore } from '@/store/preferences'
 import { useTeachingStore } from '@/store/teaching'
 import { followTargetOf, shouldSnapBack } from '@/util/classroomFollow'
 import { POSITION_SYNC_ENABLED, matchesCurrentMarkdown, onDocAnchorChange, writeDocAnchor } from '@/util/docAnchor'
@@ -234,6 +235,7 @@ const props = defineProps<{
 
 const editorStore = useEditorStore()
 const editorViewStore = useEditorViewStore()
+const preferencesStore = usePreferencesStore()
 const teachingStore = useTeachingStore()
 
 // ── ADR-24 封面叠码：课表命中自动开房后，第 1 页叠学生入会二维码 ──
@@ -478,6 +480,8 @@ const sendBuild = (preservePage = false): void => {
       view: props.leaf === 'slide' ? 'list' : 'present',
       // 代码块行粒度遍历（front-matter stepLines: true）：页面侧 player 逐行拆步。
       stepLines: stepLines.value,
+      // drawio 围栏的 embed 服务（deck 页面自己渲染 drawio 时用，与编辑器预览同一偏好）。
+      drawioServer: preferencesStore.drawioServer || undefined,
       ...(startIndex !== undefined ? { startIndex } : {})
     }
   })

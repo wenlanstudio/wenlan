@@ -44,6 +44,7 @@ const REQUIRED_FILES = [
 const REQUIRED_NON_EMPTY_DIRS = [
   'themes',
   'katex/fonts',
+  'lib/sequence-fonts', // sequence 手绘主题字体（deck 页 @font-face 指这里）
   'lib/pptxgenjs/node_modules', // 导出后端的依赖闭包
   'lib/sidecar'
 ]
@@ -58,6 +59,24 @@ for (const rel of REQUIRED_NON_EMPTY_DIRS) {
   if (!existsSync(at(rel)) || !statSync(at(rel)).isDirectory() || readdirSync(at(rel)).length === 0) {
     problems.push(`目录缺失或为空：${rel}`)
   }
+}
+
+// 图表运行时清单是活的（assets.json.libs，随 md2slides 升图表而增）：从清单逐个
+// 验存在性，别再往 REQUIRED_FILES 里逐个硬编码——deck 页面按需加载，缺一个文件
+// 就是某种图表整体报废。
+try {
+  const manifest = JSON.parse(readFileSync(at('assets.json'), 'utf-8'))
+  for (const [type, files] of Object.entries(manifest.libs ?? {})) {
+    const list = Array.isArray(files) ? files : [files]
+    if (!list.length) problems.push(`assets.json libs.${type} 是空清单`)
+    for (const file of list) {
+      if (!existsSync(at(file)) || !statSync(at(file)).isFile()) {
+        problems.push(`缺图表运行时（assets.json libs.${type}）：${file}`)
+      }
+    }
+  }
+} catch (error) {
+  problems.push(`assets.json 读不了/不是合法 JSON：${error instanceof Error ? error.message : String(error)}`)
 }
 
 if (!problems.length) {
@@ -99,5 +118,5 @@ if (problems.length) {
 
 console.log(
   `✓ md2slides 资产包完整（${REQUIRED_FILES.length} 个关键文件 + ` +
-    `${REQUIRED_NON_EMPTY_DIRS.length} 个目录 + 2 个 CJS 入口形状）→ ${assetsDir}`
+    `${REQUIRED_NON_EMPTY_DIRS.length} 个目录 + 图表运行时清单 + 2 个 CJS 入口形状）→ ${assetsDir}`
 )
