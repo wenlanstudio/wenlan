@@ -205,10 +205,13 @@ export const setEditorWidth = (value: string): void => {
   const EDITOR_WIDTH_STYLE_ID = 'editor-width'
   let result = ''
   if (value && /^[0-9]+(?:ch|px|%)$/.test(value)) {
-    // Add 100px for the container's horizontal padding. Set both the legacy
-    // camelCase var (source mode) and the kebab-case var the active
+    // Compensate for the container's horizontal padding so the text column's
+    // real width equals the slider value. muya's default is 100px (50px each
+    // side); themes with different padding declare --editor-area-inline-padding
+    // (e.g. Typora: 60px = 30px each side) and we read it here. Set both the
+    // legacy camelCase var (source mode) and the kebab-case var the active
     // @muyajs/core engine reads for `.mu-container` max-width (issue #4828).
-    const width = `calc(100px + ${value})`
+    const width = `calc(var(--editor-area-inline-padding, 100px) + ${value})`
     // `!important` — theme sheets also declare these vars on `:root`; this
     // runtime style element can end up earlier in <head> than the theme one
     // (it is applied at app root before the theme installs), so plain source

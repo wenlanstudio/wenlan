@@ -83,7 +83,7 @@ describe('theme.ts style injection helpers', () => {
         setEditorWidth(value)
 
         expect(styleHtml(WIDTH_STYLE_ID)).toBe(
-          `:root { --editorAreaWidth: calc(100px + ${value}) !important; --editor-area-width: calc(100px + ${value}) !important; }`
+          `:root { --editorAreaWidth: calc(var(--editor-area-inline-padding, 100px) + ${value}) !important; --editor-area-width: calc(var(--editor-area-inline-padding, 100px) + ${value}) !important; }`
         )
       }
     )
@@ -95,7 +95,19 @@ describe('theme.ts style injection helpers', () => {
       // on the default theme (issue #4828).
       setEditorWidth('60%')
 
-      expect(styleHtml(WIDTH_STYLE_ID)).toContain('--editor-area-width: calc(100px + 60%) !important;')
+      expect(styleHtml(WIDTH_STYLE_ID)).toContain(
+        '--editor-area-width: calc(var(--editor-area-inline-padding, 100px) + 60%) !important;'
+      )
+    })
+
+    it('reads the theme-declared padding variable so non-default themes align too', () => {
+      // Typora's .mu-container uses 30px side padding (60px total) instead of
+      // muya's 100px. The compensation must be read from the CSS var at layout
+      // time, so we only assert the var() reference is present — the browser
+      // resolves it to 60px when the Typora theme is active.
+      setEditorWidth('750px')
+
+      expect(styleHtml(WIDTH_STYLE_ID)).toContain('calc(var(--editor-area-inline-padding, 100px) + 750px)')
     })
 
     it('marks the override !important so theme :root defaults cannot win by style order', () => {

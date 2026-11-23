@@ -97,7 +97,11 @@
   --floatBorderColor: #dfe2e5;
   --floatShadow: rgba(0, 28, 36, 0.12);
   --maskColor: rgba(0, 0, 0, 0.15);
-  --editorAreaWidth: 860px;
+  --editorAreaWidth: 750px;
+  /* 容器左右 padding 之和（各 30px）。setEditorWidth 用它把滑块值补偿成容器
+     max-width，使正文实际宽度恰好等于滑块值。muya 默认是 100px（各 50px），
+     本主题复刻 Typora 用 60px，故在此覆盖。 */
+  --editor-area-inline-padding: 60px;
 
   /* @muyajs/core (kebab-case) editor variables
      与上面的 camelCase 变量一一对应；当前编辑器仍在读 camelCase，
@@ -200,25 +204,15 @@
 
 /* --- Editor: Typora github 主题的版式数值 ------------------------- */
 
-/* 定宽列：860px 含左右各 30px 内边距，正文实际 800px，与 Typora 一致。
+/* 定宽列与页宽滑块对齐：max-width 读 --editor-area-width（滑块 !important 注入），
+   fallback 750px 与其他主题的默认基准一致；左右 padding 各 30px，其总和由
+   --editor-area-inline-padding 告知 setEditorWidth 做补偿，故正文实宽 = 滑块值。
    显式写 box-sizing 是为了不受 muya 的全局盒模型影响。
-   宽屏时按 Typora 的规则放宽到 1024 / 1200。 */
+   宽屏不再写死 1024/1200——与其他主题看齐，宽度全程交给滑块。 */
 .mu-container {
   box-sizing: border-box;
-  max-width: var(--editor-area-width, 860px);
+  max-width: var(--editor-area-width, 750px);
   padding: 30px 30px 100px;
-}
-
-@media only screen and (min-width: 1400px) {
-  .mu-container {
-    max-width: 1024px;
-  }
-}
-
-@media only screen and (min-width: 1800px) {
-  .mu-container {
-    max-width: 1200px;
-  }
 }
 
 .mu-container h1,
