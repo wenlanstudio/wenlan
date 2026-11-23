@@ -54,6 +54,42 @@
       :src="frameSrc"
       title="md2slides deck"
     />
+    <!-- 图表渲染进度遮罩：首帧（total===0）居中卡片 + 暖色进度条；
+         rebuild（total>0）顶部细线，不遮挡旧画面。ready/error 即隐藏。 -->
+    <div
+      v-if="progress || (total === 0 && !error)"
+      class="deck-progress-overlay"
+      :class="{ 'first-build': total === 0 }"
+    >
+      <div
+        v-if="total === 0"
+        class="progress-card"
+      >
+        <div class="progress-label">
+          {{ progressLabel }}
+        </div>
+        <template v-if="progress?.total">
+          <div class="progress-bar">
+            <div
+              class="progress-fill"
+              :style="{ width: progressPct + '%' }"
+            />
+          </div>
+          <div class="progress-count">
+            {{ progress.done }} / {{ progress.total }}
+          </div>
+        </template>
+      </div>
+      <div
+        v-else
+        class="progress-line"
+      >
+        <div
+          class="progress-fill"
+          :style="{ width: progressPct + '%' }"
+        />
+      </div>
+    </div>
     <div
       v-if="missingWarn"
       class="deck-missing-warn"
@@ -341,6 +377,47 @@ const index = ref(0)
 const total = ref(0)
 const warnings = ref(0)
 const exporting = ref(false)
+
+/**
+ * 图表渲染进度（md2s:progress）。
+ * - phase:'assets'   图表运行时注入完毕，接下来逐张渲染
+ * - phase:'diagrams' done/total/type 标当前进度与图表类型；缓存命中也算一次 done
+ * ready/error 即终态 → null。首帧（total===0）用居中卡片，rebuild 用顶部细线。
+ */
+const progress = ref<{ phase: string; done?: number; total?: number; type?: string } | null>(null)
+
+const DIAGRAM_TYPE_LABELS: Record<string, string> = {
+  mermaid: '流程图',
+  graphviz: '拓扑图',
+  plantuml: 'UML',
+  matplotlib: '数据图',
+  echarts: '图表',
+  svg: '矢量图',
+  'vega-lite': '可视化',
+  flowchart: '流程图',
+  sequence: '时序图',
+  wavedrom: '波形图',
+  chart: '图表',
+  abc: '乐谱',
+  drawio: '流程图',
+}
+
+const progressLabel = computed(() => {
+  const p = progress.value
+  if (!p) return status.value
+  if (p.phase === 'assets') return '正在准备图表运行时…'
+  if (p.phase === 'diagrams') {
+    const label = p.type ? DIAGRAM_TYPE_LABELS[p.type] ?? p.type : ''
+    return p.total ? `正在渲染${label ? ' ' + label : '图表'}…` : '正在渲染图表…'
+  }
+  return '正在构建幻灯片…'
+})
+
+const progressPct = computed(() => {
+  const p = progress.value
+  if (!p || !p.total || !p.done) return 0
+  return Math.min(100, Math.round((p.done / p.total) * 100))
+})
 
 const isPanel = computed(() => props.mode === 'panel')
 
@@ -725,6 +802,7 @@ const onMessage = (ev: MessageEvent): void => {
   switch (data.type) {
     case 'md2s:boot':
       status.value = '正在构建幻灯片…'
+      progress.value = null
       sendBuild()
       break
     case 'md2s:locate-up': {
@@ -744,6 +822,7 @@ const onMessage = (ev: MessageEvent): void => {
       error.value = ''
       contractIssues.value = []
       status.value = ''
+      progress.value = null
       index.value = Number(data.index) || 1
       total.value = Number(data.total) || 0
       warnings.value = Number(data.warnings) || 0
@@ -807,8 +886,17 @@ const onMessage = (ev: MessageEvent): void => {
       // 缺图占位等非致命提示：不挡演示，常驻展示到下次构建/出错
       missingWarn.value = String(data.message ?? '')
       break
+    case 'md2s:progress':
+      progress.value = {
+        phase: String(data.phase ?? ''),
+        done: typeof data.done === 'number' ? data.done : undefined,
+        total: typeof data.total === 'number' ? data.total : undefined,
+        type: (data.diagramType as string) || undefined,
+      }
+      break
     case 'md2s:error': {
       missingWarn.value = ''
+      progress.value = null
       error.value = String(data.message ?? '未知错误')
       // 契约校验拒绝：结构化逐条展示（rule/code/where/message/fix），而非单句。
       const raw = data.issues
@@ -1127,6 +1215,63 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   border: 0;
+}
+
+/* 图表渲染进度遮罩：首帧居中卡片（#1a1a1a 与 iframe 底色一致），rebuild 顶部细线 */
+.deck-progress-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+.deck-progress-overlay.first-build {
+  background: #1a1a1a;
+}
+/* rebuild：半透明深色盖住旧画面的裸渲染跳变（不全黑，旧内容隐约可见） */
+.deck-progress-overlay:not(.first-build) {
+  background: rgba(26, 26, 26, 0.7);
+}
+.progress-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #ccc;
+  font-size: 14px;
+}
+.progress-label {
+  margin-bottom: 12px;
+  white-space: nowrap;
+}
+.progress-bar {
+  width: 200px;
+  height: 4px;
+  background: #333;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: #e8a838;
+  border-radius: 2px;
+  transition: width 0.2s ease;
+}
+.progress-count {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #888;
+}
+.progress-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #333;
+}
+.progress-line .progress-fill {
+  border-radius: 0;
 }
 
 .deck-bar {

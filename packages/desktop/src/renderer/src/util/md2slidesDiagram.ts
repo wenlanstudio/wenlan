@@ -25,6 +25,36 @@ const PNG_SCALE = 2
 const MAX_PIXELS = 4e7
 const BACKGROUND = '#ffffff'
 
+/**
+ * 位图缓存（照 graphvizRender 的 Promise-LRU 口径）：键=源码 hash，命中返回同一
+ * Promise 不重复 spawn Python / 打 plantuml server；失败不缓存（补装/换路径后
+ * 下次生效）。deck 的 300ms 防抖 rebuild 每次都重发 RPC，没有这层缓存意味着同一
+ * 张 matplotlib 图反复 spawn Python——黑屏久的大头就在这里。
+ */
+const MAX_CACHE = 64
+const hashSource = (code: string): string => {
+  let hash = 2166136261
+  for (let i = 0; i < code.length; i++) {
+    hash ^= code.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  return (hash >>> 0).toString(36)
+}
+const mplCache = new Map<string, Promise<string>>()
+const pumlCache = new Map<string, Promise<string>>()
+const cacheSet = (map: Map<string, Promise<string>>, key: string, p: Promise<string>) => {
+  map.set(key, p)
+  if (map.size > MAX_CACHE) {
+    const oldest = map.keys().next().value
+    if (oldest !== undefined) map.delete(oldest)
+  }
+}
+/** 测试/偏好变更用：清空 matplotlib / plantuml 位图缓存。 */
+export const clearMd2slidesDiagramCache = (): void => {
+  mplCache.clear()
+  pumlCache.clear()
+}
+
 /** viz 实例是 WASM 编译器，加载一次全进程复用（muya 的 render.ts 同款用法）。 */
 type Viz = NonNullable<Awaited<ReturnType<typeof vizInstance>>>
 let vizPromise: Promise<Viz> | null = null
@@ -82,17 +112,24 @@ export const renderGraphvizToDataUrl = async(source: string): Promise<string> =>
 }
 
 /** plantuml 源码 → PNG data URL（编码后走既有 IPC；server 来自偏好，缺省用官方）。 */
-export const renderPlantumlToDataUrl = async(source: string, server: string): Promise<string> => {
-  const { encode } = await import('plantuml-encoder')
-  const result = await window.diagram.fetchPlantuml(server, encode(source), 'png')
-  if (!result.ok) throw new Error(`plantuml 渲染失败：${result.error}`)
+export const renderPlantumlToDataUrl = (source: string, server: string): Promise<string> => {
+  const key = hashSource(`${server}\0${source}`)
+  const pending = pumlCache.get(key)
+  if (pending) return pending
+  const request = (async() => {
+    const { encode } = await import('plantuml-encoder')
+    const result = await window.diagram.fetchPlantuml(server, encode(source), 'png')
+    if (!result.ok) throw new Error(`plantuml 渲染失败：${result.error}`)
 
-  // Uint8Array → base64 分块转换（spread 大数组会爆调用栈）。
-  let binary = ''
-  for (let i = 0; i < result.data.length; i += 0x8000) {
-    binary += String.fromCharCode(...result.data.subarray(i, i + 0x8000))
-  }
-  return `data:${result.mime};base64,${btoa(binary)}`
+    // Uint8Array → base64 分块转换（spread 大数组会爆调用栈）。
+    let binary = ''
+    for (let i = 0; i < result.data.length; i += 0x8000) {
+      binary += String.fromCharCode(...result.data.subarray(i, i + 0x8000))
+    }
+    return `data:${result.mime};base64,${btoa(binary)}`
+  })().catch(err => { pumlCache.delete(key); throw err })   // 失败不缓存
+  cacheSet(pumlCache, key, request)
+  return request
 }
 
 /** base64（UTF-8 字节）→ 文本；atob 只给 latin1，必须过一遍 TextDecoder 才不会把中文弄坏。 */
@@ -139,9 +176,16 @@ const rasterizeMarkup = (markup: string): Promise<string> =>
  * 动画块回来的是成品 GIF：位图契约直接可过，不能再走栅格——canvas 会把多帧压成
  * 首帧。deck 分页量的内在尺寸即 GIF 首帧尺寸，与 PNG 同一套盒模型。
  */
-export const renderMatplotlibToDataUrl = async(source: string): Promise<string> => {
-  const result = await window.diagram.renderExternal('matplotlib', source)
-  if (!result.ok) throw new Error(`matplotlib 渲染失败：${result.error}`)
-  if (result.mime === 'image/gif') return `data:image/gif;base64,${result.data}`
-  return rasterizeMarkup(decodeBase64Utf8(result.data))
+export const renderMatplotlibToDataUrl = (source: string): Promise<string> => {
+  const key = hashSource(source)
+  const pending = mplCache.get(key)
+  if (pending) return pending
+  const request = (async() => {
+    const result = await window.diagram.renderExternal('matplotlib', source)
+    if (!result.ok) throw new Error(`matplotlib 渲染失败：${result.error}`)
+    if (result.mime === 'image/gif') return `data:image/gif;base64,${result.data}`
+    return rasterizeMarkup(decodeBase64Utf8(result.data))
+  })().catch(err => { mplCache.delete(key); throw err })   // 失败不缓存
+  cacheSet(mplCache, key, request)
+  return request
 }
