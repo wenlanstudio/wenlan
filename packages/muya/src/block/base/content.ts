@@ -531,7 +531,7 @@ class Content extends TreeNode {
         let offset = 0;
 
         if (direction === 'up') {
-            const previousContentBlock = this.previousContentInContext();
+            const previousContentBlock = this.previousContentInFlow();
             if (!previousContentBlock) {
                 if (event.key === EVENT_KEYS.ArrowUp && start.offset !== 0)
                     this.setCursor(0, 0, true);
@@ -543,7 +543,7 @@ class Content extends TreeNode {
             offset = this._upArrowOffset(previousContentBlock, event);
         }
         else {
-            cursorBlock = this.nextContentInContext();
+            cursorBlock = this.nextContentInFlow();
             if (!cursorBlock && this.text.length > 0) {
                 const newNodeState = { name: 'paragraph', text: '' };
                 const newNode = ScrollPage.loadBlock(newNodeState.name).create(

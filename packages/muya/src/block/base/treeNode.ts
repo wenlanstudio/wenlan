@@ -169,6 +169,69 @@ class TreeNode implements ILinkedNode {
     }
 
     /**
+     * Direction-key cross-block navigation with visual-flow stop order for
+     * code blocks (Typora semantics): a code block has two stops, the code
+     * body and its bottom-right language input, and the travel direction
+     * decides their order — downward = body → language input, upward =
+     * language input → body. Both directions put the language input at the
+     * screen-edge stop, which is where it visually sits.
+     *
+     * The tree-order primitives `nextContentInContext` /
+     * `previousContentInContext` stay untouched for their tree-order consumers
+     * (backspace, delete, format); only `arrowHandler` routes through these.
+     *
+     * Level note: the body content is nested inside the `code` wrapper
+     * (code-block → [language-input, code → codeblock.content]), so the
+     * wrapper's content is the only node whose content-primitives cross block
+     * levels correctly — the code-block node itself sits one level too high
+     * (its parent is the scroll page) and its language input never exits via
+     * `nextContentInContext` (special branch). The exits below therefore walk
+     * from the body / language input, never from the code-block node.
+     */
+    nextContentInFlow(): Nullable<Content> {
+        // Language input heading down leaves the block — the body was the
+        // previous stop. Walk from the body so block levels resolve correctly.
+        if (this.blockName === 'language-input') {
+            const body = this.parent?.lastContentInDescendant();
+            const next = body ? body.nextContentInContext() : null;
+            return enterBelow(next);
+        }
+
+        // The body is the block's upper stop — one keypress down is the
+        // language input, not the block after.
+        const codeBlock = enclosingCodeBlock(this);
+        if (codeBlock)
+            return codeBlock.firstContentInDescendant();
+
+        return enterBelow(this.nextContentInContext());
+    }
+
+    previousContentInFlow(): Nullable<Content> {
+        // Language input heading up folds back into the body — the block's
+        // lower stop returns to its upper stop.
+        if (this.blockName === 'language-input')
+            return this.parent?.lastContentInDescendant() ?? null;
+
+        let prev = this.previousContentInContext();
+
+        // The body's tree-previous is its language input — that stop was
+        // already visited coming up, so leave the block. The language input is
+        // the code-block's block-level child and its own primitive crosses out.
+        if (prev?.blockName === 'language-input')
+            prev = prev.previousContentInContext();
+
+        // Crossing into a code block from below lands on its body (tree tail)
+        // — the flow stop order from below starts at the language input.
+        if (prev) {
+            const codeBlock = enclosingCodeBlock(prev);
+            if (codeBlock)
+                return codeBlock.firstContentInDescendant() ?? prev;
+        }
+
+        return prev;
+    }
+
+    /**
      * Weather `this` is the only child of its parent.
      */
     isOnlyChild() {
@@ -270,6 +333,32 @@ class TreeNode implements ILinkedNode {
 
         return this;
     }
+}
+
+/**
+ * The enclosing code-block of a content node, or null. The body content sits
+ * inside the `code` wrapper (code-block → [language-input, code → content]),
+ * so a parent walk is required; other containers (frontmatter, math, diagram,
+ * html) reuse the wrapper under different block names and are excluded here.
+ */
+function enclosingCodeBlock(node: TreeNode): Nullable<Parent> {
+    let p: Nullable<Parent> = node.parent;
+    while (p && !p.isScrollPage) {
+        if (p.blockName === 'code-block')
+            return p;
+        p = p.parent;
+    }
+    return null;
+}
+
+/**
+ * Flow entry from above: tree order lands on a code-block's language input
+ * (its first content descendant) — redirect to the body, the upper stop.
+ */
+function enterBelow(next: Nullable<Content>): Nullable<Content> {
+    if (next?.blockName === 'language-input')
+        return next.parent?.lastContentInDescendant() ?? next;
+    return next;
 }
 
 export default TreeNode;
