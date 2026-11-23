@@ -144,7 +144,11 @@ declare global {
       encoded: string,
       format: 'svg' | 'png'
     ): Promise<PlantumlFetchResult>
-    renderExternal(type: string, code: string): Promise<ExternalDiagramResult>
+    renderExternal(
+      type: string,
+      code: string,
+      opts?: { format?: 'svg' | 'png' }
+    ): Promise<ExternalDiagramResult>
   }
 
   interface FileUtilsAPI {

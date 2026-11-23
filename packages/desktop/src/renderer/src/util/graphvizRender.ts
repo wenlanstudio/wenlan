@@ -6,6 +6,13 @@
  * Preview, HTML export, PNG/Pandoc export and the deck bridge all go through
  * `renderGraphvizWithExe` so they can never disagree about which engine drew
  * a given diagram.
+ *
+ * Output format is per-call: the editor preview (文/栏/页/码) asks for SVG —
+ * same dot engine, same layout, but vector so it scales without pixelation
+ * and its display size follows the SVG viewBox instead of a 192× pixel
+ * blow-up that fills the narrow editor column. The deck (览/映) and export
+ * keep PNG 192 dpi (IR needs a raster image for media landing). Results are
+ * cached separately per (source, format) so the two never pollute each other.
  */
 
 export type GraphvizExeResult =
@@ -30,9 +37,9 @@ const hashSource = (code: string): string => {
  * 首次未装 Graphviz 后补装仍会在下次渲染重新探测。 */
 const engineToken = (): string => ''
 
-const invokeDot = async(code: string): Promise<GraphvizExeResult> => {
+const invokeDot = async(code: string, format: 'svg' | 'png'): Promise<GraphvizExeResult> => {
   try {
-    const result = await window.diagram.renderExternal('graphviz', code)
+    const result = await window.diagram.renderExternal('graphviz', code, { format })
     if (!result.ok) return { ok: false, error: result.error }
     return {
       ok: true,
@@ -54,12 +61,15 @@ const invokeDot = async(code: string): Promise<GraphvizExeResult> => {
  * Failures are deliberately not cached: installing Graphviz or fixing the
  * configured path should take effect on the next render without a restart.
  */
-export const renderGraphvizWithExe = (code: string): Promise<GraphvizExeResult> => {
-  const key = hashSource(`${engineToken()}\0${code}`)
+export const renderGraphvizWithExe = (
+  code: string,
+  format: 'svg' | 'png' = 'png'
+): Promise<GraphvizExeResult> => {
+  const key = `${format}\0${hashSource(`${engineToken()}\0${code}`)}`
   const pending = cache.get(key)
   if (pending) return pending
 
-  const request = invokeDot(code).then((result) => {
+  const request = invokeDot(code, format).then((result) => {
     if (!result.ok) {
       cache.delete(key)
       // Light-touch notice: no error card, no dialog. The editor keeps drawing

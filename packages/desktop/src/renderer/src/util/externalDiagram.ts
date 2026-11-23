@@ -111,7 +111,9 @@ export const renderExternalDiagram: NonNullable<IMuyaOptions['renderExternalDiag
   }
 
   if (type === 'graphviz') {
-    const result = await renderGraphvizWithExe(code)
+    // SVG for the editor preview: vector output, scales without pixelation,
+    // display size follows the SVG viewBox instead of a 192× pixel blow-up.
+    const result = await renderGraphvizWithExe(code, 'svg')
     if (!result.ok) throw new Error(result.error)
 
     target.innerHTML = ''

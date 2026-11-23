@@ -402,14 +402,16 @@ export const setMatplotlibSource = (source: () => MatplotlibConfig): void => {
 export const registerMatplotlibHandlers = (): void => {
   ipcMain.handle(
     'mt::diagram::render-external',
-    async(_e, type: string, code: string): Promise<ExternalDiagramResult> => {
+    async(_e, type: string, code: string, opts?: { format?: 'svg' | 'png' }): Promise<ExternalDiagramResult> => {
       if (typeof code !== 'string' || !code.trim()) {
         return { ok: false, error: 'The diagram code is empty' }
       }
       // Graphviz prefers the installed dot binary. A failure here is not fatal:
       // the renderer falls back to the bundled WASM compiler.
+      // format='svg' → vector output for the editor preview; default 'png' for
+      // the md2slides deck (IR needs a raster image for media landing).
       if (type === 'graphviz') {
-        return renderGraphvizWithDot(code, graphvizDotPath())
+        return renderGraphvizWithDot(code, graphvizDotPath(), opts?.format ?? 'png')
       }
       if (type !== 'matplotlib') return { ok: false, error: `No external renderer for ${type}` }
       if (!configuredSource) return { ok: false, error: 'Invalid matplotlib request' }

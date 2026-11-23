@@ -251,7 +251,7 @@ export interface IpcInvokeChannels {
     ret: PlantumlFetchResult
   }
   'mt::diagram::render-external': {
-    args: [type: string, code: string]
+    args: [type: string, code: string, opts?: { format?: 'svg' | 'png' }]
     ret: ExternalDiagramResult
   }
   'mt::dialog::show-save': { args: [request: SaveDialogRequest]; ret: string | null }

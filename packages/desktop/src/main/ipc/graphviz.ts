@@ -8,10 +8,17 @@ import type { ExternalDiagramResult } from '@shared/types/ipc'
  * Graphviz (dot) rendering in the main process.
  *
  * Wenlan prefers the real Graphviz binary over the bundled WASM compiler: the
- * installed version, its fonts, its plugins and its 192 dpi bitmap are what
- * the authoring toolchain has always produced. `dot -Tpng -Gdpi=192` matches
- * the md2slides thin-host/CLI output, so a diagram looks the same in the
- * editor, in a deck and in an offline-built lecture.
+ * installed version, its fonts and its plugins are what the authoring toolchain
+ * has always produced. Two output formats share one engine:
+ *
+ *  - PNG (`-Tpng -Gdpi=192`): the high-resolution bitmap used by the md2slides
+ *    deck (IR needs a raster image for media landing) and by export. Matches the
+ *    md2slides thin-host/CLI output so a diagram looks the same in a deck and in
+ *    an offline-built lecture.
+ *  - SVG (`-Tsvg`): vector output for the editor preview (文/栏/页/码). Same dot
+ *    engine, same layout — just vector instead of raster, so it scales without
+ *    pixelation and its display size follows the SVG viewBox, not a 192× pixel
+ *    blow-up that fills the narrow editor column.
  *
  * The renderer falls back to @viz-js/viz (WASM) whenever this returns an
  * error, so a machine without Graphviz still renders every document.
@@ -81,9 +88,26 @@ export const setGraphvizSource = (source: () => string): void => {
 
 export const graphvizDotPath = (): string => configuredSource?.() ?? ''
 
+/**
+ * Render a Graphviz diagram with the installed `dot` binary.
+ *
+ * Two output formats:
+ *  - `'png'` (default): `-Tpng -Gdpi=192` — high-resolution bitmap, used by the
+ *    md2slides deck (IR needs a raster image for media landing) and by export.
+ *  - `'svg'`: `-Tsvg` — vector output, used by the editor preview (文/栏/页/码).
+ *    Same dot engine, same layout/fonts/quality as PNG — just vector instead of
+ *    raster, so it scales without pixelation and its display size is driven by
+ *    the SVG viewBox (logical pt → px), not by a 192× pixel blow-up that fills
+ *    the editor column and makes vertical diagrams tower over the text.
+ *
+ * A Graphviz failure is returned as `{ok:false}`; callers (graphvizRender.ts)
+ * fall back to the bundled WASM renderer so a machine without Graphviz still
+ * draws every diagram.
+ */
 export const renderGraphvizWithDot = async(
   code: string,
-  configured: string
+  configured: string,
+  format: 'png' | 'svg' = 'png'
 ): Promise<ExternalDiagramResult> => {
   const binary = await resolveDotBinary(configured)
   if (!binary) {
@@ -95,8 +119,11 @@ export const renderGraphvizWithDot = async(
     }
   }
 
+  const isSvg = format === 'svg'
+  const args = isSvg ? ['-Tsvg'] : [...DOT_ARGS]
+
   return new Promise<ExternalDiagramResult>((resolve) => {
-    const child = spawn(binary, [...DOT_ARGS], { windowsHide: true })
+    const child = spawn(binary, args, { windowsHide: true })
     const stdout: Buffer[] = []
     let stdoutLength = 0
     let stderr = ''
@@ -114,7 +141,7 @@ export const renderGraphvizWithDot = async(
       finish({ ok: false, error: `dot timed out after ${RENDER_TIMEOUT / 1000}s` })
     }, RENDER_TIMEOUT)
 
-    // PNG is binary: accumulate Buffers, never concatenate as text.
+    // Output may be binary (PNG) or text (SVG): accumulate Buffers either way.
     child.stdout.on('data', (chunk: Buffer) => {
       stdout.push(chunk)
       stdoutLength += chunk.length
@@ -130,17 +157,42 @@ export const renderGraphvizWithDot = async(
 
     child.on('close', (exitCode) => {
       const bytes = Buffer.concat(stdout)
-      if (exitCode !== 0 || !bytes.subarray(0, PNG_MAGIC.length).equals(PNG_MAGIC)) {
+      if (exitCode !== 0) {
+        finish({
+          ok: false,
+          error:
+            `dot exited with code ${exitCode}`
+            + (stderr.trim() ? `: ${stderr.trim().slice(-400)}` : ' without output')
+        })
+        return
+      }
+      if (bytes.length > OUTPUT_LIMIT) {
+        finish({ ok: false, error: 'The diagram exceeded the 16 MB output limit' })
+        return
+      }
+      if (isSvg) {
+        // SVG is UTF-8 text: validate the opening tag (dot may emit <?xml …?> or <svg …>).
+        const head = bytes.subarray(0, 200).toString('utf8').trimStart()
+        if (!head.startsWith('<?xml') && !head.startsWith('<svg')) {
+          finish({
+            ok: false,
+            error:
+              `dot did not produce valid SVG`
+              + (stderr.trim() ? `: ${stderr.trim().slice(-400)}` : '')
+          })
+          return
+        }
+        finish({ ok: true, mime: 'image/svg+xml', data: bytes.toString('base64') })
+        return
+      }
+      // PNG: binary magic check.
+      if (!bytes.subarray(0, PNG_MAGIC.length).equals(PNG_MAGIC)) {
         finish({
           ok: false,
           error:
             `dot exited with code ${exitCode}`
             + (stderr.trim() ? `: ${stderr.trim().slice(-400)}` : ' without a PNG')
         })
-        return
-      }
-      if (bytes.length > OUTPUT_LIMIT) {
-        finish({ ok: false, error: 'The diagram exceeded the 16 MB output limit' })
         return
       }
       finish({ ok: true, mime: 'image/png', data: bytes.toString('base64') })
