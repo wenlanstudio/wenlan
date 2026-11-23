@@ -100,7 +100,7 @@ export interface Md2rRunResult {
   job?: Md2rJobInfo
 }
 
-/** 执行日志条目（章作用域 ▶ 序列）。 */
+/** 执行日志条目（全文档 ▶ 序列，n 全文档递增）。 */
 export interface Md2rJournalEntry {
   n: number
   family: string
@@ -222,9 +222,8 @@ export interface Md2rProjectFile {
   content: string
 }
 
-/** journal / trace 的扁平条目：ch=-1 是文档级整份作业运行（src="document"）。 */
+/** journal / trace 的扁平条目：全文档单桶，n 全文档递增；src="document" 是文档级整份作业运行。 */
 export interface Md2rTraceEntry {
-  ch: number
   n: number
   family: string
   line: number
@@ -344,7 +343,6 @@ export interface Md2rSetTeacherTraceOpts {
 
 export interface Md2rTraceStateOpts {
   docPath: string
-  chapterLine?: number
 }
 
 /** 单次可覆盖两源（离线回放/单测用）；日常不传，用引擎实例里的状态。 */

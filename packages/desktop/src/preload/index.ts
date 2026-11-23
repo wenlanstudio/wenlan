@@ -340,7 +340,7 @@ const mdcode2runAPI = {
   }) => invoke('mt::mdcode2run::run-document', opts),
   resetSession: (opts: { docPath: string; md: string; line: number }) =>
     invoke('mt::mdcode2run::reset-session', opts),
-  journal: (opts: { docPath: string; chapterLine: number }) =>
+  journal: (opts: { docPath: string }) =>
     invoke('mt::mdcode2run::journal', opts),
   dispose: (opts: { docPath: string }) => invoke('mt::mdcode2run::dispose', opts),
   stopJob: (opts: { docPath: string; jobId: string }) =>

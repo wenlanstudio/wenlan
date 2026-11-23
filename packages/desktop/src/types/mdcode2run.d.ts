@@ -114,19 +114,19 @@ declare module 'mdcode2run' {
     resetSession(target: MdcodeCtx | { family?: string; key?: string } | string): void
     /** 宿主关文档时回收全部常驻会话（JVM/解释器管道撑着事件循环）。 */
     dispose(): void
-    journalOf(chapterLine: number): Md2rJournalEntry[]
+    journalOf(): Md2rJournalEntry[]
     traceOf(): string
     /** 只加载**自己的**执行记录；教师录制 trace 必须走 setTeacherTrace。 */
     traceLoad(text: string): unknown
     replayTrace(opts?: unknown): unknown
-    /** 章序扁平执行记录（含 src="document" 的文档级整份作业运行）。 */
-    traceEntries(chapterLine?: number | null): Md2rTraceEntry[]
+    /** 全文档扁平执行记录（含 src="document" 的文档级整份作业运行）。 */
+    traceEntries(): Md2rTraceEntry[]
     /** 📥 装载教师录制序列（JSONL / 数组 / null 清除），绝不并入 journal。 */
     setTeacherTrace(source: string | Md2rTraceEntry[] | null): Md2rTeacherTraceResult
     /** 教师序列只读副本（只定序，不是学生做过的事实）。 */
     teacherTraceOf(): Md2rTraceEntry[]
     /** 学生本地执行事实（journal 里排除 src="document"）。 */
-    localRuns(chapterLine?: number | null): Md2rTraceEntry[]
+    localRuns(): Md2rTraceEntry[]
     /** 按教师 trace 序聚合步骤 + 按学生执行记录点亮 executed。 */
     stepsOf(md: string, opts?: Md2rStepSourceOverride): Md2rStepsResult
     /** 提交某步前查「提前做」两形态 + 通过判定（只查事实）。 */

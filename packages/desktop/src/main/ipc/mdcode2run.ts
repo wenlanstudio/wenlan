@@ -172,13 +172,13 @@ const resetSessionHandler = (
 
 const journalHandler = (
   e: IpcMainInvokeEvent,
-  opts: { docPath: string; chapterLine: number }
+  opts: { docPath: string }
 ): Md2rJournalEntry[] => {
   if (!opts || typeof opts.docPath !== 'string') {
     throw new Error('Invalid mdcode2run journal request')
   }
   const { entry } = watchEngine(opts.docPath, e.sender.id)
-  return entry.engine.journalOf(opts.chapterLine ?? -1)
+  return entry.engine.journalOf()
 }
 
 const disposeHandler = (_e: IpcMainInvokeEvent, opts: { docPath: string }): boolean => {
@@ -264,11 +264,10 @@ const setTeacherTraceHandler = (
 const traceStateHandler = (e: IpcMainInvokeEvent, opts: Md2rTraceStateOpts): Md2rTraceState => {
   const { docPath } = p1Request(opts, 'trace-state')
   const { entry } = watchEngine(docPath, e.sender.id)
-  const ch = typeof opts.chapterLine === 'number' ? opts.chapterLine : null
   return {
-    teacher: entry.engine.teacherTraceOf().filter((t) => ch === null || t.ch === ch),
-    local: entry.engine.localRuns(ch),
-    all: entry.engine.traceEntries(ch)
+    teacher: entry.engine.teacherTraceOf(),
+    local: entry.engine.localRuns(),
+    all: entry.engine.traceEntries()
   }
 }
 

@@ -29,7 +29,6 @@ const docPath = (): string =>
   path.join(tmpdir(), `md2r-p1-${Date.now()}-${Math.random().toString(36).slice(2)}.md`)
 
 const entry = (line: number, n: number): Md2rTraceEntry => ({
-  ch: 0,
   n,
   family: 'bash',
   line,

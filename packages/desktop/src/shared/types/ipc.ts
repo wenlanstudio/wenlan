@@ -172,9 +172,9 @@ export interface IpcInvokeChannels {
     args: [opts: Md2rRunDocumentOpts]
     ret: Md2rRunReport
   }
-  // 章执行日志（▶ 序列，供渲染端显示 ran #N / stale）。
+  // 全文档执行日志（▶ 序列，供渲染端显示 ran #N / stale）。
   'mt::mdcode2run::journal': {
-    args: [opts: { docPath: string; chapterLine: number }]
+    args: [opts: { docPath: string }]
     ret: Md2rJournalEntry[]
   }
   // 宿主关文档：立即回收该文档的全部常驻会话。

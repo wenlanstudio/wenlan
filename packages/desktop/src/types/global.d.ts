@@ -370,7 +370,6 @@ declare global {
       resetSession(opts: { docPath: string; md: string; line: number }): Promise<boolean>
       journal(opts: {
         docPath: string
-        chapterLine: number
       }): Promise<Md2rJournalEntry[]>
       dispose(opts: { docPath: string }): Promise<boolean>
       stopJob(opts: { docPath: string; jobId: string }): Promise<boolean>
