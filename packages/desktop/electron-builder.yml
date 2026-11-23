@@ -43,6 +43,10 @@ files:
   - '!eslint.config.js'
   - '!jsconfig.json'
   - '!docs/*'
+  # mdcode2run 以 link: 依赖接入，整棵目录（含 sample/）会被扫进 asar。
+  # 作业中断会在 sample/mrjob/**/.mdjob/ 留下无权限目录（d--------），
+  # builder scandir 撞上就 EPERM 整包失败——这些是运行残留，一律排除。
+  - '!node_modules/mdcode2run/**/.mdjob/**'
   # Runtime assets are copied via extraResources below; keep them out of the asar.
   - '!resources/**'
 extraResources:
