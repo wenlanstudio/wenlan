@@ -1006,7 +1006,10 @@
     "unsafeFileTitle": "Potentially unsafe file",
     "unsafeFileMessage": "This link opens a file that can run code",
     "unsafeFileDetail": "\"{name}\" is an executable or script file. Opening it may run programs on your computer. Only continue if you trust this document.",
-    "openAnyway": "Open Anyway"
+    "openAnyway": "Open Anyway",
+    "driveRootTitle": "Cannot open folder",
+    "driveRootBody": "A whole drive cannot be used as the file list. Please select a project folder inside it.",
+    "driveRootWorkspaceBody": "A whole drive cannot be used as the course workspace. Please select a folder inside it."
   },
   "error": {
     "configSchemaViolation": "Configuration schema violation",
@@ -1121,7 +1124,10 @@
     "reportWorkdir": "workdir",
     "viewTable": "Table",
     "viewRaw": "Raw",
-    "rowCap": "{total} rows total (showing first {shown})"
+    "rowCap": "{total} rows total (showing first {shown})",
+    "sessionOf": "session {ran}/{total}",
+    "sessionStale": "stale {n}",
+    "sessionReset": "Reset session (cross-block state cleared, rebuilt on next run)"
   },
   "account": {
     "account": "Account",

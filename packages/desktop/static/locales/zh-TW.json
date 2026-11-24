@@ -998,7 +998,10 @@
     "unsafeFileTitle": "潛在不安全的檔案",
     "unsafeFileMessage": "此連結將開啟一個可執行程式碼的檔案",
     "unsafeFileDetail": "「{name}」是可執行檔或指令碼檔案。開啟它可能會在你的電腦上執行程式。請僅在信任此文件時繼續。",
-    "openAnyway": "仍要開啟"
+    "openAnyway": "仍要開啟",
+    "driveRootTitle": "無法開啟資料夾",
+    "driveRootBody": "整個磁碟不能作為檔案清單使用。請選擇一個專案資料夾。",
+    "driveRootWorkspaceBody": "整個磁碟不能作為課程工作區使用。請選擇一個資料夾。"
   },
   "error": {
     "configSchemaViolation": "設定結構違規",
@@ -1113,7 +1116,10 @@
     "reportWorkdir": "workdir",
     "viewTable": "Table",
     "viewRaw": "Raw",
-    "rowCap": "{total} rows total (showing first {shown})"
+    "rowCap": "{total} rows total (showing first {shown})",
+    "sessionOf": "會話 {ran}/{total}",
+    "sessionStale": "過期 {n}",
+    "sessionReset": "銷毀會話（跨區塊狀態歸零，下次執行重建）"
   },
   "view": {
     "slidesView": "Slides View",

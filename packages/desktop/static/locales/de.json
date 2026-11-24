@@ -998,7 +998,10 @@
     "unsafeFileTitle": "Möglicherweise unsichere Datei",
     "unsafeFileMessage": "Dieser Link öffnet eine Datei, die Code ausführen kann",
     "unsafeFileDetail": "„{name}“ ist eine ausführbare Datei oder ein Skript. Das Öffnen kann Programme auf Ihrem Computer ausführen. Fahren Sie nur fort, wenn Sie diesem Dokument vertrauen.",
-    "openAnyway": "Trotzdem öffnen"
+    "openAnyway": "Trotzdem öffnen",
+    "driveRootTitle": "Ordner kann nicht geöffnet werden",
+    "driveRootBody": "Ein gesamtes Laufwerk kann nicht als Dateiliste verwendet werden. Bitte wählen Sie einen Projektordner darin aus.",
+    "driveRootWorkspaceBody": "Ein gesamtes Laufwerk kann nicht als Kursarbeitsbereich verwendet werden. Bitte wählen Sie einen Ordner darin aus."
   },
   "error": {
     "configSchemaViolation": "Konfigurationsschema-Verletzung",
@@ -1113,7 +1116,10 @@
     "reportWorkdir": "workdir",
     "viewTable": "Table",
     "viewRaw": "Raw",
-    "rowCap": "{total} rows total (showing first {shown})"
+    "rowCap": "{total} rows total (showing first {shown})",
+    "sessionOf": "Sitzung {ran}/{total}",
+    "sessionStale": "veraltet {n}",
+    "sessionReset": "Sitzung zurücksetzen (blockübergreifender Zustand gelöscht, beim nächsten Lauf neu aufgebaut)"
   },
   "view": {
     "slidesView": "Slides View",

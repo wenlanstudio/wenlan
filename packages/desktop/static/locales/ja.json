@@ -998,7 +998,10 @@
     "unsafeFileTitle": "安全でない可能性のあるファイル",
     "unsafeFileMessage": "このリンクはコードを実行できるファイルを開きます",
     "unsafeFileDetail": "「{name}」は実行可能ファイルまたはスクリプトファイルです。開くとコンピューター上でプログラムが実行される可能性があります。この文書を信頼できる場合のみ続行してください。",
-    "openAnyway": "それでも開く"
+    "openAnyway": "それでも開く",
+    "driveRootTitle": "フォルダーを開けません",
+    "driveRootBody": "ドライブ全体をファイル一覧として使用することはできません。その中からプロジェクトフォルダーを選択してください。",
+    "driveRootWorkspaceBody": "ドライブ全体をコースの作業領域として使用することはできません。その中からフォルダーを選択してください。"
   },
   "error": {
     "configSchemaViolation": "設定スキーマ違反",
@@ -1113,7 +1116,10 @@
     "reportWorkdir": "workdir",
     "viewTable": "Table",
     "viewRaw": "Raw",
-    "rowCap": "{total} rows total (showing first {shown})"
+    "rowCap": "{total} rows total (showing first {shown})",
+    "sessionOf": "セッション {ran}/{total}",
+    "sessionStale": "期限切れ {n}",
+    "sessionReset": "セッションを破棄（ブロック間状態をリセット、次回実行で再構築）"
   },
   "view": {
     "slidesView": "Slides View",

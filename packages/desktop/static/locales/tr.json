@@ -998,7 +998,10 @@
     "unsafeFileTitle": "Güvenli olmayabilecek dosya",
     "unsafeFileMessage": "Bu bağlantı, kod çalıştırabilen bir dosyayı açar",
     "unsafeFileDetail": "\"{name}\" bir yürütülebilir veya betik dosyasıdır. Açmak, bilgisayarınızda program çalıştırabilir. Yalnızca bu belgeye güveniyorsanız devam edin.",
-    "openAnyway": "Yine de aç"
+    "openAnyway": "Yine de aç",
+    "driveRootTitle": "Klasör açılamıyor",
+    "driveRootBody": "Tüm bir sürücü dosya listesi olarak kullanılamaz. İçinde bir proje klasörü seçin.",
+    "driveRootWorkspaceBody": "Tüm bir sürücü kurs çalışma alanı olarak kullanılamaz. İçinde bir klasör seçin."
   },
   "error": {
     "configSchemaViolation": "Yapılandırma şeması ihlali",
@@ -1113,7 +1116,10 @@
     "reportWorkdir": "workdir",
     "viewTable": "Table",
     "viewRaw": "Raw",
-    "rowCap": "{total} rows total (showing first {shown})"
+    "rowCap": "{total} rows total (showing first {shown})",
+    "sessionOf": "oturum {ran}/{total}",
+    "sessionStale": "bayat {n}",
+    "sessionReset": "Oturumu sıfırla (bloklar arası durum temizlendi, sonraki çalıştırmada yeniden oluşturulur)"
   },
   "view": {
     "slidesView": "Slides View",

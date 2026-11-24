@@ -227,14 +227,15 @@
 
   /* ── 逐行运行（2026-11-17 拍板）────────────────────────────────────────
    * 代码块行粒度遍历（front-matter stepLines: true）时，会话族（java/python 有
-   * 常驻 REPL、逐行追加共享变量）的行挂 data-md2s-run-line：翻页笔走到该行、
+   * 常驻 REPL、逐行追加共享变量；2026-11-24 起 bash/shell/powershell 也升级为
+   * 常驻会话族，逐行=喂单行进活会话）的行挂 data-md2s-run-line：翻页笔走到该行、
    * 按 Enter，player 的 activate() 命中行并派发 click，这里接手 → 只执行该行。
-   * 一次性族（bash/shell/mysql/hive）只逐行遍历、不逐行运行——行照常挂
+   * 一次性族（mysql/hive/query）只逐行遍历、不逐行运行——行照常挂
    * run-line 但委托判定非 lineable 就忽略（翻页笔点它不运行，保留整块 ▶）。
    * 用独立属性 run-line 而非 activatable：行是内容，得进 IR/PPTX，activatable
    * 会被导出的 skipSelector 误删。
    */
-  var LINEABLE_FAMILIES = { java: 1, python: 1 };
+  var LINEABLE_FAMILIES = { java: 1, python: 1, shell: 1, powershell: 1 };
 
   /** 行（.code-line）→ 它所在的 pre + 行号（0 基） + 匹配到的 capability 块。 */
   var resolveRunLine = function (lineEl) {

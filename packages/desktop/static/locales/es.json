@@ -998,7 +998,10 @@
     "unsafeFileTitle": "Archivo potencialmente peligroso",
     "unsafeFileMessage": "Este enlace abre un archivo que puede ejecutar código",
     "unsafeFileDetail": "«{name}» es un archivo ejecutable o de script. Abrirlo podría ejecutar programas en tu equipo. Continúa solo si confías en este documento.",
-    "openAnyway": "Abrir de todos modos"
+    "openAnyway": "Abrir de todos modos",
+    "driveRootTitle": "No se puede abrir la carpeta",
+    "driveRootBody": "No se puede usar una unidad completa como lista de archivos. Seleccione una carpeta de proyecto en su interior.",
+    "driveRootWorkspaceBody": "No se puede usar una unidad completa como espacio de trabajo del curso. Seleccione una carpeta en su interior."
   },
   "error": {
     "configSchemaViolation": "Violación del esquema de configuración",
@@ -1113,7 +1116,10 @@
     "reportWorkdir": "workdir",
     "viewTable": "Table",
     "viewRaw": "Raw",
-    "rowCap": "{total} rows total (showing first {shown})"
+    "rowCap": "{total} rows total (showing first {shown})",
+    "sessionOf": "sesión {ran}/{total}",
+    "sessionStale": "obsoleto {n}",
+    "sessionReset": "Restablecer sesión (estado entre bloques borrado, se reconstruye en la próxima ejecución)"
   },
   "view": {
     "slidesView": "Slides View",

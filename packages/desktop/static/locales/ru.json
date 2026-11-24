@@ -998,7 +998,10 @@
     "unsafeFileTitle": "Потенциально небезопасный файл",
     "unsafeFileMessage": "Эта ссылка открывает файл, который может выполнять код",
     "unsafeFileDetail": "\"{name}\" — исполняемый файл или скрипт. Его открытие может запустить программы на вашем компьютере. Продолжайте только если доверяете этому документу.",
-    "openAnyway": "Всё равно открыть"
+    "openAnyway": "Всё равно открыть",
+    "driveRootTitle": "Не удалось открыть папку",
+    "driveRootBody": "Нельзя использовать весь диск как список файлов. Выберите папку проекта внутри него.",
+    "driveRootWorkspaceBody": "Нельзя использовать весь диск как рабочую область курса. Выберите папку внутри него."
   },
   "error": {
     "configSchemaViolation": "Нарушение схемы конфигурации",
@@ -1113,7 +1116,10 @@
     "reportWorkdir": "workdir",
     "viewTable": "Table",
     "viewRaw": "Raw",
-    "rowCap": "{total} rows total (showing first {shown})"
+    "rowCap": "{total} rows total (showing first {shown})",
+    "sessionOf": "сеанс {ran}/{total}",
+    "sessionStale": "устарело {n}",
+    "sessionReset": "Сбросить сеанс (состояние между блоками очищено, пересоздано при следующем запуске)"
   },
   "view": {
     "slidesView": "Slides View",

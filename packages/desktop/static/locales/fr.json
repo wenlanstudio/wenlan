@@ -998,7 +998,10 @@
     "unsafeFileTitle": "Fichier potentiellement dangereux",
     "unsafeFileMessage": "Ce lien ouvre un fichier pouvant exécuter du code",
     "unsafeFileDetail": "« {name} » est un fichier exécutable ou un script. L’ouvrir pourrait exécuter des programmes sur votre ordinateur. Ne continuez que si vous faites confiance à ce document.",
-    "openAnyway": "Ouvrir quand même"
+    "openAnyway": "Ouvrir quand même",
+    "driveRootTitle": "Impossible d’ouvrir le dossier",
+    "driveRootBody": "Un disque entier ne peut pas servir de liste de fichiers. Veuillez sélectionner un dossier de projet à l’intérieur.",
+    "driveRootWorkspaceBody": "Un disque entier ne peut pas servir d’espace de travail de cours. Veuillez sélectionner un dossier à l’intérieur."
   },
   "error": {
     "configSchemaViolation": "Violation du schéma de configuration",
@@ -1113,7 +1116,10 @@
     "reportWorkdir": "workdir",
     "viewTable": "Table",
     "viewRaw": "Raw",
-    "rowCap": "{total} rows total (showing first {shown})"
+    "rowCap": "{total} rows total (showing first {shown})",
+    "sessionOf": "session {ran}/{total}",
+    "sessionStale": "périmé {n}",
+    "sessionReset": "Réinitialiser la session (état inter-blocs effacé, reconstruit au prochain lancement)"
   },
   "view": {
     "slidesView": "Slides View",

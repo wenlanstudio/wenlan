@@ -186,7 +186,22 @@
               <span class="output-label">
                 {{ t('execPanel.output') }} · {{ langOf(selectedLine) }} L{{ selectedLine + 1 }}
               </span>
+              <!-- 会话族（java/python/shell/powershell）的 ran/total/过期 HUD：
+                   引擎 sessionRun.decorate 附带，一次性族（query/file/job…）没有。 -->
+              <span
+                v-if="sessionHudOf(selectedLine)"
+                class="session-hud"
+              >{{ sessionHudOf(selectedLine) }}</span>
               <span class="toolbar-flex" />
+              <!-- ⟳ 销毁会话：跨块状态（变量/cwd/env）归零，下次运行重建。 -->
+              <button
+                v-if="selectedIsSessionFamily && !isRunning(selectedLine)"
+                class="reset-btn"
+                :title="t('execPanel.sessionReset')"
+                @click="resetSelected"
+              >
+                ⟳
+              </button>
               <!-- query 原型带结构化行列（rows）时输出区给 表格/原文 双态，默认表格；
                    纯文本块不出开关，走原文分支。 -->
               <span
@@ -993,6 +1008,43 @@ const seqOf = (line: number): number | null => {
   return typeof seq === 'number' && seq >= 0 ? seq : null
 }
 
+// —— 会话族（2026-11-24 shell/powershell 会话化后与 java/python 同列）——
+const SESSION_FAMILIES = new Set(['java', 'python', 'shell', 'powershell'])
+
+const selectedIsSessionFamily = computed(() => {
+  const b = blocks.value.find((x) => x.line === selectedLine.value)
+  return !!b && SESSION_FAMILIES.has(b.family ?? '')
+})
+
+/** 会话 HUD：`会话 ran/total · 过期N`；一次性族无 HUD 字段，返回空串不渲染。 */
+const sessionHudOf = (line: number): string => {
+  const s = resultOf(line)?.session
+  if (!s || typeof s.ran !== 'number' || typeof s.total !== 'number') return ''
+  const base = t('execPanel.sessionOf', { ran: s.ran, total: s.total })
+  return s.stale ? `${base} · ${t('execPanel.sessionStale', { n: s.stale })}` : base
+}
+
+const resetting = ref(false)
+
+/** ⟳ 销毁所选块的族会话：跨块状态归零，清本行结果（重跑即从干净会话开始）。 */
+const resetSelected = async (): Promise<void> => {
+  const path = docPath.value
+  if (!path || selectedLine.value === null || resetting.value) return
+  resetting.value = true
+  try {
+    await window.mdcode2run.resetSession({
+      docPath: path,
+      md: props.markdown,
+      line: selectedLine.value
+    })
+    delete results.value[selectedLine.value]
+  } catch {
+    // 引擎侧 locate 失败等——静默，块的运行错误自会在下次运行时显形
+  } finally {
+    resetting.value = false
+  }
+}
+
 const langOf = (line: number): string => blocks.value.find((x) => x.line === line)?.lang ?? ''
 
 const finalOutputOf = (line: number): string => {
@@ -1427,6 +1479,26 @@ onBeforeUnmount(() => {
   background: transparent;
   color: var(--editorColor);
   cursor: pointer;
+}
+
+.session-hud {
+  color: var(--editorColor50);
+  font-size: 11px;
+}
+
+.reset-btn {
+  padding: 1px 7px;
+  border: 1px solid var(--editorColor20);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--editorColor);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.reset-btn:hover {
+  border-color: var(--editorColor40);
 }
 
 .output-text {

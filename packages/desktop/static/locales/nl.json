@@ -998,7 +998,10 @@
     "unsafeFileTitle": "Mogelijk onveilig bestand",
     "unsafeFileMessage": "Deze link opent een bestand dat code kan uitvoeren",
     "unsafeFileDetail": "\"{name}\" is een uitvoerbaar bestand of script. Het openen kan programma's op je computer uitvoeren. Ga alleen door als je dit document vertrouwt.",
-    "openAnyway": "Toch openen"
+    "openAnyway": "Toch openen",
+    "driveRootTitle": "Kan map niet openen",
+    "driveRootBody": "Een hele schijf kan niet als bestandenlijst worden gebruikt. Selecteer een projectmap erin.",
+    "driveRootWorkspaceBody": "Een hele schijf kan niet als cursuswerkruimte worden gebruikt. Selecteer een map erin."
   },
   "error": {
     "configSchemaViolation": "Configuratieschemaovertreding",
@@ -1113,7 +1116,10 @@
     "reportWorkdir": "workdir",
     "viewTable": "Table",
     "viewRaw": "Raw",
-    "rowCap": "{total} rows total (showing first {shown})"
+    "rowCap": "{total} rows total (showing first {shown})",
+    "sessionOf": "sessie {ran}/{total}",
+    "sessionStale": "verouderd {n}",
+    "sessionReset": "Sessie resetten (status tussen blokken gewist, herbouwd bij volgende run)"
   },
   "view": {
     "slidesView": "Slides View",
