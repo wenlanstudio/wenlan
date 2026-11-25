@@ -19,6 +19,13 @@ runs:
         node-version: ${{ inputs.node-version }}
         cache: 'pnpm'
 
+    # file-icons 依赖的 lockfile 项记录成 git@github.com: 的 SSH 形态（pnpm 对
+    # github: 速记的规范化产物）。runner 上没有 SSH key，fetch 直接失败；重写为
+    # HTTPS 后走匿名克隆（fetch-by-SHA 公开仓可用）。
+    - name: Rewrite git SSH URLs to HTTPS
+      shell: bash
+      run: git config --global url."https://github.com/".insteadOf "git@github.com:"
+
     - name: Install Dependencies
       shell: bash
       run: pnpm install --frozen-lockfile --ignore-scripts

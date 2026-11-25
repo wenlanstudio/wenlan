@@ -9,6 +9,11 @@
     "node": ">=20.19.0",
     "pnpm": ">=10"
   },
+  "pnpm": {
+    "overrides": {
+      "file-icons": "git+https://github.com/file-icons/atom.git#d2ead27a6e6fe5a1b65773ba090898affa40e6a0"
+    }
+  },
   "scripts": {
     "postinstall": "tsx scripts/postinstall.ts",
     "format": "prettier --write .",
