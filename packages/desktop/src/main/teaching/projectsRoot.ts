@@ -119,10 +119,7 @@ export const chooseProjectsRootForWindow = async(win: BrowserWindow): Promise<st
   if (canceled || !filePaths?.[0]) return null
 
   if (isDriveRoot(filePaths[0])) {
-    dialog.showErrorBox(
-      t('teaching.workspaceError'),
-      'A whole drive cannot be used as the course workspace. Please select a folder inside it.'
-    )
+    dialog.showErrorBox(t('teaching.workspaceError'), t('dialog.driveRootWorkspaceBody'))
     return null
   }
 

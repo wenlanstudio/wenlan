@@ -11,6 +11,7 @@ import { TITLE_BAR_HEIGHT, editorWinOptions, isLinux, isOsx, isWindows } from '.
 import { showEditorContextMenu } from '../contextMenu/editor'
 import { loadMarkdownFile, loadCliMarkdownFile } from '../filesystem/markdown'
 import { switchLanguage } from '../spellchecker'
+import { t } from '../i18n'
 import fs from 'fs'
 
 type RawMarkdownDocument = Awaited<ReturnType<typeof loadMarkdownFile>>
@@ -397,10 +398,9 @@ class EditorWindow extends BaseWindow {
 
     if (isDriveRoot(pathname)) {
       this.browserWindow?.webContents.send('mt::show-notification', {
-        title: 'Cannot open folder',
+        title: t('dialog.driveRootTitle'),
         type: 'warning',
-        message:
-          'A whole drive cannot be used as the file list. Please select a project folder inside it.'
+        message: t('dialog.driveRootBody')
       })
       return
     }

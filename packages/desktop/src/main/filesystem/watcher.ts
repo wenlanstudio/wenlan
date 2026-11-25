@@ -10,6 +10,7 @@ import { isLinux, isOsx } from '../config'
 import type { BrowserWindow } from 'electron'
 import type { LineEnding } from '@shared/types/files'
 import type Preference from '../preferences'
+import { t } from '../i18n'
 
 // TODO(refactor): Please see GH#1035.
 
@@ -211,10 +212,9 @@ class Watcher {
     if (type === 'dir' && isDriveRoot(watchPath)) {
       log.warn(`Refusing to watch a volume root: ${watchPath}`)
       win.webContents.send('mt::show-notification', {
-        title: 'Cannot open folder',
+        title: t('dialog.driveRootTitle'),
         type: 'warning',
-        message:
-          'A whole drive cannot be used as the file list. Please select a project folder inside it.'
+        message: t('dialog.driveRootBody')
       })
       return (): void => {}
     }
