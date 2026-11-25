@@ -123,7 +123,7 @@ jobs:
       # link: the junction/symlink resolves lazily at pack time. Follows the
       # default branch on purpose — the engine and this repo move in lockstep,
       # and a pinned ref is exactly how the md2slides bundle went stale.
-      - name: Clone mdcode2run (link: runtime dep)
+      - name: "Clone mdcode2run (link: runtime dep)"
         shell: bash
         run: |
           git clone --depth 1 https://github.com/wenlanstudio/mdcode2run "${{ github.workspace }}/../mdcode2run"
