@@ -72,6 +72,14 @@ jobs:
       - name: Build md2slides runtime assets
         uses: ./.github/actions/md2slides-assets
 
+      # Same as release.yml: mdcode2run is a link: dep pointing outside the
+      # repo; without cloning it here the PR installer crashes at startup.
+      - name: Clone mdcode2run (link: runtime dep)
+        shell: bash
+        run: |
+          git clone --depth 1 https://github.com/wenlanstudio/mdcode2run "${{ github.workspace }}/../mdcode2run"
+          node -e "console.log('mdcode2run resolved @', require.resolve('mdcode2run', { paths: ['packages/desktop'] }))"
+
       - name: build-linux
         if: matrix.platform == 'linux'
         run: pnpm run build:linux
