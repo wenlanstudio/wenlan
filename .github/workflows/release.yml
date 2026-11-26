@@ -253,3 +253,17 @@ jobs:
         run: gh release edit "${GITHUB_REF_NAME}" --draft=false --repo "${GITHUB_REPOSITORY}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 国内更新主线路：同一套资产镜像到 OSS（wenlanstudio-downloads），
+      # 桌面端 updateFeeds.ts 的候选链以此为第一源。密钥缺失（fork 构建）时跳过。
+      - name: Sync release assets to OSS (CN mirror)
+        env:
+          OSS_AK_ID: ${{ secrets.OSS_AK_ID }}
+          OSS_AK_SECRET: ${{ secrets.OSS_AK_SECRET }}
+        run: |
+          if [ -z "$OSS_AK_ID" ]; then
+            echo "OSS secrets not set — skipping sync"
+            exit 0
+          fi
+          python -m pip install --quiet oss2==2.19.1
+          python scripts/sync-release-to-oss.py dist

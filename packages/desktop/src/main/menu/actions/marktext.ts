@@ -4,6 +4,7 @@ import log from 'electron-log'
 import { COMMANDS } from '../../commands'
 import type { CommandManager } from '../../commands'
 import { isOsx } from '../../config'
+import { checkForUpdatesAcrossFeeds, isFeedChainRunning } from '../../updateFeeds'
 
 export const RELEASES_URL = 'https://github.com/wenlanstudio/wenlan/releases'
 
@@ -20,7 +21,9 @@ autoUpdater.on('error', (error: Error) => {
   // shape doesn't, but the same defensive code below stays in place.
   const err = error as Error | null
   const message = err === null ? 'Error: unknown' : (err.message || err).toString()
-  if (silentCheck) {
+  // 换源链进行中的中间源失败只记日志——最终失败由 checkForUpdatesAcrossFeeds
+  // 的调用方统一上报，否则用户会看到 OSS 失败的假警报（后续源可能成功）。
+  if (silentCheck || isFeedChainRunning()) {
     log.warn('[update] silent update check failed:', message)
   } else if (win) {
     win.webContents.send('mt::UPDATE_ERROR', message)
@@ -83,7 +86,17 @@ export const checkUpdates = (browserWindow: BrowserWindow | null): void => {
   if (!runningUpdate) {
     runningUpdate = true
     win = browserWindow
-    autoUpdater.checkForUpdates()
+    // 多源链：OSS → GitHub → gh-proxy（last-good 优先）。成功路径的收尾
+    // （available / not-available 通知与旗标复位）由既有事件监听负责；
+    // 这里只兜全部源都失败时的最终上报。
+    checkForUpdatesAcrossFeeds().then((result) => {
+      if (!result.ok) {
+        runningUpdate = false
+        if (win) {
+          win.webContents.send('mt::UPDATE_ERROR', `Error: ${result.error.message}`)
+        }
+      }
+    })
   }
 }
 
@@ -96,13 +109,12 @@ export const checkUpdatesSilently = (browserWindow: BrowserWindow | null): void 
   runningUpdate = true
   silentCheck = true
   win = browserWindow
-  autoUpdater.checkForUpdates().catch((err: unknown) => {
-    log.warn(
-      '[update] silent update check failed:',
-      err instanceof Error ? err.message : String(err)
-    )
-    runningUpdate = false
-    silentCheck = false
+  checkForUpdatesAcrossFeeds().then((result) => {
+    if (!result.ok) {
+      log.warn('[update] silent update check failed:', result.error.message)
+      runningUpdate = false
+      silentCheck = false
+    }
   })
 }
 
