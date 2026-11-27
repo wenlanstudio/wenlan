@@ -174,6 +174,7 @@ jobs:
     name: Publish GitHub Release
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     # Per-job permissions REPLACE workflow-level ones, so re-declare
     # both: contents:write to publish the release, actions:read for
     # download-artifact's Actions API calls.
@@ -266,4 +267,11 @@ jobs:
             exit 0
           fi
           python -m pip install --quiet oss2==2.19.1
-          python scripts/sync-release-to-oss.py dist
+          for attempt in 1 2 3; do
+            echo "=== OSS sync attempt $attempt ==="
+            if timeout 1200 python scripts/sync-release-to-oss.py dist; then
+              exit 0
+            fi
+            echo "attempt $attempt failed or timed out"
+          done
+          exit 1

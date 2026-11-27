@@ -1,0 +1,84 @@
+name: Sync release assets to OSS
+
+# 手动补传镜像：发布 job 的 OSS 同步偶发卡在大文件上传时，用这个 workflow
+# 从已发布的 GitHub Release 重新下载资产并续传，不需要重跑发版或挪 tag。
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '已发布的 release tag，例如 v1.2.0'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Mirror ${{ inputs.version }} to OSS
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v7.0.1
+
+      - name: Install Python 3.12
+        uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          gh release download "$VERSION" --repo "$GITHUB_REPOSITORY" --dir dist --clobber
+          echo "--- downloaded assets ---"
+          ls -lh dist
+
+      - name: Install oss2
+        run: python -m pip install --quiet oss2==2.19.1
+
+      - name: Sync to OSS (timeout + retry)
+        env:
+          OSS_AK_ID: ${{ secrets.OSS_AK_ID }}
+          OSS_AK_SECRET: ${{ secrets.OSS_AK_SECRET }}
+        run: |
+          if [ -z "$OSS_AK_ID" ]; then
+            echo "OSS secrets not set"
+            exit 1
+          fi
+          for attempt in 1 2 3; do
+            echo "=== OSS sync attempt $attempt ==="
+            if timeout 1200 python scripts/sync-release-to-oss.py dist; then
+              exit 0
+            fi
+            echo "attempt $attempt failed or timed out"
+          done
+          exit 1
+
+      - name: Verify OSS mirror
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          V="${VERSION#v}"
+          base='https://wenlanstudio-downloads.oss-cn-qingdao.aliyuncs.com'
+          while IFS= read -r name; do
+            case "$name" in
+              wenlan-win-*|latest.yml) dir=win ;;
+              wenlan-mac-*|latest-mac.yml) dir=mac ;;
+              wenlan-linux-*|latest-linux.yml) dir=linux ;;
+              SHA256SUMS.txt) dir='' ;;
+              *) continue ;;
+            esac
+            url="$base/${dir:+$dir/}$name"
+            curl -fsSI -m 30 "$url" >/dev/null || { echo "MISSING $url"; exit 1; }
+            echo "OK $url"
+          done < <(cd dist && find . -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort)
+          for feed in win/latest.yml mac/latest-mac.yml linux/latest-linux.yml; do
+            grep -q "version: $V" <(curl -fsSL -m 30 "$base/$feed") || {
+              echo "$feed does not point to $V"
+              exit 1
+            }
+            echo "OK $feed -> $V"
+          done
