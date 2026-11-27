@@ -914,6 +914,26 @@ const onMessage = (ev: MessageEvent): void => {
     case 'md2s:exec':
       void onExecRequest(data as unknown as { reqId: string; line: number; lineOffset?: number })
       break
+    case 'md2s:exec-reset': {
+      // 两栏活格（`python short`，2026-11-26 定稿）：▶ 整块 = 先重置会话再逐行回放
+      // （防 df=df.dropna() 这类非幂等行连跑两遍翻车）。引擎重建后 sessionRun 会自动
+      // 重跑引导块（签名清零），普通块的变量从第 0 行重新累积——notebook Run All 语义。
+      // 完了回 exec-reset-done：页侧 sweep 等回执再逐行（重置是异步 IPC，抢跑会和
+      // 引擎的会话重建竞速——首行 acquire 到旧会话、reset 一刀杀掉，全格收错误）。
+      const line = Number((data as { line?: unknown }).line)
+      const docPath = pathname.value
+      const run = async (): Promise<void> => {
+        if (!docPath || !Number.isFinite(line)) return
+        try {
+          await window.mdcode2run.resetSession({ docPath, md: props.markdown, line })
+        } catch {
+          /* 重置失败不拦 sweep：最坏是活会话上的 Run All（notebook 同款语义） */
+        }
+        postToDeck({ type: 'md2s:exec-reset-done' })
+      }
+      void run()
+      break
+    }
     case 'md2s:exec-stop':
       onExecStop(data as unknown as { jobId: string })
       break

@@ -234,8 +234,27 @@
    * run-line 但委托判定非 lineable 就忽略（翻页笔点它不运行，保留整块 ▶）。
    * 用独立属性 run-line 而非 activatable：行是内容，得进 IR/PPTX，activatable
    * 会被导出的 skipSelector 误删。
+   *
+   * ── 两栏活格（`python short`，2026-11-27 v2 定稿）──────────────────────
+   * 构建期 pre 收窄为左列（kit/shortCode v2，不注入任何格子——无输出行零占用），
+   * 右侧留白是版面的一部分。放映期本桥在页内造**绝对定位结果浮层**
+   * （.md2s-short-zone，盖在留白上，不改文档流 → 页几何恒定），每行执行结果
+   * 落成一张 .md2s-short-res 卡片：按内容自适配、自上而下堆叠、超留白区按份
+   * 压帽；无输出的行只落一枚压缩到行高的「✓ 已执行」薄卡（有输出的利用无输出
+   * 的空间——用户裁决 2026-11-27）。▶ 整块 = sweep：清浮层后从第 0 行依次喂
+   * 引擎、结果逐卡落位。matchBlock 的内容匹配只读行 span（跑过之后
+   * code.textContent 若混入卡片文本会连不上块——short 块按行拼回原文）。
    */
   var LINEABLE_FAMILIES = { java: 1, python: 1, shell: 1, powershell: 1 };
+
+  /** short 块的行文本按行 span 拼（卡片在浮层里、不在 code 内，通常无需兜底）。 */
+  var codeTextOf = function (code) {
+    var spans = code.querySelectorAll(".code-line");
+    if (!spans.length) return code.textContent;
+    var parts = [];
+    for (var i = 0; i < spans.length; i++) parts.push(spans[i].textContent);
+    return parts.join("\n");
+  };
 
   /** 行（.code-line）→ 它所在的 pre + 行号（0 基） + 匹配到的 capability 块。 */
   var resolveRunLine = function (lineEl) {
@@ -248,22 +267,291 @@
     if (idx < 0) return null;
     var srcLine = Number(pre.getAttribute("data-src-start"));
     if (!isFinite(srcLine) || srcLine <= 0) srcLine = 1;
-    var block = matchBlock(capability.blocks, code.textContent, srcLine - 1);
+    var block = matchBlock(capability.blocks, codeTextOf(code), srcLine - 1);
     if (!block) return null;
-    return { block: block, lineOffset: idx };
+    return { block: block, lineOffset: idx, pre: pre, lineEl: lineEl };
+  };
+
+  /* ── 结果浮层（两栏活格专用）──────────────────────────────────────────
+   * 每个改造块一区（zone = section 内绝对定位，盖在 pre 右侧留白上）。卡片状态
+   * 类：md2s-short-busy（脉冲）/ -done（跑过；空结果=✓ 薄卡）/ -error（红字）/
+   * -cur（当前行结果全亮，A 模式聚焦淡化）。 */
+  var zoneOf = function (pre) {
+    var sec = pre.closest ? pre.closest("section") : null;
+    if (!sec) return null;
+    var tag = String(Number(pre.getAttribute("data-src-start")) || 0);
+    var zone = sec.querySelector(":scope > .md2s-short-zone[data-pre-md2s-line='" + tag + "']");
+    if (!zone) {
+      zone = document.createElement("div");
+      zone.className = "md2s-short-zone";
+      zone.setAttribute("data-pre-md2s-line", tag);
+      try {
+        if (window.getComputedStyle(sec).position === "static") sec.style.position = "relative";
+      } catch (e) { sec.style.position = "relative"; }
+      sec.appendChild(zone);
+    }
+    // 几何每次重算（幂等）：decorate 时块所在页多半 display:none（rect 全 0），
+    // 只能等页可见后的首次运行/翻页来标定——量不到就保留旧值，绝不写 0。
+    var secRect = sec.getBoundingClientRect();
+    var preRect = pre.getBoundingClientRect();
+    if (preRect.width > 0 && secRect.width > 0) {
+      var ratio = secRect.width > 0 && sec.clientWidth > 0 ? secRect.width / sec.clientWidth : 1;
+      var cs = window.getComputedStyle(sec);
+      var padR = parseFloat(cs.paddingRight) || 0;
+      var padB = parseFloat(cs.paddingBottom) || 0;
+      zone.style.left = (preRect.right - secRect.left) / ratio + 28 + "px";
+      zone.style.top = (preRect.top - secRect.top) / ratio + "px";
+      zone.style.right = (padR + 6) + "px";
+      zone.style.bottom = (padB + 6) + "px";
+    }
+    return zone;
+  };
+
+  var SHORT_MAX_TEXT = 400;
+
+  /** 无输出行（import/赋值）的「已执行」落点在左列行尾（✓ 角标），右侧零占用
+   *  ——用户裁决 2026-11-27：无输出行不配在右边占空间，有输出的利用无输出的空间。 */
+  var markLineDone = function (hit) {
+    if (hit.lineEl) hit.lineEl.classList.add("md2s-line-done");
+  };
+  var clearLineDone = function (pre) {
+    Array.prototype.forEach.call(pre.querySelectorAll(".code-line.md2s-line-done"), function (el) {
+      el.classList.remove("md2s-line-done");
+    });
+  };
+
+  /** 卡片按行号有序插入（行序 = 语义序）；已有同线卡则复用。 */
+  var cardOf = function (zone, lineIdx) {
+    var found = zone.querySelector(".md2s-short-res[data-line='" + lineIdx + "']");
+    if (found) return found;
+    var card = document.createElement("div");
+    card.className = "md2s-short-res";
+    card.setAttribute("data-line", String(lineIdx));
+    // 豁免属性（kit/shortCode.CELL_ATTR 同字面量）：IR skipSelector 与图片导出
+    // 隐藏都认它——卡片是放映期 UI，导出必须零渗漏。
+    card.setAttribute("data-md2s-short-cell", "");
+    // v2.2：不放「行 N」章——卡片顺序即行序，chip 白占高度（用户裁决）。
+    var out = document.createElement("span");
+    out.className = "md2s-short-out";
+    card.appendChild(out);
+    var next = null;
+    var cards = zone.querySelectorAll(".md2s-short-res[data-line]");
+    for (var i = 0; i < cards.length; i++) {
+      if (Number(cards[i].getAttribute("data-line")) > lineIdx) { next = cards[i]; break }
+    }
+    zone.insertBefore(card, next);
+    return card;
+  };
+
+  /** 卡片回填：状态类 -busy/-done/-error、A 模式聚焦淡化（当前行卡片全亮）、
+   *  表格分支优先（引擎对 kind=table 也带 images[0]，figure 判定必须排后——
+   *  真机首跑抓过表格被拦成「已出图」注记）、文本截断。 */
+  var fillCard = function (zone, lineIdx, result) {
+    var card = cardOf(zone, lineIdx);
+    var out = card.querySelector(".md2s-short-out");
+    card.classList.remove("md2s-short-busy", "md2s-short-error");
+    Array.prototype.forEach.call(zone.querySelectorAll(".md2s-short-res"), function (c) {
+      c.classList.toggle("md2s-short-cur", c === card);
+    });
+    out.textContent = "";
+    out.innerHTML = "";
+    if (!result) { packZone(zone); return }
+    if (!result.ok) {
+      card.classList.add("md2s-short-error");
+      var msg = String(result.error || "执行失败").split("\n").pop() || "执行失败";
+      out.textContent = msg.length > SHORT_MAX_TEXT ? msg.slice(0, SHORT_MAX_TEXT) + "…" : msg;
+      card.classList.add("md2s-short-done");
+      packZone(zone);
+      return;
+    }
+    card.classList.add("md2s-short-done");
+    if (result.rows && (result.rows.columns || []).length) {
+      // 表格走**原生 HTML**（引擎出规格不画图，matplotlib 依赖解除——2026-11-27
+      // 用户裁决）。renderTable 与 ▶ 面板同源；行数帽 8，超出部分靠 tfoot 计数。
+      var tbl = renderTable(result.rows, 8);
+      tbl.classList.add("md2s-short-table");
+      out.appendChild(tbl);
+      if (result.note) {
+        var tn = document.createElement("div");
+        tn.className = "md2s-short-note";
+        tn.textContent = result.note;
+        out.appendChild(tn);
+      }
+      packZone(zone);
+      return;
+    }
+    if (result.kind === "table" && (result.images || []).length === 1) {
+      // 老引擎兜底（PNG 表格）：解码异步，onload 再排一次。
+      var img = document.createElement("img");
+      img.src = result.images[0];
+      img.onload = function () { packZone(zone) };
+      out.appendChild(img);
+      packZone(zone);
+      return;
+    }
+    if (result.kind === "figure" || (result.images || []).length) {
+      var fig = document.createElement("span");
+      fig.className = "md2s-short-fig";
+      fig.textContent = "已出图 ×" + ((result.images || []).length || 1) + "（面板查看）";
+      out.appendChild(fig);
+      packZone(zone);
+      return;
+    }
+    var text = String(result.text || result.stdout || "").trim();
+    if (text) {
+      out.textContent = text.length > SHORT_MAX_TEXT
+        ? text.slice(0, SHORT_MAX_TEXT) + "\n…" : text;
+    }
+    packZone(zone);
+  };
+
+  /** 结果分配（内容感知，2026-11-27 用户裁决「有输出的利用无输出的空间」）：
+   *  浮层里只有内容卡（无输出行零占用——✓ 在左列行尾）；文本卡给自然高（封顶
+   *  ~3.5 行）；表格卡按「满宽时的自然显示高」申报需求——总需求 ≤ 留白区就原样
+   *  给（留白优先，绝不硬撑），超了才按比例缩；再按真实溢出二次收敛两轮——
+   *  「绝不裁内容、绝不撑页」不靠猜，靠量。 */
+  var packZone = function (zone) {
+    var cards = Array.prototype.slice.call(zone.querySelectorAll(".md2s-short-res"));
+    if (!cards.length) return;
+    var H = zone.clientHeight;
+    if (H <= 0) return;
+    var rowGap = parseFloat(window.getComputedStyle(zone).rowGap) || 0;
+    var used = rowGap * Math.max(0, cards.length - 1);   // 卡间距是真实开销
+    var wants = [];
+    Array.prototype.forEach.call(cards, function (c) {
+      var out = c.querySelector(".md2s-short-out");
+      if (!out) return;
+      var img = out.querySelector("img");
+      var tbl = out.querySelector("table");
+      var natural;
+      if (img) {
+        natural = img.naturalHeight > 0 && img.naturalWidth > 0
+          ? Math.round(out.clientWidth * img.naturalHeight / img.naturalWidth)
+          : 120;
+      } else if (tbl) {
+        // 表格卡：自然内容高（scrollHeight 含被 maxHeight 钳住的部分），帽 600 防失控
+        natural = Math.min(out.scrollHeight, 600);
+      } else {
+        natural = Math.min(Math.max(out.scrollHeight, 20), 84);   // 文本卡封顶 ~3.5 行
+      }
+      wants.push({
+        card: c, out: out, img: img, tbl: !!tbl,
+        natural: Math.max(40, natural),
+        chrome: 12,   // 无 chip（v2.2）：只剩卡内边距+边框
+      });
+    });
+    var chromeSum = 0;
+    var sum = 0;
+    Array.prototype.forEach.call(wants, function (w) {
+      chromeSum += w.chrome;
+      sum += w.natural;
+    });
+    var avail = Math.max(120, H - used - chromeSum);
+    var k = sum > avail ? avail / sum : 1;   // 超了才缩；不超原样给（留白优先）
+    Array.prototype.forEach.call(wants, function (w) {
+      var cap = Math.max(40, Math.floor(w.natural * k));
+      if (w.tbl) {
+        // 表格卡：out 定高盒，表 height:100% 撑满（行随高均摊，满卡观感）
+        w.out.style.height = cap + "px";
+        w.out.style.maxHeight = cap + "px";
+      } else {
+        w.out.style.maxHeight = cap + "px";
+        if (w.img) w.img.style.maxHeight = Math.max(24, cap - 4) + "px";
+      }
+    });
+    // 二次实测收敛：常数估不准的部分用真实溢出量等比收掉，三轮封顶。削减只从
+    // 可收缩卡（maxHeight 高于地板）扣——已到地板的卡（一行文本）扣不动，摊派
+    // 给它们只会白轮空转、把贴底裁切留着（真机行6 抓到）。
+    // 溢出即标 clipped（CSS 底部渐隐）——「下面还有」比硬裁半行体面。
+    var markClipped = function () {
+      zone.querySelectorAll(".md2s-short-res").forEach(function (c) { c.classList.remove("md2s-short-clipped") });
+      zone.querySelectorAll(".md2s-short-res").forEach(function (c) {
+        var o = c.querySelector(".md2s-short-out");
+        if (o && o.scrollHeight > o.clientHeight + 1) c.classList.add("md2s-short-clipped");
+      });
+    };
+    try { markClipped() } catch (e) {}
+    for (var round = 0; round < 3 && zone.scrollHeight > zone.clientHeight + 1; round++) {
+      var over = zone.scrollHeight - zone.clientHeight;
+      var shrinkable = wants.filter(function (w) {
+        return (parseInt(w.out.style.maxHeight, 10) || 0) > 40;
+      });
+      if (!shrinkable.length) break;
+      var cut = Math.ceil(over / shrinkable.length);
+      Array.prototype.forEach.call(shrinkable, function (w) {
+        var cur = parseInt(w.out.style.maxHeight, 10) || 0;
+        var next = Math.max(40, cur - cut);
+        w.out.style.maxHeight = next + "px";
+        if (w.tbl) w.out.style.height = next + "px";
+        if (w.img) w.img.style.maxHeight = Math.max(30, next - 4) + "px";
+      });
+      try { markClipped() } catch (e) {}
+    }
+    try { markClipped() } catch (e) {}
+  };
+
+  /** short 块的 sweep 状态：整块 ▶ 点下后逐行喂引擎，行序即语义序。 */
+  var sweep = null;  // { block, pre, zone, els, i }
+
+  /** 行级执行的统一入口：short 块（有浮层）→ busy 卡 + 结果回填；无输出行 →
+   *  撤卡、左列行尾 ✓；非 short 块（java 等 stepLines 行）→ 维持现契约（▶ 面板）。
+   *  onDone 供 sweep 步进。 */
+  var runOneLine = function (hit, onDone) {
+    var pre = hit.pre || (hit.lineEl && hit.lineEl.closest("pre"));
+    var zone = pre && pre.classList.contains("md2s-short") ? zoneOf(pre) : null;
+    if (!zone) {
+      startRun(hit.block.line, hit.block.lang, hit.lineOffset);
+      if (onDone) onDone();
+      return;
+    }
+    var card = cardOf(zone, hit.lineOffset);
+    card.classList.add("md2s-short-busy");
+    card.classList.remove("md2s-short-done", "md2s-short-error");
+    var busyOut = card.querySelector(".md2s-short-out");
+    if (busyOut) { busyOut.textContent = ""; busyOut.innerHTML = ""; }
+    startRun(hit.block.line, hit.block.lang, hit.lineOffset, function (result) {
+      var hasContent = !!result && (
+        !result.ok ||
+        (String(result.text || "").trim() !== "" ||
+          String(result.stdout || "").trim() !== "" ||
+          (result.images || []).length > 0 ||
+          (result.rows && (result.rows.columns || []).length > 0))
+      );
+      if (!hasContent) {
+        // 无输出（import / 赋值行）：撤卡 + 左列行尾 ✓——右侧只留有输出的卡。
+        markLineDone(hit);
+        if (card.parentElement) card.remove();
+      } else {
+        hit.lineEl && hit.lineEl.classList.remove("md2s-line-done");
+        fillCard(zone, hit.lineOffset, result);
+      }
+      if (onDone) onDone(result);
+    });
   };
 
   var onRunLineClick = function (ev) {
     var lineEl = ev.target && ev.target.closest ? ev.target.closest("[data-md2s-run-line]") : null;
-    if (!lineEl || !capability.enabled) return;
+    if (!lineEl || !capability.enabled) { console.warn("[exec-click] 早退: enabled=" + capability.enabled + " lineEl=" + !!lineEl); return }
+    if (!lineEl.classList || !lineEl.classList.contains("code-line")) { console.warn("[exec-click] 早退: 非code-line"); return }
     var hit = resolveRunLine(lineEl);
-    if (!hit) return;
+    if (!hit) { console.warn("[exec-click] 早退: resolveRunLine null"); return }
     // 只有会话族（有常驻 REPL、共享变量）才逐行运行；一次性族点行不运行。
-    if (!LINEABLE_FAMILIES[hit.block.family]) return;
+    if (!LINEABLE_FAMILIES[hit.block.family]) { console.warn("[exec-click] 早退: family=" + hit.block.family); return }
     ev.stopPropagation();
-    startRun(hit.block.line, hit.block.lang, hit.lineOffset);
+    if (sweep) { console.warn("[exec-click] 早退: sweep 进行中"); return }
+    if (activeRun) { console.warn("[exec-click] 早退: activeRun 面板流"); return }
+    runOneLine(hit);
   };
   document.addEventListener("click", onRunLineClick, true);
+
+  // 页翻到可见的那一刻重标定浮层几何（deck-full-entry 的 onChange 派发）：decorate
+  // 时块多半在隐藏页量不到（rect 全 0），zoneOf 对量不到的页保留旧值、这里补一刀。
+  window.addEventListener("md2s-page-shown", function () {
+    if (!capability.enabled) return;
+    Array.prototype.forEach.call(document.querySelectorAll("pre.md2s-short"), function (pre) {
+      try { zoneOf(pre) } catch (e) { /* 几何标定失败不拦放映 */ }
+    });
+  });
 
   var decorate = function (cap) {
     capability = {
@@ -285,15 +573,26 @@
       if (!isFinite(n) || n <= 0) return;
       // composed 口径的 0 基行号：只作消歧提示与兜底（见 matchBlock）。
       var line = n - 1;
-      // 内容优先连接：续片是整行子串，整块是全等（#18 坐标系错位修复）。
-      var b = matchBlock(blocks, code.textContent, line);
+      // 内容优先连接（#18 坐标系错位修复）。codeTextOf：short 块跑过之后
+      // code.textContent 会混进格子里的回填文本——按行 span 拼回纯源码再匹配。
+      var b = matchBlock(blocks, codeTextOf(code), line);
       if (!b) return;
       try {
         if (window.getComputedStyle(pre).position === "static") pre.style.position = "relative";
       } catch (e) { pre.style.position = "relative"; }
 
-      pre.appendChild(makeBtn("", "▶", "运行完整代码块（不受分页切片影响；聚焦后按 Enter 也可触发）",
-        function () { startRun(b.line, b.lang); }));
+      // 两栏活格（short）：▶ = sweep 逐行喂引擎、结果逐卡落进右侧留白浮层（与
+      // Enter 逐行同语义，一次点完整个短 demo）；非 short 块维持现契约（整块执行
+      // + 结果面板）。浮层随装饰即造（几何按页实测，重建换 DOM 后重造）。
+      var shorted = pre.classList.contains("md2s-short");
+      if (shorted) zoneOf(pre);
+      pre.appendChild(makeBtn("", "▶",
+        shorted
+          ? "逐行运行整个短代码块：每行依次执行、结果落进右侧留白（共享会话变量）"
+          : "运行完整代码块（不受分页切片影响；聚焦后按 Enter 也可触发）",
+        shorted
+          ? function () { startSweep(b, pre) }
+          : function () { startRun(b.line, b.lang) }));
       injected += 1;
     });
     // 装饰后必须重建步进表，否则 ▶ 进不了翻页笔的步序列。
@@ -558,8 +857,37 @@
     post(msg);
   };
 
-  var startRun = function (line, lang, lineOffset) {
+  /* 行级执行（两栏活格）：结果进格子，不开面板。activeLine 与 activeRun（面板流）
+   * 共用 md2s:exec-result / exec-error 通道——结果路由先查 activeRun、再查 activeLine。 */
+  var activeLine = null;   // { reqId, onResult }
+
+  var beginLineExec = function (line, lang, lineOffset, onResult) {
+    var reqId = "e" + (++reqSeq);
+    activeLine = { reqId: reqId, onResult: onResult };
+    post({
+      type: "md2s:exec", reqId: reqId, docPath: capability.docPath,
+      line: line, lineOffset: lineOffset,
+    });
+  };
+
+  var startRun = function (line, lang, lineOffset, onResult) {
     closeOverlay();
+    // 行级（lineOffset + 回调）：结果回填格子（fillCell），不建结果面板。
+    if (lineOffset != null && typeof onResult === "function") {
+      if (!isConfirmed(capability.docPath)) {
+        // 首次运行确认复用面板；确认即关面板、继续行级执行。
+        var o = createOverlay("▶ 逐行运行", lang);
+        overlay = o;
+        showConfirm(o, function () {
+          markConfirmed(capability.docPath);
+          closeOverlay();
+          beginLineExec(line, lang, lineOffset, onResult);
+        });
+        return;
+      }
+      beginLineExec(line, lang, lineOffset, onResult);
+      return;
+    }
     var o = createOverlay(lineOffset == null ? "▶ 运行" : "▶ 逐行运行", lang);
     overlay = o;
     var reqId = "e" + (++reqSeq);
@@ -575,6 +903,60 @@
       o.setStatus("运行中…", "md2s-exec-busy");
       beginExec(reqId);
     }
+  };
+
+  /* short 块 ▶ = sweep：先经宿主重置会话（定稿 2026-11-26：整块重跑=清空命名空间
+   * 从头回放，防 df=df.dropna() 非幂等行连跑两遍；引擎重建后 sessionRun 自动重跑
+   * 引导块），收到 exec-reset-done 回执再逐行喂引擎、结果逐格落位（与逐行 Enter
+   * 同语义——赋值行 ✓、表达式行落结果）。空行跳过（引擎对空行报错，空行没有
+   * 教学内容）。重建换 DOM 时（pre 断连）中止。 */
+  var resetPending = null;   // sweep 等待重置回执的放行回调
+
+  var startSweep = function (block, pre) {
+    if (sweep) return;
+    var begin = function () {
+      // 重置是异步 IPC：等回执再跑，别和引擎的会话重建竞速（1.5s 兜底放行——
+      // 宿主旧版本没有回执也不至于卡死）。
+      post({ type: "md2s:exec-reset", line: block.line });
+      resetPending = function () { resetPending = null; doSweep(block, pre) };
+      setTimeout(function () {
+        if (resetPending) { resetPending = null; doSweep(block, pre) }
+      }, 1500);
+    };
+    if (!isConfirmed(capability.docPath)) {
+      var o = createOverlay("▶ 运行", block.lang);
+      overlay = o;
+      showConfirm(o, function () {
+        markConfirmed(capability.docPath);
+        closeOverlay();
+        begin();
+      });
+      return;
+    }
+    begin();
+  };
+
+  var doSweep = function (block, pre) {
+    var els = pre.querySelectorAll(".code-line");
+    if (!els.length) return;
+    var zone = zoneOf(pre);
+    if (!zone) return;
+    // 重放从清零开始（reset-session 之后命名空间归零）：卡片撤光、行尾 ✓ 清光。
+    zone.innerHTML = "";
+    clearLineDone(pre);
+    sweep = { block: block, pre: pre, els: els, i: 0 };
+    var step = function () {
+      if (!sweep || !pre.isConnected) { sweep = null; return }
+      var i = sweep.i;
+      // 空行跳过：不给引擎喂（喂了只会收一条「该行为空」的错误），也不落卡。
+      while (i < els.length && !els[i].textContent.trim()) i += 1;
+      if (i >= els.length) { sweep = null; return }
+      sweep.i = i + 1;   // 先占位：回调里再步进（防 runOneLine 同步抛错重入）
+      var hit = resolveRunLine(els[i]);
+      if (!hit || !LINEABLE_FAMILIES[hit.block.family]) { step(); return }
+      runOneLine(hit, function () { if (sweep) { sweep.i = Math.max(sweep.i, i + 1); step() } });
+    };
+    step();
   };
 
   // ── 结果渲染 ────────────────────────────────────────────────────────────
@@ -630,6 +1012,12 @@
     });
     if (result.rows && result.rows.columns && result.rows.columns.length) {
       body.appendChild(renderTable(result.rows));
+      if (result.note) {
+        var rn = document.createElement("pre");
+        rn.className = "md2s-exec-note";
+        rn.textContent = result.note;
+        body.appendChild(rn);
+      }
     }
     var note = stripVarEcho(result.text || "");
     if (note.trim()) {
@@ -690,6 +1078,17 @@
   };
 
   var handleResult = function (reqId, result) {
+    // 行级（两栏活格）：结果进卡片回调（fillCard），不碰面板。回调异常不能吞——
+    // 吞了卡片就永远停在 busy（v2.1 真机抓过），console 留痕 + 卡片落错误态。
+    var lr = activeLine;
+    if (lr && lr.reqId === reqId) {
+      activeLine = null;
+      try { lr.onResult?.(result) } catch (e) {
+        console.warn("[exec-present] 行级回填异常：", e && (e.stack || e.message) || e);
+        try { lr.onResult?.({ ok: false, kind: "none", text: "", error: "回填异常：" + (e && e.message || e) }) } catch (e2) { /* 尽力而为 */ }
+      }
+      return;
+    }
     var r = activeRun;
     if (!r || r.reqId !== reqId || !overlay || !result) return;
     var o = overlay;
@@ -741,6 +1140,13 @@
   };
 
   var handleError = function (reqId, message) {
+    // 行级：错误也进格子回调（fillCell 红字），不碰面板。
+    var lr = activeLine;
+    if (lr && lr.reqId === reqId) {
+      activeLine = null;
+      try { lr.onResult?.({ ok: false, kind: "none", text: "", error: String(message || "执行失败") }) } catch (e) { /* 同上 */ }
+      return;
+    }
     var r = activeRun;
     if (!r || r.reqId !== reqId || !overlay) return;
     overlay.done = true;
@@ -1066,8 +1472,16 @@
         break;
       case "md2s:exec-capability":
         // 重建（改字 / 换主题）会换掉整份 DOM 与 section 引用：丢掉旧浮层再装饰。
+        // sweep/行级回调也一并作废（doSweep 的 pre.isConnected 查询会兜住其余）。
         closeOverlay();
+        sweep = null;
+        resetPending = null;
+        activeLine = null;
         decorate(d);
+        break;
+      case "md2s:exec-reset-done":
+        // sweep 的会话重置回执：放行逐行回放。
+        if (resetPending) { var go = resetPending; resetPending = null; go(); }
         break;
       case "md2s:exec-state":
         handleState(d.reqId, d.event);
