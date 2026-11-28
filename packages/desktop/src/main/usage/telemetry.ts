@@ -8,7 +8,7 @@ const STARTUP_DELAY_MS = 30_000
 const REQUEST_TIMEOUT_MS = 5_000
 const MAX_PENDING = 10
 const USAGE_ENDPOINT =
-  process.env.WENLAN_USAGE_ENDPOINT ?? 'https://REPLACE_ME.service.tcloudbase.com/usage'
+  process.env.WENLAN_USAGE_ENDPOINT ?? 'https://wenlan-usage.wenlanstudio.workers.dev/usage'
 
 interface UsageEvent {
   installId: string
@@ -34,7 +34,7 @@ const localDay = (): string => {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
-const postEvent = async (event: UsageEvent): Promise<void> => {
+const postEvent = async(event: UsageEvent): Promise<void> => {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
   try {
@@ -52,7 +52,7 @@ const postEvent = async (event: UsageEvent): Promise<void> => {
   }
 }
 
-const sendWithRetryQueue = async (store: Store<UsageStore>, event: UsageEvent): Promise<void> => {
+const sendWithRetryQueue = async(store: Store<UsageStore>, event: UsageEvent): Promise<void> => {
   try {
     await postEvent(event)
   } catch (err) {
