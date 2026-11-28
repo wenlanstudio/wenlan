@@ -44,16 +44,43 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler d1 execute wenlan-usage --remote --file=schema.sql
 
+      - name: Ensure workers.dev subdomain
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain"
+          sub=$(curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api" | jq -r '.result.subdomain // empty')
+          if [ -z "$sub" ]; then
+            for candidate in "wenlanstudio" "wenlanstudio-${CLOUDFLARE_ACCOUNT_ID:0:8}"; do
+              code=$(curl -sS -o subdomain.json -w '%{http_code}' -X PUT \
+                -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+                -H 'Content-Type: application/json' \
+                --data "{\"subdomain\":\"$candidate\"}" "$api")
+              if [ "$code" = "200" ]; then
+                sub="$candidate"
+                break
+              fi
+            done
+          fi
+          if [ -z "$sub" ]; then
+            echo "workers.dev subdomain unavailable"
+            exit 1
+          fi
+          echo "SUBDOMAIN=$sub" >> "$GITHUB_ENV"
+
       - name: Deploy worker
         working-directory: services/telemetry-worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler deploy 2>&1 | tee deploy.log
-
-      - name: Show endpoint
-        working-directory: services/telemetry-worker
         run: |
-          url=$(grep -oE 'https://[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev' deploy.log | head -n 1)
-          echo "Telemetry endpoint: ${url}/usage" | tee -a "$GITHUB_STEP_SUMMARY"
-          echo "TELEMETRY_ENDPOINT=${url}/usage" >> "$GITHUB_ENV"
+          set -o pipefail
+          npx wrangler deploy 2>&1 | tee deploy.log
+
+      - name: Verify endpoint
+        run: |
+          endpoint="https://wenlan-usage.${SUBDOMAIN}.workers.dev/usage"
+          echo "Telemetry endpoint: $endpoint" | tee -a "$GITHUB_STEP_SUMMARY"
+          curl -sS -o /dev/null -w 'HTTP %{http_code}\n' -m 20 \
+            -X POST -H 'Content-Type: application/json' --data '{}' "$endpoint"
