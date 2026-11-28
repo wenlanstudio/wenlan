@@ -14,6 +14,7 @@ export const DEFAULT_PLANTUML_SERVER = 'https://www.plantuml.com/plantuml'
 
 export interface IUserPreferences {
   autoSave?: boolean
+  telemetryEnabled?: boolean
   autoSaveDelay?: number
   titleBarStyle?: 'custom' | 'native'
   openFilesInNewWindow?: boolean

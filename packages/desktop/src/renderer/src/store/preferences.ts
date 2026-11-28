@@ -23,6 +23,7 @@ export type FileSortOrder = 'asc' | 'desc'
 export interface PreferencesState {
   // ----- General -----
   autoSave: boolean
+  telemetryEnabled: boolean
   autoSaveDelay: number
   titleBarStyle: TitleBarStyle | string
   openFilesInNewWindow: boolean
@@ -151,6 +152,7 @@ export const usePreferencesStore = defineStore('preferences', {
   state: (): PreferencesState => ({
     // Typora 习惯：编辑即保存，不弹未保存提示。
     autoSave: true,
+    telemetryEnabled: true,
     autoSaveDelay: 5000,
     titleBarStyle: 'custom',
     // Typora 式一文件一窗口（#30）：单实例锁防多进程，多窗口由本开关承接；

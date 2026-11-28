@@ -19,6 +19,7 @@ import registerSpellcheckerListeners from '../spellchecker'
 import { watchers } from '../utils/imagePathAutoComplement'
 import { onInternalChannel } from '../utils/internalIpc'
 import { scheduleStartupUpdateCheck } from '../updateStartup'
+import { scheduleUsageTelemetry } from '../usage/telemetry'
 import type { HelpSection } from '../windows/help'
 import { WindowType } from '../windows/base'
 import EditorWindow from '../windows/editor'
@@ -404,6 +405,9 @@ class App {
 
     // Silent update check (throttled to once per day, 30s after boot).
     scheduleStartupUpdateCheck()
+
+    // Anonymous daily launch event (same throttle, opt-out via preferences).
+    scheduleUsageTelemetry(preferences)
 
     // this.shortcutCapture = new ShortcutCapture()
     // if (process.env.NODE_ENV === 'development') {

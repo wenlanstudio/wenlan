@@ -4,6 +4,11 @@
     "type": "boolean",
     "default": true
   },
+  "telemetryEnabled": {
+    "description": "General--Send one anonymous launch event per day.",
+    "type": "boolean",
+    "default": true
+  },
   "autoSaveDelay": {
     "description": "General--The time in ms after a change that the file is saved.",
     "type": "number",

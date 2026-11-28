@@ -474,6 +474,10 @@
         "description": "Auto save",
         "delayDescription": "Auto save delay"
       },
+      "telemetryEnabled": {
+        "title": "Anonymous usage stats",
+        "description": "Send one anonymous launch event per day. No document content or file paths."
+      },
       "window": {
         "title": "Window",
         "titleBarStyle": {

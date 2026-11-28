@@ -1,0 +1,5 @@
+{
+  "name": "wenlan-telemetry-worker",
+  "private": true,
+  "type": "module"
+}

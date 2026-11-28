@@ -28,6 +28,21 @@
     <compound>
       <template #head>
         <h6 class="title">
+          {{ t('preferences.general.telemetryEnabled.title') }}
+        </h6>
+      </template>
+      <template #children>
+        <bool
+          :description="t('preferences.general.telemetryEnabled.description')"
+          :bool="telemetryEnabled"
+          :on-change="(value) => onSelectChange('telemetryEnabled', value)"
+        />
+      </template>
+    </compound>
+
+    <compound>
+      <template #head>
+        <h6 class="title">
           {{ t('preferences.general.window.title') }}
         </h6>
       </template>
@@ -257,6 +272,7 @@ const preferenceStore = usePreferencesStore()
 
 const {
   autoSave,
+  telemetryEnabled,
   autoSaveDelay,
   titleBarStyle,
   defaultDirectoryToOpen,

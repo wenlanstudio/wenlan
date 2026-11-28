@@ -474,6 +474,10 @@
         "description": "自动保存",
         "delayDescription": "自动保存延迟"
       },
+      "telemetryEnabled": {
+        "title": "匿名使用统计",
+        "description": "每天发送一次匿名启动事件，不包含文档内容或文件路径。"
+      },
       "window": {
         "title": "窗口",
         "titleBarStyle": {

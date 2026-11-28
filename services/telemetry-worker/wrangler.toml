@@ -1,0 +1,9 @@
+name = "wenlan-usage"
+main = "src/index.ts"
+compatibility_date = "2026-11-28"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "wenlan-usage"
+database_id = "__D1_ID__"
